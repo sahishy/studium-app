@@ -5,10 +5,12 @@ import { getDoc, setDoc, doc } from 'firebase/firestore'
 import { db } from '../../lib/firebase'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { createNewUserObject } from '../../utils/userUtils'
 
 import { FaGoogle } from "react-icons/fa";
 import { FaCircleExclamation } from 'react-icons/fa6'
-import { createNewUserObject } from '../../utils/userUtils'
+
+import favicon from '../../../public/favicon.ico'
 
 const Signup = () => {
 
@@ -147,7 +149,7 @@ const Signup = () => {
                         className='"w-full max-w-5xl flex items-center gap-2 py-[4px] cursor-pointer'
                         onClick={() => navigate('/')}
                     >
-                        <img src="/favicon.ico" alt="Logo" className="w-8 h-8"/>
+                        <img src={favicon} alt="Logo" className="w-8 h-8"/>
                         <h2 className="text-lg font-extrabold">Studium</h2>
                     </button>
                 </header>
