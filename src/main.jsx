@@ -7,7 +7,7 @@ import { AuthProvider } from './contexts/AuthContext.jsx'
 
 createRoot(document.getElementById('root')).render(
 	<StrictMode>
-		<BrowserRouter basename="/studium-app">
+		<BrowserRouter basename={import.meta.env.BASE_URL}>
 			<AuthProvider>
 				<App/>
 			</AuthProvider>
