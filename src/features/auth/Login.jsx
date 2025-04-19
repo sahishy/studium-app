@@ -138,7 +138,7 @@ const Login = () => {
 
                     <h2 className="text-2xl font-extrabold text-center">Welcome Back</h2>
 
-                    <form onSubmit={handleLogin} noValidate={true} className="space-y-4">
+                    <form onSubmit={handleLogin} noValidate={true} className="space-y-4" autoComplete='on'>
 
                         <div className='flex flex-col gap-2'>
                             <input

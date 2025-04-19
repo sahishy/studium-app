@@ -158,7 +158,7 @@ const Signup = () => {
 
                     <h2 className="text-2xl font-extrabold text-center">Create Account</h2>
 
-                    <form onSubmit={handleSignup} noValidate={true} className="space-y-4">
+                    <form onSubmit={handleSignup} noValidate={true} className="space-y-4" autoComplete='on'>
 
                         <div className='flex gap-4'>
                             <div className='flex-1 flex flex-col'>
