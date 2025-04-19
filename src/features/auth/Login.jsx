@@ -138,7 +138,7 @@ const Login = () => {
 
                     <h2 className="text-2xl font-extrabold text-center">Welcome Back</h2>
 
-                    <form onSubmit={handleLogin} noValidate={true} className="space-y-4" autoComplete='on'>
+                    <form onSubmit={handleLogin} noValidate={true} className="space-y-4">
 
                         <div className='flex flex-col gap-2'>
                             <input
@@ -146,6 +146,8 @@ const Login = () => {
                                 placeholder="Email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
+                                autoComplete="email"
+                                name="email"
                                 className={`w-full p-4 border-2 rounded-lg focus:outline-yellow-400 ${errors.email ? 'border-red-400' : 'border-gray-200'}`}
                             />
                             {errors.email && <p className='text-red-400 flex items-center gap-2'><FaCircleExclamation/>{errors.email}</p>}
@@ -157,6 +159,8 @@ const Login = () => {
                                 placeholder="Password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
+                                autoComplete="current-password"
+                                name="password"
                                 className={`w-full p-4 border-2 rounded-lg focus:outline-yellow-400 ${errors.email ? 'border-red-400' : 'border-gray-200'}`}
                             />
                             {errors.password && <p className='text-red-400 flex items-center gap-2'><FaCircleExclamation/>{errors.password}</p>}

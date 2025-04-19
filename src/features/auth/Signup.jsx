@@ -158,7 +158,7 @@ const Signup = () => {
 
                     <h2 className="text-2xl font-extrabold text-center">Create Account</h2>
 
-                    <form onSubmit={handleSignup} noValidate={true} className="space-y-4" autoComplete='on'>
+                    <form onSubmit={handleSignup} noValidate={true} className="space-y-4">
 
                         <div className='flex gap-4'>
                             <div className='flex-1 flex flex-col'>
@@ -168,6 +168,8 @@ const Signup = () => {
                                     value={firstName}
                                     onChange={(e) => setFirstName(e.target.value)}
                                     className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-yellow-400"
+                                    autoComplete='given-name'
+                                    name="firstName"
                                 />      
                                 {errors.firstName && <p className='text-red-400 flex items-center gap-2'><FaCircleExclamation/>{errors.firstName}</p>}                          
                             </div>
@@ -179,6 +181,8 @@ const Signup = () => {
                                     value={lastName}
                                     onChange={(e) => setLastName(e.target.value)}
                                     className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-yellow-400"
+                                    autoComplete='family-name'
+                                    name="lastName"
                                 />
                                 {errors.lastName && <p className='text-red-400 flex items-center gap-2'><FaCircleExclamation/>{errors.lastName}</p>}                         
                             </div>
@@ -192,6 +196,8 @@ const Signup = () => {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-yellow-400"
+                                autoComplete='email'
+                                name="email"
                             />
                             {errors.email && <p className='text-red-400 flex items-center gap-2'><FaCircleExclamation/>{errors.email}</p>}
                         </div>
@@ -203,6 +209,8 @@ const Signup = () => {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-yellow-400"
+                                name="password"
+                                autoComplete='new-password'
                             />
                             {errors.password && <p className='text-red-400 flex items-center gap-2'><FaCircleExclamation/>{errors.password}</p>}
                         </div>
