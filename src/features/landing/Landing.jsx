@@ -9,6 +9,7 @@ import pfp from '../../assets/default-profile.jpg'
 import heroImage from '../../assets/hero-image.png'
 
 import { getTotalTasksCompleted, getTotalUsers } from '../../utils/userUtils';
+import { getTotalCircles } from '../../utils/circleUtils';
 
 const Landing = () => {
 
@@ -131,6 +132,7 @@ const StatsSection = () => {
 
     const [totalUsers, setTotalUsers] = useState(null)
     const [totalTasksCompleted, setTotalTasksCompleted] = useState(null)
+    const [totalCircles, setTotalCircles] = useState(null);
 
     useEffect(() => {
 
@@ -142,9 +144,14 @@ const StatsSection = () => {
             const count = await getTotalTasksCompleted();
             setTotalTasksCompleted(count);
         }
+        const fetchTotalCircles = async () => {
+            const count = await getTotalCircles();
+            setTotalCircles(count);
+        }
 
         fetchTotalUsers();
         fetchTotalTasksCompleted();
+        fetchTotalCircles();
 
     }, [])
 
@@ -181,7 +188,7 @@ const StatsSection = () => {
                     <div className='flex-1 flex gap-4 items-center border-2 border-gray-200 p-4 rounded-lg'>
                         <PiUsersThreeBold className='text-3xl ml-2'/>
                         <div className='flex flex-col'>
-                            <h3 className='text-2xl font-extrabold'>0+</h3>
+                            <h3 className='text-2xl font-extrabold'>{totalCircles ? totalCircles : 0}+</h3>
                             <p className='text-sm text-gray-400'>Focused study circles</p>
                         </div>
                     </div>

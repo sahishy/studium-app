@@ -1,4 +1,4 @@
-import { getFirestore, collection, query, where, onSnapshot, addDoc, getDocs, doc, updateDoc, getDoc, deleteDoc } from 'firebase/firestore'
+import { getFirestore, collection, query, where, onSnapshot, addDoc, getDocs, doc, updateDoc, getDoc, deleteDoc, getCountFromServer } from 'firebase/firestore'
 import { useEffect, useState } from 'react';
 import { deleteCircleSubjects } from './subjectUtils';
 import { deleteCircleTasks } from './taskUtils';
@@ -104,6 +104,17 @@ const getCircle = async ( circleId ) => {
     return circleSnap.data()
 }
 
+const getTotalCircles = async () => {
+
+    const db = getFirestore();
+    const circles = collection(db, 'circles');
+
+    const totalCirclesSnapshot = await getCountFromServer(circles);
+
+    return totalCirclesSnapshot.data().count
+
+}
+
 const useCircle = (circleId) => {
 
     const [circle, setCircle] = useState(null);
@@ -154,4 +165,4 @@ const useUserCircles = (userId) => {
     return circles;
 }
 
-export { createCircle, joinCircle, leaveCircle, updateCircle, canJoinCircle, getCircle, useCircle, useUserCircles }
+export { createCircle, joinCircle, leaveCircle, updateCircle, canJoinCircle, getCircle, getTotalCircles, useCircle, useUserCircles }
