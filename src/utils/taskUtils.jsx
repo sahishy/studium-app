@@ -37,11 +37,12 @@ const updateTask = async (taskId, taskData, userCurrentTask) => {
     const taskSnap = await getDoc(taskRef)
 
     if(taskSnap.data().userId) {
-        let taskDataWithUpdatedStatus = taskSnap.data();
-        taskDataWithUpdatedStatus.status = taskData.status;
+        let taskDataWithUpdatedStatusAndTitle = taskSnap.data();
+        taskDataWithUpdatedStatusAndTitle.status = taskData.status;
+        taskDataWithUpdatedStatusAndTitle.title = taskData.title;
     
         if(taskData.status === 'In Progress') {
-            updateCurrentTask(taskSnap.data().userId, { ...taskDataWithUpdatedStatus, uid: taskId })
+            updateCurrentTask(taskSnap.data().userId, { ...taskDataWithUpdatedStatusAndTitle, uid: taskId })
         } else if(userCurrentTask && userCurrentTask.uid === taskId) {
             updateCurrentTask(taskSnap.data().userId, null)
         }

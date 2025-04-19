@@ -46,10 +46,10 @@ const SubjectModal = ( { userId, circleId, subject, isEdit, subjectData, closeMo
                             key={crypto.randomUUID()}
                             type='button'
                             onClick={() => setColor(colorOption.name)}
-                            className={`p-1 rounded-full border-2 ${color === colorOption.name ? 'border-gray-600' : 'border-gray-200'} cursor-pointer aspect-square`}
+                            className={`relative p-1 rounded-full border-2 ${color === colorOption.name ? 'border-gray-600' : 'border-gray-200'} cursor-pointer w-8`}
                         >
-                            <div className={`w-full h-full rounded-full p-2 ${colorOption.bgStyle}`}></div>
-
+                            <div className={`absolute top-0 left-0 w-full h-full rounded-full p-2 ${colorOption.bgStyle} border-white border-4`}></div>
+                            <div className="invisible pb-[100%]"></div>
                         </button>
                     ))}
                 </div>

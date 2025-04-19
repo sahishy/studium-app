@@ -12,7 +12,7 @@ const CircleGreeting = ( { circle } ) => {
     }
 
     return (
-        <div className="flex-1 flex flex-col justify-center gap-4 p-4 bg-white rounded-lg border-2 border-gray-200">
+        <div className="flex-1 flex flex-col gap-4 p-4 bg-white rounded-lg border-2 border-gray-200">
 
             <div className="flex items-center gap-4">
                 <div className="p-4 bg-gray-100 rounded-lg">

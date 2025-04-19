@@ -57,7 +57,7 @@ const CircleInvite = ( { circle } ) => {
 
                 <button
                     onClick={() => {
-                        navigator.clipboard.writeText(`studium-app.com/join/${circle.inviteCode}`);
+                        navigator.clipboard.writeText(`https://www.studium-app.com/#/join/${circle.inviteCode}`);
                         setCopiedAlt(true)
                     }}
                     className='px-4 py-2 border-2 border-gray-200 border-b-4 rounded-lg flex gap-2 items-center hover:bg-gray-800/5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
