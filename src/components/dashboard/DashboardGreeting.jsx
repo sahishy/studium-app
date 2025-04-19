@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { FaLongArrowAltRight } from "react-icons/fa";
 
+import greetingImage from '../../assets/greeting-image.png'
+
 const DashboardGreeting = ( { profile } ) => {
 
     const [date, setDate] = useState(new Date());
@@ -68,7 +70,7 @@ const DashboardGreeting = ( { profile } ) => {
             </div>
 
             <div className='flex items-center justify-center'>
-                <img className=' h-36 object-contain' alt='greeting' src='/src/assets/greeting-image.png'></img>
+                <img className=' h-36 object-contain' alt='greeting' src={greetingImage}></img>
             </div>
             
 

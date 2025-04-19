@@ -4,7 +4,9 @@ import { useAuth } from '../../contexts/AuthContext'
 
 import { PiStudentBold, PiFileBold, PiUsersThreeBold, PiCaretLeftBold, PiCaretRightBold } from "react-icons/pi";
 import { FaLongArrowAltRight } from 'react-icons/fa';
+import favicon from '../../../public/favicon.ico'
 import pfp from '../../assets/default-profile.jpg'
+import heroImage from '../../assets/hero-image.png'
 
 import { getTotalTasksCompleted, getTotalUsers } from '../../utils/userUtils';
 
@@ -53,7 +55,7 @@ const Navbar = ( { navigate } ) => {
             <header className="w-full max-w-5xl flex justify-between items-center p-4">
                 
                 <div className='flex items-center gap-2'>
-                    <img src="/favicon.ico" alt="Logo" className="w-8 h-8"/>
+                    <img src={favicon} alt="Logo" className="w-8 h-8"/>
                     <h2 className="text-lg font-extrabold">Studium</h2>
                 </div>
 
@@ -117,7 +119,7 @@ const HeroSection = ( { navigate } ) => {
                 </div>
 
                 <div className='flex flex-1 justify-center items-center'>
-                    <img src='./src/assets/hero-image.png' alt='hero' className='w-full h-full object-contain'></img>
+                    <img src={heroImage} alt='hero' className='w-full h-full object-contain'></img>
                 </div>
 
             </div>

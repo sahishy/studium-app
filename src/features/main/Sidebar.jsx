@@ -6,6 +6,8 @@ import { FaUserFriends } from "react-icons/fa";
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import Dropdown from '../../components/Popovers/Dropdown.jsx';
 import { getActiveUserCount } from '../../utils/userUtils.jsx';
+
+import favicon from '../../../public/favicon.ico'
 import pfp from '../../assets/default-profile.jpg'
 
 
@@ -51,7 +53,7 @@ const Sidebar = ( {profile } ) => {
 
             <div className='flex flex-col gap-2'>
                 <div className='flex items-center justify-start gap-2'>
-                    <img src="/favicon.ico" alt="Logo" className="w-8 h-8"/>
+                    <img src={favicon} alt="Logo" className="w-8 h-8"/>
                     <h2 className="text-2xl font-extrabold">Studium</h2>
                     <p className='text-sm text-gray-400'>BETA</p>
                 </div>
