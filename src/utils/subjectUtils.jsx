@@ -144,6 +144,9 @@ function useUserSubjects(userId) {
 }
 
 const useCircleSubjects = (circleIds = []) => {
+
+    console.log('1')
+
     const [circleSubjects, setCircleSubjects] = useState([]);
 
     const validIds = useMemo(
@@ -153,7 +156,7 @@ const useCircleSubjects = (circleIds = []) => {
 
     useEffect(() => {
 
-        if (!validIds.length) {
+        if(!validIds.length) {
             setCircleSubjects([]);
             return;
         }
@@ -170,22 +173,15 @@ const useCircleSubjects = (circleIds = []) => {
             const q = query(subjectsRef, where('circleId', 'in', chunk));
     
             const unsub = onSnapshot(q, snapshot => {
+                
                 batches[i / BATCH_SIZE] = snapshot.docs.map(doc => ({
                     uid: doc.id,
-                    ...doc.data()
+                    ...doc.data(),
                 }));
 
                 const allSubjects = batches.flat();
-                setCircleSubjects(prev => {
-                    if (
-                        prev.length === allSubjects.length &&
-                        prev.every((subject, index) => subject.uid === allSubjects[index].uid)
-                    ) {
-                        return prev;
-                    }
-                    return allSubjects;
-                });
-            });
+                setCircleSubjects(allSubjects); 
+            })
   
             unsubscribes.push(unsub);
         }
