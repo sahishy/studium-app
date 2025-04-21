@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react';
 import { TbLayoutDashboardFilled, TbFileFilled, TbPawFilled, TbSettingsFilled, TbLogout2 } from "react-icons/tb";
 import { PiCaretUpFill, PiUserFill } from "react-icons/pi";
@@ -21,6 +21,7 @@ const navItems = [
 const Sidebar = ( {profile } ) => {
 
     const navigate = useNavigate();
+    const location = useLocation()
     const { logout } = useAuth();
     const [activeUserCount, setActiveUserCount] = useState(0);
 
@@ -57,7 +58,7 @@ const Sidebar = ( {profile } ) => {
                     <h2 className="text-2xl font-extrabold">Studium</h2>
                     <p className='text-sm text-gray-400'>BETA</p>
                 </div>
-                <h2 className='text-gray-400'>{activeUserCount} user{activeUserCount != 1 && 's'} online</h2>
+                <h2 className='text-gray-400 text-sm'>{activeUserCount} student{activeUserCount != 1 && 's'} online</h2>
             </div>
 
             <nav className="flex flex-col justify-between h-full">
@@ -71,7 +72,7 @@ const Sidebar = ( {profile } ) => {
                             end
                             className={({ isActive }) =>
                                 `font-semibold py-2 px-4 rounded-lg transition-colors duration-200 flex items-center gap-2 ${
-                                    isActive ? 'text-white bg-gray-800 hover:bg-black' : 'text-gray-600 hover:bg-gray-800/5'
+                                    (location.pathname.startsWith(item.path)) ? 'text-white bg-gray-800 hover:bg-black' : 'text-gray-600 hover:bg-gray-800/5'
                                 }`
                             }
                         >
@@ -106,8 +107,15 @@ const Sidebar = ( {profile } ) => {
                                     ></span>
                                 </div>
 
-                                <div className='font-semibold text-gray-600'>
-                                    {profile.firstName} {profile.lastName.substring(0, 1)}.
+                                <div className="flex flex-col pr-2 min-w-0">
+                                    <div className='text-gray-600 shrink-0'>
+                                        {profile.firstName} {profile.lastName.substring(0, 1)}.
+                                    </div>
+                                    {profile.currentTask && (
+                                        <div className='text-sm text-gray-400 truncate'>
+                                            {profile.currentTask.title}
+                                        </div>
+                                    )}
                                 </div>
 
                             </div>

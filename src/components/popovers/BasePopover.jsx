@@ -106,9 +106,12 @@ const BasePopover = ({ children, content, className = '', onOpen }) => {
                         <div
                             ref={popoverRef}
                             className={`
-                                absolute z-[1001] p-2 bg-white rounded-lg border-2 border-gray-200 shadow-lg shadow-gray-100
+                                absolute z-[1001] p-2 bg-white rounded-lg border-2 border-gray-200 shadow-lg shadow-gray-800/5
                                 w-fit h-fit min-w-50
-                                transition-all duration-200 ease-out transform
+
+                                {/* tailwindcss-ignore-next-line */}
+                                transition-opacity transition-transform duration-200 ease-out transform
+                                
                                 ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
                             `}
                             style={{

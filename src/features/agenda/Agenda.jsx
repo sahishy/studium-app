@@ -1,46 +1,23 @@
-import { useOutletContext } from 'react-router-dom'
-import { createTask, formatDate } from '../../utils/taskUtils.jsx'
-import { useState } from 'react'
-import { useModal } from '../../contexts/ModalContext.jsx'
-
+import { useOutletContext, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Header from '../../components/main/Header.jsx'
-import Subject from '../../components/agenda/Subject.jsx'
-import Task from '../../components/agenda/Task.jsx'
-import TasksHeader from '../../components/agenda/TasksHeader.jsx'
-import SubjectModal from '../../components/modals/SubjectModal.jsx'
-
-import { FaPlus } from 'react-icons/fa'
-import { PiCaretDownFill, PiCaretRightFill } from 'react-icons/pi'
-import { useSubjects } from '../../contexts/SubjectsContext.jsx'
-import { useTasks } from '../../contexts/TasksContext.jsx'
-import { useCircles } from '../../contexts/CirclesContext.jsx'
+import { FaCalendar, FaList, FaTh } from 'react-icons/fa'
 
 const Agenda = () => {
 
     const { profile } = useOutletContext()
-    const circles = useCircles()
+    const location = useLocation()
+    const navigate = useNavigate()
 
-    const { user: userSubjects, circle: circleSubjects } = useSubjects()
-    const { user: userTasks, circle: circleTasks } = useTasks()
+    const tabs = [
+        { name: 'list', icon: <FaList/> },
+        { name: 'calendar', icon: <FaCalendar/> },
+        { name: 'board', icon: <FaTh/> }
+    ]
+    const currentTab = tabs.findIndex(tab => location.pathname.includes(tab.name))
 
-    const [collapsedDates, setCollapsedDates] = useState([]);
-    const [collapsedGroups, setCollapsedGroups] = useState([]);
-    const [newTaskId, setNewTaskId] = useState(null)
-
-    const userTasksWithNoDueDate = userTasks.filter(x => x.dueDate === -1)
-    const userTasksWithDueDate = userTasks.filter(x => x.dueDate !== -1)
-    const userPastTasks = userTasksWithDueDate.filter(task => new Date(task.dueDate.seconds * 1000) < new Date())
-    const userFutureTasks = userTasksWithDueDate.filter(task => new Date(task.dueDate.seconds * 1000) >= new Date())
-    const userGroupedPastTasks = Object.groupBy(userPastTasks, task => new Date(task.dueDate.seconds * 1000).toLocaleDateString())
-    const userGroupedFutureTasks = Object.groupBy(userFutureTasks, task => new Date(task.dueDate.seconds * 1000).toLocaleDateString())
-
-    const circleGroupedTasks = Object.groupBy(circleTasks, task => task.circleId);
-    
-    const handleCollapseDateToggle = (date) => {
-        setCollapsedDates(collapsedDates.includes(date) ? collapsedDates.filter(x => x !== date) : [...collapsedDates, date])
-    }
-    const handleCollapseGroupToggle = (group) => {
-        setCollapsedGroups(collapsedGroups.includes(group) ? collapsedGroups.filter(x => x !== group) : [...collapsedGroups, group])
+    const handleClick = (tab) => {
+        navigate(`/agenda/${tab}`)
+        localStorage.setItem('agenda:lastTab', tab)
     }
 
     return (
@@ -48,139 +25,25 @@ const Agenda = () => {
         <div className="flex flex-col h-full relative">
             <div className="flex-1 overflow-y-auto relative">
                 <Header text={'Agenda'} profile={profile}/>
-                <div className='w-full flex flex-col items-start gap-8 p-8 max-w-5xl m-auto'>
+                <div className='w-full flex flex-col items-start gap-8 px-8 pb-8 pt-2 max-w-5xl m-auto'>
 
-                    <div className='w-full flex flex-col gap-4'>
-                        <h1 className='text-lg text-gray-600 font-extrabold'>Subjects</h1>
 
-                        <div className='w-full grid grid-cols-4 auto-rows-auto gap-2'>
-                            {userSubjects.sort((a, b) => new Date(a.createdAt.seconds) - new Date(b.createdAt.seconds)).map((subject) => (
-                                <Subject key={subject.uid} subject={subject}/>
-                            ))}
-                            {userSubjects.length < 12 && <AddSubjectButton profile={profile}/>}
-                        </div>
+                    <div className='p-2 bg-gray-100 text-gray-600 text-center text-sm rounded-lg flex gap-2'>
+                        {tabs.map((tab, index) => (
+                            <TabButton 
+                                key={tab.name}
+                                tab={tab}
+                                isCurrent={currentTab === index}
+                                onClick={() => 
+                                    handleClick(tab.name)
+                                }
+                            />
+                        ))}
                     </div>
 
-                    <div className='w-full flex flex-col gap-4'>
-                        <h1 className='text-lg text-gray-600 font-extrabold'>My Work</h1>
-                    
-                        <div className='w-full flex flex-col'>
-                            {/* past tasks, show before all other tasks */}
-                            {Object.keys(userGroupedPastTasks).sort((a, b) => new Date(a) - new Date(b)).map(date => (
-                                <div key={date} className='w-full flex flex-col'>
-                                    <button
-                                        onClick={() => handleCollapseDateToggle(date)}
-                                        className='flex items-center gap-4 p-2 rounded-lg cursor-pointer hover:bg-gray-800/5 transition-colors duration-200'
-                                    >
-                                        <div className='text-sm text-gray-600'>
-                                            {collapsedDates.includes(date) ? <PiCaretRightFill/> : <PiCaretDownFill/>}
-                                        </div>
-                                        <h1 className={`text-sm text-red-400 font-extrabold`}>{formatDate(userGroupedPastTasks[date][0].dueDate.seconds)}</h1>
-                                    </button>
-
-                                    <div className={`w-full flex-col pl-8 ${collapsedDates.includes(date) ? 'hidden' : 'flex mb-4'}`}>
-                                        <TasksHeader/>
-
-                                        {userGroupedPastTasks[date].sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
-                                            <Task key={task.uid} profile={profile} task={task} subjects={userSubjects} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId}/>
-                                        ))}
-
-                                        <AddTaskButton profile={profile} dueDate={new Date(userGroupedPastTasks[date][0].dueDate.seconds * 1000)} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
-                                    </div>
-                                </div>
-                            ))}
-
-                            {/* no due date tasks, always show the no due date section */}
-                            <div className='w-full flex flex-col'>
-                                <button
-                                    onClick={() => handleCollapseDateToggle('no-due-date')}
-                                    className='flex items-center gap-4 p-2 rounded-lg cursor-pointer hover:bg-gray-800/5 transition-colors duration-200'
-                                >
-                                    <div className='text-sm text-gray-600'>
-                                        {collapsedDates.includes('no-due-date') ? <PiCaretRightFill/> : <PiCaretDownFill/>}
-                                    </div>
-                                    <h1 className='text-sm text-gray-600 font-extrabold'>No due date</h1>
-                                </button>
-
-                                <div className={`w-full flex-col pl-8 ${collapsedDates.includes('no-due-date') ? 'hidden' : 'flex mb-4'}`}>
-                                    <TasksHeader/>
-
-                                    {userTasksWithNoDueDate.sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
-                                        <Task key={task.uid} task={task} subjects={userSubjects} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
-                                    ))}
-
-                                    <AddTaskButton profile={profile} dueDate={-1} tasks={userTasks} setNewTaskId={setNewTaskId}/>
-
-                                </div>
-                            </div>
-
-                            {/* future tasks */}
-                            {Object.keys(userGroupedFutureTasks).sort((a, b) => new Date(a) - new Date(b)).map(date => (
-                                <div key={date} className='w-full flex flex-col'>
-                                    <button
-                                        onClick={() => handleCollapseDateToggle(date)}
-                                        className='flex items-center gap-4 p-2 rounded-lg cursor-pointer hover:bg-gray-800/5 transition-colors duration-200'
-                                    >
-                                        <div className='text-sm text-gray-600'>
-                                            {collapsedDates.includes(date) ? <PiCaretRightFill/> : <PiCaretDownFill/>}
-                                        </div>
-                                        <h1 className={`text-sm text-gray-600 font-extrabold`}>{formatDate(userGroupedFutureTasks[date][0].dueDate.seconds)}</h1>
-                                    </button>
-
-                                    <div className={`w-full flex-col pl-8 ${collapsedDates.includes(date) ? 'hidden' : 'flex mb-4'}`}>
-                                        <TasksHeader/>
-
-                                        {userGroupedFutureTasks[date].sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
-                                            <Task key={task.uid} task={task} subjects={userSubjects} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
-                                        ))}
-
-                                        <AddTaskButton profile={profile} dueDate={new Date(userGroupedFutureTasks[date][0].dueDate.seconds * 1000)} setNewTaskId={setNewTaskId}/>
-                                    </div>
-                                </div>
-                            ))}
-
-                        </div>
+                    <Outlet context={{ profile }}/>
 
 
-
-                        {circles.length !== 0 && (
-                            <div className='w-full flex flex-col gap-4'>
-                                <h1 className='text-lg text-gray-600 font-extrabold'>Circle Work</h1>
-                                
-                                {Object.keys(circleGroupedTasks).length === 0 ? (
-                                    <p className='text-sm text-gray-400'>You have no upcoming Circle work.</p>
-                                ) : (
-                                    <div className='w-full flex flex-col'>
-                                        {Object.keys(circleGroupedTasks).map(group => (
-                                            <div key={group} className='w-full flex flex-col'>
-                                                <button
-                                                    onClick={() => handleCollapseGroupToggle(group)}
-                                                    className='flex items-center gap-4 p-2 rounded-lg cursor-pointer hover:bg-gray-800/5 transition-colors duration-200'
-                                                >
-                                                    <div className='text-sm text-gray-600'>
-                                                        {collapsedGroups.includes(group) ? <PiCaretRightFill/> : <PiCaretDownFill/>}
-                                                    </div>
-                                                    <h1 className={`text-sm font-extrabold`}>{circles.find(x => x.uid === group).title}</h1>
-                                                </button>
-
-                                                <div className={`w-full flex-col pl-8 ${collapsedGroups.includes(group) ? 'hidden' : 'flex mb-4'}`}>
-                                                    <TasksHeader/>
-
-                                                    {circleGroupedTasks[group].sort((a, b) => a.dueDate.seconds - b.dueDate.seconds).map((task) => (
-                                                        <Task key={task.uid} circle={group} task={task} subjects={circleSubjects.filter(x => x.circleId === group)} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId}/>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>                           
-                        )}
-
-                        <div className='pb-16'></div>
-
-
-                    </div>
                 </div>
                 
             </div>
@@ -189,53 +52,18 @@ const Agenda = () => {
     ) 
 }
 
-const AddSubjectButton = ( { profile } ) => {
+const TabButton = ( { tab, isCurrent, onClick } ) => {
 
-    const { openModal, closeModal } = useModal()
-
-    const handleClick = () => {
-        const subjectData = {
-            title: '',
-            color: 'gray',
-            link: ''
-        }
-        openModal(<SubjectModal userId={profile.uid} isEdit={false} subjectData={subjectData} closeModal={closeModal}/>)
-    }
-
-    return (
-        <button
-            onClick={handleClick}
-            className="flex items-center justify-center gap-2 p-2 hover:bg-gray-800/5 border-2 border-dashed border-gray-200 text-gray-600 rounded-lg cursor-pointer transition-colors duration-200"
-        >
-            <div className='p-2 rounded-lg'>
-                <FaPlus className='text-gray-400'/>
-            </div>
-        </button>
-    )
-}
-
-const AddTaskButton = ( { profile, dueDate, setNewTaskId } ) => {
-
-    const handleClick = async () => {
-
-        const newTask = await createTask( { userId: profile.uid, dueDate: dueDate } );
-        if(newTask && newTask.id) {
-            setNewTaskId(newTask.id);
-        }
-
-    }
+    const label = tab.name.charAt(0).toUpperCase() + tab.name.slice(1)
 
     return (
         <button 
-            onClick={handleClick}
-            className={`w-full flex items-center gap-4 p-1 hover:bg-gray-800/5 text-sm font-semibold text-gray-600 border-t-2 border-gray-200 cursor-pointer rounded-b-lg transition-colors duration-200`}
+            onClick={onClick}
+            className={`flex-1 px-4 py-2 rounded-lg border-2
+                ${isCurrent ? 'bg-white hover:bg-gray-50 border-gray-200 text-gray-600' : 'hover:bg-gray-800/5 border-transparent text-gray-400'}
+                transition-colors duration-200 cursor-pointer`}
         >
-            <div className='p-2 rounded-lg'>
-                <FaPlus className='text-gray-400'/>
-            </div>
-            <h1 className='p-2 text-gray-400'>
-                Add New
-            </h1>
+            {tab.icon}
         </button>
     )
 }

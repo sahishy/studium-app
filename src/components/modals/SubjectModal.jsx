@@ -65,7 +65,7 @@ const SubjectModal = ( { userId, circleId, subject, isEdit, subjectData, closeMo
 
                 <input
                     type="text"
-                    placeholder="Link"
+                    placeholder="Syllabus Link"
                     value={link}
                     onChange={(e) => setLink(e.target.value)}
                     className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-gray-600"

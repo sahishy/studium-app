@@ -58,15 +58,15 @@ const DatePicker = ({ children, selectedDate, onSelect, className = '' }) => {
         }
         return weeks;
 
-    };
+    }
 
     const handlePrevMonth = () => {
         setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-    };
+    }
 
     const handleNextMonth = () => {
         setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
-    };
+    }
 
     const handleDateSelect = (date) => {
         if(date === -1) {
@@ -76,7 +76,7 @@ const DatePicker = ({ children, selectedDate, onSelect, className = '' }) => {
         const endOfDay = new Date(date);
         endOfDay.setHours(23, 59, 59, 999);
         onSelect(endOfDay);
-    };
+    }
 
     const datePickerContent = (closePopover) => {
         const weeks = Calendar();
@@ -105,7 +105,7 @@ const DatePicker = ({ children, selectedDate, onSelect, className = '' }) => {
                     <div className="grid grid-cols-7 gap-1">
                         {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
                             <div key={index} className="text-center font-semibold p-1">
-                            {day}
+                                {day}
                             </div>
                         ))}
                     </div>

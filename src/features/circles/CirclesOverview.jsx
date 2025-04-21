@@ -24,7 +24,8 @@ const CirclesOverview = () => {
 
     const tasks = useCircleTasks([circleId]);
     const subjects = useCircleSubjects([circleId]);
-    const members = useMembers();
+
+    const allMembers = useMembers();
 
     const [collapsedDates, setCollapsedDates] = useState([])
     const [newTaskId, setNewTaskId] = useState(null)
@@ -82,7 +83,7 @@ const CirclesOverview = () => {
                     <div className='w-full flex flex-col gap-4'>
                         <h1 className='text-lg text-gray-600 font-extrabold'>Members</h1>
 
-                        <CircleMembers members={members} ownerId={circle.createdBy}/>
+                        <CircleMembers members={allMembers.filter(x => circle.userIds.includes(x.uid))} ownerId={circle.createdBy}/>
                     </div>
 
                     <div className='w-full flex flex-col gap-4'>

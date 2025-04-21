@@ -45,7 +45,7 @@ const Subject = ( { subject } ) => {
 
                 <div className="flex">
                     {subject.link !== '' && (
-                        (extractGoogleFileInfo(subject.link).id !== null ? (
+                        (extractGoogleFileInfo(subject.link) && extractGoogleFileInfo(subject.link).id !== null ? (
 
                             <DocPreview
                                 doc={extractGoogleFileInfo(subject.link)}

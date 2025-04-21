@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 
-import { PiStudentBold, PiFileBold, PiUsersThreeBold, PiCaretLeftBold, PiCaretRightBold } from "react-icons/pi";
-import { FaLongArrowAltRight } from 'react-icons/fa';
 import favicon from '../../../public/favicon.ico'
 import pfp from '../../assets/default-profile.jpg'
 import heroImage from '../../assets/hero-image.png'
+import { FaUserGraduate, FaFile, FaUserFriends, FaLongArrowAltRight } from "react-icons/fa";
+import { PiCaretLeftFill, PiCaretRightFill } from 'react-icons/pi'
 
 import { getTotalTasksCompleted, getTotalUsers } from '../../utils/userUtils';
 import { getTotalCircles } from '../../utils/circleUtils';
@@ -170,7 +170,9 @@ const StatsSection = () => {
                 <div className='flex gap-8 text-left'>
 
                     <div className='flex-1 flex gap-4 items-center border-2 border-gray-200 p-4 rounded-lg'>
-                        <PiStudentBold className='text-3xl ml-2'/>
+                        <div className='p-4 rounded-lg bg-gray-100 text-2xl text-gray-600'>
+                            <FaUserGraduate/>
+                        </div>
                         <div className='flex flex-col'>
                             <h3 className='text-2xl font-extrabold'>{totalUsers ? totalUsers : 0}+</h3>
                             <p className='text-sm text-gray-400'>Students staying on track</p>
@@ -178,7 +180,9 @@ const StatsSection = () => {
                     </div>
 
                     <div className='flex-1 flex gap-4 items-center border-2 border-gray-200 p-4 rounded-lg'>
-                        <PiFileBold className='text-3xl ml-2'/>
+                        <div className='p-4 rounded-lg bg-gray-100 text-2xl text-gray-600'>
+                            <FaFile/>
+                        </div>
                         <div className='flex flex-col'>
                             <h3 className='text-2xl font-extrabold'>{totalTasksCompleted ? totalTasksCompleted : 0}+</h3>
                             <p className='text-sm text-gray-400'>Assignments completed</p>
@@ -186,7 +190,9 @@ const StatsSection = () => {
                     </div>
 
                     <div className='flex-1 flex gap-4 items-center border-2 border-gray-200 p-4 rounded-lg'>
-                        <PiUsersThreeBold className='text-3xl ml-2'/>
+                        <div className='p-4 rounded-lg bg-gray-100 text-2xl text-gray-600'>
+                            <FaUserFriends/>
+                        </div>
                         <div className='flex flex-col'>
                             <h3 className='text-2xl font-extrabold'>{totalCircles ? totalCircles : 0}+</h3>
                             <p className='text-sm text-gray-400'>Focused study circles</p>
@@ -218,7 +224,7 @@ const TestimonialsSection = () => {
                 </div>
 
                 <div className='flex justify-between items-center gap-8'>
-                    <PiCaretLeftBold className='text-4xl text-gray-600'/>
+                    <PiCaretLeftFill className='text-4xl text-gray-400 opacity-50'/>
 
                     <div className='flex flex-col gap-8 items-center bg-white border-2 border-gray-200 p-8 rounded-lg max-w-lg'>
 
@@ -241,7 +247,7 @@ const TestimonialsSection = () => {
                         </div>
                     </div>
 
-                    <PiCaretRightBold className='text-4xl text-gray-600'/>
+                    <PiCaretRightFill className='text-4xl text-gray-400 opacity-50'/>
 
                 </div>
 

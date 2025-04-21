@@ -23,7 +23,7 @@ const CircleFriends = ( { userId } ) => {
 
                 {friends.length === 0 ? (
 
-                    <p className='text-sm text-center text-gray-400'>You have no friends.</p>
+                    <p className='text-sm text-center text-gray-400'>You have no Studium friends.</p>
 
                 ) : (
                     <>

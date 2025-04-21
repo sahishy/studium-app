@@ -87,7 +87,7 @@ const Task = ( { task, subjects, autoFocus, setNewTaskId, userCurrentTask } ) =>
             dueDate: task.dueDate,
         }
 
-    }, [task.status, task.title, task.subject, task.timeEstimate, task.dueDate, status, title, titleInput, subject, timeEstimate, dueDate]);
+    }, [task.status, task.title, task.subject, task.timeEstimate, task.dueDate]);
 
     useEffect(() => {
         if(!subjects.some(x => x.uid === subject)) {
@@ -117,7 +117,7 @@ const Task = ( { task, subjects, autoFocus, setNewTaskId, userCurrentTask } ) =>
             <div className="flex-1">
                 <SubjectInput subject={subject} setSubject={setSubject} subjects={subjects}/>
             </div>
-
+            
             <div className="flex-1">
                 <DueDateInput dueDate={dueDate} setDueDate={setDueDate}/>
             </div>
