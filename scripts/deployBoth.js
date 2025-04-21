@@ -33,9 +33,9 @@ const deployTo = (branch, addCNAME = false) => {
 }
 
 console.log('deploying to preview...')
+run(`DEPLOY_TARGET=preview npm run build`)
 deployTo('preview', false)
 
 console.log('deploying to gh-pages...')
+run(`npm run build`)
 deployTo('gh-pages', true)
-
-console.log('deployed to both preview and production')
