@@ -145,8 +145,6 @@ function useUserSubjects(userId) {
 
 const useCircleSubjects = (circleIds = []) => {
 
-    console.log('1')
-
     const [circleSubjects, setCircleSubjects] = useState([]);
 
     const validIds = useMemo(

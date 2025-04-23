@@ -16,7 +16,7 @@ const Dashboard = () => {
 
             <Header text={'Dashboard'} profile={profile}/>
 
-            <div className='w-full h-full flex flex-col gap-4 lg:flex-row lg:gap-8 px-8 pb-8 pt-2 max-w-5xl m-auto min-w-0'>
+            <div className='w-full h-full flex flex-col gap-4 lg:flex-row lg:gap-8 px-24 pb-8 pt-2 m-auto min-w-0'>
 
                 <div className='flex-5 min-w-0 flex flex-col gap-4'>
 
@@ -29,7 +29,7 @@ const Dashboard = () => {
                     
                     <DashboardLevel profile={profile}/>
                     <DashboardCircles/>
-                    <DashboardBuddy profile={profile}/>
+                    {/* <DashboardBuddy profile={profile}/> */}
                     {/* <DashboardStreak profile={profile}/> */}
 
                 </div>

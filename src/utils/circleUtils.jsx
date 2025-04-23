@@ -142,6 +142,7 @@ const useCircle = (circleId) => {
 
 const useUserCircles = (userId) => {
     const [circles, setCircles] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if(!userId) {
@@ -156,13 +157,14 @@ const useUserCircles = (userId) => {
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() }));
             setCircles(data);
+            setLoading(false);
         });
 
         return () => unsubscribe()
 
     }, [userId]);
 
-    return circles;
+    return { circles, loading };
 }
 
 export { createCircle, joinCircle, leaveCircle, updateCircle, canJoinCircle, getCircle, getTotalCircles, useCircle, useUserCircles }

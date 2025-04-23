@@ -16,7 +16,7 @@ const Header = ( { profile, text, circle, back } ) => {
 
     return (
         <div className="">
-            <div className='text-gray-800 w-full max-w-5xl m-auto px-8 py-4 mt-4 flex justify-between items-center'>
+            <div className='text-gray-800 w-full m-auto px-24 py-4 mt-4 flex justify-between items-center'>
                 
                 <div className="flex gap-4 items-center min-w-0">
                     {circle ? (

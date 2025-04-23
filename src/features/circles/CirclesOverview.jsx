@@ -73,7 +73,7 @@ const CirclesOverview = () => {
             <Header circle={circle} profile={profile} back='/circles'/>
             <div className="flex-1 overflow-y-auto relative">
 
-                <div className='h-full w-full flex flex-col items-start gap-8 p-8 max-w-5xl m-auto'>
+                <div className='h-full w-full flex flex-col items-start gap-8 px-24 pb-8 pt-2 m-auto'>
 
                     <div className='w-full flex gap-4'>
                         <CircleLevel circle={circle}/>
@@ -121,7 +121,7 @@ const CirclesOverview = () => {
                                         <TasksHeader/>
 
                                         {groupedPastTasks[date].sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
-                                            <Task key={task.uid} profile={profile} task={task} subjects={subjects} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId}/>
+                                            <Task key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId}/>
                                         ))}
 
                                         <AddTaskButton circle={circle} dueDate={new Date(groupedPastTasks[date][0].dueDate.seconds * 1000)} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
@@ -145,7 +145,7 @@ const CirclesOverview = () => {
                                     <TasksHeader/>
 
                                     {tasksWithNoDueDate.sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
-                                        <Task key={task.uid} task={task} subjects={subjects} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
+                                        <Task key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
                                     ))}
 
                                     <AddTaskButton circle={circle} dueDate={-1} tasks={tasks} setNewTaskId={setNewTaskId}/>
@@ -170,7 +170,7 @@ const CirclesOverview = () => {
                                         <TasksHeader/>
 
                                         {groupedFutureTasks[date].sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
-                                            <Task key={task.uid} task={task} subjects={subjects} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
+                                            <Task key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
                                         ))}
 
                                         <AddTaskButton circle={circle} dueDate={new Date(groupedFutureTasks[date][0].dueDate.seconds * 1000)} setNewTaskId={setNewTaskId}/>

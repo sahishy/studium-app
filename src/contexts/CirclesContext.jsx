@@ -6,11 +6,11 @@ const CirclesContext = createContext([]);
 
 const CirclesProvider = ( { profile, children } ) => {
 
-    const circles = useUserCircles(profile.uid);
+    const { circles, loading } = useUserCircles(profile.uid);
 
     return (
         <CirclesContext.Provider value={circles}>
-            {children}
+            {!loading && children}
         </CirclesContext.Provider>
     )
 

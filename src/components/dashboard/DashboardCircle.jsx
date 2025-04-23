@@ -23,12 +23,12 @@ const DashboardCircle = ( { circle } ) => {
                 )}
             </div>
 
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-                <h1 className="truncate text-gray-600 text-sm font-semibold min-w-0">
+            <div className="flex items-center gap-2 flex-1 min-w-0 max-w-full">
+                <h1 className="text-gray-600 text-sm font-semibold truncate max-w-full">
                     {circle.title}
                 </h1>
-                <h2 className="shrink-0 p-2 text-gray-400 flex gap-2 items-center">
-                    <PiStarFourFill />
+                <h2 className="p-2 text-gray-400 flex gap-2 items-center shrink-0">
+                    <PiStarFourFill/>
                     Lv. {circle.level}
                 </h2>
             </div>

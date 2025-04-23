@@ -10,7 +10,7 @@ const Buddy = () => {
 
             <Header text={'Buddy'} profile={profile}/>
 
-            <div className='w-full h-full flex flex-col gap-4 px-8 pb-8 pt-2 max-w-5xl m-auto'>
+            <div className='w-full h-full flex flex-col gap-4 px-24 pb-8 pt-2 m-auto'>
 
                 <h1 className='text-gray-400'>Coming soon!</h1>
 

@@ -9,7 +9,7 @@ const SubjectsProvider = ( { profile, children } ) => {
 
     const circles = useCircles();
     const user = useUserSubjects(profile.uid);
-    const circleIds = useMemo(() => circles.map(circle => circle.id), [circles]);
+    const circleIds = useMemo(() => circles.map(circle => circle.uid), [circles]);
     const circle = useCircleSubjects(circleIds);
 
     return (

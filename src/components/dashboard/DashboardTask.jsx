@@ -3,10 +3,15 @@ import { updateTask } from "../../utils/taskUtils";
 import { getColor } from "../../utils/subjectUtils";
 import Dropdown from "../Popovers/Dropdown";
 
-import { FaDotCircle, FaClock, FaCheckCircle, FaHourglass, FaCalendar } from "react-icons/fa";
+import { FaDotCircle, FaClock, FaCheckCircle, FaHourglass, FaCalendar, FaUserFriends } from "react-icons/fa";
 import { FaFolder } from "react-icons/fa6";
+import { useCircles } from "../../contexts/CirclesContext";
+import { useSubjects } from "../../contexts/SubjectsContext";
 
-const DashboardTask = ( { task, subjects, userCurrentTask } ) => {
+const DashboardTask = ( { task, userCurrentTask } ) => {
+
+    const circles = useCircles()
+    const { user: userSubjects, circle: circleSubjects } = useSubjects()
 
     const [status, setStatus] = useState(task.status);
 
@@ -40,16 +45,20 @@ const DashboardTask = ( { task, subjects, userCurrentTask } ) => {
             </div>
 
             <div className="flex-1 flex">
-                <Subject subject={task.subject} subjects={subjects}/>
+                <Subject subject={task.subject} subjects={[...userSubjects, ...circleSubjects]}/>
             </div>
 
             <div className="flex-1 flex">
                 <DueDate dueDate={task.dueDate}/>
             </div>
 
-            <div className="flex-1 flex">
-                <TimeEstimate timeEstimate={task.timeEstimate}/>
+            <div className="flex-1 flex min-w-0">
+                <Circle circleId={task.circleId} circles={circles}/>
             </div>
+
+            {/* <div className="flex-1 flex">
+                <TimeEstimate timeEstimate={task.timeEstimate}/>
+            </div> */}
 
         </div>
 
@@ -136,33 +145,50 @@ const DueDate = ( { dueDate } ) => {
 
 }
 
-const TimeEstimate = ( { timeEstimate } ) => {
+const Circle = ( { circleId, circles } ) => {
 
-    const formatTime = () => {
-
-        let h = 0;
-        let m = 0;
-        
-        if(timeEstimate >= 60) {
-            h = Math.floor(timeEstimate / 60);
-        }
-        m = timeEstimate % 60;
-
-        return `${ h !== 0 ? `${h}hr${m !== 0 ? ` ${m}m` : ''}` : `${m}m` }`;
-
+    const getCircle = () => {
+        const foundCircle = circles.find(x => x.uid === circleId);
+        return foundCircle != null ? foundCircle : {title:'Unknown'}
     }
 
     return (
-        
-        <div className="flex items-center gap-2 p-2">
-            <FaHourglass className={`${timeEstimate != 0 ? 'text-gray-600' : 'text-gray-200'}`}/>
-            {timeEstimate != 0 && (
-                <h1 className="text-xs text-gray-600">{formatTime()}</h1>
+        <div className="flex items-center gap-2 p-2 min-w-0">
+            <FaUserFriends className={`${circleId !== null ? 'text-gray-600' : 'text-gray-200'} shrink-0`}/>
+            {circleId !== null && (
+                <h1 className="text-xs max-w-20 truncate">{getCircle().title}</h1>
             )}
         </div>
-
     )
 }
+
+// const TimeEstimate = ( { timeEstimate } ) => {
+
+//     const formatTime = () => {
+
+//         let h = 0;
+//         let m = 0;
+        
+//         if(timeEstimate >= 60) {
+//             h = Math.floor(timeEstimate / 60);
+//         }
+//         m = timeEstimate % 60;
+
+//         return `${ h !== 0 ? `${h}hr${m !== 0 ? ` ${m}m` : ''}` : `${m}m` }`;
+
+//     }
+
+//     return (
+        
+//         <div className="flex items-center gap-2 p-2">
+//             <FaHourglass className={`${timeEstimate != 0 ? 'text-gray-600' : 'text-gray-200'}`}/>
+//             {timeEstimate != 0 && (
+//                 <h1 className="text-xs text-gray-600">{formatTime()}</h1>
+//             )}
+//         </div>
+
+//     )
+// }
 
 
 export default DashboardTask

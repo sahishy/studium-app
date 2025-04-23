@@ -9,7 +9,7 @@ const TasksHeader = () => {
 
             <h1 className="flex-1">Due Date</h1>
             
-            <h1 className="flex-1">Time Estimate</h1>
+            <h1 className="flex-1">Circle</h1>
 
         </div>
     )

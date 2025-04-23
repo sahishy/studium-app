@@ -17,7 +17,7 @@ const Circles = () => {
             <Header text={'Circles'} profile={profile}/>
             <div className="flex-1 overflow-y-auto relative">
 
-                <div className='w-full h-full flex flex-col gap-4 lg:flex-row lg:gap-8 lg:items-start px-8 pb-8 pt-2 max-w-5xl m-auto'>
+                <div className='w-full h-full flex flex-col gap-4 lg:flex-row lg:gap-8 lg:items-start px-24 pb-8 pt-2 m-auto'>
 
                     <div className='flex-2 flex flex-col gap-8 pb-16'>
 

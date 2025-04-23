@@ -1,10 +1,17 @@
 import { useOutletContext, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Header from '../../components/main/Header.jsx'
 import { FaCalendar, FaList, FaTh } from 'react-icons/fa'
+import { useCircles } from '../../contexts/CirclesContext.jsx'
+import { useTasks } from '../../contexts/TasksContext.jsx'
+import { useSubjects } from '../../contexts/SubjectsContext.jsx'
 
 const Agenda = () => {
 
     const { profile } = useOutletContext()
+    const { circles } = useCircles()
+    const { user: userTasks, circle: circleTasks } = useTasks()
+    const { user: userSubjects, circle: circleSubjects } = useSubjects()
+
     const location = useLocation()
     const navigate = useNavigate()
 
@@ -25,8 +32,7 @@ const Agenda = () => {
         <div className="flex flex-col h-full relative">
             <div className="flex-1 overflow-y-auto relative">
                 <Header text={'Agenda'} profile={profile}/>
-                <div className='w-full flex flex-col items-start gap-8 px-8 pb-8 pt-2 max-w-5xl m-auto'>
-
+                <div className='w-full flex flex-col items-start gap-8 px-24 pb-8 pt-2 m-auto'>
 
                     <div className='p-2 bg-gray-100 text-gray-600 text-center text-sm rounded-lg flex gap-2'>
                         {tabs.map((tab, index) => (

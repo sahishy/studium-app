@@ -1,21 +1,29 @@
 import { useState, useEffect, useRef } from "react";
 import { updateTask, deleteTask } from "../../utils/taskUtils";
 
-import { FaDotCircle, FaClock, FaCheckCircle, FaHourglass, FaCalendar } from "react-icons/fa";
+import { FaDotCircle, FaClock, FaCheckCircle, FaHourglass, FaCalendar, FaUserFriends } from "react-icons/fa";
 import { FaFolder } from "react-icons/fa6";
 import { IoClose } from "react-icons/io5"
 import { getColor } from "../../utils/subjectUtils";
 import Dropdown from "../Popovers/Dropdown";
 import DatePicker from "../popovers/DatePicker";
 import TimePicker from "../popovers/TimePicker";
+import { useCircles } from "../../contexts/CirclesContext";
+import { useSubjects } from "../../contexts/SubjectsContext";
 
-const Task = ( { task, subjects, autoFocus, setNewTaskId, userCurrentTask } ) => {
+const Task = ( { profile, task, autoFocus, setNewTaskId, userCurrentTask } ) => {
+    
+    const circles = useCircles()
+    const { user: userSubjects, circle: circleSubjects } = useSubjects()
 
     const [status, setStatus] = useState(task.status);
     const [title, setTitle] = useState(task.title);
     const [subject, setSubject] = useState(task.subject);
     const [timeEstimate, setTimeEstimate] = useState(task.timeEstimate);
     const [dueDate, setDueDate] = useState(task.dueDate);
+    const [userId, setUserId] = useState(task.userId);
+    const [circleId, setCircleId] = useState(task.circleId);
+
     const [titleInput, setTitleInput] = useState(task.title);
     const titleInputRef = useRef(null);
 
@@ -25,7 +33,9 @@ const Task = ( { task, subjects, autoFocus, setNewTaskId, userCurrentTask } ) =>
         title: task.title,
         subject: task.subject,
         timeEstimate: task.timeEstimate,
-        dueDate: task.dueDate
+        dueDate: task.dueDate,
+        userId: task.userId,
+        circleId: task.circleId,
     });
 
     const [animate, setAnimate] = useState(false);
@@ -50,14 +60,16 @@ const Task = ( { task, subjects, autoFocus, setNewTaskId, userCurrentTask } ) =>
         }
         const prev = prevTaskRef.current;
 
-        if(status === prev.status && title === prev.title && subject === prev.subject && timeEstimate === prev.timeEstimate && JSON.stringify(dueDate) === JSON.stringify(prev.dueDate)) {
+        //if task is the exact same then don't update firebase doc
+        if(status === prev.status && title === prev.title && subject === prev.subject && timeEstimate === prev.timeEstimate && userId === prev.userId && circleId === prev.circleId
+            && JSON.stringify(dueDate) === JSON.stringify(prev.dueDate)) {
             return
         }
 
-        updateTask(task.uid, { status, title, subject, timeEstimate, dueDate }, userCurrentTask);
-        prevTaskRef.current = { status, title, subject, timeEstimate, dueDate };
+        updateTask(task.uid, { status, title, subject, timeEstimate, dueDate, userId, circleId }, userCurrentTask);
+        prevTaskRef.current = { status, title, subject, timeEstimate, dueDate, userId, circleId };
 
-    }, [status, title, subject, timeEstimate, dueDate, task.uid, userCurrentTask]);
+    }, [status, title, subject, timeEstimate, dueDate, userId, circleId, task.uid, userCurrentTask]);
 
     //sync local state with firebase state
     useEffect(() => {
@@ -70,13 +82,21 @@ const Task = ( { task, subjects, autoFocus, setNewTaskId, userCurrentTask } ) =>
             setTitleInput(task.title);
         }
         if(task.subject !== subject) {
-            setSubject(task.subject);
+            if(task.subject === '' || [...userSubjects, ...circleSubjects].some(x => x.uid === task.subject)) {
+                setSubject(task.subject);
+            }
         }
         if(task.timeEstimate !== timeEstimate) {
             setTimeEstimate(task.timeEstimate);
         }
         if(JSON.stringify(task.dueDate) !== JSON.stringify(dueDate)) {
             setDueDate(task.dueDate);
+        }
+        if(task.userId !== userId) {
+            setUserId(task.userId);
+        }
+        if(task.circleId !== circleId) {
+            setCircleId(task.circleId);
         }
 
         prevTaskRef.current = {
@@ -85,15 +105,24 @@ const Task = ( { task, subjects, autoFocus, setNewTaskId, userCurrentTask } ) =>
             subject: task.subject,
             timeEstimate: task.timeEstimate,
             dueDate: task.dueDate,
+            userId: task.userId,
+            circleId: task.circleId,
         }
 
-    }, [task.status, task.title, task.subject, task.timeEstimate, task.dueDate]);
+    }, [task.status, task.title, task.subject, task.timeEstimate, task.dueDate, task.userId, task.circleId]);
+
 
     useEffect(() => {
-        if(!subjects.some(x => x.uid === subject)) {
+        if(subject !== '' && ![...userSubjects, ...circleSubjects].some(x => x.uid === subject)) {
+            console.log(`remove unknown`);
             setSubject('');
         }
-    }, [subjects])
+    }, [userSubjects, circleSubjects])
+    useEffect(() => {
+        if(!circles.some(x => x.uid === circleId)) {
+            setCircleId(null);
+        }
+    }, [circles])
 
     useEffect(() => {
         if(autoFocus && titleInputRef.current) {
@@ -115,7 +144,7 @@ const Task = ( { task, subjects, autoFocus, setNewTaskId, userCurrentTask } ) =>
             </div>
 
             <div className="flex-1">
-                <SubjectInput subject={subject} setSubject={setSubject} subjects={subjects}/>
+                <SubjectInput subject={subject} setSubject={setSubject} subjects={userId ? userSubjects : circleSubjects.filter(x => x.circleId === circleId)}/>
             </div>
             
             <div className="flex-1">
@@ -123,8 +152,12 @@ const Task = ( { task, subjects, autoFocus, setNewTaskId, userCurrentTask } ) =>
             </div>
 
             <div className="flex-1">
-                <TimeEstimateInput timeEstimate={timeEstimate} setTimeEstimate={setTimeEstimate}/>
+                <CircleInput userId={profile.uid} circleId={circleId} setUserId={setUserId} setCircleId={setCircleId} circles={circles}/>
             </div>
+
+            {/* <div className="flex-1">
+                <TimeEstimateInput timeEstimate={timeEstimate} setTimeEstimate={setTimeEstimate}/>
+            </div> */}
 
             {/* <div className="p-2 rounded-lg hover:bg-gray-800/5 cursor-pointer">
                 <IoClose className="text-sm font-semibold text-gray-400"/>
@@ -225,6 +258,7 @@ const SubjectInput = ( { subject, setSubject, subjects } ) => {
         ]
     }
     const handleSelectOption = (option) => {
+        console.log(`change: ${option.uid}`)
         setSubject(option.uid)
     }
 
@@ -284,46 +318,93 @@ const DueDateInput = ( { dueDate, setDueDate } ) => {
 
 }
 
-const TimeEstimateInput = ( { timeEstimate, setTimeEstimate } ) => {
+const CircleInput = ( { userId, circleId, circles, setUserId, setCircleId } ) => {
 
-    const onSelectTime = (amount) => {
-        setTimeEstimate(amount);
+    const getCircle = () => {
+        const foundCircle = circles.find(x => x.uid === circleId);
+        return foundCircle != null ? foundCircle : {title:'Unknown'}
     }
 
-    const formatTime = () => {
-
-        let h = 0;
-        let m = 0;
-        
-        if(timeEstimate >= 60) {
-            h = Math.floor(timeEstimate / 60);
-        }
-        m = timeEstimate % 60;
-
-        return `${ h !== 0 ? `${h}hr${m !== 0 ? ` ${m}m` : ''}` : `${m}m` }`;
-
+    const truncateOption = (s) => {
+        return s.length <= 25 ? s : `${s.substring(0, 25)}...`
     }
-
+    
+    const getOptions = () => {
+        return [
+            { uid: null, label: <h1 className="text-gray-400">None</h1>, icon: null }
+            , ...circles.map((circle) => {
+                return { uid: circle.uid, label: truncateOption(circle.title), icon: <FaUserFriends/> }
+            })
+        ]
+    }
+    const handleSelectOption = (option) => {
+        setCircleId(option.uid)
+        setUserId(option.uid === null ? userId : null);
+    }
+    
     return (
-        
-        <TimePicker
-            onSelect={onSelectTime}
-            selectedTime={timeEstimate}
+        <Dropdown
+            options={getOptions()}
+            onSelect={handleSelectOption}
         >
             {(isOpen) =>
-                <button className="flex items-center bg-gray-100 rounded-lg cursor-pointer">
-                    <div className={`flex items-center gap-2 p-2 rounded-lg ${isOpen && "bg-gray-800/5"} hover:bg-gray-800/5 transition-colors duration-200`}>
-                        <FaHourglass className={timeEstimate != 0 ? 'text-gray-600' : 'text-gray-400'}/>
-                        {timeEstimate != 0 && (
-                            <h1 className="text-xs">{formatTime()}</h1>
+                <button
+                    className={`flex min-w-0 items-center bg-gray-100 rounded-lg cursor-pointer`}
+                >
+                    <div className={`flex min-w-0 items-center gap-2 p-2 rounded-lg ${isOpen && "bg-gray-800/5"} hover:bg-gray-800/5 transition-colors duration-200`}>
+                        <FaUserFriends className={circleId !== null ? 'text-gray-600' : 'text-gray-400'}/>
+                        {circleId !== null && (
+                            <h1 className="text-xs max-w-20 truncate">{getCircle().title}</h1>
                         )}
                     </div>
+
                 </button>
             }
-        </TimePicker>
-
+        </Dropdown>
     )
+
 }
+
+// const TimeEstimateInput = ( { timeEstimate, setTimeEstimate } ) => {
+
+//     const onSelectTime = (amount) => {
+//         setTimeEstimate(amount);
+//     }
+
+//     const formatTime = () => {
+
+//         let h = 0;
+//         let m = 0;
+        
+//         if(timeEstimate >= 60) {
+//             h = Math.floor(timeEstimate / 60);
+//         }
+//         m = timeEstimate % 60;
+
+//         return `${ h !== 0 ? `${h}hr${m !== 0 ? ` ${m}m` : ''}` : `${m}m` }`;
+
+//     }
+
+//     return (
+        
+//         <TimePicker
+//             onSelect={onSelectTime}
+//             selectedTime={timeEstimate}
+//         >
+//             {(isOpen) =>
+//                 <button className="flex items-center bg-gray-100 rounded-lg cursor-pointer">
+//                     <div className={`flex items-center gap-2 p-2 rounded-lg ${isOpen && "bg-gray-800/5"} hover:bg-gray-800/5 transition-colors duration-200`}>
+//                         <FaHourglass className={timeEstimate != 0 ? 'text-gray-600' : 'text-gray-400'}/>
+//                         {timeEstimate != 0 && (
+//                             <h1 className="text-xs">{formatTime()}</h1>
+//                         )}
+//                     </div>
+//                 </button>
+//             }
+//         </TimePicker>
+
+//     )
+// }
 
 
 export default Task

@@ -10,10 +10,7 @@ const DashboardTasks = ( { profile } ) => {
     const navigate = useNavigate()
 
     const { user: myTasks, circle: circleTasks } = useTasks()
-    const { user: mySubjects, circle: circleSubjects } = useSubjects()
-
     const tasks = [...myTasks, ...circleTasks]
-    const subjects = [...mySubjects, ...circleSubjects]
     
     
     return (
@@ -49,9 +46,9 @@ const DashboardTasks = ( { profile } ) => {
                     <>
                         <TasksHeader/>
 
-                        {tasks.slice(0, 3).sort((a, b) => new Date(a.dueDate.seconds) - new Date(b.dueDate.seconds)).map((task) => (
+                        {tasks.sort((a, b) => new Date(a.dueDate.seconds) - new Date(b.dueDate.seconds)).slice(0, 3).map((task) => (
 
-                            <DaskboardTask key={task.uid} task={task} subjects={subjects} userCurrentTask={profile.currentTask}/>
+                            <DaskboardTask key={task.uid} task={task} userCurrentTask={profile.currentTask}/>
 
                         ))}
                     </>

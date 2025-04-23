@@ -37,6 +37,8 @@ const updateTask = async (taskId, taskData, userCurrentTask) => {
     const taskSnap = await getDoc(taskRef)
 
     if(taskSnap.data().userId) {
+
+        //update current task user is doing
         let taskDataWithUpdatedStatusAndTitle = taskSnap.data();
         taskDataWithUpdatedStatusAndTitle.status = taskData.status;
         taskDataWithUpdatedStatusAndTitle.title = taskData.title;
@@ -46,6 +48,7 @@ const updateTask = async (taskId, taskData, userCurrentTask) => {
         } else if(userCurrentTask && userCurrentTask.uid === taskId) {
             updateCurrentTask(taskSnap.data().userId, null)
         }
+
     }
     if(taskData.status === 'Completed') {
         completeTask(taskId);
@@ -160,8 +163,10 @@ const formatDate = (seconds) => {
 
     if(difference < 0) {
         return new Date(date).toLocaleDateString();
-    } else if(difference < lengths.week) {
+    } else if(difference < lengths.week && new Date(date).getDay() > new Date(today).getDay()) {
         return new Date(date).toLocaleDateString('default', { weekday: 'long' });
+    } else if(difference < lengths.week && new Date(date).getDay() < new Date(today).getDay()) {
+        return `Next ${new Date(date).toLocaleDateString('default', { weekday: 'long' })}`;
     } else if(difference < lengths.year) {
 
         let nth = 'th'
@@ -205,7 +210,7 @@ const useUserTasks = (userId) => {
             }));
             setUserTasks(data);
         });
-    
+
         return () => unsubscribe();
     }, [userId]);
   

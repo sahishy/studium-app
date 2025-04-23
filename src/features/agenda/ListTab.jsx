@@ -1,44 +1,37 @@
 import Task from '../../components/agenda/Task.jsx'
 import TasksHeader from '../../components/agenda/TasksHeader.jsx'
-import { useCircles } from '../../contexts/CirclesContext.jsx'
 import { useTasks } from '../../contexts/TasksContext.jsx'
 import { createTask, formatDate } from '../../utils/taskUtils.jsx'
-
 import { PiCaretDownFill, PiCaretRightFill } from 'react-icons/pi'
 import { FaPlus } from 'react-icons/fa'
 import { useOutletContext } from 'react-router-dom'
 import { useState } from 'react'
-import { useSubjects } from '../../contexts/SubjectsContext.jsx'
 import Subject from '../../components/agenda/Subject.jsx'
 import SubjectModal from '../../components/modals/SubjectModal.jsx'
 import { useModal } from '../../contexts/ModalContext.jsx'
+import { useSubjects } from '../../contexts/SubjectsContext.jsx'
 
 const ListTab = () => {
 
     const { profile } = useOutletContext()
-    const circles = useCircles()
 
     const { user: userTasks, circle: circleTasks } = useTasks()
-    const { user: userSubjects, circle: circleSubjects } = useSubjects()
+    const tasks = [...userTasks, ...circleTasks];
+    const { user: userSubjects } = useSubjects()
 
     const [collapsedDates, setCollapsedDates] = useState([]);
-    const [collapsedGroups, setCollapsedGroups] = useState([]);
     const [newTaskId, setNewTaskId] = useState(null)
 
-    const userTasksWithNoDueDate = userTasks.filter(x => x.dueDate === -1)
-    const userTasksWithDueDate = userTasks.filter(x => x.dueDate !== -1)
-    const userPastTasks = userTasksWithDueDate.filter(task => new Date(task.dueDate.seconds * 1000) < new Date())
-    const userFutureTasks = userTasksWithDueDate.filter(task => new Date(task.dueDate.seconds * 1000) >= new Date())
-    const userGroupedPastTasks = Object.groupBy(userPastTasks, task => new Date(task.dueDate.seconds * 1000).toLocaleDateString())
-    const userGroupedFutureTasks = Object.groupBy(userFutureTasks, task => new Date(task.dueDate.seconds * 1000).toLocaleDateString())
+    const tasksWithNoDueDate = tasks.filter(x => x.dueDate === -1)
+    const tasksWithDueDate = tasks.filter(x => x.dueDate !== -1)
+    const pastTasks = tasksWithDueDate.filter(task => new Date(task.dueDate.seconds * 1000) < new Date())
+    const futureTasks = tasksWithDueDate.filter(task => new Date(task.dueDate.seconds * 1000) >= new Date())
+    const groupedPastTasks = Object.groupBy(pastTasks, task => new Date(task.dueDate.seconds * 1000).toLocaleDateString())
+    const groupedFutureTasks = Object.groupBy(futureTasks, task => new Date(task.dueDate.seconds * 1000).toLocaleDateString())
 
-    const circleGroupedTasks = Object.groupBy(circleTasks, task => task.circleId);
     
     const handleCollapseDateToggle = (date) => {
         setCollapsedDates(collapsedDates.includes(date) ? collapsedDates.filter(x => x !== date) : [...collapsedDates, date])
-    }
-    const handleCollapseGroupToggle = (group) => {
-        setCollapsedGroups(collapsedGroups.includes(group) ? collapsedGroups.filter(x => x !== group) : [...collapsedGroups, group])
     }
 
     return (
@@ -60,11 +53,11 @@ const ListTab = () => {
 
 
             <div className='w-full flex flex-col gap-4'>
-                <h1 className='text-lg text-gray-600 font-extrabold'>My Work</h1>
+                <h1 className='text-lg text-gray-600 font-extrabold'>Work</h1>
             
                 <div className='w-full flex flex-col'>
                     {/* past tasks, show before all other tasks */}
-                    {Object.keys(userGroupedPastTasks).sort((a, b) => new Date(a) - new Date(b)).map(date => (
+                    {Object.keys(groupedPastTasks).sort((a, b) => new Date(a) - new Date(b)).map(date => (
                         <div key={date} className='w-full flex flex-col'>
                             <button
                                 onClick={() => handleCollapseDateToggle(date)}
@@ -73,17 +66,17 @@ const ListTab = () => {
                                 <div className='text-sm text-gray-600'>
                                     {collapsedDates.includes(date) ? <PiCaretRightFill/> : <PiCaretDownFill/>}
                                 </div>
-                                <h1 className={`text-sm text-red-400 font-extrabold`}>{formatDate(userGroupedPastTasks[date][0].dueDate.seconds)}</h1>
+                                <h1 className={`text-sm text-red-400 font-extrabold`}>{formatDate(groupedPastTasks[date][0].dueDate.seconds)}</h1>
                             </button>
 
                             <div className={`w-full flex-col pl-8 ${collapsedDates.includes(date) ? 'hidden' : 'flex mb-4'}`}>
                                 <TasksHeader/>
 
-                                {userGroupedPastTasks[date].sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
-                                    <Task key={task.uid} profile={profile} task={task} subjects={userSubjects} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId}/>
+                                {groupedPastTasks[date].sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
+                                    <Task key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId}/>
                                 ))}
 
-                                <AddTaskButton profile={profile} dueDate={new Date(userGroupedPastTasks[date][0].dueDate.seconds * 1000)} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
+                                <AddTaskButton profile={profile} dueDate={new Date(groupedPastTasks[date][0].dueDate.seconds * 1000)} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
                             </div>
                         </div>
                     ))}
@@ -103,8 +96,8 @@ const ListTab = () => {
                         <div className={`w-full flex-col pl-8 ${collapsedDates.includes('no-due-date') ? 'hidden' : 'flex mb-4'}`}>
                             <TasksHeader/>
 
-                            {userTasksWithNoDueDate.sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
-                                <Task key={task.uid} task={task} subjects={userSubjects} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
+                            {tasksWithNoDueDate.sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
+                                <Task key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
                             ))}
 
                             <AddTaskButton profile={profile} dueDate={-1} tasks={userTasks} setNewTaskId={setNewTaskId}/>
@@ -113,7 +106,7 @@ const ListTab = () => {
                     </div>
 
                     {/* future tasks */}
-                    {Object.keys(userGroupedFutureTasks).sort((a, b) => new Date(a) - new Date(b)).map(date => (
+                    {Object.keys(groupedFutureTasks).sort((a, b) => new Date(a) - new Date(b)).map(date => (
                         <div key={date} className='w-full flex flex-col'>
                             <button
                                 onClick={() => handleCollapseDateToggle(date)}
@@ -122,17 +115,17 @@ const ListTab = () => {
                                 <div className='text-sm text-gray-600'>
                                     {collapsedDates.includes(date) ? <PiCaretRightFill/> : <PiCaretDownFill/>}
                                 </div>
-                                <h1 className={`text-sm text-gray-600 font-extrabold`}>{formatDate(userGroupedFutureTasks[date][0].dueDate.seconds)}</h1>
+                                <h1 className={`text-sm text-gray-600 font-extrabold`}>{formatDate(groupedFutureTasks[date][0].dueDate.seconds)}</h1>
                             </button>
 
                             <div className={`w-full flex-col pl-8 ${collapsedDates.includes(date) ? 'hidden' : 'flex mb-4'}`}>
                                 <TasksHeader/>
 
-                                {userGroupedFutureTasks[date].sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
-                                    <Task key={task.uid} task={task} subjects={userSubjects} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
+                                {groupedFutureTasks[date].sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
+                                    <Task key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
                                 ))}
 
-                                <AddTaskButton profile={profile} dueDate={new Date(userGroupedFutureTasks[date][0].dueDate.seconds * 1000)} setNewTaskId={setNewTaskId}/>
+                                <AddTaskButton profile={profile} dueDate={new Date(groupedFutureTasks[date][0].dueDate.seconds * 1000)} setNewTaskId={setNewTaskId}/>
                             </div>
                         </div>
                     ))}
@@ -142,7 +135,7 @@ const ListTab = () => {
 
 
 
-
+{/* 
             {circles.length !== 0 && (
                 <div className='w-full flex flex-col gap-4'>
                     <h1 className='text-lg text-gray-600 font-extrabold'>Circle Work</h1>
@@ -175,7 +168,7 @@ const ListTab = () => {
                         </div>
                     )}
                 </div>                           
-            )}
+            )} */}
 
             <div className='pb-16'></div>
 
