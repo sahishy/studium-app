@@ -2,17 +2,101 @@
 @import 'tailwindcss';
 
 html {
-    background-color: #f9fafb;
+    background-color: var(--color-background0);
 
     font-family: "Quicksand", sans-serif;
     font-style: normal;
 
-    @apply text-gray-800;
+    @apply text-text0;
     @apply font-semibold;
 }    
 
 * {
     user-select: none;
     -webkit-user-drag: none;
-    @apply focus:outline-yellow-400
+    @apply focus:outline-gray-200;
 }
+
+@media (prefers-color-scheme: light) {
+
+    @theme {
+
+        --color-primary0: theme(--color-gray-800);
+        --color-primary1: theme(--color-gray-900);
+
+        --color-background0: theme(--color-white);
+        --color-background1: theme(--color-white);
+        --color-background2: oklch(97.6% 0.0025 256.0);
+        --color-background3: theme(--color-gray-100);
+        --color-background4: #f5f6f7;
+        --color-background5: oklch(70.7% 0.022 261.325 / 0.1);
+
+        --color-text0: theme(--color-gray-800);
+        --color-text1: theme(--color-gray-600);
+        --color-text2: theme(--color-gray-400);
+        --color-text3: theme(--color-gray-300);
+        --color-text4: white;
+
+        --color-border: theme(--color-gray-200);
+        --color-shadow: oklch(70.7% 0.022 261.325 / 0.1);
+        --color-backdrop: oklch(27.8% 0.033 256.848 / 0.2);
+
+    }
+
+}
+
+/* @media (prefers-color-scheme: dark) {
+
+	@theme {
+
+        --color-primary0: white;
+        --color-primary1: #dfdfe0;
+
+        --color-background0: #23242c;
+        --color-background1: #292A33;
+        --color-background2: #1e1f27;
+        --color-background3: #37383f;
+        --color-background4: #2f3039;
+        --color-background5: oklch(70.7% 0.022 261.325 / 0.1);
+
+        --color-text0: #FFFFFF;
+        --color-text1: #FFFFFF;
+        --color-text2: #9e9fa2;
+        --color-text3: #4f5055;
+        --color-text4: theme(--color-gray-600);
+
+        --color-border: #33343c;
+        --color-shadow: transparent;
+        --color-backdrop: #0a0a0d66;
+
+	}
+
+} */
+
+/* @media (prefers-color-scheme: dark) {
+
+	@theme {
+
+        --color-primary0: white;
+        --color-primary1: #dfdfe0;
+
+        --color-background0: #28282c;
+        --color-background1: #303034;
+        --color-background2: #242428;
+        --color-background3: #38383c;
+        --color-background4: #404044;
+        --color-background5: #48484c60;
+
+        --color-text0: #FFFFFF;
+        --color-text1: #FFFFFF;
+        --color-text2: #9e9fa2;
+        --color-text3: #4f5055;
+        --color-text4: theme(--color-gray-600);
+
+        --color-border: #38383c;
+        --color-shadow: transparent;
+        --color-backdrop: #0a0a0d66;
+
+	}
+
+} */

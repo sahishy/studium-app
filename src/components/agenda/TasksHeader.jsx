@@ -1,7 +1,7 @@
 const TasksHeader = () => {
     return (
 
-        <div className={`w-full flex justify-between items-center gap-4 p-2 text-sm font-semibold text-gray-400`}>
+        <div className={`w-full flex justify-between items-center gap-4 p-2 text-sm font-semibold text-text3`}>
 
             <h1 className="flex-2">Title</h1>
 

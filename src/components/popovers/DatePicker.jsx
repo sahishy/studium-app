@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BasePopover from './BasePopover';
 
 import { PiCaretRightFill, PiCaretLeftFill } from 'react-icons/pi';
+import Button from '../../pages/main/Button';
 
 const DatePicker = ({ children, selectedDate, onSelect, className = '' }) => {
 
@@ -82,21 +83,21 @@ const DatePicker = ({ children, selectedDate, onSelect, className = '' }) => {
         const weeks = Calendar();
 
         return (
-            <div className="rounded-lg w-max flex flex-col gap-2 text-sm">
+            <div className="rounded-xl w-max flex flex-col gap-2 text-sm">
 
                 <div className="flex justify-between items-center">
 
-                    <button onClick={handlePrevMonth} className="p-2 border-2 border-gray-200 border-b-4 rounded-lg hover:bg-gray-800/5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200">
+                    <Button onClick={handlePrevMonth} type={'secondary'} className={'!p-2'}>
                         <PiCaretLeftFill/>
-                    </button>
+                    </Button>
 
                     <div className="font-extrabold p-2">
                         {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
                     </div>
 
-                    <button onClick={handleNextMonth} className="p-2 border-2 border-gray-200 border-b-4 rounded-lg hover:bg-gray-800/5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200">
+                    <Button onClick={handleNextMonth} type={'secondary'} className={'!p-2'}>
                         <PiCaretRightFill/>
-                    </button>
+                    </Button>
 
                 </div>
 
@@ -126,11 +127,11 @@ const DatePicker = ({ children, selectedDate, onSelect, className = '' }) => {
                                         onClick={() => {
                                             setCurrentDate(dayData.date)
                                         }}
-                                        className={`aspect-square cursor-pointer text-center p-1 rounded-lg flex justify-center items-center border-2 transition-colors duration-200
-                                            ${dayData.currentMonth ? 'text-gray-800' : 'text-gray-400'}
-                                            ${isToday ? 'border-gray-200' : 'border-transparent'}
-                                            ${isSelected ? 'bg-gray-800 border-gray-800 text-white hover:bg-black' : 
-                                                (isPreviousSelected ? 'bg-gray-100 hover:bg-gray-800/5' : 'bg-white hover:bg-gray-800/5')}`}
+                                        className={`aspect-square cursor-pointer text-center p-1 rounded-xl flex justify-center items-center border-2 transition-colors duration-200
+                                            ${dayData.currentMonth ? 'text-text0' : 'text-text2'}
+                                            ${isToday ? 'border-border' : 'border-transparent'}
+                                            ${isSelected ? 'bg-primary0 border-primary1 text-text4 hover:bg-primary1' : 
+                                                (isPreviousSelected ? 'bg-background3 hover:bg-background5' : 'bg-background0 hover:bg-background5')}`}
                                     >
                                         {dayData.date.getDate()}
                                     </div>
@@ -145,24 +146,19 @@ const DatePicker = ({ children, selectedDate, onSelect, className = '' }) => {
                 </div>
 
                 <div className='flex gap-2 m-2'>
-                    <button
-                        onClick={() => {
-                            handleDateSelect(-1);
-                            closePopover();
-                        }}
-                        className='w-full p-2 border-2 border-gray-200 border-b-4 rounded-lg hover:bg-gray-800/5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
-                    >
+                    <Button onClick={() => {
+                        handleDateSelect(-1);
+                        closePopover();
+                    }} type={'secondary'} className={'w-full py-2'}>
                         Clear
-                    </button>
-                    <button
-                        onClick={() => {
-                            handleDateSelect(currentDate);
-                            closePopover();
-                        }}
-                        className={`w-full p-2 text-white border-black border-b-4 rounded-lg bg-gray-800 hover:bg-black active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200`}
-                    >
+                    </Button>
+
+                    <Button onClick={() => {
+                        handleDateSelect(currentDate);
+                        closePopover();
+                    }} type={'primary'} className={'w-full py-2'}>
                         Save
-                    </button>    
+                    </Button>
                 </div>
 
             </div>

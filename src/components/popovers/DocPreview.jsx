@@ -7,7 +7,7 @@ const DocPreview = ({ children, doc, className = '' }) => {
         <div>
             <iframe
                 src={`https://drive.google.com/file/d/${doc.id}/preview`}
-                className={`${doc.type === 'presentation' || doc.type === 'spreadsheet' ? 'min-w-[588px] min-h-[360px]' : 'min-w-[425px] min-h-[550px]'} rounded-lg`}
+                className={`${doc.type === 'presentation' || doc.type === 'spreadsheet' ? 'min-w-[588px] min-h-[360px]' : 'min-w-[425px] min-h-[550px]'} rounded-xl`}
             />
         </div>
   );

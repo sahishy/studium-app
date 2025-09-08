@@ -7,7 +7,7 @@ const Dropdown = ({ children, options, onSelect, className = '' }) => {
         <ul className="flex flex-col">
             {options.map((option, index) =>
                 option.isDivider ? (
-                    <hr key={index} className="my-2 border-1 border-gray-200 rounded-full" />
+                    <hr key={index} className="my-2 border-1 border-border rounded-full" />
                 ) : (
                     <li
                         key={index}
@@ -17,7 +17,7 @@ const Dropdown = ({ children, options, onSelect, className = '' }) => {
                                 closePopover();
                             }
                         }}
-                        className="flex gap-2 items-center justify-start p-2 text-gray-600 text-sm font-semibold rounded-lg hover:bg-gray-800/5 cursor-pointer"
+                        className="flex gap-2 items-center justify-start p-2 text-text1 text-sm font-semibold rounded-xl hover:bg-background5 cursor-pointer"
                     >
                         {option.icon}
                         <div className="text-sm truncate">{option.label}</div>

@@ -1,3 +1,4 @@
+import Button from "../../pages/main/Button";
 import { deleteSubject } from "../../utils/subjectUtils"
 import { getColor } from "../../utils/subjectUtils";
 
@@ -20,29 +21,20 @@ const DeleteSubjectModal = ( { subject, closeModal } ) => {
                 Are you sure?
             </h1>
 
-            <p className="text-center text-lg text-gray-600">
+            <p className="text-center text-lg text-text1">
                 Delete '
                 <span className={`font-semibold ${getColor(subject.color).textStyle}`}>{subject.title}</span> 
                 '? This action can not be reversed.
             </p>
 
             <form onSubmit={handleDelete} className="flex gap-4">
-
-                <button 
-                    type='button' 
-                    onClick={() => closeModal()}
-                    className='w-full p-4 border-2 border-gray-200 border-b-4 rounded-lg hover:bg-gray-800/5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
-                >
+                <Button onClick={() => closeModal()} type={'secondary'} className={'w-full py-4'}>
                     Cancel
-                </button>
+                </Button>
 
-                <button 
-                    type='submit' 
-                    className='w-full p-4 text-white border-red-500 border-b-4 rounded-lg bg-red-400 hover:bg-red-500 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
-                >
+                <Button htmlType={'submit'} type={'negative'} className={'w-full py-4'}>
                     Delete
-                </button>
-
+                </Button>
             </form>
 
         </div>

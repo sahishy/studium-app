@@ -11,11 +11,11 @@ const CalendarTab = () => {
     return (
         <div className="w-full flex flex-col gap-4">
 
-            <h1 className='text-gray-400'>Coming soon!</h1>
+            <h1 className='text-text2'>Coming soon!</h1>
 
             {/* <h1 className="text-2xl text-center">{currentMonth.toLocaleDateString('default', { month: 'long', year: 'numeric' })}</h1>
 
-            <div className="w-full grid grid-cols-7 border-1 border-gray-200">
+            <div className="w-full grid grid-cols-7 border-2 border-border">
                     {weeks.map((week, weekIndex) =>
                         week.map((dayData, dayIndex) => {
                             
@@ -24,11 +24,11 @@ const CalendarTab = () => {
                             return (
                                 <div
                                     key={`${weekIndex}-${dayIndex}`}
-                                    className={`cursor-pointer text-center p-2 flex flex-col gap-2 border-1 transition-colors duration-200
+                                    className={`cursor-pointer text-center p-2 flex flex-col gap-2 border-2 transition-colors duration-200
                                         text-xs min-h-28 max-h-28
-                                        ${dayData.currentMonth ? 'text-gray-800' : 'text-gray-400'}
-                                        ${isToday ? 'border-gray-200' : 'border-gray-200'}
-                                        'bg-gray-100 hover:bg-gray-800/5`}
+                                        ${dayData.currentMonth ? 'text-text0' : 'text-text2'}
+                                        ${isToday ? 'border-border' : 'border-border'}
+                                        'bg-background3 hover:bg-background5`}
                                 >
 
                                     <div className="flex justify-end">
@@ -38,7 +38,7 @@ const CalendarTab = () => {
                                     <div className="flex justify-start gap-2">
 
                                         {userTasks.filter(x => new Date(x.dueDate.seconds * 1000).toLocaleDateString() === dayData.date.toLocaleDateString()).map((task) => (
-                                            <div className="flex justify-start bg-yellow-100 p-2 w-full rounded-lg">{task.title}</div>
+                                            <div className="flex justify-start bg-yellow-400/15 p-2 w-full rounded-xl">{task.title}</div>
                                         ))}
                                     
                                     </div>

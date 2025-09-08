@@ -1,4 +1,5 @@
 import { FaFire } from "react-icons/fa6";
+import Card from "../../pages/main/Card";
 
 const DashboardStreak = ( { profile } ) => {
 
@@ -15,18 +16,18 @@ const DashboardStreak = ( { profile } ) => {
     }
 
     return (
-        <div className="flex flex-col gap-4 p-4 bg-white rounded-lg border-2 border-gray-200">
+        <Card>
 
             <div className="flex items-center gap-4"> 
-                <div className="p-4 bg-gray-100 rounded-lg">
+                <div className="p-4 bg-background3 rounded-xl">
                     <FaFire className="text-2xl text-orange-400"/>
                 </div>
-                <h1 className="text-2xl font-extrabold text-gray-600">{profile.streak} day streak!</h1>
+                <h1 className="text-2xl font-extrabold text-text1">{profile.streak} day streak!</h1>
             </div>
 
-            <p className="text-sm text-gray-400">{getRandomStatus()}</p>
+            <p className="text-sm text-text2">{getRandomStatus()}</p>
 
-        </div>
+        </Card>
     )
 
 }

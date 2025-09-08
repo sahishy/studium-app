@@ -39,7 +39,7 @@ const MainScreen = () => {
     if(profileLoading) {
         return (
             <div className="flex items-center justify-center h-screen">
-                <p className="text-lg font-semibold text-gray-600">Loading profile...</p>
+                <p className="text-lg font-semibold text-text1">Loading profile...</p>
             </div>
         )
     }
@@ -52,10 +52,10 @@ const MainScreen = () => {
 
                         <ActivityHandler profile={profile}/>
 
-                        <div className="flex min-h-screen bg-white">
+                        <div className="flex min-h-screen">
 
                             <Sidebar profile={profile}/>
-                            <main className="flex-1 h-screen">
+                            <main className="flex-1 h-screen max-w-[2560px] mx-auto">
                                 <Outlet context={{ profile }}/>
                             </main>
 

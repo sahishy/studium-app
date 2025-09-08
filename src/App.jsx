@@ -1,21 +1,25 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import PrivateRoute from './routes/PrivateRoute'
-import MainScreen from './features/main/MainScreen'
-import Dashboard from './features/dashboard/Dashboard'
-import Agenda from './features/agenda/Agenda'
-import AgendaIndexRedirect from './features/agenda/AgendaRedirect'
-import ListTab from './features/agenda/ListTab'
-import CalendarTab from './features/agenda/CalendarTab'
-import BoardTab from './features/agenda/BoardTab'
-import Buddy from './features/buddy/Buddy'
-import Circles from './features/circles/Circles'
-import CirclesOverview from './features/circles/CirclesOverview'
-import Account from './features/account/Account'
-import Login from './features/auth/Login'
-import Signup from './features/auth/Signup'
-import Landing from './features/landing/Landing'
+import MainScreen from './pages/main/MainScreen'
+import Dashboard from './pages/dashboard/Dashboard'
+import Agenda from './pages/agenda/Agenda'
+import AgendaIndexRedirect from './pages/agenda/AgendaIndexRedirect'
+import ListTab from './pages/agenda/ListTab'
+import CalendarTab from './pages/agenda/CalendarTab'
+import BoardTab from './pages/agenda/BoardTab'
+import Buddy from './pages/buddy/Buddy'
+import Circles from './pages/circles/Circles'
+import CirclesOverview from './pages/circles/CirclesOverview'
+import Account from './pages/account/Account'
+import AccountIndexRedirect from './pages/account/AccountIndexRedirect'
+import ProfileTab from './pages/account/ProfileTab'
+import SettingsTab from './pages/account/SettingsTab'
+import Login from './pages/auth/Login'
+import Signup from './pages/auth/Signup'
+import Landing from './pages/landing/Landing'
 import { ModalProvider } from './contexts/ModalContext'
-import JoinCircle from './features/circles/JoinCircle'
+import JoinCircle from './pages/circles/JoinCircle'
+import Subjects from './pages/subjects/Subjects'
 
 export default function App() {
 	return (
@@ -44,16 +48,22 @@ export default function App() {
 					<Route path="board" element={<BoardTab/>} />
 				</Route>
 
-				<Route path="/buddy" element={<Buddy/>}/>
+				<Route path="/subjects" element={<Subjects/>}/>
 
 				<Route path="/circles">
 					<Route index element={<Circles/>}/>
 					<Route path=":circleId" element={<CirclesOverview/>}/>
 				</Route>
-
 				<Route path="/join/:inviteCode" element={<JoinCircle/>}/>
 
-				<Route path="/account" element={<Account/>}/>
+				<Route path="/buddy" element={<Buddy/>}/>
+
+				<Route path="/account" element={<Account/>}>
+					<Route index element={<AccountIndexRedirect/>}/>
+					<Route path="profile" element={<ProfileTab/>}/>
+					<Route path="settings" element={<SettingsTab/>}/>
+				</Route>
+
 
 			</Route>
 

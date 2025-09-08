@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { createCircle } from '../../utils/circleUtils';
+import Button from '../../pages/main/Button';
 
 const CreateCircleModal = ( { profile, closeModal } ) => {
 
@@ -36,28 +37,21 @@ const CreateCircleModal = ( { profile, closeModal } ) => {
                     placeholder="Title*"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-gray-600"
+                    className="w-full p-4 border-2 border-border rounded-xl focus:outline-gray-400"
                     required={true}
                 />
 
                 {isCreating ? (
-                    <p className="text-gray-400 text-center">Creating...</p>
+                    <p className="text-text2 text-center">Creating...</p>
                 ) : (
                     <div className='flex gap-4 mt-4'>
-                        <button
-                            type='button' 
-                            onClick={() => closeModal()}
-                            className='w-full p-4 border-2 border-gray-200 border-b-4 rounded-lg hover:bg-gray-800/5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
-                        >
+                        <Button onClick={() => closeModal()} type={'secondary'} className={'w-full py-4'}>
                             Cancel
-                        </button>
+                        </Button>
 
-                        <button 
-                            type='submit' 
-                            className='w-full p-4 text-white border-black border-b-4 rounded-lg bg-gray-800 hover:bg-black active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
-                        >
+                        <Button htmlType={'submit'} type={'primary'} className={'w-full py-4'}>
                             Create
-                        </button>
+                        </Button>
                     </div>
                 )}
 

@@ -2,13 +2,13 @@ import { doc, updateDoc, deleteDoc, getFirestore, collection, addDoc, onSnapshot
 import { useEffect, useState, useMemo } from 'react';
 
 const colors = [
-    { name: 'gray', textStyle: 'text-gray-400', bgStyle: 'bg-gray-100' },
-    { name: 'red', textStyle: 'text-red-400',  bgStyle: 'bg-red-200' },
-    { name: 'orange', textStyle: 'text-orange-400',  bgStyle: 'bg-orange-200' },
-    { name: 'yellow', textStyle: 'text-yellow-400', bgStyle: 'bg-yellow-200' },
-    { name: 'green', textStyle: 'text-emerald-400', bgStyle: 'bg-emerald-200' },
-    { name: 'blue', textStyle: 'text-sky-400', bgStyle: 'bg-sky-200' },
-    { name: 'purple', textStyle: 'text-fuchsia-400', bgStyle: 'bg-fuchsia-200' },
+    { name: 'gray', textStyle: 'text-text2', bgStyle: 'bg-background3' },
+    { name: 'red', textStyle: 'text-red-400',  bgStyle: 'bg-red-400/15' },
+    { name: 'orange', textStyle: 'text-orange-400',  bgStyle: 'bg-orange-400/15' },
+    { name: 'yellow', textStyle: 'text-yellow-400', bgStyle: 'bg-yellow-400/15' },
+    { name: 'green', textStyle: 'text-emerald-400', bgStyle: 'bg-emerald-400/15' },
+    { name: 'blue', textStyle: 'text-sky-400', bgStyle: 'bg-sky-400/15' },
+    { name: 'purple', textStyle: 'text-fuchsia-400', bgStyle: 'bg-fuchsia-400/15' },
 ]
 const googlePatterns = [
     { type: 'document', regex: /https?:\/\/docs\.google\.com\/document\/d\/([^/]+)/ },
@@ -56,6 +56,7 @@ const createSubject = async ( { userId, circleId, subjectData } ) => {
 
     const subject = {
         title: subjectData.title,
+        day: subjectData.day,
         color: subjectData.color,
         link: subjectData.link,
         createdAt: new Date(),

@@ -4,6 +4,8 @@ import { FaCalendar, FaList, FaTh } from 'react-icons/fa'
 import { useCircles } from '../../contexts/CirclesContext.jsx'
 import { useTasks } from '../../contexts/TasksContext.jsx'
 import { useSubjects } from '../../contexts/SubjectsContext.jsx'
+import BottomFade from '../main/BottomFade.jsx'
+import Tooltip from '../../components/tooltips/Tooltip.jsx'
 
 const Agenda = () => {
 
@@ -17,8 +19,8 @@ const Agenda = () => {
 
     const tabs = [
         { name: 'list', icon: <FaList/> },
+        { name: 'board', icon: <FaTh/> },
         { name: 'calendar', icon: <FaCalendar/> },
-        { name: 'board', icon: <FaTh/> }
     ]
     const currentTab = tabs.findIndex(tab => location.pathname.includes(tab.name))
 
@@ -32,9 +34,9 @@ const Agenda = () => {
         <div className="flex flex-col h-full relative">
             <div className="flex-1 overflow-y-auto relative">
                 <Header text={'Agenda'} profile={profile}/>
-                <div className='w-full flex flex-col items-start gap-8 px-24 pb-8 pt-2 m-auto'>
+                <div className='w-full flex flex-col items-start gap-4 px-24 pb-8 pt-2 m-auto'>
 
-                    <div className='p-2 bg-gray-100 text-gray-600 text-center text-sm rounded-lg flex gap-2'>
+                    <div className='p-1 bg-background2 text-text1 text-center text-sm rounded-xl flex gap-1'>
                         {tabs.map((tab, index) => (
                             <TabButton 
                                 key={tab.name}
@@ -53,7 +55,7 @@ const Agenda = () => {
                 </div>
                 
             </div>
-            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-white to-transparent"/>
+            <BottomFade/>
         </div>
     ) 
 }
@@ -63,14 +65,16 @@ const TabButton = ( { tab, isCurrent, onClick } ) => {
     const label = tab.name.charAt(0).toUpperCase() + tab.name.slice(1)
 
     return (
-        <button 
-            onClick={onClick}
-            className={`flex-1 px-4 py-2 rounded-lg border-2
-                ${isCurrent ? 'bg-white hover:bg-gray-50 border-gray-200 text-gray-600' : 'hover:bg-gray-800/5 border-transparent text-gray-400'}
-                transition-colors duration-200 cursor-pointer`}
-        >
-            {tab.icon}
-        </button>
+        <Tooltip text={label}>
+            <button 
+                onClick={onClick}
+                className={`flex-1 px-4 py-2 rounded-xl border-2
+                    ${isCurrent ? 'bg-background1 border-border text-text1' : 'hover:bg-background5 border-transparent text-text2'}
+                    transition-colors duration-200 cursor-pointer`}
+            >
+                {tab.icon}
+            </button>
+        </Tooltip>
     )
 }
 

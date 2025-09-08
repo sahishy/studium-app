@@ -3,6 +3,7 @@ import { getFirestore, writeBatch, doc } from 'firebase/firestore';
 import { useCircleTasks }    from '../../utils/taskUtils.jsx';
 import { useCircleSubjects } from '../../utils/subjectUtils.jsx'
 import { useNavigate } from "react-router-dom";
+import Button from "../../pages/main/Button.jsx";
 
 const DeleteCircleModal = ( { circle, closeModal } ) => {
 
@@ -45,32 +46,23 @@ const DeleteCircleModal = ( { circle, closeModal } ) => {
                 Are you sure?
             </h1>
 
-            <p className="text-center text-lg text-gray-600">
+            <p className="text-center text-lg text-text1">
                 Delete '
                 <span className={`font-semibold`}>{circle.title}</span> 
                 '? This action can not be reversed.
             </p>
 
             {isDeleting ? (
-                <p className="text-gray-400 text-center">Deleting...</p>
+                <p className="text-text2 text-center">Deleting...</p>
             ) : (
                 <form onSubmit={handleDelete} className="flex gap-4">
-
-                    <button 
-                        type='button' 
-                        onClick={() => closeModal()}
-                        className='w-full p-4 border-2 border-gray-200 border-b-4 rounded-lg hover:bg-gray-800/5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
-                    >
+                    <Button onClick={() => closeModal()} type={'secondary'} className={'w-full py-4'}>
                         Cancel
-                    </button>
+                    </Button>
 
-                    <button 
-                        type='submit' 
-                        className='w-full p-4 text-white border-red-500 border-b-4 rounded-lg bg-red-400 hover:bg-red-500 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
-                    >
+                    <Button htmlType={'submit'} type={'negative'} className={'w-full py-4'}>
                         Delete
-                    </button>
-
+                    </Button>
                 </form>                
             )}
 

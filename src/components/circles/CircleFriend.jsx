@@ -5,7 +5,7 @@ const CircleFriend = ( { profile } ) => {
     const isOpen = false;
 
     return (
-        <div className='p-2 rounded-lg border-2 border-gray-200 flex items-center gap-4 min-w-0'>
+        <div className='p-2 rounded-xl border-2 border-border flex items-center gap-4 min-w-0 shadow-lg shadow-shadow'>
             <div className="relative w-8 h-8 shrink-0">
                 <img
                     src={pfp} 
@@ -13,16 +13,16 @@ const CircleFriend = ( { profile } ) => {
                     className="w-full h-full rounded-full object-cover"
                 />
                 <span
-                    className={`absolute bottom-0 right-0 w-3 h-3 ${profile.status === 'active' ? 'bg-emerald-400' : 'bg-gray-400'} border-2 ${isOpen && 'border-gray-100'} group-hover:border-gray-100 border-white rounded-full  transition-colors duration-200`}
+                    className={`absolute bottom-0 right-0 w-3 h-3 ${profile.status === 'active' ? 'bg-emerald-400' : 'bg-gray-400'} border-2 ${isOpen && 'border-background4'} group-hover:border-background3 border-background0 rounded-full  transition-colors duration-200`}
                 ></span>
             </div>
 
             <div className="flex flex-col min-w-0">
-                <div className='text-gray-600 shrink-0'>
+                <div className='text-text1 shrink-0'>
                     {profile.firstName} {profile.lastName.substring(0, 1)}.
                 </div>
                 {profile.currentTask && (
-                    <div className='text-sm text-gray-400 truncate'>
+                    <div className='text-sm text-text2 truncate'>
                         {profile.currentTask.title}
                     </div>
                 )}

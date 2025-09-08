@@ -1,9 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { updateTask, deleteTask } from "../../utils/taskUtils";
 
-import { FaDotCircle, FaClock, FaCheckCircle, FaHourglass, FaCalendar, FaUserFriends } from "react-icons/fa";
+import { FaDotCircle, FaClock, FaCheckCircle, FaHourglass, FaCalendar, FaUserFriends, FaGripVertical } from "react-icons/fa";
 import { FaFolder } from "react-icons/fa6";
-import { IoClose } from "react-icons/io5"
 import { getColor } from "../../utils/subjectUtils";
 import Dropdown from "../Popovers/Dropdown";
 import DatePicker from "../popovers/DatePicker";
@@ -11,11 +10,12 @@ import TimePicker from "../popovers/TimePicker";
 import { useCircles } from "../../contexts/CirclesContext";
 import { useSubjects } from "../../contexts/SubjectsContext";
 
-const Task = ( { profile, task, autoFocus, setNewTaskId, userCurrentTask } ) => {
+const Task = ({ profile, task, autoFocus, setNewTaskId, userCurrentTask, variant = 'list' }) => {
     
     const circles = useCircles()
     const { user: userSubjects, circle: circleSubjects } = useSubjects()
 
+    // task data
     const [status, setStatus] = useState(task.status);
     const [title, setTitle] = useState(task.title);
     const [subject, setSubject] = useState(task.subject);
@@ -38,22 +38,19 @@ const Task = ( { profile, task, autoFocus, setNewTaskId, userCurrentTask } ) => 
         circleId: task.circleId,
     });
 
+    //animation
     const [animate, setAnimate] = useState(false);
     useEffect(() => {
-
         if(status === 'Completed') {
             const timer = setTimeout(() => {
                 setAnimate(true);
             }, 10);
-
             return () => clearTimeout(timer);
         }
-
     }, [status]);
 
     //update firebase to local changes
     useEffect(() => {
-
         if(isInitialMount.current) {
             isInitialMount.current = false;
             return;
@@ -73,7 +70,6 @@ const Task = ( { profile, task, autoFocus, setNewTaskId, userCurrentTask } ) => 
 
     //sync local state with firebase state
     useEffect(() => {
-
         if(task.status !== status) {
             setStatus(task.status)
         }
@@ -111,7 +107,7 @@ const Task = ( { profile, task, autoFocus, setNewTaskId, userCurrentTask } ) => 
 
     }, [task.status, task.title, task.subject, task.timeEstimate, task.dueDate, task.userId, task.circleId]);
 
-
+    //reset if subject or circle doesnt exist
     useEffect(() => {
         if(subject !== '' && ![...userSubjects, ...circleSubjects].some(x => x.uid === subject)) {
             console.log(`remove unknown`);
@@ -124,48 +120,103 @@ const Task = ( { profile, task, autoFocus, setNewTaskId, userCurrentTask } ) => 
         }
     }, [circles])
 
+    //auto focus when task is created
     useEffect(() => {
         if(autoFocus && titleInputRef.current) {
             titleInputRef.current.focus();
         }
     }, [autoFocus]);
 
-    return (
-
-        <div className={`flex justify-between items-center gap-4 p-1 text-sm font-semibold text-gray-600 border-t-2 border-gray-200
-        transition duration-200 
-        ${animate ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}>
-
-            <div className="flex-2 flex items-center gap-4">
-
-                <StatusInput status={status} setStatus={setStatus}/>
-                <TitleInput titleInput={titleInput} setTitleInput={setTitleInput} setTitle={setTitle} inputRef={titleInputRef} taskId={task.uid} setNewTaskId={setNewTaskId}/>
-
-            </div>
-
-            <div className="flex-1">
-                <SubjectInput subject={subject} setSubject={setSubject} subjects={userId ? userSubjects : circleSubjects.filter(x => x.circleId === circleId)}/>
-            </div>
+    // board tab task
+    if(variant === 'board') {
+        return (
+            <div className={`flex flex-col gap-3 p-4 text-sm text-text1 transition duration-200 group
+                border-2 border-border rounded-xl bg-background0
+                ${animate ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}
+            >
+                <div className="flex items-center gap-2">
+                    <StatusInput status={status} setStatus={setStatus}/>
+                    <TitleInput 
+                        titleInput={titleInput} 
+                        setTitleInput={setTitleInput} 
+                        setTitle={setTitle} 
+                        inputRef={titleInputRef} 
+                        taskId={task.uid} 
+                        setNewTaskId={setNewTaskId}
+                        variant={variant}
+                    />
+                </div>
             
-            <div className="flex-1">
-                <DueDateInput dueDate={dueDate} setDueDate={setDueDate}/>
+                <div className="flex gap-3">
+
+                    <SubjectInput 
+                        subject={subject} 
+                        setSubject={setSubject} 
+                        subjects={userId ? userSubjects : circleSubjects.filter(x => x.circleId === circleId)}
+                    />
+
+                    <DueDateInput dueDate={dueDate} setDueDate={setDueDate}/>
+
+                    <CircleInput 
+                        userId={profile.uid} 
+                        circleId={circleId} 
+                        setUserId={setUserId} 
+                        setCircleId={setCircleId} 
+                        circles={circles}
+                    />    
+
+                </div>
+
             </div>
+        )
+    }
 
-            <div className="flex-1">
-                <CircleInput userId={profile.uid} circleId={circleId} setUserId={setUserId} setCircleId={setCircleId} circles={circles}/>
+    // default list tab task
+    if(variant === 'list') {
+        return (
+            <div className={`relative flex justify-between items-center gap-4 p-1 text-sm font-semibold text-text1 
+                border-t-2 border-border transition duration-200 group
+                ${animate ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}
+            >
+                <div className="flex-2 flex items-center gap-4">
+                    <StatusInput status={status} setStatus={setStatus}/>
+                    <TitleInput 
+                        titleInput={titleInput} 
+                        setTitleInput={setTitleInput} 
+                        setTitle={setTitle} 
+                        inputRef={titleInputRef} 
+                        taskId={task.uid} 
+                        setNewTaskId={setNewTaskId}
+                        variant={variant}
+                    />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                    <SubjectInput 
+                        subject={subject} 
+                        setSubject={setSubject} 
+                        subjects={userId ? userSubjects : circleSubjects.filter(x => x.circleId === circleId)}
+                    />
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                    <DueDateInput dueDate={dueDate} setDueDate={setDueDate}/>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                    <CircleInput 
+                        userId={profile.uid} 
+                        circleId={circleId} 
+                        setUserId={setUserId} 
+                        setCircleId={setCircleId} 
+                        circles={circles}
+                    />
+                </div>
+
+                <DragHandle/>
             </div>
-
-            {/* <div className="flex-1">
-                <TimeEstimateInput timeEstimate={timeEstimate} setTimeEstimate={setTimeEstimate}/>
-            </div> */}
-
-            {/* <div className="p-2 rounded-lg hover:bg-gray-800/5 cursor-pointer">
-                <IoClose className="text-sm font-semibold text-gray-400"/>
-            </div> */}
-
-        </div>
-
-    )
+        )
+    }
 }
 
 const StatusInput = ( { status, setStatus } ) => {
@@ -186,11 +237,11 @@ const StatusInput = ( { status, setStatus } ) => {
         >
             {(isOpen) =>
                 <button
-                    className={`flex items-center bg-gray-100 rounded-lg cursor-pointer`}
+                    className={`flex items-center bg-background3 rounded-xl cursor-pointer`}
                 >
-                    <div className={`p-2 rounded-lg ${isOpen && "bg-gray-800/5"} hover:bg-gray-800/5 transition-colors duration-200`}>
+                    <div className={`p-2 rounded-xl ${isOpen && "bg-background5"} hover:bg-background5 transition-colors duration-200`}>
                         {status === "Incomplete" ? (
-                            <FaDotCircle className="text-gray-600"/>
+                            <FaDotCircle className="text-text1"/>
                         ) : status === "In Progress" ? (
                             <FaClock className="text-yellow-400"/>
                         ) : (
@@ -205,7 +256,7 @@ const StatusInput = ( { status, setStatus } ) => {
     )
 }
 
-const TitleInput = ( { titleInput, setTitleInput, setTitle, inputRef, taskId, setNewTaskId } ) => {
+const TitleInput = ( { titleInput, setTitleInput, setTitle, inputRef, taskId, setNewTaskId, variant } ) => {
 
     const handleBlur = () => {
         if(titleInput === '') {
@@ -213,8 +264,17 @@ const TitleInput = ( { titleInput, setTitleInput, setTitle, inputRef, taskId, se
         } else {
             setTitle(titleInput);
         }
-        setNewTaskId(null);
+        setNewTaskId(-1);
     };
+
+    const getStyle = () => {
+        if(variant === 'board') {
+            return `text-left w-full p-2 focus:outline-none text-wrap`;
+        } else if(variant === 'list') {
+            return `text-left w-full p-2 focus:outline-none overflow-ellipsis`;
+        }
+        return '';
+    }
 
     return (
 
@@ -231,7 +291,7 @@ const TitleInput = ( { titleInput, setTitleInput, setTitle, inputRef, taskId, se
                     e.target.blur()
                 }
             }}
-            className="text-left w-full p-2 focus:outline-none overflow-ellipsis"
+            className={getStyle()}
             onBlur={handleBlur}
         ></input>
 
@@ -251,7 +311,7 @@ const SubjectInput = ( { subject, setSubject, subjects } ) => {
 
     const getOptions = () => {
         return [
-            { uid: '', label: <h1 className="text-gray-400">None</h1>, icon: null }
+            { uid: '', label: <h1 className="text-text2">None</h1>, icon: null }
             , ...subjects.map((subject) => {
                 return { uid: subject.uid, label: truncateOption(subject.title), icon: <FaFolder className={`text-sm ${getColor(subject.color).textStyle}`}/> }
             })
@@ -267,15 +327,16 @@ const SubjectInput = ( { subject, setSubject, subjects } ) => {
         <Dropdown
             options={getOptions()}
             onSelect={handleSelectOption}
+            className="justify-self-start self-start max-w-full"
         >
             {(isOpen) =>
                 <button
-                    className={`flex min-w-0 items-center ${subject !== '' ? getColor(getSubject().color).bgStyle : 'bg-gray-100'} rounded-lg cursor-pointer`}
+                    className={`w-full flex min-w-0 items-center ${subject !== '' ? getColor(getSubject().color).bgStyle : 'bg-background3'} rounded-xl cursor-pointer`}
                 >
-                    <div className={`flex min-w-0 items-center gap-2 p-2 rounded-lg ${isOpen && "bg-gray-800/5"} hover:bg-gray-800/5 transition-colors duration-200`}>
-                        <FaFolder className={subject !== '' ? 'hidden' : 'text-gray-400'}/>
+                    <div className={`flex min-w-0 items-center gap-2 p-2 rounded-xl ${isOpen && "bg-background5"} hover:bg-background5 transition-colors duration-200`}>
+                        <FaFolder className={subject !== '' ? 'hidden' : 'text-text2'}/>
                         {subject !== '' && (
-                            <h1 className="text-xs max-w-20 truncate">{getSubject().title}</h1>
+                            <h1 className="text-xs max-w-full truncate">{getSubject().title}</h1>
                         )}
                     </div>
  
@@ -298,11 +359,12 @@ const DueDateInput = ( { dueDate, setDueDate } ) => {
         <DatePicker
             onSelect={onSelectDate} 
             selectedDate={dueDate}
+            className="justify-self-start self-start max-w-full"
         >
             {(isOpen) =>
-                <button className="flex items-center bg-gray-100 rounded-lg cursor-pointer">
-                    <div className={`flex items-center gap-2 p-2 rounded-lg ${isOpen && "bg-gray-800/5"} hover:bg-gray-800/5 transition-colors duration-200`}>
-                        <FaCalendar className={dueDate !== -1 ? 'text-gray-600' : 'text-gray-400'}/>
+                <button className="w-full flex items-center bg-background3 rounded-xl cursor-pointer">
+                    <div className={`flex items-center gap-2 p-2 rounded-xl ${isOpen && "bg-background5"} hover:bg-background5 transition-colors duration-200`}>
+                        <FaCalendar className={dueDate !== -1 ? 'text-text1' : 'text-text2'}/>
                         {dueDate !== -1 && (
                             <h1 className={`text-xs ${dueDate.seconds * 1000 < Date.now() && 'text-red-400'}`}>
                                 {new Date(dueDate.seconds * 1000).toLocaleDateString()}
@@ -331,7 +393,7 @@ const CircleInput = ( { userId, circleId, circles, setUserId, setCircleId } ) =>
     
     const getOptions = () => {
         return [
-            { uid: null, label: <h1 className="text-gray-400">None</h1>, icon: null }
+            { uid: null, label: <h1 className="text-text2">None</h1>, icon: null }
             , ...circles.map((circle) => {
                 return { uid: circle.uid, label: truncateOption(circle.title), icon: <FaUserFriends/> }
             })
@@ -346,15 +408,16 @@ const CircleInput = ( { userId, circleId, circles, setUserId, setCircleId } ) =>
         <Dropdown
             options={getOptions()}
             onSelect={handleSelectOption}
+            className="justify-self-start self-start max-w-full "
         >
             {(isOpen) =>
                 <button
-                    className={`flex min-w-0 items-center bg-gray-100 rounded-lg cursor-pointer`}
+                    className={`w-full flex min-w-0 items-center bg-background3 rounded-xl cursor-pointer`}
                 >
-                    <div className={`flex min-w-0 items-center gap-2 p-2 rounded-lg ${isOpen && "bg-gray-800/5"} hover:bg-gray-800/5 transition-colors duration-200`}>
-                        <FaUserFriends className={circleId !== null ? 'text-gray-600' : 'text-gray-400'}/>
+                    <div className={`flex min-w-0 items-center gap-2 p-2 rounded-xl ${isOpen && "bg-background5"} hover:bg-background5 transition-colors duration-200`}>
+                        <FaUserFriends className={circleId !== null ? 'text-text1' : 'text-text2'}/>
                         {circleId !== null && (
-                            <h1 className="text-xs max-w-20 truncate">{getCircle().title}</h1>
+                            <h1 className="text-xs max-w-full truncate">{getCircle().title}</h1>
                         )}
                     </div>
 
@@ -392,9 +455,9 @@ const CircleInput = ( { userId, circleId, circles, setUserId, setCircleId } ) =>
 //             selectedTime={timeEstimate}
 //         >
 //             {(isOpen) =>
-//                 <button className="flex items-center bg-gray-100 rounded-lg cursor-pointer">
-//                     <div className={`flex items-center gap-2 p-2 rounded-lg ${isOpen && "bg-gray-800/5"} hover:bg-gray-800/5 transition-colors duration-200`}>
-//                         <FaHourglass className={timeEstimate != 0 ? 'text-gray-600' : 'text-gray-400'}/>
+//                 <button className="flex items-center bg-background3 rounded-xl cursor-pointer">
+//                     <div className={`flex items-center gap-2 p-2 rounded-xl ${isOpen && "bg-background5"} hover:bg-background5 transition-colors duration-200`}>
+//                         <FaHourglass className={timeEstimate != 0 ? 'text-text1' : 'text-text2'}/>
 //                         {timeEstimate != 0 && (
 //                             <h1 className="text-xs">{formatTime()}</h1>
 //                         )}
@@ -405,6 +468,14 @@ const CircleInput = ( { userId, circleId, circles, setUserId, setCircleId } ) =>
 
 //     )
 // }
+
+const DragHandle = () => {
+    return (
+        <div className="absolute -left-8 p-2 cursor-grab rounded-xl text-text2 hover:bg-background5 opacity-0 group-hover:opacity-100 transition duration-200">
+            <FaGripVertical/>
+        </div>
+    )
+}
 
 
 export default Task

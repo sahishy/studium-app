@@ -7,6 +7,8 @@ import { FaDotCircle, FaClock, FaCheckCircle, FaHourglass, FaCalendar, FaUserFri
 import { FaFolder } from "react-icons/fa6";
 import { useCircles } from "../../contexts/CirclesContext";
 import { useSubjects } from "../../contexts/SubjectsContext";
+import { useAuth } from "../../contexts/AuthContext";
+import Card from "../../pages/main/Card";
 
 const DashboardTask = ( { task, userCurrentTask } ) => {
 
@@ -15,6 +17,7 @@ const DashboardTask = ( { task, userCurrentTask } ) => {
 
     const [status, setStatus] = useState(task.status);
 
+    //animate
     const [animate, setAnimate] = useState(false);
     useEffect(() => {
 
@@ -28,18 +31,18 @@ const DashboardTask = ( { task, userCurrentTask } ) => {
 
     }, [status]);
 
+    //update task status
     useEffect(() => {
-        updateTask(task.uid, {status: status}, userCurrentTask)
+        updateTask(task.uid, { title: task.title, status: status, userId: task.userId }, userCurrentTask)
     }, [status])
 
     return (
 
-        <div className={`flex justify-between items-center gap-4 border-2 bg-white border-gray-200 p-2 rounded-lg
-        transition duration-200 ${animate ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}>
+        <Card className={`!p-2 flex-row transition duration-200 ${animate ? 'scale-95 opacity-0' : 'scale-100 opacity-100'}`}>
 
             <div className="flex-2 min-w-0 flex items-center gap-4">
 
-                <StatusInput status={status} setStatus={setStatus} task={task}/>
+                <StatusInput status={status} setStatus={setStatus}/>
                 <Title title={task.title}/>
 
             </div>
@@ -60,12 +63,12 @@ const DashboardTask = ( { task, userCurrentTask } ) => {
                 <TimeEstimate timeEstimate={task.timeEstimate}/>
             </div> */}
 
-        </div>
+        </Card>
 
     )
 }
 
-const StatusInput = ( { status, setStatus, task } ) => {
+const StatusInput = ( { status, setStatus } ) => {
 
     const handleSelectOption = (option) => {
         setStatus(option.label)
@@ -83,11 +86,11 @@ const StatusInput = ( { status, setStatus, task } ) => {
         >
             {(isOpen) =>
                 <button
-                    className={`flex items-center bg-gray-100 rounded-lg cursor-pointer`}
+                    className={`flex items-center bg-background3 rounded-xl cursor-pointer`}
                 >
-                    <div className={`p-2 rounded-lg ${isOpen && "bg-gray-800/5"} hover:bg-gray-800/5 transition-colors duration-200`}>
+                    <div className={`p-2 rounded-xl ${isOpen && "bg-background5"} hover:bg-background5 transition-colors duration-200`}>
                         {status === "Incomplete" ? (
-                            <FaDotCircle className="text-gray-600"/>
+                            <FaDotCircle className="text-text1"/>
                         ) : status === "In Progress" ? (
                             <FaClock className="text-yellow-400"/>
                         ) : (
@@ -105,7 +108,7 @@ const StatusInput = ( { status, setStatus, task } ) => {
 
 const Title = ( { title } ) => {
     return (
-        <div className="truncate text-sm font-semibold text-gray-600">
+        <div className="truncate text-sm font-semibold text-text1">
             {title}
         </div>
     )
@@ -119,11 +122,11 @@ const Subject = ( { subject, subjects } ) => {
     }
 
     return (
-        <div className={`flex items-center gap-2 p-2 rounded-lg ${subject !== '' && getColor(getSubject().color).bgStyle}`}>
+        <div className={`flex items-center gap-2 p-2 rounded-xl ${subject !== '' && getColor(getSubject().color).bgStyle}`}>
             {subject !== '' ? (
-                <h1 className="text-xs max-w-20 truncate text-gray-600">{getSubject().title}</h1>
+                <h1 className="text-xs max-w-20 truncate text-text1">{getSubject().title}</h1>
             ) : (
-                <FaFolder className='text-gray-200'/>
+                <FaFolder className='text-text3'/>
             )}
         </div>
     )
@@ -134,9 +137,9 @@ const DueDate = ( { dueDate } ) => {
 
     return (
         <div className="flex items-center gap-2 p-2">
-            <FaCalendar className={`${dueDate !== -1 ? 'text-gray-600' : 'text-gray-200'}`}/>
+            <FaCalendar className={`${dueDate !== -1 ? 'text-text2' : 'text-text3'}`}/>
             {dueDate !== -1 && (
-                <h1 className={`text-xs ${dueDate.seconds * 1000 < Date.now() && 'text-red-400'}`}>
+                <h1 className={`text-xs text-text2 ${dueDate.seconds * 1000 < Date.now() && 'text-red-400'}`}>
                     {new Date(dueDate.seconds * 1000).toLocaleDateString()}
                 </h1>
             )}
@@ -154,9 +157,9 @@ const Circle = ( { circleId, circles } ) => {
 
     return (
         <div className="flex items-center gap-2 p-2 min-w-0">
-            <FaUserFriends className={`${circleId !== null ? 'text-gray-600' : 'text-gray-200'} shrink-0`}/>
+            <FaUserFriends className={`${circleId !== null ? 'text-text2' : 'text-text3'} shrink-0`}/>
             {circleId !== null && (
-                <h1 className="text-xs max-w-20 truncate">{getCircle().title}</h1>
+                <h1 className="text-xs text-text2 max-w-20 truncate">{getCircle().title}</h1>
             )}
         </div>
     )
@@ -181,9 +184,9 @@ const Circle = ( { circleId, circles } ) => {
 //     return (
         
 //         <div className="flex items-center gap-2 p-2">
-//             <FaHourglass className={`${timeEstimate != 0 ? 'text-gray-600' : 'text-gray-200'}`}/>
+//             <FaHourglass className={`${timeEstimate != 0 ? 'text-text1' : 'text-text3'}`}/>
 //             {timeEstimate != 0 && (
-//                 <h1 className="text-xs text-gray-600">{formatTime()}</h1>
+//                 <h1 className="text-xs text-text1">{formatTime()}</h1>
 //             )}
 //         </div>
 

@@ -6,7 +6,7 @@ const CircleMember = ( { profile, isOwner } ) => {
     const isOpen = false;
 
     return (
-        <div className='p-2 rounded-lg border-2 border-gray-200 flex items-center gap-4'>
+        <div className='p-2 rounded-xl border-2 border-border flex items-center gap-4 shadow-lg shadow-shadow'>
             <div className="relative w-8 h-8 shrink-0">
                 <img
                     src={pfp} 
@@ -14,13 +14,13 @@ const CircleMember = ( { profile, isOwner } ) => {
                     className="w-full h-full rounded-full object-cover"
                 />
                 <span
-                    className={`absolute bottom-0 right-0 w-3 h-3 ${profile.status === 'active' ? 'bg-emerald-400' : 'bg-gray-400'} border-2 ${isOpen && 'border-gray-100'} group-hover:border-gray-100 border-white rounded-full  transition-colors duration-200`}
+                    className={`absolute bottom-0 right-0 w-3 h-3 ${profile.status === 'active' ? 'bg-emerald-400' : 'bg-gray-400'} border-2 ${isOpen && 'border-background4'} group-hover:border-background4 border-background0 rounded-full  transition-colors duration-200`}
                 ></span>
             </div>
 
             <div className="flex flex-col pr-2 min-w-0">
 
-                <div className='flex items-center gap-2 text-gray-600 shrink-0'>
+                <div className='flex items-center gap-2 text-text1 shrink-0'>
                     {isOwner && (
                         <FaCrown/>
                     )}
@@ -29,7 +29,7 @@ const CircleMember = ( { profile, isOwner } ) => {
                     </div>
                 </div>
                 {profile.currentTask && (
-                    <div className='text-sm text-gray-400 truncate'>
+                    <div className='text-sm text-text2 truncate'>
                         {profile.currentTask.title}
                     </div>
                 )}

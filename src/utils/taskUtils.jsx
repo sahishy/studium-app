@@ -4,17 +4,19 @@ import confetti from 'https://cdn.skypack.dev/canvas-confetti';
 import { updateCurrentTask, userCompleteTask } from './userUtils';
 import { useEffect, useMemo, useState } from 'react';
 
-const createTask = async ( { userId, circleId, dueDate } ) => {
+const createTask = async ( { title, subject, dueDate, status, listIndex, boardIndex, userId, circleId } ) => {
 
     const db = getFirestore();
     const collectionRef = collection(db, 'tasks')
 
     const task = {
-        title: '',
-        subject: '',
-        dueDate: dueDate,
+        title: (title ? title : ''),
+        subject: (subject ? subject : ''),
+        dueDate: (dueDate ? dueDate : -1),
         timeEstimate: 0,
-        status: 'Incomplete',
+        status: (status ? status : 'Incomplete'),
+        listIndex: (listIndex ? listIndex : -1),
+        boardIndex: (boardIndex ? boardIndex : -1),
         userId: (userId ? userId : null),
         circleId: (circleId ? circleId : null),
         createdAt: new Date()
@@ -146,48 +148,56 @@ const completeTaskAnimation = (isCircle) => {
 }
 
 const formatDate = (seconds) => {
+    
+    const MS = {
+        day: 86400000,
+        week: 604800000,
+        year: 31536000000,
+    };
+    const now = Date.now();
+    const dateMs = seconds * 1000;
+    const today = new Date(now);
+    const target = new Date(dateMs);
 
-    const lengths = { day: 86400000, week: 604800000, year: 31536000000 }
-    const today = Date.now();
-    const date = seconds * 1000;
+    const isSameDay = (a, b) => a.toDateString() === b.toDateString();
 
-    if(new Date(today).toLocaleDateString() === new Date(date).toLocaleDateString()) {
-        return 'Today';
-    } else if(new Date(today + lengths.day).toLocaleDateString() === new Date(date).toLocaleDateString()) {
-        return 'Tomorrow';
-    } else if(new Date(today - lengths.day).toLocaleDateString() === new Date(date).toLocaleDateString()) {
-        return 'Yesterday';
+    if (isSameDay(today, target)) return 'Today';
+    if (isSameDay(new Date(now + MS.day), target)) return 'Tomorrow';
+    if (isSameDay(new Date(now - MS.day), target)) return 'Yesterday';
+
+    const diff = dateMs - now;
+
+    if (diff < 0) {
+        // past
+        return target.toLocaleDateString();
     }
 
-    const difference = (date - today);
+    // within next 7 days (excluding today)
+    if (diff < MS.week) {
+        return target.toLocaleDateString('default', { weekday: 'long' });
+    }
 
-    if(difference < 0) {
-        return new Date(date).toLocaleDateString();
-    } else if(difference < lengths.week && new Date(date).getDay() > new Date(today).getDay()) {
-        return new Date(date).toLocaleDateString('default', { weekday: 'long' });
-    } else if(difference < lengths.week && new Date(date).getDay() < new Date(today).getDay()) {
-        return `Next ${new Date(date).toLocaleDateString('default', { weekday: 'long' })}`;
-    } else if(difference < lengths.year) {
+    // between 7 and 14 days out: "Next Tuesday" etc.
+    if (diff < 2 * MS.week) {
+        const weekday = target.toLocaleDateString('default', { weekday: 'long' });
+        return `Next ${weekday}`;
+    }
 
-        let nth = 'th'
-        switch(new Date(date).getDate() % 10) {
-            case 1:
-                nth = 'st';
-                break;
-            case 2:
-                nth = 'nd';
-                break;
-            case 3:
-                nth = 'rd';
-                break;
+    // within this year, show "Month Day<st/nd/rd/th>"
+    if (diff < MS.year) {
+        const day = target.getDate();
+        let suffix = 'th';
+        if (!(day % 100 >= 10 && day % 100 <= 19)) {
+            if (day % 10 === 1) suffix = 'st';
+            else if (day % 10 === 2) suffix = 'nd';
+            else if (day % 10 === 3) suffix = 'rd';
         }
-        return new Date(date).toLocaleDateString('default', { day: 'numeric', month: 'long' } ) + nth;
-
-
-    } else {
-        return new Date(date).toLocaleDateString();
+        const monthDay = target.toLocaleDateString('default', { day: 'numeric', month: 'long' });
+        return `${monthDay}${suffix}`;
     }
 
+    // fallback
+    return target.toLocaleDateString();
 }
 
 const useUserTasks = (userId) => {

@@ -15,23 +15,18 @@ const DashboardTasks = ( { profile } ) => {
     
     return (
 
-        <div className="flex flex-col gap-4 border-2 border-gray-200 bg-white p-4 rounded-lg">
+        <div className="flex flex-col gap-4">
 
             <div className="flex items-center justify-between gap-4">
 
-                <div className="flex items-center gap-4"> 
-                    <div className="p-4 bg-gray-100 rounded-lg">
-                        <FaFile className="text-2xl text-gray-400"/>
-                    </div>
-                    <h1 className="text-2xl font-extrabold text-gray-600">Upcoming Work</h1>
-                </div>
+                <h1 className="text-xl font-extrabold text-text1">Upcoming Work</h1>
 
                 <a
                     onClick={() => navigate('/agenda')}
-                    className="text-gray-400 font-extrabold group transition-all cursor-pointer p-4"
+                    className="text-text2 font-extrabold group transition-all cursor-pointer"
                 >
                     View All
-                    <span className="block max-w-0 group-hover:max-w-full transition-all duration-200 h-0.5 bg-gray-400"></span>
+                    <span className="block max-w-0 rounded-full group-hover:max-w-full transition-all duration-200 h-0.5 bg-text2"></span>
                 </a>
 
             </div>
@@ -40,16 +35,27 @@ const DashboardTasks = ( { profile } ) => {
 
                 {tasks.length === 0 ? (
 
-                    <p className='text-sm text-center text-gray-400'>You have no upcoming tasks.</p>
+                    <p className='text-sm text-center text-text2 p-2'>You have no upcoming tasks.</p>
 
                 ) : (
                     <>
                         <TasksHeader/>
 
-                        {tasks.sort((a, b) => new Date(a.dueDate.seconds) - new Date(b.dueDate.seconds)).slice(0, 3).map((task) => (
+                        {tasks.sort((a, b) => {
+                            
+                            const dueA = new Date(a.dueDate.seconds * 1000);
+                            const dueB = new Date(b.dueDate.seconds * 1000);
 
+                            if(a.dueDate.seconds !== b.dueDate.seconds) {
+                                return dueA - dueB;
+                            }
+
+                            const createdA = new Date(a.createdAt.seconds * 1000);
+                            const createdB = new Date(b.createdAt.seconds * 1000);
+                            return createdB - createdA;
+                            
+                        }).slice(0, 5).map((task) => (
                             <DaskboardTask key={task.uid} task={task} userCurrentTask={profile.currentTask}/>
-
                         ))}
                     </>
                 )}

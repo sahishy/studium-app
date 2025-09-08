@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { FaCheck, FaCopy, FaUserFriends } from "react-icons/fa";
+import Button from "../../../pages/main/Button";
+import Card from "../../../pages/main/Card";
 
 const CircleInvite = ( { circle } ) => {
 
@@ -23,23 +25,23 @@ const CircleInvite = ( { circle } ) => {
     }, [copiedAlt])
 
     return (
-        <div className="flex-1 flex flex-col gap-4 p-4 bg-white rounded-lg border-2 border-gray-200">
+        <Card className={'flex-1'}>
 
            <div className="flex items-center gap-4">
-                <div className="p-4 bg-gray-100 rounded-lg">
+                <div className="p-4 bg-sky-400/15 rounded-xl">
                     <FaUserFriends className="text-2xl text-sky-400"/>
                 </div>
 
-                <h1 className="text-2xl font-extrabold flex">Invite Friends&nbsp;
+                <h1 className="text-xl font-extrabold text-text1 flex">Invite Friends&nbsp;
 
                     <div
                         onClick={() => {
                             navigator.clipboard.writeText(circle.inviteCode);
                             setCopied(true)
                         }}
-                        className="flex items-center gap-2 group cursor-pointer text-gray-400"
+                        className="flex items-center gap-2 group cursor-pointer text-text2"
                     >
-                        <h1 className="font-extrabold text-2xl">#{circle.inviteCode}</h1>
+                        <h1 className="font-extrabold text-xl">#{circle.inviteCode}</h1>
                         {copied ? (
                             <FaCheck className="text-sm hidden group-hover:block"/>
                         ) : (
@@ -51,22 +53,20 @@ const CircleInvite = ( { circle } ) => {
 
             </div>
 
-            <div className="flex items-center gap-2 text-gray-400 text-sm">
+            <div className="flex items-center gap-2 text-text2 text-sm">
 
-                <h1 className="text-gray-400">Or use a link: </h1>&nbsp;
+                <h1 className="text-text2">Or use a link: </h1>&nbsp;
 
-                <button
-                    onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/#/join/${circle.inviteCode}`);
-                        setCopiedAlt(true)
-                    }}
-                    className='px-4 py-2 border-2 border-gray-200 border-b-4 rounded-lg flex gap-2 items-center hover:bg-gray-800/5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
-                >
+                <Button onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/#/join/${circle.inviteCode}`);
+                    setCopiedAlt(true)
+                }} type={'secondary'}>
                     {copiedAlt ? 'Copied' : 'Copy Link'}
-                </button>
+                </Button>
+
             </div>
 
-        </div>
+        </Card>
     )
 }
 

@@ -16,6 +16,15 @@ const createNewUserObject = ( { uid, firstName, lastName, email } ) => {
     }
 }
 
+const updateUserInfo = async ( uid, userData ) => {
+
+    const db = getFirestore();
+    const userRef = doc(db, 'users', uid)
+
+    await updateDoc(userRef, userData)
+
+}
+
 const getActiveUserCount = (setActiveUserCount) => {
 
     const db = getFirestore();
@@ -215,6 +224,7 @@ const useMembersList = (memberIds = []) => {
 
 export { 
     createNewUserObject, 
+    updateUserInfo,
     getTotalUsers, 
     getTotalTasksCompleted, 
     getActiveUserCount,

@@ -1,7 +1,10 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 
 const BasePopover = ({ children, content, className = '', onOpen }) => {
+
+    const gap = 4;
+
     const [isOpen, setIsOpen] = useState(false);
     const [popoverSize, setPopoverSize] = useState({ width: 0, height: 0 });
     const [popoverPosition, setPopoverPosition] = useState({ top: 0, left: 0 });
@@ -22,8 +25,8 @@ const BasePopover = ({ children, content, className = '', onOpen }) => {
             const spaceRight = window.innerWidth - rect.left;
 
             const top = spaceBelow > 200
-                ? rect.bottom + 8
-                : rect.top - popoverSize.height - 8;
+                ? rect.bottom + gap
+                : rect.top - popoverSize.height - gap;
             const left = spaceRight > 200
                 ? rect.left
                 : rect.right - popoverSize.width;
@@ -61,13 +64,13 @@ const BasePopover = ({ children, content, className = '', onOpen }) => {
                 const spaceBelow = window.innerHeight - buttonRect.bottom;
                 const spaceRight = window.innerWidth - buttonRect.left;
 
-                const top = spaceBelow > rect.height + 16
-                    ? buttonRect.bottom + 8
-                    : Math.max(buttonRect.top - rect.height - 8, 8);
+                const top = spaceBelow > rect.height + (gap * 2)
+                    ? buttonRect.bottom + gap
+                    : Math.max(buttonRect.top - rect.height - gap, gap);
 
-                const left = spaceRight > rect.width + 16
+                const left = spaceRight > rect.width + (gap * 2)
                     ? buttonRect.left
-                    : Math.max(buttonRect.right - rect.width, 8);
+                    : Math.max(buttonRect.right - rect.width, gap);
 
                 setPopoverPosition({ top, left });
             }
@@ -106,7 +109,7 @@ const BasePopover = ({ children, content, className = '', onOpen }) => {
                         <div
                             ref={popoverRef}
                             className={`
-                                absolute z-[1001] p-2 bg-white rounded-lg border-2 border-gray-200 shadow-lg shadow-gray-800/5
+                                absolute z-[1001] p-2 bg-background0 rounded-xl border-2 border-border shadow-lg shadow-shadow
                                 w-fit h-fit min-w-50
 
                                 {/* tailwindcss-ignore-next-line */}

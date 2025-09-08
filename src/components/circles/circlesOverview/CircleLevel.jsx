@@ -1,4 +1,5 @@
 import { PiStarFourFill } from "react-icons/pi"
+import Card from "../../../pages/main/Card"
 
 const CircleGreeting = ( { circle } ) => {
 
@@ -12,19 +13,19 @@ const CircleGreeting = ( { circle } ) => {
     }
 
     return (
-        <div className="flex-1 flex flex-col gap-4 p-4 bg-white rounded-lg border-2 border-gray-200">
+        <Card className={'flex-1'}>
 
             <div className="flex items-center gap-4">
-                <div className="p-4 bg-gray-100 rounded-lg">
+                <div className="p-4 bg-sky-400/15 rounded-xl">
                     <PiStarFourFill className="text-2xl text-sky-400"/>
                 </div>
                 <div className="flex flex-col">
-                    <h1 className="text-2xl font-extrabold text-gray-600">Level {circle.level}</h1>
+                    <h1 className="text-xl font-extrabold text-text1">Level {circle.level}</h1>
                 </div>
             </div>
 
-            <div className="flex items-center gap-2">
-                <div className="flex-1 bg-gray-100 w-full h-4 rounded-full overflow-hidden">
+            <div className="flex items-center gap-2 mt-3">
+                <div className="flex-1 bg-background3 w-full h-4 rounded-full overflow-hidden">
                     <div 
                         className="bg-sky-400 rounded-full h-full transition-all duration-1000"
                         style={{ width: `${getXPBarWidth()}%` }}
@@ -33,12 +34,12 @@ const CircleGreeting = ( { circle } ) => {
                     </div>
                 </div>
 
-                <h1 className="inset-0 flex items-center justify-center text-sm font-semibold text-gray-400">
+                <h1 className="inset-0 flex items-center justify-center text-sm font-semibold text-text2">
                     {circle.xp} / {Math.pow(2, circle.level) * 100} XP
                 </h1>
             </div>
 
-        </div>
+        </Card>
     )
 }
 

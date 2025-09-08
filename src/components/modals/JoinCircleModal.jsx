@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { joinCircle, canJoinCircle } from '../../utils/circleUtils';
+import Button from '../../pages/main/Button';
 
 const JoinCircleModal = ( { profile, closeModal } ) => {
 
@@ -90,27 +91,20 @@ const JoinCircleModal = ( { profile, closeModal } ) => {
                             onChange={(e) => handleChange(e, index)}
                             onKeyDown={(e) => handleKeyDown(e, index)}
                             ref={(el) => (inputsRef.current[index] = el)}
-                            className="w-16 h-16 uppercase text-center text-2xl border-2 border-gray-200 rounded-lg focus:outline-none focus:border-yellow-400"
+                            className="w-16 h-16 uppercase text-center text-2xl border-2 border-border rounded-xl"
                             required
                         />
                     ))}
                 </div>
 
                 <div className='flex gap-4 mt-4'>
-                    <button
-                        type='button' 
-                        onClick={() => closeModal()}
-                        className='w-full p-4 border-2 border-gray-200 border-b-4 rounded-lg hover:bg-gray-800/5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
-                    >
+                    <Button onClick={() => closeModal()} type={'secondary'} className={'w-full py-4'}>
                         Cancel
-                    </button>
+                    </Button>
 
-                    <button 
-                        type='submit' 
-                        className='w-full p-4 text-white border-black border-b-4 rounded-lg bg-gray-800 hover:bg-black active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
-                    >
+                    <Button htmlType={'submit'} type={'primary'} className={'w-full py-4'}>
                         Join
-                    </button>
+                    </Button>
                 </div>
 
             </form>

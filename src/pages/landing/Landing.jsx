@@ -52,7 +52,7 @@ const Navbar = ( { navigate } ) => {
     }, []);
   
     return (
-        <div className={`fixed w-full flex justify-center border-gray-200 ${scrolled && 'border-b-2 bg-white'} transition-all duration-200`}>    
+        <div className={`fixed w-full flex justify-center border-border ${scrolled && 'border-b-2 bg-background0'} transition-all duration-200`}>    
             <header className="w-full max-w-5xl flex justify-between items-center p-4">
                 
                 <div className='flex items-center gap-2'>
@@ -64,14 +64,14 @@ const Navbar = ( { navigate } ) => {
 
                     <button 
                         onClick={() => navigate('/login')}
-                        className='px-4 py-2 text-white font-extrabold border-black border-b-4 rounded-lg bg-gray-800 hover:bg-black active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
+                        className='px-4 py-2 text-white font-extrabold border-black border-b-4 rounded-xl bg-gray-800 hover:bg-black active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
                     >
                         Log In
                     </button>
 
                     <button
                         onClick={() => navigate('/signup')}
-                        className='px-4 py-2 font-extrabold border-yellow-500 border-b-4 rounded-lg bg-yellow-400 hover:bg-yellow-500 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
+                        className='px-4 py-2 font-extrabold border-yellow-500 border-b-4 rounded-xl bg-yellow-400 hover:bg-yellow-500 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
                     >
                         Sign Up
                     </button>
@@ -84,7 +84,7 @@ const Navbar = ( { navigate } ) => {
 
 const HeroSection = ( { navigate } ) => {
     return (
-        <section className="w-full min-h-screen py-24 pt-[88px] bg-gray-50">
+        <section className="w-full min-h-screen py-24 pt-[88px] bg-background2">
             <div className="max-w-5xl h-full m-auto flex gap-16">
 
                 <div className='flex flex-1 flex-col justify-center gap-8'>
@@ -94,7 +94,7 @@ const HeroSection = ( { navigate } ) => {
                         <span className='border-b-4 border-yellow-400'>fun.</span>
                     </h2>
 
-                    <p className="text-lg text-gray-400">
+                    <p className="text-lg text-text2">
                         Stay organized, motivated, and on top of your assignments — all in one intelligent planner built for students.
                     </p>
 
@@ -102,14 +102,14 @@ const HeroSection = ( { navigate } ) => {
 
                         <button 
                             onClick={() => navigate('/signup')}
-                            className='px-8 py-4 font-extrabold border-yellow-500 border-b-4 rounded-lg bg-yellow-400 hover:bg-yellow-500 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
+                            className='px-8 py-4 font-extrabold border-yellow-500 border-b-4 rounded-xl bg-yellow-400 hover:bg-yellow-500 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
                         >
                             Get Started
                         </button>
 
                         <button
                             onClick={() => navigate('/')}
-                            className="px-8 py-4 text-white font-extrabold border-black border-b-4 rounded-lg bg-gray-800 hover:bg-black active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200 flex items-center justify-center gap-2"
+                            className="px-8 py-4 text-white font-extrabold border-black border-b-4 rounded-xl bg-gray-800 hover:bg-black active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200 flex items-center justify-center gap-2"
                         >
                             Learn More
                             <FaLongArrowAltRight/>
@@ -156,46 +156,46 @@ const StatsSection = () => {
     }, [])
 
     return (
-        <section className="w-full py-24 bg-white border-2 border-gray-200">
+        <section className="w-full py-24 bg-background0 border-2 border-border">
             <div className="max-w-5xl h-full m-auto flex flex-col gap-8 text-center">
 
                 <h2 className="text-4xl font-extrabold text-center">
                     Working Smarter Starts Here
                 </h2>
 
-                <p className="text-lg text-gray-400">
+                <p className="text-lg text-text2">
                     Studium makes planning your schoolwork effortless and rewarding. Add assignments in seconds, build daily habits, and earn XP as you get things done.
                 </p>
 
                 <div className='flex gap-8 text-left'>
 
-                    <div className='flex-1 flex gap-4 items-center border-2 border-gray-200 p-4 rounded-lg'>
-                        <div className='p-4 rounded-lg bg-gray-100 text-2xl text-gray-600'>
+                    <div className='flex-1 flex gap-4 items-center border-2 border-border p-4 rounded-xl'>
+                        <div className='p-4 rounded-xl bg-background3 text-2xl text-text1'>
                             <FaUserGraduate/>
                         </div>
                         <div className='flex flex-col'>
                             <h3 className='text-2xl font-extrabold'>{totalUsers ? totalUsers : 0}+</h3>
-                            <p className='text-sm text-gray-400'>Students staying on track</p>
+                            <p className='text-sm text-text2'>Students staying on track</p>
                         </div>
                     </div>
 
-                    <div className='flex-1 flex gap-4 items-center border-2 border-gray-200 p-4 rounded-lg'>
-                        <div className='p-4 rounded-lg bg-gray-100 text-2xl text-gray-600'>
+                    <div className='flex-1 flex gap-4 items-center border-2 border-border p-4 rounded-xl'>
+                        <div className='p-4 rounded-xl bg-background3 text-2xl text-text1'>
                             <FaFile/>
                         </div>
                         <div className='flex flex-col'>
                             <h3 className='text-2xl font-extrabold'>{totalTasksCompleted ? totalTasksCompleted : 0}+</h3>
-                            <p className='text-sm text-gray-400'>Assignments completed</p>
+                            <p className='text-sm text-text2'>Assignments completed</p>
                         </div>
                     </div>
 
-                    <div className='flex-1 flex gap-4 items-center border-2 border-gray-200 p-4 rounded-lg'>
-                        <div className='p-4 rounded-lg bg-gray-100 text-2xl text-gray-600'>
+                    <div className='flex-1 flex gap-4 items-center border-2 border-border p-4 rounded-xl'>
+                        <div className='p-4 rounded-xl bg-background3 text-2xl text-text1'>
                             <FaUserFriends/>
                         </div>
                         <div className='flex flex-col'>
                             <h3 className='text-2xl font-extrabold'>{totalCircles ? totalCircles : 0}+</h3>
-                            <p className='text-sm text-gray-400'>Focused study circles</p>
+                            <p className='text-sm text-text2'>Focused study circles</p>
                         </div>
                     </div>
 
@@ -210,11 +210,11 @@ const StatsSection = () => {
 
 const TestimonialsSection = () => {
     return (
-        <section className="w-full py-24 bg-gray-50">
+        <section className="w-full py-24 bg-background2">
             <div className="max-w-5xl h-full m-auto flex flex-col gap-16">
 
                 <div className='flex flex-col items-center gap-4 text-center font-extrabold'>
-                    <h2 className="text-lg border-b-4 border-b-yellow-400 text-gray-600">
+                    <h2 className="text-lg border-b-4 border-b-yellow-400 text-text1">
                         TESTIMONIALS
                     </h2>
 
@@ -224,11 +224,11 @@ const TestimonialsSection = () => {
                 </div>
 
                 <div className='flex justify-between items-center gap-8'>
-                    <PiCaretLeftFill className='text-4xl text-gray-400 opacity-50'/>
+                    <PiCaretLeftFill className='text-4xl text-text2 opacity-50'/>
 
-                    <div className='flex flex-col gap-8 items-center bg-white border-2 border-gray-200 p-8 rounded-lg max-w-lg'>
+                    <div className='flex flex-col gap-8 items-center bg-background0 border-2 border-border p-8 rounded-xl max-w-lg'>
 
-                        <p className="text-lg text-gray-600 text-center">
+                        <p className="text-lg text-text1 text-center">
                             "Studium has revolutionized the way I approach my studies. The XP system keeps me motivated and on track!"
                         </p>
 
@@ -236,10 +236,10 @@ const TestimonialsSection = () => {
 
                             <img src={pfp} alt='student' className='rounded-full w-16 h-16 m-auto'/>
                             <div>
-                                <p className="text-2xl text-gray-600 font-extrabold text-center">
+                                <p className="text-2xl text-text1 font-extrabold text-center">
                                     Test S.
                                 </p>
-                                <p className="text-sm text-gray-400 text-center">
+                                <p className="text-sm text-text2 text-center">
                                     11th Grade
                                 </p>
                             </div>
@@ -247,7 +247,7 @@ const TestimonialsSection = () => {
                         </div>
                     </div>
 
-                    <PiCaretRightFill className='text-4xl text-gray-400 opacity-50'/>
+                    <PiCaretRightFill className='text-4xl text-text2 opacity-50'/>
 
                 </div>
 
@@ -258,7 +258,7 @@ const TestimonialsSection = () => {
 
 const CallToActionSection = ( { navigate } ) => {
     return (
-        <section className="w-full py-24 bg-white border-2 border-gray-200">
+        <section className="w-full py-24 bg-background0 border-2 border-border">
             <div className="max-w-5xl h-full m-auto flex gap-16">
 
                 <div className='flex-1 flex flex-col gap-8'>
@@ -266,7 +266,7 @@ const CallToActionSection = ( { navigate } ) => {
                         Ready to Focus Better and Crush School?
                     </h2>
 
-                    <p className="text-lg text-gray-400">
+                    <p className="text-lg text-text2">
                         Studium makes planning your schoolwork effortless and rewarding. Add assignments in seconds, build daily habits, and earn XP as you get things done.
                     </p>
                 </div>
@@ -275,7 +275,7 @@ const CallToActionSection = ( { navigate } ) => {
 
                     <button
                         onClick={() => navigate('/signup')}
-                        className='px-8 py-4 font-extrabold border-yellow-500 border-b-4 rounded-lg bg-yellow-400 hover:bg-yellow-500 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
+                        className='px-8 py-4 font-extrabold border-yellow-500 border-b-4 rounded-xl bg-yellow-400 hover:bg-yellow-500 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
                     >
                         Get Started
                     </button>

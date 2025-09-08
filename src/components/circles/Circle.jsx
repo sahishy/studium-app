@@ -1,5 +1,6 @@
 import { PiStarFourFill } from "react-icons/pi";
 import pfp from '../../assets/default-profile.jpg'
+import Card from "../../pages/main/Card";
 
 const Circle = ( { circle } ) => {
 
@@ -13,21 +14,21 @@ const Circle = ( { circle } ) => {
     }
 
     return (
-        <div className="group flex flex-col gap-2 p-4 bg-white rounded-lg border-2 border-gray-200 hover:bg-gray-100 transition-colors cursor-pointer duration-200">
+        <Card hoverable={true}>
 
             <div className="flex items-center gap-4 min-w-0"> 
-                <div className="bg-gray-100 rounded-lg">
+                <div className="bg-background3 rounded-xl">
 
                     {circle.icon ? (
                         null
                     ) : (
-                        <div className="w-10 h-10 p-2 flex justify-center items-center text-lg text-gray-400">
+                        <div className="w-10 h-10 p-2 flex justify-center items-center text-lg text-text2">
                             {circle.title[0]}
                         </div>
                     )}
 
                 </div>
-                <h1 className="text-lg font-extrabold text-gray-600 truncate">{circle.title}</h1>
+                <h1 className="text-lg font-extrabold text-text1 truncate">{circle.title}</h1>
             </div>
 
             <div className="flex items-center">
@@ -37,26 +38,26 @@ const Circle = ( { circle } ) => {
                         key={userId}
                         src={pfp}
                         alt="Profile"
-                        className={`w-10 h-10 rounded-full border-4 group-hover:border-gray-100 border-white ${index !== 0 ? '-ml-3' : ''} transition-colors duration-200`}
+                        className={`w-10 h-10 rounded-full border-4 group-hover:border-background4 border-background1 ${index !== 0 ? '-ml-3' : ''} transition-colors duration-200`}
                         style={{ zIndex: 4 - index }}
                     />
                 ))}
                 {circle.userIds.length > 4 && (
-                    <div className="w-10 h-10 rounded-full border-4 group-hover:border-gray-100 border-white -ml-3 flex items-center justify-center bg-gray-100 text-sm text-gray-400 transition-colors duration-200">
+                    <div className="w-10 h-10 rounded-full border-4 group-hover:border-background4 border-background1 -ml-3 flex items-center justify-center bg-background3 text-sm text-text2 transition-colors duration-200">
                         +{circle.userIds.length - 4}
                     </div>                    
                 )}
 
             </div>
             
-            <div className="flex items-center gap-4 mt-2">
+            <div className="flex items-center gap-4">
 
-                <h1 className="flex items-center justify-center gap-2 text-sm font-semibold text-gray-400">
+                <h1 className="flex items-center justify-center gap-2 text-sm font-semibold text-text2">
                     <PiStarFourFill/>
                     Lv. {circle.level}
                 </h1>
 
-                <div className="flex-1 bg-gray-100 w-full h-4 rounded-full overflow-hidden">
+                <div className="flex-1 bg-background3 w-full h-4 rounded-full overflow-hidden">
                     <div 
                         className="bg-sky-400 rounded-full h-full transition-all duration-1000"
                         style={{ width: `${getXPBarWidth()}%` }}
@@ -67,7 +68,7 @@ const Circle = ( { circle } ) => {
 
             </div>
 
-        </div>
+        </Card>
     )
 
 }

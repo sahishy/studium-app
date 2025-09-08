@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { createSubject, getColors, updateSubject } from '../../utils/subjectUtils';
+import { FaCircle } from 'react-icons/fa';
+import Button from '../../pages/main/Button';
 
 const SubjectModal = ( { userId, circleId, subject, isEdit, subjectData, closeModal } ) => {
 
     const [title, setTitle] = useState(subjectData.title);
+    const [day, setDay] = useState(subjectData.day);
     const [color, setColor] = useState(subjectData.color);
     const [link, setLink] = useState(subjectData.link);
 
@@ -13,6 +16,7 @@ const SubjectModal = ( { userId, circleId, subject, isEdit, subjectData, closeMo
 
         const subjectData = {
             title: title,
+            day: day,
             color: color,
             link: link
         }
@@ -46,9 +50,11 @@ const SubjectModal = ( { userId, circleId, subject, isEdit, subjectData, closeMo
                             key={crypto.randomUUID()}
                             type='button'
                             onClick={() => setColor(colorOption.name)}
-                            className={`relative p-1 rounded-full border-2 ${color === colorOption.name ? 'border-gray-600' : 'border-gray-200'} cursor-pointer w-8`}
+                            className={`relative p-3 rounded-full border-2 ${color === colorOption.name ? 'border-text2' : 'border-border'} cursor-pointer w-8`}
                         >
-                            <div className={`absolute top-0 left-0 w-full h-full rounded-full p-2 ${colorOption.bgStyle} border-white border-4`}></div>
+                            <div className={`absolute top-0 left-0 w-full h-full rounded-full p-2 ${colorOption.bgStyle} border-border`}>
+                                <FaCircle className={`absolute p-[0.4rem] w-full h-full top-0 left-0 bottom-0 right-0 ${colorOption.textStyle}`}/>
+                            </div>
                             <div className="invisible pb-[100%]"></div>
                         </button>
                     ))}
@@ -59,33 +65,41 @@ const SubjectModal = ( { userId, circleId, subject, isEdit, subjectData, closeMo
                     placeholder="Title*"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-gray-600"
+                    className="w-full p-4 border-2 border-border rounded-xl focus:outline-gray-600"
                     required={true}
                 />
 
+                <div className='p-1 bg-background2 text-text1 text-center text-sm rounded-xl flex gap-1'>
+                    {['A', 'B'].map((_day, index) => (
+                        <button 
+                            onClick={() => setDay(_day)}
+                            type='button'
+                            key={index}
+                            className={`flex-1 px-4 py-2 rounded-xl border-2
+                                ${(_day === day) ? 'bg-background1 border-border text-text1' : 'hover:bg-background5 border-transparent text-text2'}
+                                transition-colors duration-200 cursor-pointer`}
+                        >
+                            {_day} Day
+                        </button>
+                    ))}
+                </div>
+
                 <input
                     type="text"
-                    placeholder="Syllabus Link"
+                    placeholder="Syllabus Link (Optional)"
                     value={link}
                     onChange={(e) => setLink(e.target.value)}
-                    className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-gray-600"
+                    className="w-full p-4 border-2 border-border rounded-xl focus:outline-gray-600"
                 />
 
                 <div className='flex gap-4'>
-                    <button
-                        type='button' 
-                        onClick={() => closeModal()}
-                        className='w-full p-4 border-2 border-gray-200 border-b-4 rounded-lg hover:bg-gray-800/5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
-                    >
+                    <Button onClick={() => closeModal()} type={'secondary'} className={'w-full py-4'}>
                         Cancel
-                    </button>
+                    </Button>
 
-                    <button 
-                        type='submit' 
-                        className='w-full p-4 text-white border-black border-b-4 rounded-lg bg-gray-800 hover:bg-black active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
-                    >
+                    <Button htmlType={'submit'} type={'primary'} className={'w-full py-4'}>
                         {isEdit ? 'Save Changes' : 'Add'}
-                    </button>
+                    </Button>
                 </div>
 
             </form>
