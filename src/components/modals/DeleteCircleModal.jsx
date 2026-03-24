@@ -1,14 +1,12 @@
 import { useState } from "react";
-import { getFirestore, writeBatch, doc } from 'firebase/firestore';
-import { useCircleTasks }    from '../../utils/taskUtils.jsx';
-import { useCircleSubjects } from '../../utils/subjectUtils.jsx'
+import { getFirestore, writeBatch, doc, collection, getDocs } from 'firebase/firestore';
+import { useCircleTasks }    from '../../services/taskService.jsx';
 import { useNavigate } from "react-router-dom";
-import Button from "../../pages/main/Button.jsx";
+import Button from "../main/Button.jsx";
 
 const DeleteCircleModal = ( { circle, closeModal } ) => {
 
     const tasks = useCircleTasks([circle.uid]);
-    const subjects = useCircleSubjects([circle.uid]);
     const navigate = useNavigate()
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -28,10 +26,12 @@ const DeleteCircleModal = ( { circle, closeModal } ) => {
             const ref = doc(db, 'tasks', task.uid);
             batch.delete(ref);
         })
-        subjects.forEach(subject => {
-            const ref = doc(db, 'subjects', subject.uid);
-            batch.delete(ref);
-        })
+
+        const membersSnapshot = await getDocs(collection(db, 'circles', circle.uid, 'members'));
+        membersSnapshot.forEach((memberDoc) => {
+            batch.delete(memberDoc.ref);
+        });
+
         batch.delete(doc(db, 'circles', circle.uid));
         await batch.commit();
     

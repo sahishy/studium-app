@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { createCircle } from '../../utils/circleUtils';
-import Button from '../../pages/main/Button';
+import { createCircle } from '../../services/circleService';
+import Button from '../main/Button';
 
 const CreateCircleModal = ( { profile, closeModal } ) => {
 

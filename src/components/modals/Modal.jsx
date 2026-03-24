@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useModal } from '../../contexts/ModalContext'
 
 import { IoClose } from "react-icons/io5";
-import Button from '../../pages/main/Button';
+import Button from '../main/Button';
 
 const Modal = ({ isOpen, closeModal }) => {
 

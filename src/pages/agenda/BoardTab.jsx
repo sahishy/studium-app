@@ -1,12 +1,12 @@
 import Task from '../../components/agenda/Task.jsx'
 import TasksHeader from '../../components/agenda/TasksHeader.jsx'
 import { useTasks } from '../../contexts/TasksContext.jsx'
-import { createTask } from '../../utils/taskUtils.jsx'
+import { createTask } from '../../services/taskService.jsx'
 import { FaPlus } from 'react-icons/fa'
 import { FaDotCircle, FaClock, FaCheckCircle } from 'react-icons/fa'
 import { useOutletContext } from 'react-router-dom'
 import { useState } from 'react'
-import BottomPadding from '../main/BottomPadding.jsx'
+import BottomPadding from '../../components/main/BottomPadding.jsx'
 
 const BoardTab = () => {
     const { profile } = useOutletContext()
@@ -117,12 +117,14 @@ const KanbanColumn = ({ column, profile, newTaskId, setNewTaskId }) => {
     )
 }
 
-const AddTaskButton = ( { profile, dueDate, setNewTaskId } ) => {
+const AddTaskButton = ( { profile, status, setNewTaskId } ) => {
 
     const handleClick = async () => {
         const newTask = await createTask({ 
-            userId: profile.uid, 
-            dueDate: -1,
+            ownerType: 'user',
+            ownerId: profile.uid,
+            createdByUserId: profile.uid,
+            dueAt: -1,
             status: status 
         })
         

@@ -1,16 +1,13 @@
 import Task from '../../components/agenda/Task.jsx'
 import TasksHeader from '../../components/agenda/TasksHeader.jsx'
 import { useTasks } from '../../contexts/TasksContext.jsx'
-import { createTask, formatDate } from '../../utils/taskUtils.jsx'
+import { createTask } from '../../services/taskService.jsx'
+import { formatRelativeTaskDate, toDateKeyFromSeconds } from '../../utils/formatters.jsx'
 import { PiCaretDownFill, PiCaretRightFill } from 'react-icons/pi'
 import { FaPlus } from 'react-icons/fa'
 import { useOutletContext } from 'react-router-dom'
 import { useState } from 'react'
-import Subject from '../../components/agenda/Subject.jsx'
-import SubjectModal from '../../components/modals/SubjectModal.jsx'
-import { useModal } from '../../contexts/ModalContext.jsx'
-import { useSubjects } from '../../contexts/SubjectsContext.jsx'
-import BottomPadding from '../main/BottomPadding.jsx'
+import BottomPadding from '../../components/main/BottomPadding.jsx'
 
 const ListTab = () => {
 
@@ -22,18 +19,18 @@ const ListTab = () => {
     const [collapsedDates, setCollapsedDates] = useState([]);
     const [newTaskId, setNewTaskId] = useState(-1)
 
-    const tasksWithNoDueDate = tasks.filter(x => x.dueDate === -1)
-    const tasksWithDueDate = tasks.filter(x => x.dueDate !== -1)
-    const pastTasks = tasksWithDueDate.filter(task => new Date(task.dueDate.seconds * 1000) < new Date())
-    const futureTasks = tasksWithDueDate.filter(task => new Date(task.dueDate.seconds * 1000) >= new Date())
-    const groupedPastTasks = Object.groupBy(pastTasks, task => new Date(task.dueDate.seconds * 1000).toLocaleDateString())
-    const groupedFutureTasks = Object.groupBy(futureTasks, task => new Date(task.dueDate.seconds * 1000).toLocaleDateString())
+    const tasksWithNoDueDate = tasks.filter(x => x.dueAt === -1)
+    const tasksWithDueDate = tasks.filter(x => x.dueAt !== -1)
+    const pastTasks = tasksWithDueDate.filter(task => new Date(task.dueAt.seconds * 1000) < new Date())
+    const futureTasks = tasksWithDueDate.filter(task => new Date(task.dueAt.seconds * 1000) >= new Date())
+    const groupedPastTasks = Object.groupBy(pastTasks, task => toDateKeyFromSeconds(task.dueAt.seconds))
+    const groupedFutureTasks = Object.groupBy(futureTasks, task => toDateKeyFromSeconds(task.dueAt.seconds))
 
     const handleCollapseDateToggle = (date) => {
         setCollapsedDates(collapsedDates.includes(date) ? collapsedDates.filter(x => x !== date) : [...collapsedDates, date])
     }
 
-   const renderTaskGroup = (groupTasks, groupKey, headerText, headerStyle = 'text-text2', alwaysShow = false) => {
+   const renderTaskGroup = (groupTasks, groupKey, headerText, headerStyle, alwaysShow = false) => {
         if ((!groupTasks.length && groupKey != 'no-due-date') && !alwaysShow) return null
 
         return (
@@ -65,7 +62,7 @@ const ListTab = () => {
 
                     <AddTaskButton 
                         profile={profile} 
-                        dueDate={groupKey === 'no-due-date' ? -1 : new Date(groupTasks[0]?.dueDate?.seconds * 1000 || Date.now())} 
+                        dueAt={groupKey === 'no-due-date' ? -1 : new Date(groupTasks[0]?.dueAt?.seconds * 1000 || Date.now())} 
                         setNewTaskId={setNewTaskId}
                         tasksInGroup={groupTasks}
                     />
@@ -82,7 +79,7 @@ const ListTab = () => {
                     renderTaskGroup(
                         groupedPastTasks[date],
                         date,
-                        formatDate(groupedPastTasks[date][0].dueDate.seconds),
+                        formatRelativeTaskDate(groupedPastTasks[date][0].dueAt.seconds),
                         'text-red-400'
                     )
                 )}
@@ -91,14 +88,16 @@ const ListTab = () => {
                     tasksWithNoDueDate.sort((a, b) => new Date(a.createdAt.seconds) - new Date(b.createdAt.seconds)),
                     'no-due-date',
                     'No due date',
-                    true
+                    'text-text2',
+                    true,
                 )}
 
                 {Object.keys(groupedFutureTasks).sort((a, b) => new Date(a) - new Date(b)).map(date =>
                     renderTaskGroup(
                         groupedFutureTasks[date],
                         date,
-                        formatDate(groupedFutureTasks[date][0].dueDate.seconds)
+                        formatRelativeTaskDate(groupedFutureTasks[date][0].dueAt.seconds),
+                        'text-text2',
                     )
                 )}
             
@@ -109,11 +108,16 @@ const ListTab = () => {
 }
 
 
-const AddTaskButton = ( { profile, dueDate, setNewTaskId } ) => {
+const AddTaskButton = ( { profile, dueAt, setNewTaskId } ) => {
 
     const handleClick = async () => {
 
-        const newTask = await createTask( { userId: profile.uid, dueDate: dueDate } );
+        const newTask = await createTask({
+            ownerType: 'user',
+            ownerId: profile.uid,
+            createdByUserId: profile.uid,
+            dueAt
+        });
         if(newTask && newTask.id) {
             setNewTaskId(newTask.id);
         }

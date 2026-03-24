@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom'
-import Sidebar from './Sidebar'
+import Sidebar from '../../components/main/Sidebar'
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { doc, onSnapshot } from 'firebase/firestore'
@@ -7,7 +7,6 @@ import { db } from '../../lib/firebase'
 import ActivityHandler from './ActivityHandler'
 import { CirclesProvider } from '../../contexts/CirclesContext'
 import { MembersProvider } from '../../contexts/MembersContext'
-import { SubjectsProvider } from '../../contexts/SubjectsContext'
 import { TasksProvider } from '../../contexts/TasksContext'
 
 const MainScreen = () => {
@@ -47,22 +46,20 @@ const MainScreen = () => {
     return (
         <CirclesProvider profile={profile}>
             <MembersProvider>
-                <SubjectsProvider profile={profile}>
-                    <TasksProvider profile={profile}>
+                <TasksProvider profile={profile}>
 
-                        <ActivityHandler profile={profile}/>
+                    <ActivityHandler profile={profile}/>
 
-                        <div className="flex min-h-screen">
+                    <div className="flex min-h-screen">
 
-                            <Sidebar profile={profile}/>
-                            <main className="flex-1 h-screen max-w-[2560px] mx-auto">
-                                <Outlet context={{ profile }}/>
-                            </main>
+                        <Sidebar profile={profile}/>
+                        <main className="flex-1 h-screen max-w-[2560px] mx-auto">
+                            <Outlet context={{ profile }}/>
+                        </main>
 
-                        </div>
+                    </div>
 
-                    </TasksProvider>
-                </SubjectsProvider>
+                </TasksProvider>
             </MembersProvider>
         </CirclesProvider>
     )

@@ -5,7 +5,7 @@ import { getDoc, setDoc, doc } from 'firebase/firestore'
 import { db } from '../../lib/firebase'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { createNewUserObject } from '../../utils/userUtils'
+import { createNewUserObject } from '../../services/userService'
 
 import { FaGoogle } from "react-icons/fa";
 import { FaCircleExclamation } from 'react-icons/fa6'
@@ -44,7 +44,7 @@ const Signup = () => {
             
                 await setDoc(userRef, createNewUserObject( {uid: user.uid, firstName: firstName, lastName: lastName, email: res.user.email} ));
             
-                navigate('/dashboard')
+                navigate('/agenda')
             } catch (err) {
                 setFirebaseError(err)
             }
@@ -69,26 +69,15 @@ const Signup = () => {
             const userSnap = await getDoc(userRef)
     
             if(!userSnap.exists()) {
-                const [firstName, ...rest] = user.displayName.split(' ')
+                const [firstName, ...rest] = (user.displayName || '').split(' ')
                 const lastName = rest.join(' ') || ''
     
                 await setDoc(userRef, createNewUserObject( {uid: user.uid, firstName: firstName, lastName: lastName, email: user.email} ))
             }
     
-            //try to link google account with the existing email/password account
-            const emailProvider = new EmailAuthProvider();
-            const credential = emailProvider.credential(user.email, password);
-            try {
-                await linkWithCredential(user, credential)
-                console.log("Successfully linked Google to Email/Password.")
-            } catch (err) {
-                //account is already linked, no need to do anything
-                console.log("Account is already linked.")
-            }
-    
-            navigate('/dashboard')
+            navigate('/agenda')
         } catch (err) {
-            setFirebaseError(err.message)
+            setFirebaseError(err)
         }
 
     }

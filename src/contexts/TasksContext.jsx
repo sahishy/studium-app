@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { useUserTasks, useCircleTasks } from '../utils/taskUtils';
+import { useUserTasks, useCircleTasks } from '../services/taskService';
 import { useAuth } from './AuthContext';
 import { useCircles } from './CirclesContext';
 

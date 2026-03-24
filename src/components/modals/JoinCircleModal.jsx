@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
-import { joinCircle, canJoinCircle } from '../../utils/circleUtils';
-import Button from '../../pages/main/Button';
+import { joinCircle, canJoinCircle } from '../../services/circleService';
+import Button from '../main/Button';
 
 const JoinCircleModal = ( { profile, closeModal } ) => {
 

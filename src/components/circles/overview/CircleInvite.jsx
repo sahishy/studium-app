@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FaCheck, FaCopy, FaUserFriends } from "react-icons/fa";
-import Button from "../../../pages/main/Button";
-import Card from "../../../pages/main/Card";
+import Button from "../../main/Button";
+import Card from "../../main/Card";
 
 const CircleInvite = ( { circle } ) => {
 

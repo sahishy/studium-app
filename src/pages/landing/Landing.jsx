@@ -1,15 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-
 import favicon from '../../../public/favicon.ico'
-import pfp from '../../assets/default-profile.jpg'
-import heroImage from '../../assets/hero-image.png'
-import { FaUserGraduate, FaFile, FaUserFriends, FaLongArrowAltRight } from "react-icons/fa";
-import { PiCaretLeftFill, PiCaretRightFill } from 'react-icons/pi'
-
-import { getTotalTasksCompleted, getTotalUsers } from '../../utils/userUtils';
-import { getTotalCircles } from '../../utils/circleUtils';
 
 const Landing = () => {
 
@@ -18,7 +10,7 @@ const Landing = () => {
   
     useEffect(() => {
         if(!loading && user) {
-            navigate('/dashboard')
+            navigate('/agenda')
         }
     }, [user, loading, navigate])
 
@@ -26,11 +18,8 @@ const Landing = () => {
         <div className="h-screen flex flex-col items-center">
 
             <Navbar navigate={navigate}/>
-            <HeroSection navigate={navigate}/>
-            <StatsSection/>
-            <TestimonialsSection/>
-            <CallToActionSection navigate={navigate}/>
-            <Footer/>
+
+            <h1 className='mt-64'>in progress</h1>
 
         </div>
     )
@@ -79,223 +68,6 @@ const Navbar = ( { navigate } ) => {
                 </div>
             </header>
         </div>
-    )
-}
-
-const HeroSection = ( { navigate } ) => {
-    return (
-        <section className="w-full min-h-screen py-24 pt-[88px] bg-background2">
-            <div className="max-w-5xl h-full m-auto flex gap-16">
-
-                <div className='flex flex-1 flex-col justify-center gap-8'>
-                    
-                    <h2 className="text-6xl font-extrabold">
-                        We make schoolwork&nbsp;
-                        <span className='border-b-4 border-yellow-400'>fun.</span>
-                    </h2>
-
-                    <p className="text-lg text-text2">
-                        Stay organized, motivated, and on top of your assignments — all in one intelligent planner built for students.
-                    </p>
-
-                    <div className='flex gap-4'>
-
-                        <button 
-                            onClick={() => navigate('/signup')}
-                            className='px-8 py-4 font-extrabold border-yellow-500 border-b-4 rounded-xl bg-yellow-400 hover:bg-yellow-500 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
-                        >
-                            Get Started
-                        </button>
-
-                        <button
-                            onClick={() => navigate('/')}
-                            className="px-8 py-4 text-white font-extrabold border-black border-b-4 rounded-xl bg-gray-800 hover:bg-black active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200 flex items-center justify-center gap-2"
-                        >
-                            Learn More
-                            <FaLongArrowAltRight/>
-                        </button>
-
-                    </div>
-
-                </div>
-
-                <div className='flex flex-1 justify-center items-center'>
-                    <img src={heroImage} alt='hero' className='w-full h-full object-contain'></img>
-                </div>
-
-            </div>
-        </section>
-    )
-}
-
-const StatsSection = () => {
-
-    const [totalUsers, setTotalUsers] = useState(null)
-    const [totalTasksCompleted, setTotalTasksCompleted] = useState(null)
-    const [totalCircles, setTotalCircles] = useState(null);
-
-    useEffect(() => {
-
-        const fetchTotalUsers = async () => {
-            const count = await getTotalUsers();
-            setTotalUsers(count);
-        }
-        const fetchTotalTasksCompleted = async () => {
-            const count = await getTotalTasksCompleted();
-            setTotalTasksCompleted(count);
-        }
-        const fetchTotalCircles = async () => {
-            const count = await getTotalCircles();
-            setTotalCircles(count);
-        }
-
-        fetchTotalUsers();
-        fetchTotalTasksCompleted();
-        fetchTotalCircles();
-
-    }, [])
-
-    return (
-        <section className="w-full py-24 bg-background0 border-2 border-border">
-            <div className="max-w-5xl h-full m-auto flex flex-col gap-8 text-center">
-
-                <h2 className="text-4xl font-extrabold text-center">
-                    Working Smarter Starts Here
-                </h2>
-
-                <p className="text-lg text-text2">
-                    Studium makes planning your schoolwork effortless and rewarding. Add assignments in seconds, build daily habits, and earn XP as you get things done.
-                </p>
-
-                <div className='flex gap-8 text-left'>
-
-                    <div className='flex-1 flex gap-4 items-center border-2 border-border p-4 rounded-xl'>
-                        <div className='p-4 rounded-xl bg-background3 text-2xl text-text1'>
-                            <FaUserGraduate/>
-                        </div>
-                        <div className='flex flex-col'>
-                            <h3 className='text-2xl font-extrabold'>{totalUsers ? totalUsers : 0}+</h3>
-                            <p className='text-sm text-text2'>Students staying on track</p>
-                        </div>
-                    </div>
-
-                    <div className='flex-1 flex gap-4 items-center border-2 border-border p-4 rounded-xl'>
-                        <div className='p-4 rounded-xl bg-background3 text-2xl text-text1'>
-                            <FaFile/>
-                        </div>
-                        <div className='flex flex-col'>
-                            <h3 className='text-2xl font-extrabold'>{totalTasksCompleted ? totalTasksCompleted : 0}+</h3>
-                            <p className='text-sm text-text2'>Assignments completed</p>
-                        </div>
-                    </div>
-
-                    <div className='flex-1 flex gap-4 items-center border-2 border-border p-4 rounded-xl'>
-                        <div className='p-4 rounded-xl bg-background3 text-2xl text-text1'>
-                            <FaUserFriends/>
-                        </div>
-                        <div className='flex flex-col'>
-                            <h3 className='text-2xl font-extrabold'>{totalCircles ? totalCircles : 0}+</h3>
-                            <p className='text-sm text-text2'>Focused study circles</p>
-                        </div>
-                    </div>
-
-
-                </div>
-
-
-            </div>
-        </section>
-    )
-}
-
-const TestimonialsSection = () => {
-    return (
-        <section className="w-full py-24 bg-background2">
-            <div className="max-w-5xl h-full m-auto flex flex-col gap-16">
-
-                <div className='flex flex-col items-center gap-4 text-center font-extrabold'>
-                    <h2 className="text-lg border-b-4 border-b-yellow-400 text-text1">
-                        TESTIMONIALS
-                    </h2>
-
-                    <h2 className="text-4xl">
-                        Students Love Studium
-                    </h2>
-                </div>
-
-                <div className='flex justify-between items-center gap-8'>
-                    <PiCaretLeftFill className='text-4xl text-text2 opacity-50'/>
-
-                    <div className='flex flex-col gap-8 items-center bg-background0 border-2 border-border p-8 rounded-xl max-w-lg'>
-
-                        <p className="text-lg text-text1 text-center">
-                            "Studium has revolutionized the way I approach my studies. The XP system keeps me motivated and on track!"
-                        </p>
-
-                        <div className='flex flex-col gap-2'>
-
-                            <img src={pfp} alt='student' className='rounded-full w-16 h-16 m-auto'/>
-                            <div>
-                                <p className="text-2xl text-text1 font-extrabold text-center">
-                                    Test S.
-                                </p>
-                                <p className="text-sm text-text2 text-center">
-                                    11th Grade
-                                </p>
-                            </div>
-
-                        </div>
-                    </div>
-
-                    <PiCaretRightFill className='text-4xl text-text2 opacity-50'/>
-
-                </div>
-
-            </div>
-        </section>
-    )
-}
-
-const CallToActionSection = ( { navigate } ) => {
-    return (
-        <section className="w-full py-24 bg-background0 border-2 border-border">
-            <div className="max-w-5xl h-full m-auto flex gap-16">
-
-                <div className='flex-1 flex flex-col gap-8'>
-                    <h2 className="text-4xl font-extrabold text-left">
-                        Ready to Focus Better and Crush School?
-                    </h2>
-
-                    <p className="text-lg text-text2">
-                        Studium makes planning your schoolwork effortless and rewarding. Add assignments in seconds, build daily habits, and earn XP as you get things done.
-                    </p>
-                </div>
-
-                <div className='flex justify-end items-center gap-4'>
-
-                    <button
-                        onClick={() => navigate('/signup')}
-                        className='px-8 py-4 font-extrabold border-yellow-500 border-b-4 rounded-xl bg-yellow-400 hover:bg-yellow-500 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
-                    >
-                        Get Started
-                    </button>
-
-                </div>
-
-            </div>
-        </section>
-    )
-}
-
-const Footer = () => {
-    return (
-        <section className="w-full py-24 bg-gray-800 text-white">
-            <div className="max-w-5xl h-full m-auto flex justify-center gap-16">
-                <p>
-                    © {new Date().getFullYear()} Studium. All rights reserved.
-                </p>
-            </div>
-        </section>
     )
 }
 

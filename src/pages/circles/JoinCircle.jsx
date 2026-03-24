@@ -1,7 +1,7 @@
 import { useParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useEffect, useState } from "react";
-import { canJoinCircle, getCircle, joinCircle } from "../../utils/circleUtils";
+import { canJoinCircle, getCircle, joinCircle } from "../../services/circleService";
 import { useNavigate } from "react-router-dom";
 import { PiStarFourFill } from "react-icons/pi";
 import { FaUserFriends } from "react-icons/fa";
@@ -81,7 +81,7 @@ const JoinCircle = () => {
                         </div>
                         <div className="flex items-center gap-2">
                             <FaUserFriends/>
-                            <h2>{circle.userIds.length} members</h2>
+                            <h2>{circle.memberCount ?? 0} members</h2>
                         </div>
                     </div>
 

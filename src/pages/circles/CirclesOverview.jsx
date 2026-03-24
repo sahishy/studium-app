@@ -1,32 +1,29 @@
 import { useOutletContext, useParams } from 'react-router-dom';
 import Header from '../../components/main/Header';
-import { useCircle } from '../../utils/circleUtils';
-import CircleMembers from '../../components/circles/circlesOverview/CircleMembers';
+import { useCircle } from '../../services/circleService';
+import CircleMembers from '../../components/circles/overview/CircleMembers.jsx';
 import { useState } from 'react';
-import { createTask, formatDate, useCircleTasks } from '../../utils/taskUtils';
+import { createTask, useCircleTasks } from '../../services/taskService';
+import { formatRelativeTaskDate, toDateKeyFromSeconds } from '../../utils/formatters.jsx';
 import { FaPlus } from 'react-icons/fa';
 import { PiCaretDownFill, PiCaretRightFill } from 'react-icons/pi';
 import TasksHeader from '../../components/agenda/TasksHeader';
 import Task from '../../components/agenda/Task';
-import SubjectModal from '../../components/modals/SubjectModal';
-import Subject from '../../components/agenda/Subject';
-import { useModal } from '../../contexts/ModalContext';
-import { useCircleSubjects } from '../../utils/subjectUtils';
 import { useMembers } from '../../contexts/MembersContext';
-import CircleLevel from '../../components/circles/circlesOverview/CircleLevel';
-import CircleInvite from '../../components/circles/circlesOverview/CircleInvite';
-import Button from '../main/Button';
+import CircleInvite from '../../components/circles/overview/CircleInvite.jsx';
+import { useCircleMembers } from '../../services/circleService';
 
 const CirclesOverview = () => {
 
     const { profile } = useOutletContext()
     const { circleId } = useParams();
     const { circle, loading } = useCircle(circleId);
+    const { members: circleMembers, loading: circleMembersLoading } = useCircleMembers(circleId);
 
     const tasks = useCircleTasks([circleId]);
-    const subjects = useCircleSubjects([circleId]);
 
     const allMembers = useMembers();
+    const ownerId = circleMembers.find((member) => member.role === 'owner')?.userId || circle?.createdByUserId || circle?.createdBy
 
     const [collapsedDates, setCollapsedDates] = useState([])
     const [newTaskId, setNewTaskId] = useState(null)
@@ -34,14 +31,14 @@ const CirclesOverview = () => {
 
 
 
-    const tasksWithNoDueDate = tasks.filter(x => x.dueDate === -1)
-    const tasksWithDueDate = tasks.filter(x => x.dueDate !== -1)
+    const tasksWithNoDueDate = tasks.filter(x => x.dueAt === -1)
+    const tasksWithDueDate = tasks.filter(x => x.dueAt !== -1)
 
-    const pastTasks = tasksWithDueDate.filter(task => new Date(task.dueDate.seconds * 1000) < new Date())
-    const futureTasks = tasksWithDueDate.filter(task => new Date(task.dueDate.seconds * 1000) >= new Date())
+    const pastTasks = tasksWithDueDate.filter(task => new Date(task.dueAt.seconds * 1000) < new Date())
+    const futureTasks = tasksWithDueDate.filter(task => new Date(task.dueAt.seconds * 1000) >= new Date())
 
-    const groupedPastTasks = Object.groupBy(pastTasks, task => new Date(task.dueDate.seconds * 1000).toLocaleDateString())
-    const groupedFutureTasks = Object.groupBy(futureTasks, task => new Date(task.dueDate.seconds * 1000).toLocaleDateString())
+    const groupedPastTasks = Object.groupBy(pastTasks, task => toDateKeyFromSeconds(task.dueAt.seconds))
+    const groupedFutureTasks = Object.groupBy(futureTasks, task => toDateKeyFromSeconds(task.dueAt.seconds))
 
     const handleCollapseToggle = (date) => {
         setCollapsedDates(collapsedDates.includes(date) ? collapsedDates.filter(x => x !== date) : [...collapsedDates, date])
@@ -61,7 +58,14 @@ const CirclesOverview = () => {
             </div>
         )
     }
-    if(!circle.userIds.includes(profile.uid)) {
+    if(circleMembersLoading) {
+        return (
+            <div className="flex items-center justify-center h-screen">
+                <p className="text-lg font-semibold text-text1">Loading circle members...</p>
+            </div>
+        )
+    }
+    if(!circleMembers.some((member) => member.userId === profile.uid)) {
         return (
             <div className="flex items-center justify-center h-screen">
                 <p className="text-lg font-semibold text-text1">You aren't in that circle!</p>
@@ -77,25 +81,13 @@ const CirclesOverview = () => {
                 <div className='h-full w-full flex flex-col items-start gap-8 px-24 pb-8 pt-2 m-auto'>
 
                     <div className='w-full flex gap-4'>
-                        <CircleLevel circle={circle}/>
                         <CircleInvite circle={circle}/>
                     </div>
 
                     <div className='w-full flex flex-col gap-4'>
                         <h1 className='text-lg text-text1 font-extrabold'>Members</h1>
 
-                        <CircleMembers members={allMembers.filter(x => circle.userIds.includes(x.uid))} ownerId={circle.createdBy}/>
-                    </div>
-
-                    <div className='w-full flex flex-col items-start gap-4'>
-                        <h1 className='text-lg text-text1 font-extrabold'>Subjects</h1>
-                        {subjects.length < 12 && <AddSubjectButton circle={circle}/>}
-
-                        <div className='w-full grid grid-cols-4 auto-rows-auto gap-2'>
-                            {subjects.sort((a, b) => new Date(a.createdAt.seconds) - new Date(b.createdAt.seconds)).map((subject) => (
-                                <Subject key={subject.uid} subject={subject}/>
-                            ))}
-                        </div>
+                        <CircleMembers members={allMembers.filter((user) => circleMembers.some((member) => member.userId === user.uid))} ownerId={ownerId}/>
                     </div>
 
 
@@ -115,7 +107,7 @@ const CirclesOverview = () => {
                                         <div className='text-sm text-text1'>
                                             {collapsedDates.includes(date) ? <PiCaretRightFill/> : <PiCaretDownFill/>}
                                         </div>
-                                        <h1 className={`text-sm text-red-400 font-extrabold`}>{formatDate(groupedPastTasks[date][0].dueDate.seconds)}</h1>
+                                        <h1 className={`text-sm text-red-400 font-extrabold`}>{formatRelativeTaskDate(groupedPastTasks[date][0].dueAt.seconds)}</h1>
                                     </button>
 
                                     <div className={`w-full flex-col pl-8 ${collapsedDates.includes(date) ? 'hidden' : 'flex mb-4'}`}>
@@ -125,7 +117,7 @@ const CirclesOverview = () => {
                                             <Task key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId}/>
                                         ))}
 
-                                        <AddTaskButton circle={circle} dueDate={new Date(groupedPastTasks[date][0].dueDate.seconds * 1000)} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
+                                        <AddTaskButton circle={circle} dueAt={new Date(groupedPastTasks[date][0].dueAt.seconds * 1000)} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
                                     </div>
                                 </div>
                             ))}
@@ -139,7 +131,7 @@ const CirclesOverview = () => {
                                     <div className='text-sm text-text1'>
                                         {collapsedDates.includes('no-due-date') ? <PiCaretRightFill/> : <PiCaretDownFill/>}
                                     </div>
-                                    <h1 className='text-sm text-text1 font-extrabold'>No due date</h1>
+                                    <h1 className='text-sm text-text2 font-extrabold'>No due date</h1>
                                 </button>
 
                                 <div className={`w-full flex-col pl-8 ${collapsedDates.includes('no-due-date') ? 'hidden' : 'flex mb-4'}`}>
@@ -149,7 +141,7 @@ const CirclesOverview = () => {
                                         <Task key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
                                     ))}
 
-                                    <AddTaskButton circle={circle} dueDate={-1} tasks={tasks} setNewTaskId={setNewTaskId}/>
+                                    <AddTaskButton circle={circle} dueAt={-1} tasks={tasks} setNewTaskId={setNewTaskId}/>
 
                                 </div>
                             </div>
@@ -164,7 +156,7 @@ const CirclesOverview = () => {
                                         <div className='text-sm text-text1'>
                                             {collapsedDates.includes(date) ? <PiCaretRightFill/> : <PiCaretDownFill/>}
                                         </div>
-                                        <h1 className={`text-sm text-text1 font-extrabold`}>{formatDate(groupedFutureTasks[date][0].dueDate.seconds)}</h1>
+                                        <h1 className={`text-sm text-text1 font-extrabold`}>{formatRelativeTaskDate(groupedFutureTasks[date][0].dueAt.seconds)}</h1>
                                     </button>
 
                                     <div className={`w-full flex-col pl-8 ${collapsedDates.includes(date) ? 'hidden' : 'flex mb-4'}`}>
@@ -174,7 +166,7 @@ const CirclesOverview = () => {
                                             <Task key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
                                         ))}
 
-                                        <AddTaskButton circle={circle} dueDate={new Date(groupedFutureTasks[date][0].dueDate.seconds * 1000)} setNewTaskId={setNewTaskId}/>
+                                        <AddTaskButton circle={circle} dueAt={new Date(groupedFutureTasks[date][0].dueAt.seconds * 1000)} setNewTaskId={setNewTaskId}/>
                                     </div>
                                 </div>
                             ))}
@@ -190,32 +182,17 @@ const CirclesOverview = () => {
     )
     
 }
-const AddSubjectButton = ( { circle } ) => {
 
-    const { openModal, closeModal } = useModal()
-
-    const handleClick = () => {
-        const subjectData = {
-            title: '',
-            day: 'A',
-            color: 'gray',
-            link: ''
-        }
-        openModal(<SubjectModal circleId={circle.uid} isEdit={false} subjectData={subjectData} closeModal={closeModal}/>)
-    }
-
-    return (
-        <Button onClick={handleClick} type={'secondary'}>
-            Add Subject
-        </Button>
-    )
-}
-
-const AddTaskButton = ( { circle, dueDate, setNewTaskId } ) => {
+const AddTaskButton = ( { circle, dueAt, setNewTaskId } ) => {
 
     const handleClick = async () => {
 
-        const newTask = await createTask( { circleId: circle.uid, dueDate: dueDate } );
+        const newTask = await createTask({
+            ownerType: 'circle',
+            ownerId: circle.uid,
+            createdByUserId: circle.createdByUserId || circle.createdBy || null,
+            dueAt
+        });
         if(newTask && newTask.id) {
             setNewTaskId(newTask.id);
         }

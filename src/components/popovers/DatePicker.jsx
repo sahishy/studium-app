@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BasePopover from './BasePopover';
 
 import { PiCaretRightFill, PiCaretLeftFill } from 'react-icons/pi';
-import Button from '../../pages/main/Button';
+import Button from '../main/Button';
 
 const DatePicker = ({ children, selectedDate, onSelect, className = '' }) => {
 

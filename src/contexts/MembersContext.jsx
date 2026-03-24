@@ -1,17 +1,16 @@
 import React, { createContext, useContext, useMemo } from 'react';
-import { useMembersList } from '../utils/userUtils';
+import { useMembersList } from '../services/userService';
 import { useCircles } from './CirclesContext';
+import { useCircleMemberIds } from '../services/circleService';
 
 const MembersContext = createContext([]);
 
 const MembersProvider = ( { children } ) => {
 
     const circles = useCircles();
+    const circleIds = useMemo(() => circles.map(circle => circle.uid), [circles]);
 
-    const memberIds = useMemo(
-        () => circles.flatMap(circle => circle.userIds || []),
-        [circles]
-    );
+    const memberIds = useCircleMemberIds(circleIds);
     
     const members = useMembersList(memberIds);
 

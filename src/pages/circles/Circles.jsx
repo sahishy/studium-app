@@ -1,13 +1,12 @@
 import { Link, useOutletContext } from 'react-router-dom'
 import Header from '../../components/main/Header.jsx'
 import Circle from '../../components/circles/Circle.jsx'
-import CircleFriends from '../../components/circles/CirclesFriends.jsx'
 import CreateCircleModal from '../../components/modals/CreateCircleModal.jsx'
 import { useModal } from '../../contexts/ModalContext.jsx'
 import JoinCircleModal from '../../components/modals/JoinCircleModal.jsx'
 import { useCircles } from '../../contexts/CirclesContext.jsx'
-import Button from '../main/Button.jsx'
-import BottomFade from '../main/BottomFade.jsx'
+import Button from '../../components/main/Button.jsx'
+import BottomFade from '../../components/main/BottomFade.jsx'
 
 const Circles = () => {
 
@@ -58,13 +57,9 @@ const Circles = () => {
 
                     </div>
 
-                </div>
-                
 
-                <div className='flex-1 min-w-0'>
                     
-                    <CircleFriends userId={profile.uid}/>
-                    
+
                 </div>
 
             </div>

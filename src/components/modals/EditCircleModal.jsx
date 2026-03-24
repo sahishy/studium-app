@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { getColors } from '../../utils/subjectUtils';
-import { updateCircle } from '../../utils/circleUtils';
-import Button from '../../pages/main/Button';
+import { updateCircle } from '../../services/circleService';
+import Button from '../main/Button';
 
 const EditCircleModal = ( { profile, circle, closeModal } ) => {
 

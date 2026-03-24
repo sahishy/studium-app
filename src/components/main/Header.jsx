@@ -5,11 +5,11 @@ import Dropdown from "../Popovers/Dropdown";
 import { FaPen, FaTrash } from 'react-icons/fa';
 import { PiCaretDownFill } from 'react-icons/pi'
 import { BiSolidDoorOpen } from "react-icons/bi";
-import { leaveCircle } from "../../utils/circleUtils";
+import { leaveCircle } from "../../services/circleService";
 import { useModal } from "../../contexts/ModalContext";
 import EditCircleModal from "../modals/EditCircleModal";
 import DeleteCircleModal from "../modals/DeleteCircleModal";
-import Button from "../../pages/main/Button";
+import Button from "./Button";
 
 const Header = ( { profile, text, circle, back } ) => {
 
@@ -54,8 +54,9 @@ const Header = ( { profile, text, circle, back } ) => {
 const CircleHeader = ( { circle, profile, navigate } ) => {
 
     const { openModal, closeModal } = useModal()
+    const ownerUserId = circle.createdByUserId || circle.createdBy
 
-    const options = (circle.createdBy === profile.uid ? [
+    const options = (ownerUserId === profile.uid ? [
         { label: 'Edit', icon: <FaPen className="text-sm"/> },
         { isDivider: true },
         { label: 'Delete', icon: <FaTrash className="text-sm"/> }

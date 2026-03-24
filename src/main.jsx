@@ -1,28 +1,24 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 // import { BrowserRouter } from 'react-router-dom'
-import { HashRouter as Router  } from 'react-router-dom'
+import { HashRouter as Router } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './contexts/AuthContext.jsx'
 
-/**
- * Apply saved appearance (light | dark | system) before React mounts.
- * This injects CSS variable overrides to match the themes defined in src/index.css.
- */
 const applySavedAppearance = () => {
-	try {
-		const appearance = localStorage.getItem('appearance');
-		if (!appearance || appearance === 'system') return;
+  try {
+    const appearance = localStorage.getItem('appearance');
+    if (!appearance || appearance === 'system') return;
 
-		const existing = document.getElementById('app-theme-vars');
-		if (existing) existing.remove();
+    const existing = document.getElementById('app-theme-vars');
+    if (existing) existing.remove();
 
-		const style = document.createElement('style');
-		style.id = 'app-theme-vars';
+    const style = document.createElement('style');
+    style.id = 'app-theme-vars';
 
-		if (appearance === 'light') {
-			style.textContent = `:root {
+    if (appearance === 'light') {
+      style.textContent = `:root {
   --color-primary0: #111827;
   --color-primary1: #111827;
   --color-background0: #ffffff;
@@ -35,8 +31,8 @@ const applySavedAppearance = () => {
   --color-text1: #4b5563;
   --color-border: #e5e7eb;
 }`;
-		} else if (appearance === 'dark') {
-			style.textContent = `:root {
+    } else if (appearance === 'dark') {
+      style.textContent = `:root {
         --color-primary0: white;
         --color-primary1: #dfdfe0;
 
@@ -58,23 +54,23 @@ const applySavedAppearance = () => {
         --color-backdrop: #0a0a0d66;
 
 }`;
-		}
+    }
 
-		document.head.appendChild(style);
-	} catch (e) {
-		// ignore errors (e.g., localStorage unavailable)
-	}
+    document.head.appendChild(style);
+  } catch (e) {
+    // ignore errors (e.g., localStorage unavailable)
+  }
 };
 
 // run before mounting React so the correct theme is visible on first paint
 applySavedAppearance();
 
 createRoot(document.getElementById('root')).render(
-	<StrictMode>
-		<Router>
-			<AuthProvider>
-				<App/>
-			</AuthProvider>
-		</Router>
-	</StrictMode>,
+  <StrictMode>
+    <Router>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </Router>
+  </StrictMode>,
 )

@@ -1,6 +1,6 @@
 import { PiStarFourFill } from "react-icons/pi";
 import pfp from '../../assets/default-profile.jpg'
-import Card from "../../pages/main/Card";
+import Card from "../main/Card";
 
 const Circle = ( { circle } ) => {
 
@@ -33,18 +33,18 @@ const Circle = ( { circle } ) => {
 
             <div className="flex items-center">
 
-                {circle.userIds.slice(0, 4).map((userId, index) => (
+                {Array.from({ length: Math.min(circle.memberCount || 0, 4) }).map((_, index) => (
                     <img
-                        key={userId}
+                        key={index}
                         src={pfp}
                         alt="Profile"
                         className={`w-10 h-10 rounded-full border-4 group-hover:border-background4 border-background1 ${index !== 0 ? '-ml-3' : ''} transition-colors duration-200`}
                         style={{ zIndex: 4 - index }}
                     />
                 ))}
-                {circle.userIds.length > 4 && (
+                {(circle.memberCount || 0) > 4 && (
                     <div className="w-10 h-10 rounded-full border-4 group-hover:border-background4 border-background1 -ml-3 flex items-center justify-center bg-background3 text-sm text-text2 transition-colors duration-200">
-                        +{circle.userIds.length - 4}
+                        +{(circle.memberCount || 0) - 4}
                     </div>                    
                 )}
 

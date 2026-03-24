@@ -5,7 +5,7 @@ import { getDoc, setDoc, doc } from 'firebase/firestore'
 import { db } from '../../lib/firebase'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { createNewUserObject } from '../../utils/userUtils'
+import { createNewUserObject } from '../../services/userService'
 
 import { FaGoogle } from "react-icons/fa";
 import { FaCircleExclamation } from "react-icons/fa6";
@@ -60,22 +60,13 @@ const Login = () => {
             const userSnap = await getDoc(userRef)
 
             if(!userSnap.exists()) {
-                const [firstName, ...rest] = user.displayName.split(' ')
+                const [firstName, ...rest] = (user.displayName || '').split(' ')
                 const lastName = rest.join(' ') || ''
 
                 await setDoc(userRef, createNewUserObject( {uid: user.uid, firstName: firstName, lastName: lastName, email: user.email}))
             }
 
-            const emailProvider = new EmailAuthProvider();
-            const credential = emailProvider.credential(user.email, password);
-            try {
-                await linkWithCredential(user, credential)
-                //console.log("successfully linked google to email/password.")
-            } catch(err) {
-                //console.log("account is already linked")
-            }
-
-            navigate('/dashboard')
+            navigate('/agenda')
         } catch (err) {
             setFirebaseError(err)
         }
@@ -161,7 +152,7 @@ const Login = () => {
                                 onChange={(e) => setPassword(e.target.value)}
                                 autoComplete="current-password"
                                 name="password"
-                                className={`w-full p-4 border-2 rounded-xl focus:outline-yellow-400 ${errors.email ? 'border-red-400' : 'border-border'}`}
+                                className={`w-full p-4 border-2 rounded-xl focus:outline-yellow-400 ${errors.password ? 'border-red-400' : 'border-border'}`}
                             />
                             {errors.password && <p className='text-red-400 flex items-center gap-2'><FaCircleExclamation/>{errors.password}</p>}
                         </div>

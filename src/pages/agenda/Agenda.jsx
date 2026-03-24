@@ -3,16 +3,14 @@ import Header from '../../components/main/Header.jsx'
 import { FaCalendar, FaList, FaTh } from 'react-icons/fa'
 import { useCircles } from '../../contexts/CirclesContext.jsx'
 import { useTasks } from '../../contexts/TasksContext.jsx'
-import { useSubjects } from '../../contexts/SubjectsContext.jsx'
-import BottomFade from '../main/BottomFade.jsx'
-import Tooltip from '../../components/tooltips/Tooltip.jsx'
+import BottomFade from '../../components/main/BottomFade.jsx'
+import Tooltip from '../../components/tooltips/TextTooltip.jsx'
 
 const Agenda = () => {
 
     const { profile } = useOutletContext()
     const { circles } = useCircles()
     const { user: userTasks, circle: circleTasks } = useTasks()
-    const { user: userSubjects, circle: circleSubjects } = useSubjects()
 
     const location = useLocation()
     const navigate = useNavigate()

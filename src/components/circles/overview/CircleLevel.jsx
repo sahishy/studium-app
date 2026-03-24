@@ -1,5 +1,5 @@
 import { PiStarFourFill } from "react-icons/pi"
-import Card from "../../../pages/main/Card"
+import Card from "../../main/Card"
 
 const CircleGreeting = ( { circle } ) => {
 

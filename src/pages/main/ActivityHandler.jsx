@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { updateStatus, updateStreak } from "../../utils/userUtils";
+import { updateStatus, updateStreak } from "../../services/userService";
 
 const ActivityHandler = ( { profile } ) => {
 
