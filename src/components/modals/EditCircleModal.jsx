@@ -34,7 +34,7 @@ const EditCircleModal = ( { profile, circle, closeModal } ) => {
                     placeholder="Title*"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full p-4 border-2 border-border rounded-xl focus:outline-gray-600"
+                    className="w-full p-4 border-2 border-neutral4 rounded-xl focus:outline-gray-600"
                     required={true}
                 />
 

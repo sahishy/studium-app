@@ -91,7 +91,7 @@ const JoinCircleModal = ( { profile, closeModal } ) => {
                             onChange={(e) => handleChange(e, index)}
                             onKeyDown={(e) => handleKeyDown(e, index)}
                             ref={(el) => (inputsRef.current[index] = el)}
-                            className="w-16 h-16 uppercase text-center text-2xl border-2 border-border rounded-xl"
+                            className="w-16 h-16 uppercase text-center text-2xl border-2 border-neutral4 rounded-xl"
                             required
                         />
                     ))}

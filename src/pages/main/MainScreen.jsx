@@ -8,6 +8,7 @@ import ActivityHandler from './ActivityHandler'
 import { CirclesProvider } from '../../contexts/CirclesContext'
 import { MembersProvider } from '../../contexts/MembersContext'
 import { TasksProvider } from '../../contexts/TasksContext'
+import { CoursesProvider } from '../../contexts/CoursesContext'
 
 const MainScreen = () => {
     const { user, loading } = useAuth()
@@ -45,22 +46,24 @@ const MainScreen = () => {
 
     return (
         <CirclesProvider profile={profile}>
-            <MembersProvider>
-                <TasksProvider profile={profile}>
+            <CoursesProvider profile={profile}>
+                <MembersProvider>
+                    <TasksProvider profile={profile}>
 
-                    <ActivityHandler profile={profile}/>
+                        <ActivityHandler profile={profile}/>
 
-                    <div className="flex min-h-screen">
+                        <div className="flex min-h-screen">
 
-                        <Sidebar profile={profile}/>
-                        <main className="flex-1 h-screen max-w-[2560px] mx-auto">
-                            <Outlet context={{ profile }}/>
-                        </main>
+                            <Sidebar profile={profile}/>
+                            <main className="flex-1 h-screen max-w-[2560px] mx-auto">
+                                <Outlet context={{ profile }}/>
+                            </main>
 
-                    </div>
+                        </div>
 
-                </TasksProvider>
-            </MembersProvider>
+                    </TasksProvider>
+                </MembersProvider>
+            </CoursesProvider>
         </CirclesProvider>
     )
 }

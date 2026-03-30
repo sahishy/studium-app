@@ -1,8 +1,8 @@
 import { PiStarFourFill } from "react-icons/pi";
-import pfp from '../../assets/default-profile.jpg'
+import pfp from '../../assets/images/default-profile.jpg'
 import Card from "../main/Card";
 
-const Circle = ( { circle } ) => {
+const CircleCard = ({ circle }) => {
 
     const getXPBarWidth = () => {
 
@@ -16,7 +16,7 @@ const Circle = ( { circle } ) => {
     return (
         <Card hoverable={true}>
 
-            <div className="flex items-center gap-4 min-w-0"> 
+            <div className="flex items-center gap-4 min-w-0">
                 <div className="bg-background3 rounded-xl">
 
                     {circle.icon ? (
@@ -28,37 +28,18 @@ const Circle = ( { circle } ) => {
                     )}
 
                 </div>
-                <h1 className="text-lg font-extrabold text-text1 truncate">{circle.title}</h1>
+                <h1 className="text-lg font-semibold text-text1 truncate">{circle.title}</h1>
             </div>
 
-            <div className="flex items-center">
-
-                {Array.from({ length: Math.min(circle.memberCount || 0, 4) }).map((_, index) => (
-                    <img
-                        key={index}
-                        src={pfp}
-                        alt="Profile"
-                        className={`w-10 h-10 rounded-full border-4 group-hover:border-background4 border-background1 ${index !== 0 ? '-ml-3' : ''} transition-colors duration-200`}
-                        style={{ zIndex: 4 - index }}
-                    />
-                ))}
-                {(circle.memberCount || 0) > 4 && (
-                    <div className="w-10 h-10 rounded-full border-4 group-hover:border-background4 border-background1 -ml-3 flex items-center justify-center bg-background3 text-sm text-text2 transition-colors duration-200">
-                        +{(circle.memberCount || 0) - 4}
-                    </div>                    
-                )}
-
-            </div>
-            
             <div className="flex items-center gap-4">
 
                 <h1 className="flex items-center justify-center gap-2 text-sm font-semibold text-text2">
-                    <PiStarFourFill/>
+                    <PiStarFourFill />
                     Lv. {circle.level}
                 </h1>
 
                 <div className="flex-1 bg-background3 w-full h-4 rounded-full overflow-hidden">
-                    <div 
+                    <div
                         className="bg-sky-400 rounded-full h-full transition-all duration-1000"
                         style={{ width: `${getXPBarWidth()}%` }}
                     >
@@ -68,9 +49,28 @@ const Circle = ( { circle } ) => {
 
             </div>
 
+            <div className="flex items-center">
+
+                {Array.from({ length: Math.min(circle.memberCount || 0, 4) }).map((_, index) => (
+                    <img
+                        key={index}
+                        src={pfp}
+                        alt="Profile"
+                        className={`w-10 h-10 rounded-full border-4 border-background1 ${index !== 0 ? '-ml-3' : ''} transition-colors `}
+                        style={{ zIndex: 4 - index }}
+                    />
+                ))}
+                {(circle.memberCount || 0) > 4 && (
+                    <div className="w-10 h-10 rounded-full border-4 border-background1 -ml-3 flex items-center justify-center bg-background3 text-sm text-text2 transition-colors ">
+                        +{(circle.memberCount || 0) - 4}
+                    </div>
+                )}
+
+            </div>
+
         </Card>
     )
 
 }
 
-export default Circle;
+export default CircleCard;

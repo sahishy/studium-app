@@ -15,7 +15,7 @@ const CalendarTab = () => {
 
             {/* <h1 className="text-2xl text-center">{currentMonth.toLocaleDateString('default', { month: 'long', year: 'numeric' })}</h1>
 
-            <div className="w-full grid grid-cols-7 border-2 border-border">
+            <div className="w-full grid grid-cols-7 border-2 border-neutral4">
                     {weeks.map((week, weekIndex) =>
                         week.map((dayData, dayIndex) => {
                             
@@ -24,10 +24,10 @@ const CalendarTab = () => {
                             return (
                                 <div
                                     key={`${weekIndex}-${dayIndex}`}
-                                    className={`cursor-pointer text-center p-2 flex flex-col gap-2 border-2 transition-colors duration-200
+                                    className={`cursor-pointer text-center p-2 flex flex-col gap-2 border-2 transition-colors 
                                         text-xs min-h-28 max-h-28
                                         ${dayData.currentMonth ? 'text-text0' : 'text-text2'}
-                                        ${isToday ? 'border-border' : 'border-border'}
+                                        ${isToday ? 'border-neutral4' : 'border-neutral4'}
                                         'bg-background3 hover:bg-background5`}
                                 >
 

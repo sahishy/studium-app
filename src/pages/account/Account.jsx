@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useOutletContext } from 'react-router-dom'
-import Header from '../../components/main/Header';
+import Topbar from '../../components/main/Topbar.jsx';
 
 const Account = () => {
 
@@ -14,8 +14,11 @@ const Account = () => {
 
     return (
         <div className='flex flex-col h-full overflow-scroll'>
+            <Topbar profile={profile} />
 
-            <Header text={getTabTitle()} profile={profile}/>
+            <div className='w-full px-24 pt-2'>
+                <h1 className='text-2xl font-semibold'>{getTabTitle()}</h1>
+            </div>
 
         </div>
     )

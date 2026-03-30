@@ -1,6 +1,6 @@
 import { Link, useOutletContext } from 'react-router-dom'
-import Header from '../../components/main/Header.jsx'
-import Circle from '../../components/circles/Circle.jsx'
+import Topbar from '../../components/main/Topbar.jsx'
+import CircleCard from '../../components/circles/CircleCard.jsx'
 import CreateCircleModal from '../../components/modals/CreateCircleModal.jsx'
 import { useModal } from '../../contexts/ModalContext.jsx'
 import JoinCircleModal from '../../components/modals/JoinCircleModal.jsx'
@@ -15,17 +15,16 @@ const Circles = () => {
 
     return (
         <div className='flex flex-col h-full overflow-scroll'>
-            <Header text={'Circles'} profile={profile}/>
+            <Topbar profile={profile} />
 
             <div className='w-full h-full flex flex-col gap-4 lg:flex-row lg:gap-16 lg:items-start px-24 pb-8 pt-2 m-auto'>
+                <div className='flex-2 flex flex-col gap-4 pb-16'>
 
-                <div className='flex-2 flex flex-col gap-8 pb-16'>
-
-
+                    <h1 className="text-2xl font-semibold">Circles</h1>
 
                     <div className='w-full flex flex-col gap-4'>
 
-                        {/* <h1 className='text-lg text-text1 font-extrabold'>Your Circles</h1> */}
+                        {/* <h1 className='text-lg text-text1 font-semibold'>Your Circles</h1> */}
 
                         <div className='flex gap-2'>
 
@@ -46,7 +45,7 @@ const Circles = () => {
                                             key={circle.uid}
                                             to={circle.uid}
                                         >
-                                            <Circle circle={circle}/>
+                                            <CircleCard circle={circle}/>
                                         </Link>
 
                                     ))}

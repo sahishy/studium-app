@@ -1,15 +1,16 @@
 import BaseTooltip from "./BaseTooltip";
 
-const Tooltip = ({ children, text, placement = 'auto', className = '' }) => {
+const TextTooltip = ({ children, text, placement = 'auto', className = '', disabled = false }) => {
     return (
         <BaseTooltip
             content={text}
             placement={placement}
             className={className}
+            disabled={disabled}
         >
             {children}
         </BaseTooltip>
     )
 }
 
-export default Tooltip;
+export default TextTooltip;

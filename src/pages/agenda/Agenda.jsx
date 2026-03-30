@@ -1,10 +1,10 @@
 import { useOutletContext, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import Header from '../../components/main/Header.jsx'
+import Topbar from '../../components/main/Topbar.jsx'
 import { FaCalendar, FaList, FaTh } from 'react-icons/fa'
 import { useCircles } from '../../contexts/CirclesContext.jsx'
 import { useTasks } from '../../contexts/TasksContext.jsx'
 import BottomFade from '../../components/main/BottomFade.jsx'
-import Tooltip from '../../components/tooltips/TextTooltip.jsx'
+import IconTabSelector from '../../components/main/IconTabSelector.jsx'
 
 const Agenda = () => {
 
@@ -16,9 +16,9 @@ const Agenda = () => {
     const navigate = useNavigate()
 
     const tabs = [
-        { name: 'list', icon: <FaList/> },
-        { name: 'board', icon: <FaTh/> },
-        { name: 'calendar', icon: <FaCalendar/> },
+        { name: 'list', label: 'List', icon: <FaList/> },
+        { name: 'board', label: 'Board', icon: <FaTh/> },
+        { name: 'calendar', label: 'Calendar', icon: <FaCalendar/> },
     ]
     const currentTab = tabs.findIndex(tab => location.pathname.includes(tab.name))
 
@@ -30,22 +30,20 @@ const Agenda = () => {
     return (
 
         <div className="flex flex-col h-full relative">
+            <Topbar profile={profile} />
             <div className="flex-1 overflow-y-auto relative">
-                <Header text={'Agenda'} profile={profile}/>
                 <div className='w-full flex flex-col items-start gap-4 px-24 pb-8 pt-2 m-auto'>
 
-                    <div className='p-1 bg-background2 text-text1 text-center text-sm rounded-xl flex gap-1'>
-                        {tabs.map((tab, index) => (
-                            <TabButton 
-                                key={tab.name}
-                                tab={tab}
-                                isCurrent={currentTab === index}
-                                onClick={() => 
-                                    handleClick(tab.name)
-                                }
-                            />
-                        ))}
+                    <div className='flex items-center justify-between w-full'>
+                        <h1 className="text-2xl font-semibold">Agenda</h1>
+
+                        <IconTabSelector
+                            tabs={tabs}
+                            currentIndex={currentTab}
+                            onSelect={(tab) => handleClick(tab.name)}
+                        />
                     </div>
+
 
                     <Outlet context={{ profile }}/>
 
@@ -56,24 +54,6 @@ const Agenda = () => {
             <BottomFade/>
         </div>
     ) 
-}
-
-const TabButton = ( { tab, isCurrent, onClick } ) => {
-
-    const label = tab.name.charAt(0).toUpperCase() + tab.name.slice(1)
-
-    return (
-        <Tooltip text={label}>
-            <button 
-                onClick={onClick}
-                className={`flex-1 px-4 py-2 rounded-xl border-2
-                    ${isCurrent ? 'bg-background1 border-border text-text1' : 'hover:bg-background5 border-transparent text-text2'}
-                    transition-colors duration-200 cursor-pointer`}
-            >
-                {tab.icon}
-            </button>
-        </Tooltip>
-    )
 }
 
 export default Agenda

@@ -1,5 +1,5 @@
 import { PiStarFourFill } from "react-icons/pi"
-import Card from "../../main/Card"
+import Card from "../main/Card"
 
 const CircleGreeting = ( { circle } ) => {
 
@@ -20,7 +20,7 @@ const CircleGreeting = ( { circle } ) => {
                     <PiStarFourFill className="text-2xl text-sky-400"/>
                 </div>
                 <div className="flex flex-col">
-                    <h1 className="text-xl font-extrabold text-text1">Level {circle.level}</h1>
+                    <h1 className="text-xl font-semibold text-text1">Level {circle.level}</h1>
                 </div>
             </div>
 

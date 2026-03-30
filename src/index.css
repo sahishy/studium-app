@@ -1,14 +1,37 @@
 @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap');
 @import 'tailwindcss';
 
+
+@font-face {
+    font-family: 'BasierSquare'; 
+    src: url('/BasierSquare-Regular.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'BasierSquare'; 
+    src: url('/Basier Square Medium.otf') format('opentype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'BasierSquare'; 
+    src: url('/Basier Square Italic.otf') format('opentype');
+    font-weight: normal;
+    font-style: italic;
+}
+
+
 html {
     background-color: var(--color-background0);
 
-    font-family: "Quicksand", sans-serif;
+    font-family: "BasierSquare", sans-serif;
     font-style: normal;
 
-    @apply text-text0;
-    @apply font-semibold;
+    @apply text-neutral0;
+
 }    
 
 * {
@@ -20,6 +43,14 @@ html {
 @media (prefers-color-scheme: light) {
 
     @theme {
+
+        --color-neutral0: #1F2937;
+        --color-neutral1: #9CA3AF;
+        --color-neutral2: #D1D5DB;
+        --color-neutral3: #E5E7EB;
+        --color-neutral4: #ebedf2;
+        --color-neutral5: #F3F4F6;
+        --color-neutral6: white;
 
         --color-primary0: theme(--color-gray-800);
         --color-primary1: theme(--color-gray-900);

@@ -1,10 +1,10 @@
-import { doc, updateDoc, deleteDoc, getFirestore, collection, addDoc, onSnapshot, where, query, getDoc, getDocs, writeBatch } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, deleteDoc, getFirestore, collection, onSnapshot, where, query, getDoc, getDocs, writeBatch } from 'firebase/firestore'
 import { updateCircleXP, updateUserXP } from './xpService';
-import confetti from 'https://cdn.skypack.dev/canvas-confetti';
+import confetti from 'canvas-confetti';
 import { updateCurrentTask, userCompleteTask } from './userService';
 import { useEffect, useMemo, useState } from 'react';
 
-const createTask = async ({ title, dueAt, status, listIndex, boardIndex, ownerType, ownerId, createdByUserId }) => {
+const createTask = async ({ title, dueAt, status, listIndex, boardIndex, ownerType, ownerId, createdByUserId, taskId }) => {
     const db = getFirestore();
     const collectionRef = collection(db, 'tasks')
     const now = new Date()
@@ -14,8 +14,8 @@ const createTask = async ({ title, dueAt, status, listIndex, boardIndex, ownerTy
         dueAt: (dueAt ? dueAt : -1),
         timeEstimate: 0,
         status: (status ? status : 'Incomplete'),
-        listIndex: (listIndex ? listIndex : -1),
-        boardIndex: (boardIndex ? boardIndex : -1),
+        listIndex: (listIndex ?? -1),
+        boardIndex: (boardIndex ?? -1),
         ownerType: (ownerType ? ownerType : 'user'),
         ownerId: (ownerId ? ownerId : null),
         createdByUserId: (createdByUserId ? createdByUserId : null),
@@ -23,7 +23,8 @@ const createTask = async ({ title, dueAt, status, listIndex, boardIndex, ownerTy
         updatedAt: now
     }
 
-    const taskRef = await addDoc(collectionRef, task)
+    const taskRef = taskId ? doc(db, 'tasks', taskId) : doc(collectionRef)
+    await setDoc(taskRef, task)
 
     return taskRef
 }
@@ -49,8 +50,21 @@ const updateTask = async (taskId, taskData, userCurrentTask) => {
         }
     }
 
-    if(taskData.status === 'Completed') {
-        completeTask(taskId);
+    if(taskData.status === 'Completed' && existingTask.status !== 'Completed') {
+        completeTaskAnimation(resolvedOwnerType === 'circle');
+
+        if(resolvedOwnerType === 'user' && resolvedOwnerId) {
+            const userRef = doc(db, 'users', resolvedOwnerId)
+            const userSnap = await getDoc(userRef);
+
+            await updateUserXP(userSnap.data(), 10);
+            await userCompleteTask(userSnap.data());
+        } else if(resolvedOwnerType === 'circle' && resolvedOwnerId) {
+            const circleRef = doc(db, 'circles', resolvedOwnerId)
+            const circleSnap = await getDoc(circleRef);
+
+            await updateCircleXP(circleSnap.data(), 10);
+        }
     }
 
     await updateDoc(taskRef, { ...taskData, updatedAt: new Date() })

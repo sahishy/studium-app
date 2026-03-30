@@ -1,5 +1,4 @@
 import { useOutletContext } from 'react-router-dom'
-import pfp from '../../assets/default-profile.jpg'
 
 const ProfileTab = () => {
 

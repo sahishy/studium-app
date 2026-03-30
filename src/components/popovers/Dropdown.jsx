@@ -7,7 +7,7 @@ const Dropdown = ({ children, options, onSelect, className = '' }) => {
         <ul className="flex flex-col">
             {options.map((option, index) =>
                 option.isDivider ? (
-                    <hr key={index} className="my-2 border-1 border-border rounded-full" />
+                    <hr key={index} className="my-2 border-1 border-neutral4 rounded-full" />
                 ) : (
                     <li
                         key={index}

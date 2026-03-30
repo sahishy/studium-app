@@ -1,18 +1,20 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-const BaseTooltip = ({ children, content, className = '', delay = 0, placement = 'auto' }) => {
+const BaseTooltip = ({ children, content, className = '', delay = 0, placement = 'auto', disabled = false }) => {
 
     const gap = 4;
+    const animationDuration = 150;
 
-    const [isVisible, setIsVisible] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
     const [tooltipSize, setTooltipSize] = useState({ width: 0, height: 0 });
     const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
-    const [animate, setAnimate] = useState(false);
 
     const tooltipRef = useRef(null);
     const triggerRef = useRef(null);
-    const timeoutRef = useRef(null);
+    const showTimeoutRef = useRef(null);
+    const unmountTimeoutRef = useRef(null);
 
     const calculatePosition = (triggerRect, tooltipRect) => {
         let top, left;
@@ -45,13 +47,27 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
     };
 
     const showTooltip = () => {
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
+        if (disabled) return;
+
+        if (showTimeoutRef.current) {
+            clearTimeout(showTimeoutRef.current);
         }
-        timeoutRef.current = setTimeout(() => {
-            const willShow = !isVisible;
-            setIsVisible(willShow);
-            if (willShow && triggerRef.current) {
+
+        if (unmountTimeoutRef.current) {
+            clearTimeout(unmountTimeoutRef.current);
+        }
+
+        showTimeoutRef.current = setTimeout(() => {
+            setIsMounted(true);
+            setIsOpen(false);
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    setIsOpen(true);
+                });
+            });
+
+            if (triggerRef.current) {
                 const rect = triggerRef.current.getBoundingClientRect();
                 const estimatedRect = { width: tooltipSize.width || 150, height: tooltipSize.height || 40 };
                 const position = calculatePosition(rect, estimatedRect);
@@ -61,14 +77,22 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
     };
 
     const hideTooltip = () => {
-        if (timeoutRef.current) {
-            clearTimeout(timeoutRef.current);
+        if (showTimeoutRef.current) {
+            clearTimeout(showTimeoutRef.current);
         }
-        setIsVisible(false);
+
+        if (unmountTimeoutRef.current) {
+            clearTimeout(unmountTimeoutRef.current);
+        }
+
+        setIsOpen(false);
+        unmountTimeoutRef.current = setTimeout(() => {
+            setIsMounted(false);
+        }, animationDuration);
     };
 
     useLayoutEffect(() => {
-        if (isVisible && tooltipRef.current) {
+        if (isMounted && tooltipRef.current) {
             const rect = tooltipRef.current.getBoundingClientRect();
             setTooltipSize({ width: rect.width, height: rect.height });
 
@@ -78,28 +102,26 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
                 const position = calculatePosition(triggerRect, rect);
                 setTooltipPosition(position);
             }
-        } else {
-            // reset animation when closed
-            setAnimate(false);
         }
-    }, [isVisible]);
-
-    useEffect(() => {
-        if (isVisible) {
-            const timer = setTimeout(() => setAnimate(true), 10);
-            return () => clearTimeout(timer);
-        } else {
-            setAnimate(false);
-        }
-    }, [isVisible]);
+    }, [isMounted]);
 
     useEffect(() => {
         return () => {
-            if (timeoutRef.current) {
-                clearTimeout(timeoutRef.current);
+            if (showTimeoutRef.current) {
+                clearTimeout(showTimeoutRef.current);
+            }
+
+            if (unmountTimeoutRef.current) {
+                clearTimeout(unmountTimeoutRef.current);
             }
         };
     }, []);
+
+    useEffect(() => {
+        if (disabled) {
+            hideTooltip();
+        }
+    }, [disabled]);
 
     return (
         <div className={`relative ${className}`}>
@@ -109,22 +131,23 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
                 onMouseLeave={hideTooltip}
                 onFocus={showTooltip}
                 onBlur={hideTooltip}
+                onClick={hideTooltip}
                 className="cursor-pointer"
             >
                 {children}
             </div>
 
-            {isVisible &&
+            {!disabled && isMounted &&
                 createPortal(
                     <div
                         ref={tooltipRef}
                         className={`
-                            absolute z-[9999] py-1 px-2 bg-background0 border-1 border-border text-text0 text-xs rounded-xl
+                            absolute z-[9999] py-1 px-2 bg-neutral0 text-neutral6 text-xs rounded-lg
                             pointer-events-none select-none
 
-                            transition-transform duration-200 ease-out transform
+                            transition-all duration-150 ease-out transform
                             
-                            ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
+                            ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
                         `}
                         style={{
                             top: `${tooltipPosition.top}px`,

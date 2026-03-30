@@ -1,14 +1,24 @@
-const Button = ( { children, onClick, type, htmlType='button', className, disabled=false } ) => {
+const Button = ( {
+    children,
+    onClick,
+    type,
+    htmlType = 'button',
+    className = '',
+    disabled = false,
+    ...props
+} ) => {
 
     const getClass = () => {
         if(type === 'primary') {
-            return 'text-text4 bg-primary0 hover:bg-primary1 border-primary1';
+            return 'text-neutral6 bg-neutral0 hover:opacity-90';
         } else if(type === 'secondary') {
-            return 'text-text1 bg-background1 hover:bg-background5 border-border';
+            return 'text-neutral0 bg-neutral6 border border-neutral4 hover:bg-neutral5';
+        } else if(type === 'tertiary') {
+            return 'text-neutral0 bg-neutral5 hover:bg-neutral4';
         } else if(type === 'negative') {
             return 'text-white bg-red-400 hover:bg-red-500 border-red-500';
         } else {
-            return 'text-text1 bg-background1 hover:bg-background5 border-border';
+            return 'text-neutral0 bg-neutral5';
         }
     }
 
@@ -17,11 +27,12 @@ const Button = ( { children, onClick, type, htmlType='button', className, disabl
             type={htmlType}
             disabled={disabled}
             onClick={onClick}
+            {...props}
             className={`${className} flex gap-3 items-center justify-center
+                text-sm font-semibold
                 ${getClass()}
-                px-4 py-2 border-2 border-b-4 rounded-xl active:mt-[2px] active:border-b-2 cursor-pointer 
-                
-                transition-all duration-200`}
+                px-4 py-2 rounded-full cursor-pointer 
+                transition-all `}
         >
             {children}
         </button>

@@ -1,17 +1,17 @@
 import { useOutletContext, useParams } from 'react-router-dom';
-import Header from '../../components/main/Header';
+import Topbar from '../../components/main/Topbar.jsx';
 import { useCircle } from '../../services/circleService';
-import CircleMembers from '../../components/circles/overview/CircleMembers.jsx';
+import CircleMembers from '../../components/circles/CircleMembers.jsx';
 import { useState } from 'react';
 import { createTask, useCircleTasks } from '../../services/taskService';
 import { formatRelativeTaskDate, toDateKeyFromSeconds } from '../../utils/formatters.jsx';
 import { FaPlus } from 'react-icons/fa';
 import { PiCaretDownFill, PiCaretRightFill } from 'react-icons/pi';
-import TasksHeader from '../../components/agenda/TasksHeader';
-import Task from '../../components/agenda/Task';
+import LegacyListTask from '../../components/tasks/LegacyListTask.jsx';
 import { useMembers } from '../../contexts/MembersContext';
-import CircleInvite from '../../components/circles/overview/CircleInvite.jsx';
+import CircleInvite from '../../components/circles/CircleInvite.jsx';
 import { useCircleMembers } from '../../services/circleService';
+import CircleHeader from '../../components/circles/CircleHeader.jsx';
 
 const CirclesOverview = () => {
 
@@ -75,17 +75,18 @@ const CirclesOverview = () => {
 
     return (
         <div className="flex flex-col h-full relative">
-            <Header circle={circle} profile={profile} back='/circles'/>
+            <Topbar profile={profile} />
             <div className="flex-1 overflow-y-auto relative">
 
                 <div className='h-full w-full flex flex-col items-start gap-8 px-24 pb-8 pt-2 m-auto'>
+                    <CircleHeader circle={circle} profile={profile} back='/circles' />
 
                     <div className='w-full flex gap-4'>
                         <CircleInvite circle={circle}/>
                     </div>
 
                     <div className='w-full flex flex-col gap-4'>
-                        <h1 className='text-lg text-text1 font-extrabold'>Members</h1>
+                        <h1 className='text-lg text-text1 font-semibold'>Members</h1>
 
                         <CircleMembers members={allMembers.filter((user) => circleMembers.some((member) => member.userId === user.uid))} ownerId={ownerId}/>
                     </div>
@@ -94,7 +95,7 @@ const CirclesOverview = () => {
 
                     
                     <div className='flex-1 w-full flex flex-col gap-4 pb-16'>
-                        <h1 className='text-lg text-text1 font-extrabold'>Circle Work</h1>
+                        <h1 className='text-lg text-text1 font-semibold'>Circle Work</h1>
                         <div className='w-full flex flex-col'>
 
                             {/* past tasks, show before all other tasks */}
@@ -102,19 +103,19 @@ const CirclesOverview = () => {
                                 <div key={date} className='w-full flex flex-col'>
                                     <button
                                         onClick={() => handleCollapseToggle(date)}
-                                        className='flex items-center gap-4 p-2 rounded-xl cursor-pointer hover:bg-background5 transition-colors duration-200'
+                                        className='flex items-center gap-4 p-2 rounded-xl cursor-pointer hover:bg-background5 transition-colors '
                                     >
                                         <div className='text-sm text-text1'>
                                             {collapsedDates.includes(date) ? <PiCaretRightFill/> : <PiCaretDownFill/>}
                                         </div>
-                                        <h1 className={`text-sm text-red-400 font-extrabold`}>{formatRelativeTaskDate(groupedPastTasks[date][0].dueAt.seconds)}</h1>
+                                        <h1 className={`text-sm text-red-400 font-semibold`}>{formatRelativeTaskDate(groupedPastTasks[date][0].dueAt.seconds)}</h1>
                                     </button>
 
                                     <div className={`w-full flex-col pl-8 ${collapsedDates.includes(date) ? 'hidden' : 'flex mb-4'}`}>
-                                        <TasksHeader/>
+                                        {/* <TasksHeader/> */}
 
                                         {groupedPastTasks[date].sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
-                                            <Task key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId}/>
+                                            <LegacyListTask key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId}/>
                                         ))}
 
                                         <AddTaskButton circle={circle} dueAt={new Date(groupedPastTasks[date][0].dueAt.seconds * 1000)} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
@@ -126,19 +127,19 @@ const CirclesOverview = () => {
                             <div className='w-full flex flex-col'>
                                 <button
                                     onClick={() => handleCollapseToggle('no-due-date')}
-                                    className='flex items-center gap-4 p-2 rounded-xl cursor-pointer hover:bg-background5 transition-colors duration-200'
+                                    className='flex items-center gap-4 p-2 rounded-xl cursor-pointer hover:bg-background5 transition-colors '
                                 >
                                     <div className='text-sm text-text1'>
                                         {collapsedDates.includes('no-due-date') ? <PiCaretRightFill/> : <PiCaretDownFill/>}
                                     </div>
-                                    <h1 className='text-sm text-text2 font-extrabold'>No due date</h1>
+                                    <h1 className='text-sm text-text2 font-semibold'>No due date</h1>
                                 </button>
 
                                 <div className={`w-full flex-col pl-8 ${collapsedDates.includes('no-due-date') ? 'hidden' : 'flex mb-4'}`}>
-                                    <TasksHeader/>
+                                    {/* <TasksHeader/> */}
 
                                     {tasksWithNoDueDate.sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
-                                        <Task key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
+                                        <LegacyListTask key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
                                     ))}
 
                                     <AddTaskButton circle={circle} dueAt={-1} tasks={tasks} setNewTaskId={setNewTaskId}/>
@@ -151,19 +152,19 @@ const CirclesOverview = () => {
                                 <div key={date} className='w-full flex flex-col'>
                                     <button
                                         onClick={() => handleCollapseToggle(date)}
-                                        className='flex items-center gap-4 p-2 rounded-xl cursor-pointer hover:bg-background5 transition-colors duration-200'
+                                        className='flex items-center gap-4 p-2 rounded-xl cursor-pointer hover:bg-background5 transition-colors '
                                     >
                                         <div className='text-sm text-text1'>
                                             {collapsedDates.includes(date) ? <PiCaretRightFill/> : <PiCaretDownFill/>}
                                         </div>
-                                        <h1 className={`text-sm text-text1 font-extrabold`}>{formatRelativeTaskDate(groupedFutureTasks[date][0].dueAt.seconds)}</h1>
+                                        <h1 className={`text-sm text-text1 font-semibold`}>{formatRelativeTaskDate(groupedFutureTasks[date][0].dueAt.seconds)}</h1>
                                     </button>
 
                                     <div className={`w-full flex-col pl-8 ${collapsedDates.includes(date) ? 'hidden' : 'flex mb-4'}`}>
                                         <TasksHeader/>
 
                                         {groupedFutureTasks[date].sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
-                                            <Task key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
+                                            <LegacyListTask key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId} userCurrentTask={profile.currentTask}/>
                                         ))}
 
                                         <AddTaskButton circle={circle} dueAt={new Date(groupedFutureTasks[date][0].dueAt.seconds * 1000)} setNewTaskId={setNewTaskId}/>
@@ -202,7 +203,7 @@ const AddTaskButton = ( { circle, dueAt, setNewTaskId } ) => {
     return (
         <button 
             onClick={handleClick}
-            className={`w-full flex items-center gap-4 p-1 hover:bg-background5 text-sm font-semibold text-text1 border-t-2 border-border cursor-pointer rounded-b-lg transition-colors duration-200`}
+            className={`w-full flex items-center gap-4 p-1 hover:bg-background5 text-sm font-semibold text-text1 border-t-2 border-neutral4 cursor-pointer rounded-b-lg transition-colors `}
         >
             <div className='p-2 rounded-xl'>
                 <FaPlus className='text-text2'/>

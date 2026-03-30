@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { updateTask, deleteTask } from "../../services/taskService";
 
-import { FaDotCircle, FaClock, FaCheckCircle, FaCalendar, FaUserFriends, FaGripVertical } from "react-icons/fa";
+import { FaDotCircle, FaClock, FaCheckCircle, FaCalendar, FaUserFriends, FaRegCircle } from "react-icons/fa";
 import Dropdown from "../Popovers/Dropdown";
 import DatePicker from "../popovers/DatePicker";
 import { useCircles } from "../../contexts/CirclesContext";
 import { formatDateFromSeconds } from "../../utils/formatters";
+import { FaCheck } from "react-icons/fa6";
 
-const Task = ({ profile, task, autoFocus, setNewTaskId, userCurrentTask, variant = 'list' }) => {
-    
+const Task = ({ profile, task, autoFocus, setNewTaskId, userCurrentTask, variant = 'list', onDeleteEmpty = null, onEnter = null }) => {
+
     const circles = useCircles()
 
     // task data
@@ -57,7 +58,7 @@ const Task = ({ profile, task, autoFocus, setNewTaskId, userCurrentTask, variant
             setStatus(task.status)
         }
         if(task.title !== title) {
-            setTitle(task.title); 
+            setTitle(task.title);
             setTitleInput(task.title);
         }
         if(task.timeEstimate !== timeEstimate) {
@@ -96,37 +97,39 @@ const Task = ({ profile, task, autoFocus, setNewTaskId, userCurrentTask, variant
     useEffect(() => {
         if(autoFocus && titleInputRef.current) {
             titleInputRef.current.focus();
+            const valueLength = titleInputRef.current.value.length;
+            titleInputRef.current.setSelectionRange(valueLength, valueLength);
         }
     }, [autoFocus]);
 
     // board tab task
     if(variant === 'board') {
         return (
-            <div className="flex flex-col gap-3 p-4 text-sm text-text1 group border-2 border-border rounded-xl bg-background0">
+            <div className="flex flex-col gap-3 p-4 text-sm text-text1 group border-2 border-neutral4 rounded-xl bg-background0">
                 <div className="flex items-center gap-2">
                     <StatusInput status={status} setStatus={setStatus}/>
-                    <TitleInput 
-                        titleInput={titleInput} 
-                        setTitleInput={setTitleInput} 
-                        setTitle={setTitle} 
-                        inputRef={titleInputRef} 
-                        taskId={task.uid} 
+                    <TitleInput
+                        titleInput={titleInput}
+                        setTitleInput={setTitleInput}
+                        setTitle={setTitle}
+                        inputRef={titleInputRef}
+                        taskId={task.uid}
                         setNewTaskId={setNewTaskId}
                         variant={variant}
                     />
                 </div>
-            
+
                 <div className="flex gap-3">
                     <DueDateInput dueAt={dueAt} setDueAt={setDueAt}/>
 
-                    <CircleInput 
-                        userId={profile.uid} 
+                    <CircleInput
+                        userId={profile.uid}
                         ownerType={ownerType}
                         ownerId={ownerId}
                         setOwnerType={setOwnerType}
                         setOwnerId={setOwnerId}
                         circles={circles}
-                    />    
+                    />
 
                 </div>
 
@@ -134,30 +137,74 @@ const Task = ({ profile, task, autoFocus, setNewTaskId, userCurrentTask, variant
         )
     }
 
+    // doc-like agenda list task
+    if(variant === 'doc') {
+        const isCompleted = status === 'Completed';
+
+        const handleToggleComplete = () => {
+            setStatus(isCompleted ? 'Incomplete' : 'Completed');
+        }
+
+        return (
+            <div className={`group flex items-center gap-2 text-sm ${isCompleted ? 'text-text2' : 'text-text1'}`}>
+                <button
+                    onClick={handleToggleComplete}
+                    className={`group/check shrink-0 flex h-4 w-4 items-center justify-center rounded-[3px] border bg-transparent cursor-pointer transition-all  ${
+                        isCompleted
+                            ? 'opacity-100 border-neutral2'
+                            : 'opacity-0 border-transparent group-hover:opacity-100 group-hover:border-neutral2 hover:border-neutral3'
+                    }`}
+                >
+                    <FaCheck
+                        className={`text-[10px] ${
+                            isCompleted
+                                ? 'opacity-100 text-neutral0'
+                                : 'opacity-0 text-neutral2 group-hover/check:opacity-100'
+                        }`}
+                    />
+                </button>
+
+                <TitleInput
+                    titleInput={titleInput}
+                    setTitleInput={setTitleInput}
+                    setTitle={setTitle}
+                    inputRef={titleInputRef}
+                    taskId={task.uid}
+                    setNewTaskId={setNewTaskId}
+                    variant={variant}
+                    placeholder=''
+                    classNameOverride={`${isCompleted ? 'line-through text-neutral1' : 'text-neutral0'}`}
+                    onDeleteEmpty={onDeleteEmpty}
+                    onEnter={onEnter}
+                />
+            </div>
+        )
+    }
+
     // default list tab task
     if(variant === 'list') {
         return (
-            <div className="relative flex justify-between items-center gap-4 p-1 text-sm font-semibold text-text1 border-t-2 border-border group">
+            <div className="relative flex justify-between items-center gap-4 p-1 text-sm font-semibold text-text1 border-t-2 border-neutral4 group">
                 <div className="flex-2 flex items-center gap-4">
                     <StatusInput status={status} setStatus={setStatus}/>
-                    <TitleInput 
-                        titleInput={titleInput} 
-                        setTitleInput={setTitleInput} 
-                        setTitle={setTitle} 
-                        inputRef={titleInputRef} 
-                        taskId={task.uid} 
+                    <TitleInput
+                        titleInput={titleInput}
+                        setTitleInput={setTitleInput}
+                        setTitle={setTitle}
+                        inputRef={titleInputRef}
+                        taskId={task.uid}
                         setNewTaskId={setNewTaskId}
                         variant={variant}
                     />
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
                     <DueDateInput dueAt={dueAt} setDueAt={setDueAt}/>
                 </div>
 
                 <div className="flex-1 min-w-0">
-                    <CircleInput 
-                        userId={profile.uid} 
+                    <CircleInput
+                        userId={profile.uid}
                         ownerType={ownerType}
                         ownerId={ownerId}
                         setOwnerType={setOwnerType}
@@ -165,7 +212,7 @@ const Task = ({ profile, task, autoFocus, setNewTaskId, userCurrentTask, variant
                         circles={circles}
                     />
                 </div>
-                
+
             </div>
         )
     }
@@ -191,7 +238,7 @@ const StatusInput = ( { status, setStatus } ) => {
                 <button
                     className={`flex items-center bg-background3 rounded-xl cursor-pointer`}
                 >
-                    <div className={`p-2 rounded-xl ${isOpen && "bg-background5"} hover:bg-background5 transition-colors duration-200`}>
+                    <div className={`p-2 rounded-xl ${isOpen && "bg-background5"} hover:bg-background5 transition-colors `}>
                         {status === "Incomplete" ? (
                             <FaDotCircle className="text-text1"/>
                         ) : status === "In Progress" ? (
@@ -208,7 +255,7 @@ const StatusInput = ( { status, setStatus } ) => {
     )
 }
 
-const TitleInput = ( { titleInput, setTitleInput, setTitle, inputRef, taskId, setNewTaskId, variant } ) => {
+const TitleInput = ( { titleInput, setTitleInput, setTitle, inputRef, taskId, setNewTaskId, variant, placeholder = 'Title', classNameOverride = '', onDeleteEmpty = null, onEnter = null } ) => {
 
     const handleBlur = () => {
         if(titleInput === '') {
@@ -216,7 +263,9 @@ const TitleInput = ( { titleInput, setTitleInput, setTitle, inputRef, taskId, se
         } else {
             setTitle(titleInput);
         }
-        setNewTaskId(-1);
+        if(setNewTaskId) {
+            setNewTaskId(-1);
+        }
     };
 
     const getStyle = () => {
@@ -224,6 +273,8 @@ const TitleInput = ( { titleInput, setTitleInput, setTitle, inputRef, taskId, se
             return `text-left w-full p-2 focus:outline-none text-wrap`;
         } else if(variant === 'list') {
             return `text-left w-full p-2 focus:outline-none overflow-ellipsis`;
+        } else if(variant === 'doc') {
+            return `text-left w-full bg-transparent focus:outline-none`;
         }
         return '';
     }
@@ -234,16 +285,28 @@ const TitleInput = ( { titleInput, setTitleInput, setTitle, inputRef, taskId, se
             ref={inputRef}
             type="text"
             value={titleInput}
-            placeholder="Title"
+            placeholder={placeholder}
             onChange={(e) => {
                 setTitleInput(e.target.value);
             }}
             onKeyUp={(e) => {
-                if(e.key === 'Enter') {
+                if(e.key === 'Enter' && variant !== 'doc') {
                     e.target.blur()
                 }
             }}
-            className={getStyle()}
+            onKeyDown={async (e) => {
+                if(variant === 'doc' && e.key === 'Enter') {
+                    e.preventDefault();
+                    await onEnter?.();
+                    return;
+                }
+
+                if(variant === 'doc' && e.key === 'Backspace' && titleInput === '' && onDeleteEmpty) {
+                    e.preventDefault();
+                    await onDeleteEmpty();
+                }
+            }}
+            className={`${getStyle()} ${classNameOverride} ${variant === 'doc' ? 'placeholder:text-text2' : ''}`}
             onBlur={handleBlur}
         ></input>
 
@@ -259,13 +322,13 @@ const DueDateInput = ( { dueAt, setDueAt } ) => {
     return (
 
         <DatePicker
-            onSelect={onSelectDate} 
+            onSelect={onSelectDate}
             selectedDate={dueAt}
             className="justify-self-start self-start max-w-full"
         >
             {(isOpen) =>
                 <button className="w-full flex items-center bg-background3 rounded-xl cursor-pointer">
-                    <div className={`flex items-center gap-2 p-2 rounded-xl ${isOpen && "bg-background5"} hover:bg-background5 transition-colors duration-200`}>
+                    <div className={`flex items-center gap-2 p-2 rounded-xl ${isOpen && "bg-background5"} hover:bg-background5 transition-colors `}>
                         <FaCalendar className={dueAt !== -1 ? 'text-text1' : 'text-text2'}/>
                         {dueAt !== -1 && (
                             <h1 className={`text-xs ${dueAt.seconds * 1000 < Date.now() && 'text-red-400'}`}>
@@ -292,7 +355,7 @@ const CircleInput = ( { userId, ownerType, ownerId, circles, setOwnerType, setOw
     const truncateOption = (s) => {
         return s.length <= 25 ? s : `${s.substring(0, 25)}...`
     }
-    
+
     const getOptions = () => {
         return [
             { uid: null, label: <h1 className="text-text2">None</h1>, icon: null }
@@ -311,7 +374,7 @@ const CircleInput = ( { userId, ownerType, ownerId, circles, setOwnerType, setOw
         setOwnerType('circle')
         setOwnerId(option.uid)
     }
-    
+
     return (
         <Dropdown
             options={getOptions()}
@@ -322,7 +385,7 @@ const CircleInput = ( { userId, ownerType, ownerId, circles, setOwnerType, setOw
                 <button
                     className={`w-full flex min-w-0 items-center bg-background3 rounded-xl cursor-pointer`}
                 >
-                    <div className={`flex min-w-0 items-center gap-2 p-2 rounded-xl ${isOpen && "bg-background5"} hover:bg-background5 transition-colors duration-200`}>
+                    <div className={`flex min-w-0 items-center gap-2 p-2 rounded-xl ${isOpen && "bg-background5"} hover:bg-background5 transition-colors `}>
                         <FaUserFriends className={ownerType === 'circle' ? 'text-text1' : 'text-text2'}/>
                         {ownerType === 'circle' && (
                             <h1 className="text-xs max-w-full truncate">{getCircle().title}</h1>

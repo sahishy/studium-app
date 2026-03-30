@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FaCheck, FaCopy, FaUserFriends } from "react-icons/fa";
-import Button from "../../main/Button";
-import Card from "../../main/Card";
+import Button from "../main/Button";
+import Card from "../main/Card";
 
 const CircleInvite = ( { circle } ) => {
 
@@ -32,7 +32,7 @@ const CircleInvite = ( { circle } ) => {
                     <FaUserFriends className="text-2xl text-sky-400"/>
                 </div>
 
-                <h1 className="text-xl font-extrabold text-text1 flex">Invite Friends&nbsp;
+                <h1 className="text-xl font-semibold text-text1 flex">Invite Friends&nbsp;
 
                     <div
                         onClick={() => {
@@ -41,7 +41,7 @@ const CircleInvite = ( { circle } ) => {
                         }}
                         className="flex items-center gap-2 group cursor-pointer text-text2"
                     >
-                        <h1 className="font-extrabold text-xl">#{circle.inviteCode}</h1>
+                        <h1 className="font-semibold text-xl">#{circle.inviteCode}</h1>
                         {copied ? (
                             <FaCheck className="text-sm hidden group-hover:block"/>
                         ) : (

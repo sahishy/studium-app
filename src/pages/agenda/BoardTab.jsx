@@ -1,5 +1,4 @@
-import Task from '../../components/agenda/Task.jsx'
-import TasksHeader from '../../components/agenda/TasksHeader.jsx'
+import BoardTask from '../../components/tasks/BoardTask.jsx'
 import { useTasks } from '../../contexts/TasksContext.jsx'
 import { createTask } from '../../services/taskService.jsx'
 import { FaPlus } from 'react-icons/fa'
@@ -76,7 +75,7 @@ const KanbanColumn = ({ column, profile, newTaskId, setNewTaskId }) => {
 
                     <div className='flex items-center gap-3'>
                         {column.icon}
-                        <h2 className='text-sm font-extrabold text-text1'>{column.title}</h2>
+                        <h2 className='text-sm font-semibold text-text1'>{column.title}</h2>
                     </div>
                     <span className='text-xs font-semibold text-text2 bg-background5 px-2 py-1 rounded-full'>
                         {column.count}
@@ -92,13 +91,13 @@ const KanbanColumn = ({ column, profile, newTaskId, setNewTaskId }) => {
                 <div className='flex flex-col gap-3'>
 
                     {column.tasks.map((task) => (
-                        <Task
+                        <BoardTask
+                            key={task.uid}
                             profile={profile}
                             task={task}
                             autoFocus={task.uid === newTaskId}
                             setNewTaskId={setNewTaskId}
                             userCurrentTask={profile.currentTask}
-                            variant='board'
                         />
                     ))}
 
@@ -136,7 +135,7 @@ const AddTaskButton = ( { profile, status, setNewTaskId } ) => {
     return (
         <button 
             onClick={handleClick}
-            className={`w-full flex justify-center items-center p-4 hover:bg-background5 text-sm font-semibold text-text1 border-2 border-dashed border-border cursor-pointer rounded-xl transition-colors duration-200`}
+            className={`w-full flex justify-center items-center p-4 hover:bg-background5 text-sm font-semibold text-text1 border-2 border-dashed border-neutral4 cursor-pointer rounded-xl transition-colors `}
         >
             <FaPlus className='text-text2'/>
         </button>

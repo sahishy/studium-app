@@ -139,13 +139,13 @@ const Signup = () => {
                         onClick={() => navigate('/')}
                     >
                         <img src={favicon} alt="Logo" className="w-8 h-8"/>
-                        <h2 className="text-lg font-extrabold">Studium</h2>
+                        <h2 className="text-lg font-semibold">Studium</h2>
                     </button>
                 </header>
 
-                <div className="flex flex-col gap-8 p-8 max-w-lg bg-background0 border-2 border-border rounded-xl mx-auto mt-2">
+                <div className="flex flex-col gap-8 p-8 max-w-lg bg-background0 border-2 border-neutral4 rounded-xl mx-auto mt-2">
 
-                    <h2 className="text-2xl font-extrabold text-center">Create Account</h2>
+                    <h2 className="text-2xl font-semibold text-center">Create Account</h2>
 
                     <form onSubmit={handleSignup} noValidate={true} className="space-y-4">
 
@@ -156,7 +156,7 @@ const Signup = () => {
                                     placeholder="First Name"
                                     value={firstName}
                                     onChange={(e) => setFirstName(e.target.value)}
-                                    className="w-full p-4 border-2 border-border rounded-xl focus:outline-yellow-400"
+                                    className="w-full p-4 border-2 border-neutral4 rounded-xl focus:outline-yellow-400"
                                     autoComplete='given-name'
                                     name="firstName"
                                 />      
@@ -169,7 +169,7 @@ const Signup = () => {
                                     placeholder="Last Name"
                                     value={lastName}
                                     onChange={(e) => setLastName(e.target.value)}
-                                    className="w-full p-4 border-2 border-border rounded-xl focus:outline-yellow-400"
+                                    className="w-full p-4 border-2 border-neutral4 rounded-xl focus:outline-yellow-400"
                                     autoComplete='family-name'
                                     name="lastName"
                                 />
@@ -184,7 +184,7 @@ const Signup = () => {
                                 placeholder="Email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full p-4 border-2 border-border rounded-xl focus:outline-yellow-400"
+                                className="w-full p-4 border-2 border-neutral4 rounded-xl focus:outline-yellow-400"
                                 autoComplete='email'
                                 name="email"
                             />
@@ -197,7 +197,7 @@ const Signup = () => {
                                 placeholder="Password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full p-4 border-2 border-border rounded-xl focus:outline-yellow-400"
+                                className="w-full p-4 border-2 border-neutral4 rounded-xl focus:outline-yellow-400"
                                 name="password"
                                 autoComplete='new-password'
                             />
@@ -206,20 +206,20 @@ const Signup = () => {
 
                         {firebaseError.code && <p className="text-red-400 flex justify-center items-center gap-2"><FaCircleExclamation/>{formatFirebaseError()}</p>}
 
-                        <button className="w-full p-4 font-extrabold border-yellow-500 border-b-4 rounded-xl bg-yellow-400 hover:bg-yellow-500 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200">
+                        <button className="w-full p-4 font-semibold border-yellow-500 border-b-4 rounded-xl bg-yellow-400 hover:bg-yellow-500 active:mt-[2px] active:border-b-2 cursor-pointer transition-all ">
                             Sign Up
                         </button>
 
                         <div className='flex items-center gap-2'>
-                            <hr className='flex-1 border-2 border-border rounded-full'></hr>
-                            <p className='text-text2 font-extrabold'>OR</p>
-                            <hr className='flex-1 border-2 border-border rounded-full'></hr>
+                            <hr className='flex-1 border-2 border-neutral4 rounded-full'></hr>
+                            <p className='text-text2 font-semibold'>OR</p>
+                            <hr className='flex-1 border-2 border-neutral4 rounded-full'></hr>
                         </div>
 
                         <button
                             type="button"
                             onClick={handleGoogleContinue}
-                            className="w-full p-4 text-white font-extrabold border-black border-b-4 rounded-xl bg-gray-800 hover:bg-black active:translate-y-[2px] active:mb-[18px] active:border-b-2 cursor-pointer transition-all duration-200 flex items-center justify-center gap-2"
+                            className="w-full p-4 text-white font-semibold border-black border-b-4 rounded-xl bg-gray-800 hover:bg-black active:translate-y-[2px] active:mb-[18px] active:border-b-2 cursor-pointer transition-all  flex items-center justify-center gap-2"
                         >
                             <FaGoogle/>
                             Continue with Google
@@ -229,10 +229,10 @@ const Signup = () => {
                             Already have an account?&nbsp;
                             <a
                                 onClick={() => navigate('/login')} 
-                                className="text-yellow-400 font-extrabold group transition-all cursor-pointer"
+                                className="text-yellow-400 font-semibold group transition-all cursor-pointer"
                             >
                                 Log In
-                                <span className="block max-w-0 group-hover:max-w-full transition-all duration-200 h-0.5 bg-yellow-400"></span>
+                                <span className="block max-w-0 group-hover:max-w-full transition-all  h-0.5 bg-yellow-400"></span>
                             </a>
                         </p>
 

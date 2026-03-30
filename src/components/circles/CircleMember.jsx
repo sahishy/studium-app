@@ -1,4 +1,4 @@
-import pfp from '../../../assets/default-profile.jpg'
+import pfp from '../../assets/images/default-profile.jpg'
 import { FaCrown } from "react-icons/fa6";
 
 const CircleMember = ( { profile, isOwner } ) => {
@@ -6,7 +6,7 @@ const CircleMember = ( { profile, isOwner } ) => {
     const isOpen = false;
 
     return (
-        <div className='p-2 rounded-xl border-2 border-border flex items-center gap-4 shadow-lg shadow-shadow'>
+        <div className='p-2 rounded-xl border-2 border-neutral4 flex items-center gap-4 shadow-lg shadow-shadow'>
             <div className="relative w-8 h-8 shrink-0">
                 <img
                     src={pfp} 
@@ -14,7 +14,7 @@ const CircleMember = ( { profile, isOwner } ) => {
                     className="w-full h-full rounded-full object-cover"
                 />
                 <span
-                    className={`absolute bottom-0 right-0 w-3 h-3 ${profile.status === 'active' ? 'bg-emerald-400' : 'bg-gray-400'} border-2 ${isOpen && 'border-background4'} group-hover:border-background4 border-background0 rounded-full  transition-colors duration-200`}
+                    className={`absolute bottom-0 right-0 w-3 h-3 ${profile.status === 'active' ? 'bg-emerald-400' : 'bg-gray-400'} border-2 ${isOpen && 'border-background4'} group-hover:border-background4 border-background0 rounded-full  transition-colors `}
                 ></span>
             </div>
 

@@ -68,7 +68,7 @@ const JoinCircle = () => {
                     <p className="text-lg font-semibold text-text1">Circle doesn't exist or can't be joined!</p>
                 )
             ) : (
-                <div className="p-4 border-2 border-border rounded-xl flex flex-col gap-4 text-center min-w-xs">
+                <div className="p-4 border-2 border-neutral4 rounded-xl flex flex-col gap-4 text-center min-w-xs">
 
                     <h2 className="text-text1">You've been invited to:</h2>
 
@@ -87,7 +87,7 @@ const JoinCircle = () => {
 
                     <button 
                         onClick={handleJoin}
-                        className='p-2 w-full text-white border-black border-b-4 rounded-xl bg-gray-800 hover:bg-black active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
+                        className='p-2 w-full text-white border-black border-b-4 rounded-xl bg-gray-800 hover:bg-black active:mt-[2px] active:border-b-2 cursor-pointer transition-all '
                     >
                         Join
                     </button>

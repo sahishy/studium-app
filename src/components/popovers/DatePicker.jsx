@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import BasePopover from './BasePopover';
 
 import { PiCaretRightFill, PiCaretLeftFill } from 'react-icons/pi';
@@ -91,7 +91,7 @@ const DatePicker = ({ children, selectedDate, onSelect, className = '' }) => {
                         <PiCaretLeftFill/>
                     </Button>
 
-                    <div className="font-extrabold p-2">
+                    <div className="font-semibold p-2">
                         {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
                     </div>
 
@@ -127,9 +127,9 @@ const DatePicker = ({ children, selectedDate, onSelect, className = '' }) => {
                                         onClick={() => {
                                             setCurrentDate(dayData.date)
                                         }}
-                                        className={`aspect-square cursor-pointer text-center p-1 rounded-xl flex justify-center items-center border-2 transition-colors duration-200
+                                        className={`aspect-square cursor-pointer text-center p-1 rounded-xl flex justify-center items-center border-2 transition-colors 
                                             ${dayData.currentMonth ? 'text-text0' : 'text-text2'}
-                                            ${isToday ? 'border-border' : 'border-transparent'}
+                                            ${isToday ? 'border-neutral4' : 'border-transparent'}
                                             ${isSelected ? 'bg-primary0 border-primary1 text-text4 hover:bg-primary1' : 
                                                 (isPreviousSelected ? 'bg-background3 hover:bg-background5' : 'bg-background0 hover:bg-background5')}`}
                                     >

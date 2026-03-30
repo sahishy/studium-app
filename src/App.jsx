@@ -8,6 +8,7 @@ import CalendarTab from './pages/agenda/CalendarTab'
 import BoardTab from './pages/agenda/BoardTab'
 import Circles from './pages/circles/Circles'
 import CirclesOverview from './pages/circles/CirclesOverview'
+import Courses from './pages/courses/Courses'
 import Account from './pages/account/Account'
 import AccountIndexRedirect from './routes/AccountIndexRedirect'
 import ProfileTab from './pages/account/ProfileTab'
@@ -47,6 +48,7 @@ export default function App() {
 					<Route index element={<Circles/>}/>
 					<Route path=":circleId" element={<CirclesOverview/>}/>
 				</Route>
+				<Route path="/courses" element={<Courses/>}/>
 				<Route path="/join/:inviteCode" element={<JoinCircle/>}/>
 
 				<Route path="/account" element={<Account/>}>

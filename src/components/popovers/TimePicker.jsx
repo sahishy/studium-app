@@ -22,13 +22,13 @@ const TimePicker = ({ children, onSelect, selectedTime, className = '' }) => {
             <div className='flex flex-col items-center gap-2'>
                     <button
                         onClick={() => setTime(time + 60)}
-                        className="p-2 border-2 border-border border-b-4 rounded-xl hover:bg-background5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200"
+                        className="p-2 border-2 border-neutral4 border-b-4 rounded-xl hover:bg-background5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all "
                     >
                         <PiCaretUpFill/>
                     </button>
 
                     <div className='text-center'>
-                        <h1 className="font-extrabold text-lg">
+                        <h1 className="font-semibold text-lg">
                             {Math.floor(time / 60)}
                         </h1>
                         <p className="font-semibold text-text2">
@@ -38,7 +38,7 @@ const TimePicker = ({ children, onSelect, selectedTime, className = '' }) => {
 
                     <button
                         onClick={() => time >= 60 && setTime(time - 60) }
-                        className={`p-2 border-2 border-border border-b-4 rounded-xl transition-all duration-200 ${time < 60 ? 'opacity-50' : ' active:mt-[2px] active:border-b-2 hover:bg-background5 cursor-pointer'}`}
+                        className={`p-2 border-2 border-neutral4 border-b-4 rounded-xl transition-all  ${time < 60 ? 'opacity-50' : ' active:mt-[2px] active:border-b-2 hover:bg-background5 cursor-pointer'}`}
                     >
                         <PiCaretDownFill/>
                     </button>
@@ -47,13 +47,13 @@ const TimePicker = ({ children, onSelect, selectedTime, className = '' }) => {
                 <div className='flex flex-col items-center gap-2'>
                     <button
                         onClick={() => setTime(time + 5)}
-                        className="p-2 border-2 border-border border-b-4 rounded-xl hover:bg-background5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200"
+                        className="p-2 border-2 border-neutral4 border-b-4 rounded-xl hover:bg-background5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all "
                     >
                         <PiCaretUpFill/>
                     </button>
 
                     <div className='text-center'>
-                        <h1 className="font-extrabold text-lg">
+                        <h1 className="font-semibold text-lg">
                             {time % 60}
                         </h1>
                         <p className="font-semibold text-text2">
@@ -63,7 +63,7 @@ const TimePicker = ({ children, onSelect, selectedTime, className = '' }) => {
 
                     <button
                         onClick={() => setTime(Math.max(time - 5, 0))}
-                        className={`p-2 border-2 border-border border-b-4 rounded-xl transition-all duration-200 ${time === 0 ? 'opacity-50' : ' active:mt-[2px] active:border-b-2 hover:bg-background5 cursor-pointer'}`}
+                        className={`p-2 border-2 border-neutral4 border-b-4 rounded-xl transition-all  ${time === 0 ? 'opacity-50' : ' active:mt-[2px] active:border-b-2 hover:bg-background5 cursor-pointer'}`}
                     >
                         <PiCaretDownFill/>
                     </button>
@@ -77,7 +77,7 @@ const TimePicker = ({ children, onSelect, selectedTime, className = '' }) => {
                         handleSelectTime(0);
                         closePopover();
                     }}
-                    className='w-full p-2 border-2 border-border border-b-4 rounded-xl hover:bg-background5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
+                    className='w-full p-2 border-2 border-neutral4 border-b-4 rounded-xl hover:bg-background5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all '
                 >
                     Clear
                 </button>
@@ -86,7 +86,7 @@ const TimePicker = ({ children, onSelect, selectedTime, className = '' }) => {
                         handleSelectTime(time)
                         closePopover();
                     }}
-                    className='w-full p-2 text-white border-black border-b-4 rounded-xl bg-gray-800 hover:bg-black active:mt-[2px] active:border-b-2 cursor-pointer transition-all duration-200'
+                    className='w-full p-2 text-white border-black border-b-4 rounded-xl bg-gray-800 hover:bg-black active:mt-[2px] active:border-b-2 cursor-pointer transition-all '
                 >
                     Save
                 </button>             

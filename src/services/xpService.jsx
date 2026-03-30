@@ -1,5 +1,5 @@
 import { doc, getFirestore, updateDoc } from 'firebase/firestore'
-import confetti from 'https://cdn.skypack.dev/canvas-confetti';
+import confetti from 'canvas-confetti';
 
 const updateUserXP = async (profile, value) => {
     const db = getFirestore();
