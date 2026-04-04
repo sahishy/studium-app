@@ -2,8 +2,7 @@ import { generateAvatarThumbnailBlob } from './avatarService'
 import { supabase } from '../lib/supabase'
 import { updateUserInfo } from './userService'
 
-// const PROFILE_PICTURE_UPLOAD_DELAY_MS = 10_000
-const PROFILE_PICTURE_UPLOAD_DELAY_MS = 1000
+const PROFILE_PICTURE_UPLOAD_DELAY_MS = 10_000
 const PROFILE_PICTURE_BUCKET = 'profilePictures'
 
 const pendingProfilePictureUploads = new Map()

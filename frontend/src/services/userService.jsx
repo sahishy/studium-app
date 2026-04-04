@@ -1,4 +1,4 @@
-import { doc, updateDoc, collection, getAggregateFromServer, getCountFromServer, getFirestore, onSnapshot, query, sum, where, increment, documentId, getDocs } from 'firebase/firestore'
+import { doc, updateDoc, collection, getAggregateFromServer, getCountFromServer, getFirestore, onSnapshot, query, sum, where, increment, documentId, getDocs, getDoc, setDoc } from 'firebase/firestore'
 import { useEffect, useState } from 'react';
 import { getRandomAvatarColor } from '../utils/avatarUtils';
 import { generateRandomDisplayName, isDisplayNameFormatValid } from '../utils/userUtils';
@@ -62,6 +62,30 @@ const createNewUserObject = async ({ firstName, lastName, email }) => {
             streak: 0,
             tasksCompleted: 0,
         }
+    }
+}
+
+const createNewUserStatsObject = ({ userId }) => {
+    return {
+        userId,
+        schoolId: null,
+        targetMajors: [],
+        scores: {
+            sat: null,
+            act: null,
+        },
+        gpa: {
+            unweighted: null,
+            weighted: null,
+        },
+        extracurriculars: [],
+        awards: [],
+        college: {
+            committed: null,
+            acceptances: [],
+        },
+        createdAt: new Date(),
+        lastUpdated: new Date(),
     }
 }
 
@@ -173,6 +197,70 @@ const getUsersByIds = (userIds, setUsers) => {
     }
 }
 
+const getUserStatsByUserId = async (userId) => {
+    if(!userId) {
+        return null;
+    }
+
+    const db = getFirestore();
+    const userStatsRef = doc(db, 'userStats', userId);
+    const userStatsSnap = await getDoc(userStatsRef);
+
+    if(!userStatsSnap.exists()) {
+        return null;
+    }
+
+    return {
+        uid: userStatsSnap.id,
+        ...userStatsSnap.data()
+    }
+}
+
+const subscribeToUserStatsByUserId = (userId, setUserStats, setLoading = () => {}, setError = () => {}) => {
+    if(!userId) {
+        setUserStats(null);
+        setLoading(false);
+        return () => {};
+    }
+
+    const db = getFirestore();
+    const userStatsRef = doc(db, 'userStats', userId);
+
+    const unsubscribe = onSnapshot(userStatsRef, (docSnap) => {
+        if(docSnap.exists()) {
+            setUserStats({
+                uid: docSnap.id,
+                ...docSnap.data()
+            });
+        } else {
+            setUserStats(null);
+        }
+
+        setError(null);
+        setLoading(false);
+    }, (error) => {
+        setError(error);
+        setLoading(false);
+    });
+
+    return unsubscribe;
+}
+
+const updateUserStatsByUserId = async (userId, userStatsData) => {
+    if(!userId) {
+        throw new Error('A valid userId is required to update user stats.');
+    }
+
+    const db = getFirestore();
+    const userStatsRef = doc(db, 'userStats', userId);
+
+    await setDoc(userStatsRef, {
+        ...userStatsData,
+        userId,
+        lastUpdated: new Date(),
+    }, { merge: true });
+}
+
 const useMembersList = (memberIds = []) => {
     const [members, setMembers] = useState([]);
 
@@ -216,6 +304,7 @@ const useMembersList = (memberIds = []) => {
 
 export {
     createNewUserObject,
+    createNewUserStatsObject,
     isDisplayNameAvailable,
     generateUniqueDisplayName,
     updateUserInfo,
@@ -226,5 +315,8 @@ export {
     updateStreak,
     updateStatus,
     getUsersByIds,
-    useMembersList
+    useMembersList,
+    getUserStatsByUserId,
+    subscribeToUserStatsByUserId,
+    updateUserStatsByUserId
 }
