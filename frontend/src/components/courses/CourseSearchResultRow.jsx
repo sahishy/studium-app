@@ -14,7 +14,7 @@ const CourseSearchResultRow = ({ course, onAdd, loading, isTaking }) => {
             <div className='min-w-0 flex-1'>
                 <p className='text-sm font-semibold text-neutral0 truncate'>{course.title}</p>
                 <p className='text-xs text-neutral1 truncate'>
-                    {course.subject} • {course.courseId} • {course.description || 'No description'}
+                    {course.subject} • {course.description || 'No description'}
                 </p>
             </div>
         </button>

@@ -8,7 +8,7 @@ const Card = ( { hoverable, className, children } ) => {
                 ${className}`}
         >
             {children}
-            <div className={`absolute right-4 bottom-4 bg-neutral3/40 backdrop-blur-xs rounded-full p-2
+            <div className={`absolute right-4 bottom-4 bg-neutral3/60 backdrop-blur-xs rounded-full p-2
                 group-hover:opacity-100 group-hover:translate-x-0  opacity-0 -translate-x-1 transition
                 ${!hoverable && 'pointer-events-none'}
             `}

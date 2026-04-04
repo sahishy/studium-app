@@ -1,0 +1,164 @@
+[
+    {
+        "highSchoolId": "LCPS-001",
+        "abbreviation": "BRH",
+        "name": "Broad Run",
+        "city": "Ashburn",
+        "state": "VA",
+        "address": "21670 Ashburn Rd, Ashburn, VA 20147",
+        "website": "https://www.lcps.org/o/brh"
+    },
+    {
+        "highSchoolId": "LCPS-002",
+        "abbreviation": "BWH",
+        "name": "Briar Woods",
+        "city": "Ashburn",
+        "state": "VA",
+        "address": "22700 Belmont Ridge Rd, Ashburn, VA 20148",
+        "website": "https://www.lcps.org/o/bwh"
+    },
+    {
+        "highSchoolId": "LCPS-003",
+        "abbreviation": "DMH",
+        "name": "Dominion",
+        "city": "Sterling",
+        "state": "VA",
+        "address": "21326 Augusta Dr, Sterling, VA 20164",
+        "website": "https://www.lcps.org/o/dhs"
+    },
+    {
+        "highSchoolId": "LCPS-004",
+        "abbreviation": "FHS",
+        "name": "Freedom",
+        "city": "South Riding",
+        "state": "VA",
+        "address": "25450 Riding Center Dr, South Riding, VA 20152",
+        "website": "https://www.lcps.org/o/fhs"
+    },
+    {
+        "highSchoolId": "LCPS-005",
+        "abbreviation": "HTH",
+        "name": "Heritage",
+        "city": "Leesburg",
+        "state": "VA",
+        "address": "107 Heritage Way NE, Leesburg, VA 20176",
+        "website": "https://www.lcps.org/o/hhs"
+    },
+    {
+        "highSchoolId": "LCPS-006",
+        "abbreviation": "IHS",
+        "name": "Independence",
+        "city": "Ashburn",
+        "state": "VA",
+        "address": "21490 Ridgetop Cir, Ashburn, VA 20147",
+        "website": "https://www.lcps.org/o/ihs"
+    },
+    {
+        "highSchoolId": "LCPS-007",
+        "abbreviation": "JCH",
+        "name": "John Champe",
+        "city": "Aldie",
+        "state": "VA",
+        "address": "41535 Sacred Mountain St, Aldie, VA 20105",
+        "website": "https://www.lcps.org/o/jch"
+    },
+    {
+        "highSchoolId": "LCPS-008",
+        "abbreviation": "LCH",
+        "name": "Loudoun County",
+        "city": "Leesburg",
+        "state": "VA",
+        "address": "415 Dry Mill Rd, Leesburg, VA 20175",
+        "website": "https://www.lcps.org/o/lch"
+    },
+    {
+        "highSchoolId": "LCPS-009",
+        "abbreviation": "LRH",
+        "name": "Lightridge",
+        "city": "Aldie",
+        "state": "VA",
+        "address": "40575 Loudoun Valley Pkwy, Aldie, VA 20105",
+        "website": "https://www.lcps.org/o/lrh"
+    },
+    {
+        "highSchoolId": "LCPS-010",
+        "abbreviation": "LVH",
+        "name": "Loudoun Valley",
+        "city": "Purcellville",
+        "state": "VA",
+        "address": "340 N Maple Ave, Purcellville, VA 20132",
+        "website": "https://www.lcps.org/o/lvh"
+    },
+    {
+        "highSchoolId": "LCPS-011",
+        "abbreviation": "PFH",
+        "name": "Potomac Falls",
+        "city": "Sterling",
+        "state": "VA",
+        "address": "46400 Algonkian Pkwy, Sterling, VA 20164",
+        "website": "https://www.lcps.org/o/pfh"
+    },
+    {
+        "highSchoolId": "LCPS-012",
+        "abbreviation": "PVH",
+        "name": "Park View",
+        "city": "Sterling",
+        "state": "VA",
+        "address": "400 W Laurel Ave, Sterling, VA 20164",
+        "website": "https://www.lcps.org/o/pvh"
+    },
+    {
+        "highSchoolId": "LCPS-013",
+        "abbreviation": "RRH",
+        "name": "Rock Ridge",
+        "city": "Ashburn",
+        "state": "VA",
+        "address": "43460 Loudoun Reserve Dr, Ashburn, VA 20148",
+        "website": "https://www.lcps.org/o/rrh"
+    },
+    {
+        "highSchoolId": "LCPS-014",
+        "abbreviation": "RVH",
+        "name": "Riverside",
+        "city": "Leesburg",
+        "state": "VA",
+        "address": "15000 Dahlgren Rd, Leesburg, VA 20176",
+        "website": "https://www.lcps.org/o/rvh"
+    },
+    {
+        "highSchoolId": "LCPS-015",
+        "abbreviation": "SBH",
+        "name": "Stone Bridge",
+        "city": "Ashburn",
+        "state": "VA",
+        "address": "43100 Hay Rd, Ashburn, VA 20147",
+        "website": "https://www.lcps.org/o/sbh"
+    },
+    {
+        "highSchoolId": "LCPS-016",
+        "abbreviation": "THS",
+        "name": "Tuscarora",
+        "city": "Leesburg",
+        "state": "VA",
+        "address": "801 N King St, Leesburg, VA 20176",
+        "website": "https://www.lcps.org/o/ths"
+    },
+    {
+        "highSchoolId": "LCPS-017",
+        "abbreviation": "WHS",
+        "name": "Woodgrove",
+        "city": "Purcellville",
+        "state": "VA",
+        "address": "36 Allder School Rd, Purcellville, VA 20132",
+        "website": "https://www.lcps.org/o/whs"
+    },
+    {
+        "highSchoolId": "LCPS-018",
+        "abbreviation": "RBH",
+        "name": "William O. Robey",
+        "city": "Sterling",
+        "state": "VA",
+        "address": "21670 Valley View Pkwy, Sterling, VA 20164",
+        "website": "https://www.lcps.org/o/rbh"
+    }
+]

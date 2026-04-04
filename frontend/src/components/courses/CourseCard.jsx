@@ -11,7 +11,7 @@ const CourseCard = ({ course, onRemove, loading = false }) => {
 
             <div className='flex flex-col gap-1'>
                 <p className='font-semibold text-neutral0 truncate'>{course.title}</p>
-                <p className='text-sm text-neutral1 truncate'>{course.subject} • {course.courseId}</p>
+                <p className='text-sm text-neutral1 truncate'>{course.subject}</p>
             </div>
 
             <div className='flex justify-end'>

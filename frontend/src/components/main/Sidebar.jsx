@@ -1,14 +1,15 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { FaBookOpen, FaUserFriends } from "react-icons/fa";
 import logo from '../../assets/images/logo_lg.png'
-import { FaArrowRight, FaChild, FaGraduationCap } from 'react-icons/fa6';
-import Avatar from '../avatar/Avatar.jsx';
+import { FaArrowRight, FaChild, FaGraduationCap, FaUserGroup, FaBookOpen, FaBoxArchive } from 'react-icons/fa6';
+import { RiSwordFill } from 'react-icons/ri';
+import AvatarPicture from '../avatar/AvatarPicture.jsx';
 
 const navItems = [
     { title: 'Agenda', path: '/agenda', icon: <FaBookOpen /> },
     { title: 'Courses', path: '/courses', icon: <FaGraduationCap /> },
-    { title: 'Circles', path: '/circles', icon: <FaUserFriends /> },
-    { title: 'Profile', path: '/account/profile', icon: <FaChild/> },
+    { title: 'Circles', path: '/circles', icon: <FaUserGroup /> },
+    { title: 'Resources', path: '/resources', icon: <FaBoxArchive /> },
+    { title: 'Avatar', path: '/avatar', icon: <FaChild/> },
 ]
 
 const Sidebar = ({ profile }) => {
@@ -26,14 +27,14 @@ const Sidebar = ({ profile }) => {
                 <img src={logo} alt="Logo" className="w-36 h-12 p-2 object-contain" />
 
                 <div className='py-6 flex flex-col gap-3 items-center'>
-                    <button onClick={() => navigate('/account/settings')}>
-                        <Avatar profile={profile} className='relative w-16 h-16 group/avatar cursor-pointer'>
-                            <div className={`absolute -bottom-1 -right-1 bg-neutral3/40 backdrop-blur-xs rounded-full p-2
+                    <button onClick={() => navigate(`/profile/${profile.uid}`)}>
+                        <AvatarPicture profile={profile} className='relative w-16 h-16 group/avatar cursor-pointer'>
+                            <div className={`absolute -bottom-1 -right-1 bg-neutral3/60 backdrop-blur-xs rounded-full p-2
                                 opacity-0 group-hover/avatar:opacity-100 transition
                             `}>
                                 <FaArrowRight className='text-sm group-hover/avatar:-rotate-45 transition'/>
                             </div>
-                        </Avatar>
+                        </AvatarPicture>
                     </button>
 
                     <div className='flex flex-col items-center'>
@@ -43,6 +44,7 @@ const Sidebar = ({ profile }) => {
                 </div>
 
                 <div className='flex flex-col'>
+                    <PlayButton/>
                     {navItems.map((item, index) => (
                         <SidebarNavLink key={index} item={item} isActive={location.pathname.startsWith(item.path)} />
                     ))}
@@ -62,6 +64,22 @@ const Sidebar = ({ profile }) => {
     )
 }
 
+const PlayButton = () => {
+
+    const navigate = useNavigate();
+    
+    return (
+        <button
+            onClick={() => navigate('')}
+            className='px-3 py-2 flex items-center justify-center gap-2 rounded-xl bg-neutral0 text-neutral6 text-sm
+                mb-3 cursor-pointer hover:opacity-90 transition'
+        >
+            <RiSwordFill/>
+            SAT 1v1s
+        </button>
+    )
+}
+
 const SidebarNavLink = ({ item, isActive }) => {
     return (
         <NavLink
@@ -69,12 +87,11 @@ const SidebarNavLink = ({ item, isActive }) => {
             to={item.path}
             end
             className={
-                `flex items-center p-3 gap-2 rounded-xl transition-all  ${(isActive) ? 'text-neutral0 bg-neutral3' : 'text-neutral1 hover:bg-neutral4'
-                }`
+                `flex items-center px-3 py-2 gap-2 rounded-xl transition-all  ${(isActive) ? 'text-neutral0 bg-neutral3' : 'text-neutral1 hover:bg-neutral4'}`
             }
         >
             <div className='text-sm'>{item.icon}</div>
-            <div className='text-sm leading-0 text-nowrap'>{item.title}</div>
+            <div className='text-sm text-nowrap'>{item.title}</div>
         </NavLink>
     )
 }

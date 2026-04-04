@@ -1,7 +1,7 @@
 import { PiStarFourFill } from "react-icons/pi";
 import pfp from '../../assets/images/default-profile.jpg'
 import Card from "../main/Card";
-import Avatar from "../avatar/Avatar";
+import AvatarPicture from "../avatar/AvatarPicture";
 import { useCircleMembers } from "../../services/circleService";
 
 const CircleCard = ({ circle }) => {
@@ -56,7 +56,7 @@ const CircleCard = ({ circle }) => {
             <div className="flex items-center">
 
                 {Array.from({ length: Math.min(circle.memberCount || 0, 4) }).map((_, index) => (
-                    <Avatar key={index} profile={circleMembers[index]}/>
+                    <AvatarPicture key={index} profile={circleMembers[index]}/>
                 ))}
                 {(circle.memberCount || 0) > 4 && (
                     <div className="w-10 h-10 rounded-full border-4 border-background1 -ml-3 flex items-center justify-center bg-background3 text-sm text-text2 transition-colors ">

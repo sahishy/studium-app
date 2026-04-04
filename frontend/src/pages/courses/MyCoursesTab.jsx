@@ -8,8 +8,10 @@ import CourseSearchResultRow from '../../components/courses/CourseSearchResultRo
 import CoursePaletteGridCard from '../../components/courses/CoursePaletteGridCard'
 import { useCourses } from '../../contexts/CoursesContext'
 import { getCourseSubjects, joinCourse, leaveCourse, searchCourses } from '../../services/courseService'
+import { FaMagnifyingGlass } from 'react-icons/fa6'
 
 const MyCoursesTab = () => {
+
     const { profile } = useOutletContext()
     const { selectedCourses = [], courseIds = [] } = useCourses()
     const [loadingCourseId, setLoadingCourseId] = useState(null)
@@ -85,8 +87,19 @@ const MyCoursesTab = () => {
     return (
         <>
             <div className='w-full h-full flex flex-col gap-4 lg:flex-row lg:gap-16 lg:items-start m-auto'>
-                <div className='flex-1 flex flex-col items-start gap-4 pb-16'>
-                    <Button type='secondary' onClick={openPalette}>Add Course</Button>
+                <div className='flex-1 flex flex-col items-start pb-16'>
+
+                    <div className='w-full flex justify-center py-8'>
+                        {/* <Button type='secondary' onClick={openPalette}>Add Course</Button> */}
+                        <button
+                            onClick={openPalette}
+                            className='px-6 py-3 bg-neutral5 rounded-full text-neutral1 hover:bg-neutral4 cursor-pointer
+                                flex gap-3 items-center w-96 hover:w-104 transition-all'
+                        >
+                            <FaMagnifyingGlass className='text-neutral0'/>
+                            Add a course...
+                        </button>
+                    </div>
 
                     {selectedCourses.length === 0 ? (
                         <p className='text-sm text-neutral1'>You haven&apos;t added any courses yet.</p>
@@ -169,8 +182,6 @@ const MyCoursesTab = () => {
                     </div>
                 )}
             </CommandPalette>
-
-            <BottomFade />
         </>
     )
 }

@@ -1,5 +1,5 @@
 import { FaCrown } from "react-icons/fa6";
-import Avatar from '../avatar/Avatar';
+import AvatarPicture from '../avatar/AvatarPicture';
 
 const CircleMember = ( { profile, isOwner } ) => {
 
@@ -7,7 +7,7 @@ const CircleMember = ( { profile, isOwner } ) => {
 
     return (
         <div className='p-2 rounded-xl border-2 border-neutral4 flex items-center gap-4 shadow-lg shadow-shadow'>
-            <Avatar profile={profile}/>
+            <AvatarPicture profile={profile}/>
 
             <div className="flex flex-col pr-2 min-w-0">
 

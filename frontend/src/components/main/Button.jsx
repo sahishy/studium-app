@@ -14,7 +14,7 @@ const Button = ( {
         } else if(type === 'secondary') {
             return 'text-neutral0 bg-neutral6 border border-neutral4 not-disabled:hover:bg-neutral5';
         } else if(type === 'tertiary') {
-            return 'text-neutral0 bg-neutral5 not-disabled:hover:bg-neutral4';
+            return 'text-neutral0 bg-neutral3/60 backdrop-blur-xs not-disabled:hover:bg-neutral3';
         } else if(type === 'negative') {
             return 'text-white bg-red-400 not-disabled:hover:bg-red-500 border-red-500';
         } else {

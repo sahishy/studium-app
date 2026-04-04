@@ -11,17 +11,17 @@ import CirclesOverview from './pages/circles/CirclesOverview'
 import Courses from './pages/courses/Courses'
 import MyCoursesTab from './pages/courses/MyCoursesTab'
 import AllCoursesTab from './pages/courses/AllCoursesTab'
-import Account from './pages/account/Account'
-import AccountIndexRedirect from './routes/AccountIndexRedirect'
 import CoursesIndexRedirect from './routes/CoursesIndexRedirect'
-import ProfileTab from './pages/account/ProfileTab'
-import SettingsTab from './pages/account/SettingsTab'
+import Avatar from './pages/avatar/Avatar'
+import Settings from './pages/settings/Settings'
+import ProfileOverview from './pages/profile/ProfileOverview'
 import Login from './pages/auth/Login'
 import Signup from './pages/auth/Signup'
 import Landing from './pages/landing/Landing'
 import { ModalProvider } from './contexts/ModalContext'
 import JoinCircle from './pages/circles/JoinCircle'
 import ErrorState from './components/main/ErrorState'
+import Resources from './pages/resources/Resources'
 
 export default function App() {
 	return (
@@ -47,7 +47,6 @@ export default function App() {
 					<Route path="calendar" element={<CalendarTab/>} />
 					<Route path="board" element={<BoardTab/>} />
 				</Route>
-
 				<Route path="/circles">
 					<Route index element={<Circles/>}/>
 					<Route path=":circleId" element={<CirclesOverview/>}/>
@@ -57,13 +56,11 @@ export default function App() {
 					<Route path="me" element={<MyCoursesTab/>}/>
 					<Route path="all" element={<AllCoursesTab/>}/>
 				</Route>
+				<Route path="/resources" element={<Resources/>}/>
 				<Route path="/join/:inviteCode" element={<JoinCircle/>}/>
-
-				<Route path="/account" element={<Account/>}>
-					<Route index element={<AccountIndexRedirect/>}/>
-					<Route path="profile" element={<ProfileTab/>}/>
-					<Route path="settings" element={<SettingsTab/>}/>
-				</Route>
+				<Route path="/avatar" element={<Avatar/>}/>
+				<Route path="/settings" element={<Settings/>}/>
+				<Route path="/profile/:userId" element={<ProfileOverview/>}/>
 
 
 			</Route>
