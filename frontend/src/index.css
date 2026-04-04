@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&display=swap');
+@import 'tailwindcss';
+
+
+@font-face {
+    font-family: 'BasierSquare'; 
+    src: url('/BasierSquare-Regular.otf') format('opentype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'BasierSquare'; 
+    src: url('/Basier Square Medium.otf') format('opentype');
+    font-weight: bold;
+    font-style: normal;
+}
+
+@font-face {
+    font-family: 'BasierSquare'; 
+    src: url('/Basier Square Italic.otf') format('opentype');
+    font-weight: normal;
+    font-style: italic;
+}
+
+
+html {
+    background-color: var(--color-background0);
+
+    font-family: "BasierSquare", sans-serif;
+    font-style: normal;
+
+    @apply text-neutral0;
+
+}    
+
+* {
+    -webkit-user-drag: none;
+    @apply focus:outline-gray-200;
+}
+
+@media (prefers-color-scheme: light) {
+
+    @theme {
+
+        --color-neutral0: #1F2937;
+        --color-neutral1: #9CA3AF;
+        --color-neutral2: #D1D5DB;
+        --color-neutral3: #E5E7EB;
+        --color-neutral4: #ebedf2;
+        --color-neutral5: #F3F4F6;
+        --color-neutral6: white;
+
+        --color-primary0: theme(--color-gray-800);
+        --color-primary1: theme(--color-gray-900);
+
+        --color-background0: theme(--color-white);
+        --color-background1: theme(--color-white);
+        --color-background2: oklch(97.6% 0.0025 256.0);
+        --color-background3: theme(--color-gray-100);
+        --color-background4: #f5f6f7;
+        --color-background5: oklch(70.7% 0.022 261.325 / 0.1);
+
+        --color-text0: theme(--color-gray-800);
+        --color-text1: theme(--color-gray-600);
+        --color-text2: theme(--color-gray-400);
+        --color-text3: theme(--color-gray-300);
+        --color-text4: white;
+
+        --color-border: theme(--color-gray-200);
+        --color-shadow: oklch(70.7% 0.022 261.325 / 0.1);
+        --color-backdrop: oklch(27.8% 0.033 256.848 / 0.2);
+
+    }
+
+}
