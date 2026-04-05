@@ -11,7 +11,7 @@ const toDateKeyFromSeconds = (seconds) => toDateFromSeconds(seconds).toLocaleDat
 const formatDateFromSeconds = (seconds) => toDateFromSeconds(seconds).toLocaleDateString();
 
 const toTitleCase = (value = '') => String(value ?? '')
-    .toLowerCase()
+    // .toLowerCase()
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
 const formatRelativeTaskDate = (seconds) => {

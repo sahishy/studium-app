@@ -28,6 +28,7 @@ class AvatarModelErrorBoundary extends Component {
 }
 
 const Model = ({ profile, animation = null }) => {
+    
     const groupRef = useRef();
 
     const { scene, animations } = useGLTF(characterModelUrl);

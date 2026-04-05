@@ -121,7 +121,7 @@ const Avatar = () => {
             <Topbar profile={profile} />
 
             <div className='w-full flex-1 flex flex-col gap-4 px-24 pb-24 pt-2'>
-                <div className='flex justify-between items-center'>
+                <div className='flex justify-between items-start'>
                     <h1 className='text-2xl font-semibold'>Avatar</h1>
                     <TextTabSelector
                         tabs={tabs}

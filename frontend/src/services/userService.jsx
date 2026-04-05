@@ -69,6 +69,7 @@ const createNewUserStatsObject = ({ userId }) => {
     return {
         userId,
         schoolId: null,
+        schoolAffiliations: [],
         targetMajors: [],
         scores: {
             sat: null,

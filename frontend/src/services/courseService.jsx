@@ -1,20 +1,7 @@
 import { collection, deleteDoc, doc, getDoc, getDocs, getFirestore, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
 import coursesCatalog from '../data/courses.json'
-
-const subjectColorMap = {
-    Admin: '#7c3aed',
-    English: '#2563eb',
-    Art: '#db2777',
-    Music: '#ea580c',
-    'Theater Arts': '#9333ea',
-    'World Languages and Culture': '#0891b2',
-    'Health and PE': '#16a34a',
-    Math: '#4f46e5',
-    Science: '#059669',
-    'Social Science and Global Studies': '#0f766e',
-    'Career and Technical Education': '#b45309'
-}
+import { buildEnrollmentId, normalizeSearchText, tokenizeText } from '../utils/courseUtils'
 
 const getAllCourses = () => {
     return coursesCatalog
@@ -30,21 +17,6 @@ const getCoursesBySubject = (subject) => {
 
 const getCourseSubjects = () => {
     return Array.from(new Set(coursesCatalog.map((course) => course.subject))).sort((a, b) => a.localeCompare(b))
-}
-
-const normalizeSearchText = (value) => {
-    return String(value ?? '')
-        .toLowerCase()
-        .replace(/([0-9])([a-z])/g, '$1 $2')
-        .replace(/([a-z])([0-9])/g, '$1 $2')
-        .replace(/[^a-z0-9\s]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-}
-
-const tokenizeText = (value) => {
-    const normalized = normalizeSearchText(value)
-    return normalized ? normalized.split(' ') : []
 }
 
 const searchCourses = (queryText = '', options = {}) => {
@@ -152,15 +124,8 @@ const getAvailableCoursesByCourseIds = (courseIds = []) => {
     return coursesCatalog.filter((course) => !selected.has(String(course.courseId)))
 }
 
-const getSubjectColor = (subject) => {
-    return subjectColorMap[subject] ?? '#64748b'
-}
-
-const buildEnrollmentId = (courseId, studentId) => {
-    return `${String(courseId)}_${String(studentId)}`
-}
-
 const joinCourse = async (studentId, courseId, options = {}) => {
+
     const db = getFirestore()
     const now = serverTimestamp()
     const {
@@ -168,6 +133,7 @@ const joinCourse = async (studentId, courseId, options = {}) => {
         teacherId = null,
         customization = { bgColor: '#1f2937', iconColor: '#ffffff' }
     } = options
+    
     const enrollmentId = buildEnrollmentId(courseId, studentId)
     const enrollmentRef = doc(db, 'courses', enrollmentId)
     const existingEnrollment = await getDoc(enrollmentRef)
@@ -185,6 +151,12 @@ const joinCourse = async (studentId, courseId, options = {}) => {
             lastUpdated: now
         }, { merge: true })
     } else {
+        
+        const coursesRef = collection(db, 'courses')
+        const studentCoursesQuery = query(coursesRef, where('studentId', '==', String(studentId)))
+        const studentCoursesSnapshot = await getDocs(studentCoursesQuery)
+        const sortIndex = studentCoursesSnapshot.size
+
         await setDoc(enrollmentRef, {
             courseId: String(courseId),
             studentId: String(studentId),
@@ -194,6 +166,7 @@ const joinCourse = async (studentId, courseId, options = {}) => {
                 bgColor: customization?.bgColor ?? '#1f2937',
                 iconColor: customization?.iconColor ?? '#ffffff'
             },
+            sortIndex,
             createdAt: now,
             lastUpdated: now
         })
@@ -251,12 +224,16 @@ const toggleCourseEnrollment = async (studentId, courseId) => {
 
 const useStudentCourses = (studentId) => {
     const [enrollments, setEnrollments] = useState([])
+    const [loading, setLoading] = useState(false)
 
     useEffect(() => {
         if(!studentId) {
             setEnrollments([])
+            setLoading(false)
             return
         }
+
+        setLoading(true)
 
         const db = getFirestore()
         const coursesRef = collection(db, 'courses')
@@ -269,6 +246,9 @@ const useStudentCourses = (studentId) => {
             }))
 
             setEnrollments(data)
+            setLoading(false)
+        }, () => {
+            setLoading(false)
         })
 
         return () => unsubscribe()
@@ -284,11 +264,11 @@ const useStudentCourses = (studentId) => {
             .filter(Boolean)
     }, [courseIds])
 
-    return { enrollments, courseIds, courses }
+    return { enrollments, courseIds, courses, loading }
 }
 
 const useCourseLibrary = (studentId) => {
-    const { enrollments, courseIds, courses } = useStudentCourses(studentId)
+    const { enrollments, courseIds, courses, loading } = useStudentCourses(studentId)
 
     const availableCourses = useMemo(() => {
         return getAvailableCoursesByCourseIds(courseIds)
@@ -298,7 +278,8 @@ const useCourseLibrary = (studentId) => {
         enrollments,
         courseIds,
         selectedCourses: courses,
-        availableCourses
+        availableCourses,
+        loading
     }
 }
 
@@ -311,7 +292,6 @@ export {
     getFeaturedCourses,
     getCoursesByIds,
     getAvailableCoursesByCourseIds,
-    getSubjectColor,
     joinCourse,
     leaveCourse,
     toggleCourseEnrollment,

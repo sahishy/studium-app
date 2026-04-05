@@ -6,9 +6,17 @@ import CourseCommandPalette from '../../components/commandPalettes/CourseCommand
 import AllCoursesCard from '../../components/courses/AllCoursesCard'
 import { getAllCourses, getCourseSubjects, searchCourses } from '../../services/courseService'
 import { getAverageScoreByCourseIds } from '../../services/reviewService'
+import { createCacheKey, resolveCachedRecordsByIds, setCachedRecordsById } from '../../services/cacheService'
+import { CACHE_NAMESPACES, CACHE_TTLS_MS } from '../../utils/cacheUtils'
 
 const CARD_PAGE_SIZE = 9
 const PALETTE_PAGE_SIZE = 10
+const SCORE_CACHE_TTL_MS = CACHE_TTLS_MS.COURSE_SCORE
+const SCORE_CACHE_NAMESPACE = CACHE_NAMESPACES.COURSE_SCORE
+
+const getScoreCacheKey = (courseId) => {
+    return createCacheKey(SCORE_CACHE_NAMESPACE, courseId)
+}
 
 const AllCoursesTab = () => {
     const navigate = useNavigate()
@@ -18,6 +26,7 @@ const AllCoursesTab = () => {
     const [searchVisibleCount, setSearchVisibleCount] = useState(PALETTE_PAGE_SIZE)
     const [subjectVisibleCount, setSubjectVisibleCount] = useState(PALETTE_PAGE_SIZE)
     const [scoreMap, setScoreMap] = useState({})
+    const [loadingScoreIds, setLoadingScoreIds] = useState({})
     const subjects = useMemo(() => getCourseSubjects(), [])
     const [activeSubject, setActiveSubject] = useState(subjects[0] ?? null)
 
@@ -63,6 +72,8 @@ const AllCoursesTab = () => {
     const canLoadMoreSubject = subjectCourses.length > visibleSubjectCourses.length
 
     useEffect(() => {
+        let cancelled = false
+
         const visibleIds = Array.from(new Set([
             ...visibleCourses.map((course) => String(course.courseId)),
             ...visibleSearchResults.map((course) => String(course.courseId)),
@@ -70,16 +81,94 @@ const AllCoursesTab = () => {
         ].filter(Boolean)))
 
         if(visibleIds.length === 0) {
-            setScoreMap({})
             return
         }
 
-        const loadScores = async () => {
-            const nextMap = await getAverageScoreByCourseIds(visibleIds)
-            setScoreMap(nextMap)
+        const {
+            freshValuesById,
+            staleValuesById,
+            missingIds,
+            staleIds,
+        } = resolveCachedRecordsByIds(visibleIds, {
+            keyForId: getScoreCacheKey,
+        })
+
+        setScoreMap((previous) => ({
+            ...previous,
+            ...freshValuesById,
+            ...staleValuesById,
+        }))
+
+        const loadMissingScores = async () => {
+            if(missingIds.length === 0) {
+                return
+            }
+
+            setLoadingScoreIds((previous) => {
+                const next = { ...previous }
+                missingIds.forEach((courseId) => {
+                    next[String(courseId)] = true
+                })
+                return next
+            })
+
+            try {
+                const nextMap = await getAverageScoreByCourseIds(missingIds)
+                const normalizedMap = missingIds.reduce((acc, courseId) => {
+                    acc[String(courseId)] = nextMap[String(courseId)] ?? null
+                    return acc
+                }, {})
+
+                if(!cancelled) {
+                    setCachedRecordsById(normalizedMap, {
+                        keyForId: getScoreCacheKey,
+                        ttlMs: SCORE_CACHE_TTL_MS,
+                    })
+                    setScoreMap((previous) => ({
+                        ...previous,
+                        ...normalizedMap,
+                    }))
+                }
+            } finally {
+                setLoadingScoreIds((previous) => {
+                    const next = { ...previous }
+                    missingIds.forEach((courseId) => {
+                        delete next[String(courseId)]
+                    })
+                    return next
+                })
+            }
         }
 
-        loadScores()
+        const refreshStaleScores = async () => {
+            if(staleIds.length === 0) {
+                return
+            }
+
+            const nextMap = await getAverageScoreByCourseIds(staleIds)
+            const normalizedMap = staleIds.reduce((acc, courseId) => {
+                acc[String(courseId)] = nextMap[String(courseId)] ?? null
+                return acc
+            }, {})
+
+            if(!cancelled) {
+                setCachedRecordsById(normalizedMap, {
+                    keyForId: getScoreCacheKey,
+                    ttlMs: SCORE_CACHE_TTL_MS,
+                })
+                setScoreMap((previous) => ({
+                    ...previous,
+                    ...normalizedMap,
+                }))
+            }
+        }
+
+        loadMissingScores()
+        refreshStaleScores()
+
+        return () => {
+            cancelled = true
+        }
     }, [visibleCourses, visibleSearchResults, visibleSubjectCourses])
 
     useEffect(() => {
@@ -156,6 +245,7 @@ const AllCoursesTab = () => {
                 onLoadMoreSearch={() => setSearchVisibleCount((prev) => prev + PALETTE_PAGE_SIZE)}
                 onLoadMoreSubject={() => setSubjectVisibleCount((prev) => prev + PALETTE_PAGE_SIZE)}
                 scoreMap={scoreMap}
+                getScoreLoading={(courseId) => Boolean(loadingScoreIds[String(courseId)])}
                 getIsTaking={() => false}
                 getIsLoading={() => false}
                 onSelectCourse={(course) => {

@@ -2,14 +2,26 @@ import { useEffect, useMemo, useState } from 'react'
 import Button from '../main/Button'
 import BooleanSelect from '../main/BooleanSelect'
 import TeacherCommandPalette from '../commandPalettes/TeacherCommandPalette'
-import { createTeacher, searchTeachersByName } from '../../services/teacherService'
+import AddTeacherConfirmationModal from './AddTeacherConfirmationModal'
+import { createTeacher, searchTeachersBySchoolIds } from '../../services/teacherService'
 import { joinCourse } from '../../services/courseService'
 import { toTitleCase } from '../../utils/formatters'
+import { COURSE_COLORS } from '../../utils/courseUtils'
+import { getEffectiveSchoolIds, getSchoolNameById } from '../../services/schoolService'
+import { useModal } from '../../contexts/ModalContext'
 
-const AddCourseModal = ({ profile, course, schoolId = null, closeModal, onAdded = () => { } }) => {
+const AddCourseModal = ({
+    profile,
+    course,
+    schoolId = null,
+    schoolAffiliations = [],
+    closeModal,
+    onAdded = () => { }
+}) => {
 
     const [day, setDay] = useState('A')
     const [selectedTeacher, setSelectedTeacher] = useState(null)
+    const [selectedColor, setSelectedColor] = useState(COURSE_COLORS[0])
     const [isSaving, setIsSaving] = useState(false)
 
     const [teacherPaletteOpen, setTeacherPaletteOpen] = useState(false)
@@ -19,16 +31,40 @@ const AddCourseModal = ({ profile, course, schoolId = null, closeModal, onAdded 
     const [teacherHasMore, setTeacherHasMore] = useState(false)
     const [teacherLoading, setTeacherLoading] = useState(false)
     const [createLoading, setCreateLoading] = useState(false)
+    const { openModal, closeModal: closeTopModal } = useModal()
 
     const normalizedTeacherQuery = teacherQuery.trim()
+    const effectiveSchoolIds = useMemo(() => {
+        return getEffectiveSchoolIds({ schoolId, schoolAffiliations })
+    }, [schoolId, schoolAffiliations])
+
+    const teacherSchoolOptions = useMemo(() => {
+        const combinedSchoolIds = [schoolId, ...(schoolAffiliations ?? [])]
+        const normalizedSchoolIds = Array.from(new Set(combinedSchoolIds.map((id) => String(id)).filter(Boolean)))
+
+        return normalizedSchoolIds.map((id) => ({
+            id,
+            label: getSchoolNameById(id) ?? `School ${id}`,
+        }))
+    }, [schoolId, schoolAffiliations])
+
+    const createTeacherForSchool = async ({ teacherName, selectedSchoolId }) => {
+        const teacherId = await createTeacher({
+            name: teacherName,
+            schoolId: selectedSchoolId,
+            createdBy: profile.uid,
+        })
+
+        setSelectedTeacher({ uid: teacherId, name: teacherName, schoolId: selectedSchoolId })
+    }
 
     const loadTeachers = async ({ reset = false } = {}) => {
         setTeacherLoading(true)
         try {
 
-            const response = await searchTeachersByName({
+            const response = await searchTeachersBySchoolIds({
                 queryText: normalizedTeacherQuery,
-                schoolId,
+                schoolIds: effectiveSchoolIds,
                 limitCount: 12,
                 cursor: reset ? null : teacherCursor,
             })
@@ -63,22 +99,50 @@ const AddCourseModal = ({ profile, course, schoolId = null, closeModal, onAdded 
         setTeacherCursor(null)
         loadTeachers({ reset: true })
 
-    }, [normalizedTeacherQuery, teacherPaletteOpen])
+    }, [normalizedTeacherQuery, teacherPaletteOpen, effectiveSchoolIds])
 
     const handleCreateTeacher = async () => {
         if (!normalizedTeacherQuery || !profile?.uid) {
             return
         }
 
+        const teacherName = toTitleCase(normalizedTeacherQuery)
+        const defaultSchoolId = effectiveSchoolIds.includes(String(schoolId))
+            ? String(schoolId)
+            : effectiveSchoolIds[0] ?? null
+
+        if((schoolAffiliations ?? []).length > 0) {
+            openModal(
+                <AddTeacherConfirmationModal
+                    teacherName={teacherName}
+                    schoolOptions={teacherSchoolOptions}
+                    defaultSchoolId={defaultSchoolId}
+                    onCancel={closeTopModal}
+                    onConfirm={(selectedSchoolId) => handleConfirmCreateTeacher(teacherName, selectedSchoolId)}
+                    confirmLoading={createLoading}
+                />
+            )
+            return
+        }
+
         setCreateLoading(true)
         try {
-            const teacherId = await createTeacher({
-                name: toTitleCase(normalizedTeacherQuery),
-                schoolId,
-                createdBy: profile.uid,
-            })
+            await createTeacherForSchool({ teacherName, selectedSchoolId: defaultSchoolId })
+            setTeacherPaletteOpen(false)
+        } finally {
+            setCreateLoading(false)
+        }
+    }
 
-            setSelectedTeacher({ uid: teacherId, name: toTitleCase(normalizedTeacherQuery), schoolId })
+    const handleConfirmCreateTeacher = async (teacherName, selectedSchoolId) => {
+        if(!teacherName || !profile?.uid || !selectedSchoolId) {
+            return
+        }
+
+        setCreateLoading(true)
+        try {
+            await createTeacherForSchool({ teacherName, selectedSchoolId })
+            closeTopModal()
             setTeacherPaletteOpen(false)
         } finally {
             setCreateLoading(false)
@@ -97,8 +161,8 @@ const AddCourseModal = ({ profile, course, schoolId = null, closeModal, onAdded 
                 day,
                 teacherId: selectedTeacher.uid,
                 customization: {
-                    bgColor: '#1f2937',
-                    iconColor: '#ffffff',
+                    bgColor: selectedColor?.bg ?? '#f3f4f6',
+                    iconColor: selectedColor?.icon ?? '#9ca3af',
                 }
             })
 
@@ -150,6 +214,26 @@ const AddCourseModal = ({ profile, course, schoolId = null, closeModal, onAdded 
                         >
                             {teacherButtonLabel}
                         </button>
+                    </div>
+
+                    <div className='flex flex-col gap-2'>
+                        <p className='text-sm text-neutral1'>Color</p>
+                        <div className='flex justify-between'>
+                            {COURSE_COLORS.map((color, index) => {
+                                const isSelected = selectedColor?.icon === color.icon && selectedColor?.bg === color.bg
+
+                                return (
+                                    <button
+                                        key={`${color.icon}-${color.bg}`}
+                                        type='button'
+                                        onClick={() => setSelectedColor(color)}
+                                        className={`h-9 w-9 rounded-full border border-neutral4 cursor-pointer transition-transform hover:scale-105 ${isSelected ? 'ring-2 ring-neutral1 ring-offset-2' : ''}`}
+                                        style={{ backgroundColor: color.icon }}
+                                        aria-label={`Select color ${index + 1}`}
+                                    />
+                                )
+                            })}
+                        </div>
                     </div>
 
                     <div className='flex gap-3 mt-2'>

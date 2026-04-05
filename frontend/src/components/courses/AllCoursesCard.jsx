@@ -1,13 +1,17 @@
 import { FaBook, FaThumbsUp } from 'react-icons/fa6'
 import Card from '../main/Card'
 import { formatScoreLabel } from '../../utils/reviewUtils'
+import { SUBJECT_ICONS } from '../../utils/courseUtils';
 
 const AllCoursesCard = ({ course, score, onOpen }) => {
+
+    const SubjectIcon = SUBJECT_ICONS[course.subject];
+
     return (
         <button onClick={onOpen} className='w-full text-left'>
             <Card hoverable className='h-full'>
                 <div className='h-24 rounded-xl bg-neutral5 flex items-center justify-center text-neutral2'>
-                    <FaBook className='text-3xl' />
+                    <SubjectIcon className='text-3xl' />
                 </div>
 
                 <div className='flex flex-col gap-3 min-w-0'>
@@ -30,6 +34,7 @@ const AllCoursesCard = ({ course, score, onOpen }) => {
             </Card>
         </button>
     )
+
 }
 
 export default AllCoursesCard

@@ -1,34 +1,43 @@
 import Card from '../main/Card'
-import { getSchoolNameById } from '../../utils/reviewUtils'
+import { getSchoolNameById, SCORE_OPTIONS } from '../../utils/reviewUtils'
+import AvatarPicture from '../avatar/AvatarPicture';
+import { FaSchool } from 'react-icons/fa6';
+import { FaChalkboardTeacher } from 'react-icons/fa';
 
-const scoreNames = {
-    '1': 'Good',
-    '0.5': 'Okay',
-    '0': 'Bad'
-}
-
-const CourseReviewCard = ({ review, reviewerName, teacherName }) => {
+const CourseReviewCard = ({ review, reviewer, teacherName }) => {
 
     const score = review?.score;
     const schoolName = getSchoolNameById(review?.schoolId)
 
+    const scoreOption = SCORE_OPTIONS.find(x => x.value === score);
+    const scoreName = scoreOption.label;
+    const ScoreIcon = scoreOption.icon;
+
     return (
         <Card className='gap-3'>
 
-            <div className='flex flex-col gap-1'>
-                <p className='text-sm font-semibold text-neutral0'>{reviewerName || 'Anonymous'}</p>
+            <div className='flex gap-3 items-center'>
 
-                <div className='flex gap-1'>
-                    <span className='inline-flex items-center rounded-full bg-neutral5 px-2 py-0.5 text-[10px] text-neutral1'>
-                        {score ? `${scoreNames[score]}` : 'No Rating'}
-                    </span>
-                    <span className='inline-flex items-center rounded-full bg-neutral5 px-2 py-0.5 text-[10px] text-neutral1'>
-                        {(schoolName ? `${schoolName} High School` : 'Unknown High School')}
-                    </span>
-                    <span className='inline-flex w-fit items-center rounded-full bg-neutral5 px-2 py-0.5 text-[10px] text-neutral1'>
-                        Taught by {teacherName || 'Unknown teacher'}
-                    </span>
+                <AvatarPicture
+                    profile={reviewer}
+                    className='w-20 h-20'
+                />
+
+                <div className='flex flex-col gap-1'>
+                    <p className='font-semibold text-neutral0'>
+                        {reviewer?.displayName || 'Anonymous'}
+                    </p>
+                    <p className='text-xs text-neutral1 flex items-center gap-2'>
+                        <FaSchool /> Attends {(schoolName ? `${schoolName} High School` : 'an unknown high school')}
+                    </p>
+                    <p className='text-xs text-neutral1 flex items-center gap-2'>
+                        <FaChalkboardTeacher /> Taught by {teacherName || 'Unknown teacher'}
+                    </p>
+                    <div className='text-xs text-neutral1 flex items-center gap-2'>
+                        <ScoreIcon /> Rated {scoreName}
+                    </div>
                 </div>
+
             </div>
 
             <p className='text-sm text-neutral1 whitespace-pre-wrap'>

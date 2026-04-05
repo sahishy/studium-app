@@ -21,7 +21,7 @@ const Dropdown = ({ children, options, onSelect, className = '', onOpen, isOptio
                             }
                         }}
                         className={`flex gap-2 items-center justify-start p-2 text-neutral0 text-sm rounded-xl cursor-pointer ${
-                            selected ? 'bg-neutral0 text-neutral6' : 'hover:bg-neutral5'
+                            selected ? 'bg-neutral4 text-neutral0' : 'hover:bg-neutral5'
                         }`}
                     >
                         <div className='text-neutral1'>{option.icon}</div>

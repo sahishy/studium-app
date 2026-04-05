@@ -18,6 +18,10 @@ import {
     clampReviewScore,
     computeAverageScoreFromReviews,
 } from '../utils/reviewUtils'
+import { createCacheKey, deleteCacheEntry } from './cacheService'
+import { CACHE_NAMESPACES } from '../utils/cacheUtils'
+
+const COURSE_SCORE_CACHE_NAMESPACE = CACHE_NAMESPACES.COURSE_SCORE
 
 const buildReviewId = (courseId, userId) => `${String(courseId)}_${String(userId)}`
 
@@ -47,6 +51,7 @@ const upsertCourseReview = async ({
 
     if(existing.exists()) {
         await setDoc(reviewRef, payload, { merge: true })
+        deleteCacheEntry(createCacheKey(COURSE_SCORE_CACHE_NAMESPACE, courseId))
         return reviewId
     }
 
@@ -54,6 +59,8 @@ const upsertCourseReview = async ({
         ...payload,
         createdAt: now,
     })
+
+    deleteCacheEntry(createCacheKey(COURSE_SCORE_CACHE_NAMESPACE, courseId))
 
     return reviewId
 }

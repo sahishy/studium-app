@@ -1,6 +1,6 @@
 import { FaCalendar, FaCheckCircle, FaClock, FaDotCircle, FaUserFriends } from 'react-icons/fa'
 import DatePicker from '../popovers/DatePicker'
-import Dropdown from '../popovers/Dropdown'
+import Select from '../popovers/Select'
 import { formatDateFromSeconds } from '../../utils/formatters'
 
 const STATUS_OPTIONS = [
@@ -27,7 +27,7 @@ export const TaskStatusInput = ({ status, setStatus, className = '', renderTrigg
     const handleSelectOption = (option) => setStatus(option.label)
 
     return (
-        <Dropdown
+        <Select
             options={STATUS_OPTIONS}
             onSelect={handleSelectOption}
             className={className}
@@ -38,7 +38,7 @@ export const TaskStatusInput = ({ status, setStatus, className = '', renderTrigg
                     ? renderTrigger({ isOpen, status, options: STATUS_OPTIONS })
                     : <DefaultStatusTrigger isOpen={isOpen} status={status} />
             }
-        </Dropdown>
+        </Select>
     )
 }
 
@@ -119,7 +119,7 @@ export const TaskCircleInput = ({
     }
 
     return (
-        <Dropdown
+        <Select
             options={options}
             onSelect={handleSelectOption}
             className={className}
@@ -133,6 +133,6 @@ export const TaskCircleInput = ({
                     ? renderTrigger({ isOpen, ownerType, ownerId, selectedCircle })
                     : <DefaultCircleTrigger isOpen={isOpen} ownerType={ownerType} selectedCircle={selectedCircle} />
             }
-        </Dropdown>
+        </Select>
     )
 }

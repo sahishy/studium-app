@@ -13,6 +13,7 @@ import { UserStatsProvider } from '../../contexts/UserStatsContext'
 import LoadingState from '../../components/main/LoadingState'
 
 const MainScreen = () => {
+    
     const { user, loading } = useAuth()
     const [profile, setProfile] = useState(null)
     const [profileLoading, setProfileLoading] = useState(true)

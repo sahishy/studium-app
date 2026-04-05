@@ -9,21 +9,34 @@ import { useModal } from '../../contexts/ModalContext'
 import AddCourseModal from '../../components/modals/AddCourseModal'
 import { useUserStats } from '../../contexts/UserStatsContext'
 import { getAverageScoreByCourseIds } from '../../services/reviewService'
+import { getTeachersByIdsMap } from '../../services/teacherService'
+import LoadingState from '../../components/main/LoadingState'
+import { createCacheKey, resolveCachedRecordsByIds, setCachedRecordsById } from '../../services/cacheService'
+import { CACHE_NAMESPACES, CACHE_TTLS_MS } from '../../utils/cacheUtils'
 
 const RESULTS_PAGE_SIZE = 10
+const SCORE_CACHE_TTL_MS = CACHE_TTLS_MS.COURSE_SCORE
+const SCORE_CACHE_NAMESPACE = CACHE_NAMESPACES.COURSE_SCORE
+
+const getScoreCacheKey = (courseId) => {
+    return createCacheKey(SCORE_CACHE_NAMESPACE, courseId)
+}
 
 const MyCoursesTab = () => {
 
     const { profile } = useOutletContext()
     const { userStats } = useUserStats()
     const { openModal, closeModal } = useModal()
-    const { selectedCourses = [], courseIds = [] } = useCourses()
+    const { enrollments = [], selectedCourses = [], courseIds = [], loading: coursesLoading = false } = useCourses()
     const [loadingCourseId, setLoadingCourseId] = useState(null)
+    const [teachersLoading, setTeachersLoading] = useState(false)
     const [isPaletteOpen, setIsPaletteOpen] = useState(false)
     const [query, setQuery] = useState('')
     const [searchVisibleCount, setSearchVisibleCount] = useState(RESULTS_PAGE_SIZE)
     const [subjectVisibleCount, setSubjectVisibleCount] = useState(RESULTS_PAGE_SIZE)
     const [scoreMap, setScoreMap] = useState({})
+    const [loadingScoreIds, setLoadingScoreIds] = useState({})
+    const [teachersMap, setTeachersMap] = useState({})
 
     const subjects = useMemo(() => getCourseSubjects(), [])
     const [activeSubject, setActiveSubject] = useState(subjects[0] ?? null)
@@ -33,6 +46,13 @@ const MyCoursesTab = () => {
     const selectedCourseIds = useMemo(() => {
         return new Set(courseIds.map((courseId) => String(courseId)))
     }, [courseIds])
+
+    const enrollmentByCourseId = useMemo(() => {
+        return enrollments.reduce((acc, enrollment) => {
+            acc[String(enrollment.courseId)] = enrollment
+            return acc
+        }, {})
+    }, [enrollments])
 
     const subjectCourses = useMemo(() => {
         if (normalizedQuery) {
@@ -78,22 +98,142 @@ const MyCoursesTab = () => {
     const canLoadMoreSubject = subjectCourses.length > visibleSubjectCourses.length
 
     useEffect(() => {
+        let cancelled = false
+
         const visibleCourseIds = normalizedQuery
             ? visibleSearchResults.map((course) => String(course.courseId))
             : visibleSubjectCourses.map((course) => String(course.courseId))
 
         if (visibleCourseIds.length === 0) {
-            setScoreMap({})
             return
         }
 
-        const loadScores = async () => {
-            const nextMap = await getAverageScoreByCourseIds(visibleCourseIds)
-            setScoreMap(nextMap)
+        const {
+            freshValuesById,
+            staleValuesById,
+            missingIds,
+            staleIds,
+        } = resolveCachedRecordsByIds(visibleCourseIds, {
+            keyForId: getScoreCacheKey,
+        })
+
+        setScoreMap((previous) => ({
+            ...previous,
+            ...freshValuesById,
+            ...staleValuesById,
+        }))
+
+        const loadMissingScores = async () => {
+            if (missingIds.length === 0) {
+                return
+            }
+
+            setLoadingScoreIds((previous) => {
+                const next = { ...previous }
+                missingIds.forEach((courseId) => {
+                    next[String(courseId)] = true
+                })
+                return next
+            })
+
+            try {
+                const nextMap = await getAverageScoreByCourseIds(missingIds)
+                const normalizedMap = missingIds.reduce((acc, courseId) => {
+                    acc[String(courseId)] = nextMap[String(courseId)] ?? null
+                    return acc
+                }, {})
+
+                if (!cancelled) {
+                    setCachedRecordsById(normalizedMap, {
+                        keyForId: getScoreCacheKey,
+                        ttlMs: SCORE_CACHE_TTL_MS,
+                    })
+                    setScoreMap((previous) => ({
+                        ...previous,
+                        ...normalizedMap,
+                    }))
+                }
+            } finally {
+                setLoadingScoreIds((previous) => {
+                    const next = { ...previous }
+                    missingIds.forEach((courseId) => {
+                        delete next[String(courseId)]
+                    })
+                    return next
+                })
+            }
         }
 
-        loadScores()
+        const refreshStaleScores = async () => {
+            if (staleIds.length === 0) {
+                return
+            }
+
+            const nextMap = await getAverageScoreByCourseIds(staleIds)
+            const normalizedMap = staleIds.reduce((acc, courseId) => {
+                acc[String(courseId)] = nextMap[String(courseId)] ?? null
+                return acc
+            }, {})
+
+            if (!cancelled) {
+                setCachedRecordsById(normalizedMap, {
+                    keyForId: getScoreCacheKey,
+                    ttlMs: SCORE_CACHE_TTL_MS,
+                })
+                setScoreMap((previous) => ({
+                    ...previous,
+                    ...normalizedMap,
+                }))
+            }
+        }
+
+        loadMissingScores()
+        refreshStaleScores()
+
+        return () => {
+            cancelled = true
+        }
     }, [normalizedQuery, visibleSearchResults, visibleSubjectCourses])
+
+    useEffect(() => {
+        let cancelled = false
+
+        const teacherIds = Array.from(
+            new Set(
+                enrollments
+                    .map((enrollment) => String(enrollment.teacherId ?? ''))
+                    .filter(Boolean)
+            )
+        )
+
+        if (teacherIds.length === 0) {
+            if (!cancelled) {
+                setTeachersMap({})
+                setTeachersLoading(false)
+            }
+            return
+        }
+
+        const loadTeachers = async () => {
+            setTeachersLoading(true)
+            try {
+                const nextMap = await getTeachersByIdsMap(teacherIds)
+                if (!cancelled) {
+                    setTeachersMap(nextMap)
+                }
+            } finally {
+                if (!cancelled) {
+                    setTeachersLoading(false)
+                }
+            }
+        }
+
+        loadTeachers()
+
+        return () => {
+            cancelled = true
+        }
+    }, [enrollments])
 
     useEffect(() => {
         setSearchVisibleCount(RESULTS_PAGE_SIZE)
@@ -110,6 +250,7 @@ const MyCoursesTab = () => {
                 profile={profile}
                 course={course}
                 schoolId={userStats?.schoolId ?? null}
+                schoolAffiliations={userStats?.schoolAffiliations ?? []}
                 closeModal={closeModal}
             />
         )
@@ -117,7 +258,7 @@ const MyCoursesTab = () => {
 
     const handleLeaveCourse = async (courseId) => {
 
-        if(!profile?.uid) {
+        if (!profile?.uid) {
             return
         }
 
@@ -148,9 +289,11 @@ const MyCoursesTab = () => {
                         </button>
                     </div>
 
-                    {selectedCourses.length === 0 ? (
+                    {coursesLoading ? (
+                        <LoadingState label='Loading your courses...' />
+                    ) : selectedCourses.length === 0 ? (
                         <div className='w-full flex flex-col items-center justify-center py-16 gap-3'>
-                            <FaArrowUp className='text-neutral1'/>
+                            <FaArrowUp className='text-neutral1' />
                             <p className='text-sm text-neutral1'>You haven't added any courses yet.</p>
                         </div>
                     ) : (
@@ -158,14 +301,25 @@ const MyCoursesTab = () => {
                             {selectedCourses
                                 .slice()
                                 .sort((a, b) => a.title.localeCompare(b.title))
-                                .map((course) => (
-                                    <MyCoursesCard
-                                        key={course.courseId}
-                                        course={course}
-                                        loading={loadingCourseId === String(course.courseId)}
-                                        onRemove={() => handleLeaveCourse(course.courseId)}
-                                    />
-                                ))}
+                                .map((course) => {
+                                    const enrollment = enrollmentByCourseId[String(course.courseId)]
+
+                                    return (
+                                        <MyCoursesCard
+                                            key={course.courseId}
+                                            course={course}
+                                            customization={enrollment?.customization}
+                                            teacherName={teachersMap[String(enrollment?.teacherId)]?.name}
+                                            loading={
+                                                loadingCourseId === String(course.courseId)
+                                                || teachersLoading
+                                                || coursesLoading
+                                            }
+                                            teacherLoading={teachersLoading && Boolean(enrollment?.teacherId)}
+                                            onRemove={() => handleLeaveCourse(course.courseId)}
+                                        />
+                                    )
+                                })}
                         </div>
                     )}
                 </div>
@@ -187,8 +341,9 @@ const MyCoursesTab = () => {
                 onLoadMoreSearch={() => setSearchVisibleCount((prev) => prev + RESULTS_PAGE_SIZE)}
                 onLoadMoreSubject={() => setSubjectVisibleCount((prev) => prev + RESULTS_PAGE_SIZE)}
                 scoreMap={scoreMap}
+                getScoreLoading={(courseId) => Boolean(loadingScoreIds[String(courseId)])}
                 getIsTaking={(courseId) => selectedCourseIds.has(String(courseId))}
-                getIsLoading={(courseId) => loadingCourseId === String(courseId)}
+                getIsLoading={(courseId) => loadingCourseId === String(courseId) || coursesLoading}
                 onSelectCourse={handleOpenAddCourseModal}
             />
         </>

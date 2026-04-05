@@ -6,11 +6,12 @@ const CoursesContext = createContext({
     courseIds: [],
     courses: [],
     selectedCourses: [],
-    availableCourses: []
+    availableCourses: [],
+    loading: false
 })
 
 const CoursesProvider = ({ profile, children }) => {
-    const { enrollments, courseIds, selectedCourses, availableCourses } = useCourseLibrary(profile?.uid)
+    const { enrollments, courseIds, selectedCourses, availableCourses, loading } = useCourseLibrary(profile?.uid)
 
     return (
         <CoursesContext.Provider
@@ -19,7 +20,8 @@ const CoursesProvider = ({ profile, children }) => {
                 courseIds,
                 courses: selectedCourses,
                 selectedCourses,
-                availableCourses
+                availableCourses,
+                loading
             }}
         >
             {children}

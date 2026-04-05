@@ -1,5 +1,14 @@
 [
     {
+        "highSchoolId": "LCPS-000",
+        "abbreviation": "ACL",
+        "name": "Academies of Loudoun",
+        "city": "Leesburg",
+        "state": "VA",
+        "address": "42075 Loudoun Academy Dr, Leesburg, VA 20175",
+        "website": "https://www.lcps.org/o/acl"
+    },
+    {
         "highSchoolId": "LCPS-001",
         "abbreviation": "BRH",
         "name": "Broad Run",

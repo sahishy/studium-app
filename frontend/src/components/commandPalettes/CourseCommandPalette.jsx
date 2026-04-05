@@ -19,6 +19,7 @@ const CourseCommandPalette = ({
     onLoadMoreSearch,
     onLoadMoreSubject,
     scoreMap = {},
+    getScoreLoading = () => false,
     getIsTaking = () => false,
     getIsLoading = () => false,
     onSelectCourse,
@@ -36,7 +37,7 @@ const CourseCommandPalette = ({
             {normalizedQuery ? (
                 <div className='h-full px-4 overflow-y-auto flex flex-col gap-2 bg-neutral6'>
                     {searchResults.length === 0 ? (
-                        <p className='text-sm text-neutral1 p-4'>No courses found for "{normalizedQuery}"".</p>
+                        <p className='text-sm text-neutral1 p-4'>No courses found for "{normalizedQuery}".</p>
                     ) : (
                         <>
                             {visibleSearchResults.map((course) => (
@@ -44,6 +45,7 @@ const CourseCommandPalette = ({
                                     key={course.courseId}
                                     course={course}
                                     score={scoreMap[String(course.courseId)]}
+                                    scoreLoading={getScoreLoading(String(course.courseId))}
                                     isTaking={getIsTaking(String(course.courseId))}
                                     loading={getIsLoading(String(course.courseId))}
                                     onAdd={() => onSelectCourse?.(course)}

@@ -3973,7 +3973,8 @@
         "title": "AET Pre-Integrated Math",
         "description": "Honors-level alternative to Geometry for highly motivated mathematics students covering plane, solid, and coordinate geometric concepts. Includes investigations of lines, planes, congruence, similarity, areas, volumes, circles, and three-dimensional shapes. Emphasizes reasoning, problem solving, and formal proof including two-column, paragraph, and coordinate proofs.",
         "tags": [
-            "HON"
+            "HON",
+			"ACL"
         ],
         "subject": "Math",
         "alias": []
@@ -3982,7 +3983,9 @@
         "courseId": "LCPS-566100",
         "title": "AET Integrated Mathematics I",
         "description": "First in a two-year series of integrated math courses for AET students covering Algebra 2 with Trigonometry and Math Analysis as an integrated progression, with additional content from geometry, advanced algebra, trigonometry, math analysis, and AP Calculus A. Inquiry-based with content learned through investigations, applications, simulations, and problem-based exercises.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Math",
         "alias": []
     },
@@ -3991,7 +3994,8 @@
         "title": "AET AP Integrated Mathematics II",
         "description": "Second in a two-year series of integrated math courses for AET students exploring relationships between trigonometry, conic sections, polar graphing, parametric equations, vectors, and calculus concepts. Students have the opportunity to take the AP Precalculus Exam for possible college credit.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Math",
         "alias": []
@@ -4001,7 +4005,8 @@
         "title": "AET AP Calculus AB",
         "description": "Explores limits, continuity, derivatives, and integrals using verbal, numerical, analytical, and graphical approaches. Applications include rates of change, optimization, curve analysis, and integrals as Riemann sums. Students have the opportunity to take the AP Calculus AB Exam in May for possible college credit.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Math",
         "alias": []
@@ -4011,7 +4016,8 @@
         "title": "AET AP Calculus BC",
         "description": "Rigorous treatment of calculus topics including parametric, polar, and vector functions, advanced integration techniques, sequences and series, and applications extending into physics and computer science. Students have the opportunity to take the AP Calculus BC Exam for possible college credit.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Math",
         "alias": []
@@ -4021,7 +4027,8 @@
         "title": "AET AP Statistics",
         "description": "Covers AP Statistics topics including data collection and interpretation, binomial and normal distributions, probability, linear correlation and regression, analysis of variance, and descriptive statistical methods. Students have the opportunity to take the AP Statistics Exam in May for possible college credit.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Math",
         "alias": []
@@ -4030,7 +4037,9 @@
         "courseId": "LCPS-583300",
         "title": "AET Multivariable Calculus",
         "description": "Covers differential, integral, and vector calculus for functions of more than one variable. Includes methods for computing double and triple integrals and the theorems of Gauss, Green, and Stokes. The tool Mathematica is integrated throughout the course.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Math",
         "alias": []
     },
@@ -4038,7 +4047,9 @@
         "courseId": "LCPS-667100",
         "title": "AET Integrated Science I",
         "description": "First in a two-year series of integrated science courses for AET students covering physics and chemistry as an integrated progression. Inquiry-based with content primarily learned through laboratory exercises. Required for all AET Engineering and Entrepreneurship freshmen.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Science",
         "alias": []
     },
@@ -4046,7 +4057,9 @@
         "courseId": "LCPS-667200",
         "title": "AET Integrated Science II",
         "description": "Second in a two-year series of integrated science courses for AET students covering physics and chemistry as an integrated progression. Inquiry-based with content primarily learned through laboratory exercises. Required for all AET Engineering and Entrepreneurship sophomores.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Science",
         "alias": []
     },
@@ -4054,7 +4067,9 @@
         "courseId": "LCPS-671300",
         "title": "AET Physics",
         "description": "Rigorous inquiry-based physics course for AET IT pathway students covering mechanics, electricity and magnetism, and waves and optics. Incorporates algebraic and trigonometric concepts alongside laboratory work including graphical analysis.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Science",
         "alias": []
     },
@@ -4062,7 +4077,9 @@
         "courseId": "LCPS-650400",
         "title": "AET Research Biology",
         "description": "Problem-solving and inquiry-based biology course covering biochemical life processes, cellular organization, mechanisms of inheritance, dynamic relationships among organisms, and changes in organisms through time. Incorporates mathematical analysis, computational thinking, and engineering design experiences.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Science",
         "alias": []
     },
@@ -4070,7 +4087,9 @@
         "courseId": "LCPS-661500",
         "title": "AET Research Chemistry",
         "description": "Rigorous chemistry course for AET IT pathway sophomores emphasizing scientific research methodology to develop chemistry content knowledge. Students collect and communicate data using descriptive statistics and graphical representations, and develop independent research questions and investigation designs.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Science",
         "alias": []
     },
@@ -4079,7 +4098,8 @@
         "title": "AET AP Applied Advanced Computer Science II",
         "description": "Second in a two-year series of computer science courses for AET IT pathway students completing the AP Computer Science curriculum. Topics include sorting algorithms, data structures such as arrays, linked lists, stacks, queues, trees, and graphs, and programming in Java. Students have the opportunity to take the AP Computer Science Exam in May for possible college credit.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Math",
         "alias": []
@@ -4089,7 +4109,8 @@
         "title": "AET AP Physics",
         "description": "College-level AP Physics course emphasizing mechanics across six content areas: kinematics, Newton's laws, work/energy/power, systems of particles and linear momentum, circular motion and rotation, and oscillations and gravitation. Pre-calculus and calculus skills are applied throughout. Students have the opportunity to take the AP Physics Exam in May for possible college credit.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Science",
         "alias": []
@@ -4098,7 +4119,9 @@
         "courseId": "LCPS-855103",
         "title": "AET Engineering Studies III, Junior Research",
         "description": "Eleventh grade engineering course building on AET Engineering I and II through problem-based labs in Aerospace, Civil, Electrical, and Biomedical engineering disciplines. Emphasizes microcontroller programming, prototyping, biomedical design, and robotics, with training in planning and implementing a research project.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Career and Technical Education",
         "alias": []
     },
@@ -4106,7 +4129,9 @@
         "courseId": "LCPS-668100",
         "title": "AET Computer Science Investigations, Junior Research",
         "description": "Eleventh grade IT elective building on prior computer science coursework to explore Artificial Intelligence, Machine Learning, and Mobile/Web Application Development. Includes training in planning and implementing a research project. Counts for either a math or science credit.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Math",
         "alias": []
     },
@@ -4115,7 +4140,8 @@
         "title": "AET AP Biology",
         "description": "College-level AP Biology course covering evolution, cellular processes, energy and communication, genetics, information transfer, ecology, and integrations. Emphasizes inquiry-based laboratory investigations. Students have the opportunity to take the AP Biology Exam in May for possible college credit.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Science",
         "alias": []
@@ -4125,7 +4151,8 @@
         "title": "AET AP Environmental Science",
         "description": "College-level AP Environmental Science course including fieldwork and extended lab procedures. Covers population biology, ecosystems, earth systems, atmospheric science, land and water use, energy, pollution, and global change. Students have the opportunity to take the AP Environmental Science Exam in May for possible college credit.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Science",
         "alias": []
@@ -4135,7 +4162,8 @@
         "title": "AET AP Chemistry",
         "description": "College-level AP Chemistry course with many extended lab procedures. Introduces organic chemistry, biochemistry, nuclear chemistry, coordination complexes, and semi-micro qualitative analysis. Students have the opportunity to take the AP Chemistry Exam in May for possible college credit.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Science",
         "alias": []
@@ -4144,7 +4172,9 @@
         "courseId": "LCPS-668200",
         "title": "AET Senior Research - Computer Systems",
         "description": "Interdisciplinary science research course using inquiry-based methodology to develop research and development techniques and scientific writing at a publication level. Students continue a research project developed in junior research under the guidance of a faculty mentor with regular presentation of results.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Math",
         "alias": []
     },
@@ -4152,7 +4182,9 @@
         "courseId": "LCPS-668300",
         "title": "AET Senior Research - Engineering",
         "description": "Culminating fourth-year course for AET Engineering students conducting a year-long interdisciplinary engineering research project using inquiry-based methodology. Students present results through notebook documentation, poster creation, and verbal presentations.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Career and Technical Education",
         "alias": []
     },
@@ -4160,7 +4192,9 @@
         "courseId": "LCPS-564000",
         "title": "AET Applied Advanced Computer Science I",
         "description": "First in a series of computer science courses for AET IT pathway students covering object-oriented programming, graphics and animation, GUI interfaces, arrays and files, and ethics. Programming languages include Java, Python, and Arduino C. Students design and conduct multiple programming and research projects.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Math",
         "alias": []
     },
@@ -4168,7 +4202,9 @@
         "courseId": "LCPS-855101",
         "title": "AET Engineering Studies I",
         "description": "First in a series of engineering studies courses for AET Engineering students covering the engineering design process through inquiry-based, problem-based exercises. Students apply mathematical and scientific concepts to hands-on engineering projects and communicate findings through presentations, proposals, and technical reports.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Career and Technical Education",
         "alias": []
     },
@@ -4176,7 +4212,9 @@
         "courseId": "LCPS-855102",
         "title": "AET Engineering Studies II",
         "description": "Second in a series of engineering studies courses for AET Engineering students emphasizing integration of mathematics and science into engineering problems. Students practice engineering skills and communication of technical information while applying the engineering design process to multiple projects.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Career and Technical Education",
         "alias": []
     },
@@ -4184,7 +4222,9 @@
         "courseId": "LCPS-824201",
         "title": "AET Entrepreneurship I",
         "description": "First in a series of Entrepreneurship courses for AET students covering business ownership, economics, finance, customer service, sales, and marketing with a STEM focus. Students develop multiple STEM-focused business and marketing plans.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Career and Technical Education",
         "alias": []
     },
@@ -4193,7 +4233,8 @@
         "title": "AET Entrepreneurship II DE",
         "description": "Second in a series of Entrepreneurship courses for AET students focusing on advanced entrepreneurship strategies in STEM industries. Builds on Entrepreneurship I with emphasis on developing a start-up business plan using Lean Methodologies from initial concept to final investor pitch.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "Career and Technical Education",
         "alias": []
@@ -4203,7 +4244,8 @@
         "title": "AOS Pre-Integrated Math",
         "description": "Honors-level alternative to Geometry for highly motivated mathematics students covering plane, solid, and coordinate geometric concepts. Includes investigations of lines, planes, congruence, similarity, areas, volumes, circles, and three-dimensional shapes. Emphasizes reasoning, problem solving, and formal proof including two-column, paragraph, and coordinate proofs.",
         "tags": [
-            "HON"
+            "HON",
+			"ACL"
         ],
         "subject": "Math",
         "alias": []
@@ -4212,7 +4254,9 @@
         "courseId": "LCPS-563001",
         "title": "AOS Integrated Math I",
         "description": "First in a two-year series of integrated math courses for AOS students covering geometry, advanced algebra, trigonometry, math analysis, and AP Calculus A topics. Emphasizes mathematical communication, reasoning, authentic problem solving, and multiple representations. Mathematical concepts are connected to AOS Integrated Science courses.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Math",
         "alias": []
     },
@@ -4221,7 +4265,8 @@
         "title": "AOS AP Integrated Math II",
         "description": "Continuation of AOS Integrated Math I covering elementary, transcendental, and logistic functions, parametric, polar, matrix, and linear algebra systems, infinite sequences and series, differential calculus, and an introduction to integration. Includes inferential statistics topics connected to independent science research.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Math",
         "alias": []
@@ -4231,7 +4276,8 @@
         "title": "AOS AP Calculus AB",
         "description": "Covers all AP Calculus AB topics from the College Board including use of differential equations to model dynamic processes in physical and biological sciences. Students have the opportunity to take the AP Calculus AB Exam in May for possible college credit.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Math",
         "alias": []
@@ -4241,7 +4287,8 @@
         "title": "AOS AP Calculus BC",
         "description": "Covers all AP Calculus BC topics from the College Board including use of differential equations to model dynamic processes in physical and biological sciences. Students have the opportunity to take the AP Calculus BC Exam in May for possible college credit.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Math",
         "alias": []
@@ -4250,7 +4297,9 @@
         "courseId": "LCPS-583301",
         "title": "AOS Multivariable Calculus",
         "description": "Vector calculus course emphasizing vector fields to model motion of particles and fluids in two and three dimensions. Includes double and triple integrals and the theorems of Gauss, Green, and Stokes to measure flow and turbulence. Mathematica is used throughout to create interactive graphics.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Math",
         "alias": []
     },
@@ -4258,7 +4307,9 @@
         "courseId": "LCPS-664900",
         "title": "AOS Integrated Science I",
         "description": "First in a series of integrated science courses for AOS students covering physics, chemistry, and earth science as an integrated progression. Inquiry-based with many student-designed laboratory exercises. Students take the Earth Science and Chemistry SOL tests during the course progression. Required for all AOS 9th graders.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Science",
         "alias": []
     },
@@ -4266,7 +4317,9 @@
         "courseId": "LCPS-645900",
         "title": "AOS Integrated Science II",
         "description": "Second in a series of integrated science courses for AOS students covering physics, chemistry, and earth science as an integrated progression. Inquiry-based with many student-designed laboratory exercises. Students take the Earth Science and Chemistry SOL tests during the course progression. Required for all AOS 9th graders.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Science",
         "alias": []
     },
@@ -4274,7 +4327,9 @@
         "courseId": "LCPS-654900",
         "title": "AOS Integrated Science III",
         "description": "Third in a series of integrated science courses for AOS students covering physics, chemistry, and earth science as an integrated progression. Inquiry-based with many student-designed laboratory exercises. Students take the Earth Science and Chemistry SOL tests during the course progression. Required for all AOS 10th graders.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Science",
         "alias": []
     },
@@ -4282,7 +4337,9 @@
         "courseId": "LCPS-651900",
         "title": "AOS Sophomore Science Research",
         "description": "Interdisciplinary science research course involving students in inquiry-based methodology, laboratory techniques, and scientific writing at a publication level. During the second semester, students begin an independent science research project of their own design. Required for all AOS 10th graders.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Science",
         "alias": []
     },
@@ -4290,7 +4347,9 @@
         "courseId": "LCPS-661900",
         "title": "AOS Junior Science Research",
         "description": "Continuation of interdisciplinary science research using inquiry-based methodology with increased laboratory skill development. Students develop an independent research plan including literature search, laboratory protocols, materials list, and budget under a faculty mentor with regular presentation of results.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Science",
         "alias": []
     },
@@ -4298,7 +4357,9 @@
         "courseId": "LCPS-671900",
         "title": "AOS Senior Science Research",
         "description": "Culminating interdisciplinary science research course using inquiry-based methodology. Students conduct bench-work on a plan developed in junior research under the guidance of a faculty mentor, with regular presentation of results. Some students interact with local scientist mentors during the school year and summer.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "Science",
         "alias": []
     },
@@ -4307,7 +4368,8 @@
         "title": "AOS AP Biology",
         "description": "College-level AP Biology course covering cellular biology, biochemical processes, vertebrate anatomy and physiology, advanced genetics, evolution, plant anatomy and physiology, and ecology. Students have the opportunity to take the AP Biology Exam in May for possible college credit.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Science",
         "alias": []
@@ -4317,7 +4379,8 @@
         "title": "AOS AP Environmental Science",
         "description": "College-level AP Environmental Science course including fieldwork and extended lab procedures. Covers population biology, ecosystems, geologic and earth science concepts, atmospheric science, land and water use, energy, pollution, and global change. Students have the opportunity to take the AP Environmental Science Exam in May for possible college credit.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Science",
         "alias": []
@@ -4327,7 +4390,8 @@
         "title": "AOS AP Chemistry",
         "description": "College-level AP Chemistry course with many extended lab procedures introducing organic chemistry, biochemistry, nuclear chemistry, coordination complexes, and semi-micro qualitative analysis. Students have the opportunity to take the AP Chemistry Exam in May for possible college credit.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Science",
         "alias": []
@@ -4337,7 +4401,8 @@
         "title": "AOS AP Physics",
         "description": "College-level AP Physics course emphasizing mechanics with optional additional topics. Pre-calculus and calculus skills are used to develop concepts and solve problems. Students have the opportunity to take the AP Physics Exam in May for possible college credit.",
         "tags": [
-            "AP"
+            "AP",
+			"ACL"
         ],
         "subject": "Science",
         "alias": []
@@ -4347,7 +4412,8 @@
         "title": "MATA Administration of Justice I SEM H",
         "description": "First semester course in the MATA Administration of Justice pathway preparing students for entry-level employment in law enforcement and criminal justice. Topics include criminal justice professions, ethics, criminal and civil law, use of force, patrol functions, community policing, criminal investigation, search and seizure, crime scene investigation, and the juvenile justice system.",
         "tags": [
-            "HON"
+            "HON",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4357,7 +4423,8 @@
         "title": "MATA Administration of Justice II SEM H",
         "description": "Second semester course in the MATA Administration of Justice sequence. Covers constitutional law, substantive and procedural law, interviews and interrogations, search and arrest warrants, organized crime, federal task forces, complex criminal investigation, international terrorism, counterterrorism strategies, and advanced crime scene investigation.",
         "tags": [
-            "HON"
+            "HON",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4366,7 +4433,9 @@
         "courseId": "LCPS-867701",
         "title": "MATA Auto Collision Repair Technology I SEM",
         "description": "First semester course in the MATA Auto Collision Repair Technology sequence providing basic knowledge of automobile construction and skills in body shop materials, equipment, tools, and procedures. Covers basic welding, dent and plastic repair, bolt-on parts replacement, and estimating.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4374,7 +4443,9 @@
         "courseId": "LCPS-867702",
         "title": "MATA Auto Collision Repair Technology II SEM",
         "description": "Second semester course in the MATA Auto Collision Repair Technology sequence. Covers preparing vehicles for painting, mixing and applying automotive paints, identifying and removing paint defects, and paint detailing. Explores career options including collision repair technician, refinish technician, estimator, and insurance adjuster.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4382,7 +4453,9 @@
         "courseId": "LCPS-862401",
         "title": "MATA Auto Servicing Technology I SEM",
         "description": "First semester course in the MATA Auto Servicing Technology sequence providing training in brakes, steering and suspension, engine repair, and HVAC using ASE and NATEF industry-standard curriculum. Students may obtain ASE certification and participate in internship programs with local dealerships.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4390,7 +4463,9 @@
         "courseId": "LCPS-862402",
         "title": "MATA Auto Servicing Technology II SEM",
         "description": "Second semester course in the MATA Auto Servicing Technology sequence covering electricity, manual drivetrain and axle, engine performance, and automatic transmission using ASE and NATEF curriculum. Students may obtain ASE certification and participate in internship programs with local dealerships.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4398,7 +4473,9 @@
         "courseId": "LCPS-862600",
         "title": "MATA Auto Servicing Technology III",
         "description": "Third course in the MATA Auto Servicing Technology sequence covering the full second year of instruction in electricity, manual drivetrain and axle, engine performance, and automatic transmission. Students may obtain ASE certification and participate in internship programs with local dealerships.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4407,7 +4484,8 @@
         "title": "MATA Biomedical Technology I DE",
         "description": "First year of a two-year pathway covering biomedical techniques including bioprocessing, DNA analysis, medicine, biomechanical systems, and environmental applications. Students are introduced to laboratory procedures supporting bioscience research and investigate safety, quality assurance, and ethical concerns in biomedical technology.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4416,7 +4494,9 @@
         "courseId": "LCPS-885302",
         "title": "MATA Biomedical Technology II",
         "description": "Second year of the MATA Biomedical Technology pathway focusing on human body systems, disease prevention, diagnosis, and treatment. Students take on roles of biomedical professionals to solve real-world medical cases and develop a research project addressing health challenges or compete in HOSA.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4424,7 +4504,9 @@
         "courseId": "LCPS-885200",
         "title": "MATA Biotechnology",
         "description": "One-year course introducing biotechnology including medical, industrial, agricultural, marine, and bioinformatics applications. Topics include plant-based pharmaceuticals, bioethics, forensics, health and medical applications, and environmental management. Students use laboratory equipment and complete an independent research project.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4432,7 +4514,9 @@
         "courseId": "LCPS-865701",
         "title": "MATA Building Construction I SEM",
         "description": "First semester course in the MATA Building Construction sequence covering residential construction and carpentry. Includes OSHA certification, structural components, foundation work, floor and wall framing, interior and exterior finishes, and cabinetry construction and installation.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4440,7 +4524,9 @@
         "courseId": "LCPS-865702",
         "title": "MATA Building Construction II SEM",
         "description": "Second semester course in the MATA Building Construction sequence with advanced skills and independent work. Students earn their OSHA 10 Card Certification and receive professional accreditation from NCCER and SkillsUSA Carpentry certification upon graduation.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4449,7 +4535,8 @@
         "title": "MATA CISCO I DE QTR",
         "description": "First-quarter course covering fundamentals of computer and mobile device hardware, software, networking, and security. Students learn to assemble a computer system, install operating systems, connect devices to the Internet, and share resources in a networked environment. Prepares students for the CompTIA A+ certification exam.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4459,7 +4546,8 @@
         "title": "MATA CISCO II DE QTR",
         "description": "Second-quarter course building on CISCO I using Cisco Networking Academy CCNAv7 curriculum. Students learn how networks operate, build simple LANs, configure routers and switches, and implement IP. Prepares students toward the Cisco CCNA certification exam.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4469,7 +4557,8 @@
         "title": "MATA CISCO III DE QTR",
         "description": "Third-quarter course building on CISCO I and II covering enterprise and theoretical networking models, router and switch architecture, wireless LANs, and network security. Students configure and troubleshoot routers and switches using security best practices for IPv4/IPv6 networks.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4479,7 +4568,8 @@
         "title": "MATA CISCO IV DE QTR",
         "description": "Final course in the CISCO sequence covering architecture, components, operations, and security for large complex networks including WAN technologies, network virtualization, and automation. Prepares students to take the Cisco CCNA certification exam.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4489,7 +4579,8 @@
         "title": "MATA Computer & Digital Animation I H",
         "description": "First year of the MATA Computer & Digital Animation sequence introducing 2D animation through graphics, design concepts, storyboarding, motion graphics, animation principles, and environmental geometry. Software includes Adobe Photoshop, Illustrator, InDesign, After Effects, Animate, Toon Boom Harmony, and 3dsMax.",
         "tags": [
-            "HON"
+            "HON",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4498,7 +4589,9 @@
         "courseId": "LCPS-839006",
         "title": "MATA Computer & Digital Animation II",
         "description": "Second year of the MATA Computer & Digital Animation sequence introducing 3D animation through object manipulation, texturing, lighting, and environmental geometry. Students participate in the school film festival and learn production skills including proposals and budgets. Software includes Adobe Creative Cloud, Toon Boom, 3dsMax, and Blender.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4507,7 +4600,8 @@
         "title": "MATA Computer Integrated Engineering & Design (CIED) I H",
         "description": "First-year CIED course providing foundational skills in manufacturing and engineering design through hands-on, task-based activities. Students explore engineering disciplines including Aerospace, Civil, Electrical, and Mechanical, and are introduced to 2D and 3D CAD/CAM software, 3D printing, laser cutting, CNC milling, and robotics.",
         "tags": [
-            "HON"
+            "HON",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4517,7 +4611,8 @@
         "title": "MATA Computer Integrated Engineering & Design (CIED) II H",
         "description": "Second-year CIED course extending foundational topics from CIED I with development of proficiency in CAD/CAM software and digital fabrication. Students develop a substantial engineering design-related project throughout the course.",
         "tags": [
-            "HON"
+            "HON",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4526,7 +4621,9 @@
         "courseId": "LCPS-873701",
         "title": "MATA Cosmetology I SEM",
         "description": "First semester of the MATA Cosmetology sequence introducing shampooing, hairstyling, scalp treatments, hair cutting, chemical relaxing, permanent waving, hair coloring, facials, make-up, wig care, and manicuring. Related subjects include public health, personal hygiene, bacteriology, and salon management.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4534,7 +4631,9 @@
         "courseId": "LCPS-874702",
         "title": "MATA Cosmetology II SEM",
         "description": "Second semester of the MATA Cosmetology sequence developing job-entry skills for a professional salon environment. Covers advanced hair cutting, chemical texture services, hair coloring, artificial nail applications, waxing, salon management, and anatomy and physiology of the scalp, skin, and nails.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4542,7 +4641,9 @@
         "courseId": "LCPS-874500",
         "title": "MATA Cosmetology III",
         "description": "Full second year of the MATA Cosmetology sequence building proficiency in hair cutting and styling on live models, chemical processes, advanced hair coloring, skin and nail care including facials, manicures, pedicures, and nail enhancements. Prepares students for the Virginia State Licensing Exam.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4550,7 +4651,9 @@
         "courseId": "LCPS-875701",
         "title": "MATA Culinary Arts I SEM",
         "description": "First semester of the MATA Culinary Arts sequence preparing students for the culinary industry. Covers safety, sanitation, equipment use, recipe calculation, food storage and preparation, and skills in preparing appetizers, soups, salads, meats, breads, and desserts. Includes catering events and culinary competitions.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4558,7 +4661,9 @@
         "courseId": "LCPS-875702",
         "title": "MATA Culinary Arts II SEM",
         "description": "Second semester of the MATA Culinary Arts sequence covering advanced production and service skills. Topics include nutrition, marketing, sustainability, ethnic cuisines, baking techniques, menu planning, costing, and inventory control. Students complete Workplace Readiness Testing and the ServSafe Industry test.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4567,7 +4672,8 @@
         "title": "MATA Cybersecurity I DE SEM",
         "description": "First semester of the MATA Cybersecurity program covering computer hardware assembly, operating system installation and configuration, computer troubleshooting, and networking fundamentals. Students may qualify to take the CompTIA A+ certification exam upon successful completion.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4577,7 +4683,8 @@
         "title": "MATA Cybersecurity II DE SEM",
         "description": "Second semester of the MATA Cybersecurity program developing advanced skills in computer networking and resource sharing. Students may qualify to take the CompTIA A+, Network+, and/or Security+ certification exams upon successful completion.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4587,7 +4694,8 @@
         "title": "MATA Emergency Medical Technician (EMT) I DE SEM",
         "description": "First semester EMT course providing training to function in a medical emergency as a link in the health care team. Covers emergency medical care for traumatic injury, CPR, basic patient assessment, vital signs, and Mass Casualty Incident Command.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4597,7 +4705,8 @@
         "title": "MATA Emergency Medical Technician (EMT) II DE SEM",
         "description": "Second EMT course building on EMT I covering EMS operations, medical emergencies, and management of special patient populations. Requires supervised field experience outside school hours. Successful completion may lead to eligibility for the Virginia State Psychomotor Exam and National Registry EMT cognitive exam.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4607,7 +4716,8 @@
         "title": "MATA Emergency Medical Technician (EMT) III DE SEM",
         "description": "Third EMT course continuing topics from EMT I and II covering EMS operations, medical emergencies, and management of special patient populations. Requires supervised field experience outside school hours. Successful completion may lead to eligibility for the Virginia State Psychomotor Exam and National Registry EMT cognitive exam.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4617,7 +4727,8 @@
         "title": "MATA Environmental Plant Science I DE SEM",
         "description": "First semester of a plant science pathway focused on environmental responsibility. Topics include horticulture, forestry, natural resource management, plant botany and physiology, sustainable landscaping, woody plants, soil science, and business practices. Industry certifications available through Virginia Nursery and Landscape Association and others.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4627,7 +4738,8 @@
         "title": "MATA Environmental Plant Sciences II DE SEM",
         "description": "Second semester of the MATA Environmental Plant Science pathway covering plant propagation and genetics, fertilization practices, plant growth and development, greenhouse systems, plant diagnostics and pest management, and sustainable agricultural practices.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4636,7 +4748,9 @@
         "courseId": "LCPS-879400",
         "title": "MATA Graphic Communications I",
         "description": "First course in the MATA Graphic Communications sequence introducing graphic design, computer graphics, and visual communication. Students work individually and in teams on digital projects covering layout, typography, image manipulation, illustration, animation, and web design. Students may obtain PrintEd certifications.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4644,7 +4758,9 @@
         "courseId": "LCPS-879500",
         "title": "MATA Graphic Communications II",
         "description": "Second course in the MATA Graphic Communications sequence covering advanced design concepts, portfolio development, contracts, copyright, freelance business practices, and client-based work. Students run a creative design firm, work with printers, and may obtain PrintEd certifications.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4652,7 +4768,9 @@
         "courseId": "LCPS-861100",
         "title": "MATA Health Informatics",
         "description": "One-year pathway exploring health information technology including the history of health IT, medical terminology, Electronic Health Records, ethical and privacy issues, cybersecurity and data breaches, clinical decision support, and emerging healthcare technologies. Includes hands-on simulation of an EHR program.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4660,7 +4778,9 @@
         "courseId": "LCPS-881701",
         "title": "MATA Heating, Ventilation, & Air Conditioning (HVAC) I SEM",
         "description": "First semester of the MATA HVAC sequence providing basic knowledge and skills in residential and commercial air conditioning, refrigeration, and heating. Topics include basic electricity, safety, refrigeration physics, soldering, electrical components, wiring diagrams, plumbing, sheet metal fabrication, and duct installation.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4668,7 +4788,9 @@
         "courseId": "LCPS-881702",
         "title": "MATA Heating, Ventilation, & Air Conditioning (HVAC) II SEM",
         "description": "Second semester of the MATA HVAC sequence providing advanced skills in installing, maintaining, and repairing heating and cooling equipment. Covers air distribution, refrigeration equipment, oil, gas, electric and heat pump systems, and plumbing. Students may qualify for EPA certification and HVAC Excellence exams.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4677,7 +4799,8 @@
         "title": "MATA Introduction to Health and Medical Sciences DE",
         "description": "One-year course introducing a broad range of health and medical profession careers. Covers medical terminology, pharmacology, anatomy and physiology, therapeutic and diagnostic interventions, and professional and ethical issues. Students rotate through various medical settings for observational experiences.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4686,7 +4809,9 @@
         "courseId": "LCPS-898701",
         "title": "MATA Masonry I SEM",
         "description": "First course in the MATA Masonry sequence familiarizing students with materials, tools, equipment, and practices of the masonry trade. Students develop skills in laying concrete block, brick, and ceramic tile, and study blueprint reading and labor and material estimates. Students are eligible to obtain an OSHA-10 certificate.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4694,7 +4819,9 @@
         "courseId": "LCPS-898702",
         "title": "MATA Masonry II SEM",
         "description": "Second course in the MATA Masonry sequence advancing skills with concrete, block, brick, and ceramic tile through projects such as chimneys, fireplaces, sidewalks, and arches. Includes repair and renovation work and stone masonry for walls, fireplaces, and entryways.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4703,7 +4830,8 @@
         "title": "MATA Medical Laboratory Technology I DE",
         "description": "First-year course in Medical Laboratory Technology providing foundational knowledge and skills for medical laboratory science careers. Covers clinical chemistry, urinalysis, microscopy, clinical hematology, and phlebotomy through laboratory exercises reflecting clinical settings. Students may participate in organized field experiences.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4713,7 +4841,8 @@
         "title": "MATA Medical Laboratory Technology II DE",
         "description": "Second-year course building on Medical Laboratory Technology I covering clinical microbiology, immunohematology, coagulation and hemostasis, and clinical laboratory biotechnology. Laboratory exercises reflect routine clinical settings and students may participate in organized field experiences.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4723,7 +4852,8 @@
         "title": "MATA Nurse Aide I SEM DE",
         "description": "First semester of the MATA Nurse Aide pathway covering growth and development, anatomy and physiology, medical terminology, infection prevention, and entry-level nursing skills including vital signs and CPR. Includes a required forty-hour clinical rotation at a long-term care facility. Prepares students for the NNAAP exam.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4733,7 +4863,8 @@
         "title": "MATA Nurse Aide II SEM DE",
         "description": "Second semester of the MATA Nurse Aide sequence building on Nurse Aide I. Includes a required forty-hour clinical rotation at a long-term care facility. Students successfully completing the course take the NNAAP exam to become a Certified Nurse Aide.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4743,7 +4874,8 @@
         "title": "MATA Pharmacy Technology I H",
         "description": "First year of a pharmacy technician certificate program providing basic skills and knowledge to begin work as a pharmacy technician. Coursework fulfills Virginia Board of Pharmacy requirements and prepares students for state or national Pharmacy Technician Certification Board exams. Includes shadowing and organized field experiences.",
         "tags": [
-            "HON"
+            "HON",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4753,7 +4885,8 @@
         "title": "MATA Pharmacy Technology II H",
         "description": "Second year of the pharmacy technician certificate program fulfilling Virginia Board of Pharmacy requirements and preparing students for state or national Pharmacy Technician Certification Board exams. Emphasizes clinical field experiences and coordinated work experiences.",
         "tags": [
-            "HON"
+            "HON",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4763,7 +4896,8 @@
         "title": "MATA Radiology Technology I DE",
         "description": "First-year radiology technology course covering the radiographer's role in the health care team, anatomy and physiology for diagnostic imaging, safe use of radiation, history of the radiological profession, medical ethics, radiobiology, radiation protection, and the future of radiologic technology careers.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4773,7 +4907,8 @@
         "title": "MATA Radiology Technology II H",
         "description": "Second-year radiology technology course building on Radiology Technology I. Covers anatomy and physiology, disease processes, physics of medical imaging equipment, radiation protection, patient care in radiology, vital signs assessment, immobilization techniques, sterile techniques, and management of medical emergencies.",
         "tags": [
-            "HON"
+            "HON",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4782,7 +4917,9 @@
         "courseId": "LCPS-893701",
         "title": "MATA Television Production & Digital Moviemaking I SEM",
         "description": "First semester course introducing scriptwriting, storyboarding, camera operation, non-linear editing, lighting, audio production, and studio control room operations for single-camera productions. Students create an ePortfolio including an individually produced television commercial.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4790,7 +4927,9 @@
         "courseId": "LCPS-893702",
         "title": "MATA Television Production & Digital Moviemaking II SEM",
         "description": "Second semester course building toward complex multicamera media productions. Students write, plan, direct, mix, and edit multicamera studio productions from the control room, adding a completed live in-studio television segment to their ePortfolio.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4798,7 +4937,9 @@
         "courseId": "LCPS-885401",
         "title": "MATA Veterinary Science I SEM",
         "description": "First semester of the MATA Veterinary Science program covering anatomy and physiology, medical terminology, safety and sanitation, parasitology, animal nutrition, breeds, and professional conduct. Students perform clinical exams and laboratory procedures coordinated with area veterinary clinics.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4806,7 +4947,9 @@
         "courseId": "LCPS-885402",
         "title": "MATA Veterinary Science II SEM",
         "description": "Second semester of the MATA Veterinary Science program expanding knowledge in animal structure and function, disease prevention, parasitology, and genetics. Students develop advanced skills in first aid, surgery, aseptic techniques, medication administration, and office functions with potential clinical instruction at veterinary offices.",
-        "tags": [],
+        "tags": [
+			"ACL"
+		],
         "subject": "MATA",
         "alias": []
     },
@@ -4815,7 +4958,8 @@
         "title": "MATA Welding I DE SEM",
         "description": "First semester welding course covering Oxy-fuel Welding and Cutting, Plasma Arc cutting, Shielded Metal Arc, and beginning GMAW welding processes. Includes art and ornamental welding and preparation for the American Welding Society (AWS) Test.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4825,7 +4969,8 @@
         "title": "MATA Welding II DE SEM",
         "description": "Second semester welding course emphasizing Shielded Metal Arc Welding in horizontal, all-position, and pipe configurations. Students may practice for the AWS Limited and Unlimited Welding Thickness Test and pursue welding certification. Includes advanced MIG and TIG process work.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []
@@ -4835,7 +4980,8 @@
         "title": "MATA Welding III DE",
         "description": "Capstone welding course covering emerging industry technologies and Gas Tungsten Arc Welding (GTAW) and Shielded Metal Arc Welding (SMAW) pipe tests. Prepares students to earn industry credentials toward employment in production or manufacturing facilities.",
         "tags": [
-            "DE"
+            "DE",
+			"ACL"
         ],
         "subject": "MATA",
         "alias": []

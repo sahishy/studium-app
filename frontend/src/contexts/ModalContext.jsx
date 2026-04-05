@@ -6,23 +6,36 @@ const ModalContext = createContext()
 export const useModal = () => useContext(ModalContext)
 
 export const ModalProvider = ({ children }) => {
-    const [isOpen, setIsOpen] = useState(false)
-    const [modalContent, setModalContent] = useState(null)
+    const [modalStack, setModalStack] = useState([])
 
     const openModal = (content) => {
-        setModalContent(content)
-        setIsOpen(true)
+        const modalId = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+        setModalStack((previous) => [...previous, { id: modalId, content }])
+        return modalId
+    }
+
+    const closeModalById = (modalId) => {
+        setModalStack((previous) => previous.filter((modalEntry) => modalEntry.id !== modalId))
     }
 
     const closeModal = () => {
-        setIsOpen(false)
-        setModalContent(null)
+        setModalStack((previous) => previous.slice(0, -1))
     }
 
+    const isOpen = modalStack.length > 0
+    const modalContent = modalStack[modalStack.length - 1]?.content ?? null
+
     return (
-        <ModalContext.Provider value={{ isOpen, modalContent, openModal, closeModal }}>
+        <ModalContext.Provider value={{ isOpen, modalContent, openModal, closeModal, closeModalById, modalStack }}>
             {children}
-            {isOpen && <Modal isOpen={isOpen} content={modalContent} closeModal={closeModal}/>}
+            {modalStack.map((modalEntry) => (
+                <Modal
+                    key={modalEntry.id}
+                    isOpen={true}
+                    modalContent={modalEntry.content}
+                    closeModal={() => closeModalById(modalEntry.id)}
+                />
+            ))}
         </ModalContext.Provider>
     )
 }

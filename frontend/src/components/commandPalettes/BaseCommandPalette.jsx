@@ -1,6 +1,16 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { IoSearch } from 'react-icons/io5'
 import CloseButton from '../main/CloseButton'
+import {
+    allocateWindowLayer,
+    getWindowRoot,
+    isTopWindowLayer,
+    lockBodyScroll,
+    releaseWindowLayer,
+    subscribeWindowLayerChanges,
+    unlockBodyScroll,
+} from '../../utils/windowLayerUtils'
 
 const BaseCommandPalette = ({
     isOpen,
@@ -14,12 +24,22 @@ const BaseCommandPalette = ({
     maxWidthClass = 'max-w-3xl',
 }) => {
     const [animate, setAnimate] = useState(false)
+    const [windowLayer, setWindowLayer] = useState(null)
+    const [isTopmostLayer, setIsTopmostLayer] = useState(true)
 
     useEffect(() => {
         if(!isOpen) {
             setAnimate(false)
             return
         }
+
+        const nextLayer = allocateWindowLayer()
+        setWindowLayer(nextLayer)
+        setIsTopmostLayer(isTopWindowLayer(nextLayer))
+
+        const unsubscribeLayerChanges = subscribeWindowLayerChanges(() => {
+            setIsTopmostLayer(isTopWindowLayer(nextLayer))
+        })
 
         const timer = setTimeout(() => {
             setAnimate(true)
@@ -31,13 +51,14 @@ const BaseCommandPalette = ({
             }
         }
 
-        const previousOverflow = document.body.style.overflow
-        document.body.style.overflow = 'hidden'
+        lockBodyScroll()
         document.addEventListener('keydown', handleKeyDown)
 
         return () => {
             clearTimeout(timer)
-            document.body.style.overflow = previousOverflow
+            unsubscribeLayerChanges()
+            releaseWindowLayer(nextLayer)
+            unlockBodyScroll()
             document.removeEventListener('keydown', handleKeyDown)
         }
     }, [isOpen, onClose])
@@ -46,11 +67,17 @@ const BaseCommandPalette = ({
         return null
     }
 
-    return (
-        <div className={`fixed inset-0 z-50 bg-backdrop flex items-center justify-center p-6
-            transition-all ${animate ? 'backdrop-blur-xs' : 'backdrop-blur-none'}`}>
+    const zIndex = 1000 + ((windowLayer ?? 1) * 10)
+    const windowRoot = getWindowRoot()
+
+    if(!windowRoot) {
+        return null
+    }
+
+    return createPortal((
+        <div className={`fixed inset-0 z-50 flex items-center justify-center p-6 transition-all ${isTopmostLayer ? 'bg-backdrop' : 'bg-transparent'} ${animate && isTopmostLayer ? 'backdrop-blur-xs' : 'backdrop-blur-none'}`} style={{ zIndex }}>
             <div className={`w-full ${maxWidthClass} h-[72vh] bg-neutral6 rounded-xl shadow-2xl
-                flex flex-col overflow-hidden transition-all transform
+                flex flex-col overflow-hidden transition-all transform will-change-transform will-change-opacity
                 ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
                 <div className='px-6 py-4 flex items-center gap-3'>
                     <IoSearch className='text-lg text-neutral1 shrink-0'/>
@@ -75,7 +102,7 @@ const BaseCommandPalette = ({
                 ) : null}
             </div>
         </div>
-    )
+    ), windowRoot)
 }
 
 export default BaseCommandPalette

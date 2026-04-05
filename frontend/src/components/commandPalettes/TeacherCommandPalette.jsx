@@ -54,10 +54,10 @@ const TeacherCommandPalette = ({
                     <p className='text-center text-sm text-neutral1 p-3'>No teachers found.</p>
                 ) : null} */}
 
-                {normalizedQuery && !teacherLoading ? (
+                {normalizedQuery ? (
                     <div className='p-2 flex items-center justify-center gap-3'>
                         <p className='text-sm text-neutral1'>Can't find your teacher?</p>
-                        <Button type='secondary' onClick={onCreateTeacher} disabled={createLoading}>
+                        <Button type='secondary' className='disabled:opacity-100!' onClick={onCreateTeacher} disabled={createLoading || teacherLoading}>
                             {createLoading ? 'Adding...' : `Add "${toTitleCase(normalizedQuery)}"`}
                         </Button>
                     </div>

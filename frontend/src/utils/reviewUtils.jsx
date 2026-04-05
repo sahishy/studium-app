@@ -1,4 +1,11 @@
 import highschools from '../data/highschools.json'
+import { FaThumbsUp, FaHandshake, FaThumbsDown } from 'react-icons/fa6'
+
+const SCORE_OPTIONS = [
+    { value: 1, label: 'Good', icon: FaThumbsUp },
+    { value: 0.5, label: 'Okay', icon: FaHandshake },
+    { value: 0, label: 'Bad', icon: FaThumbsDown },
+]
 
 const clampReviewScore = (score) => {
     if(score === 0 || score === 0.5 || score === 1) {
@@ -46,12 +53,12 @@ const formatScoreLabel = (score) => {
     return `${Math.round(score * 100)}%`
 }
 
-const sortReviewsBySchoolPriority = (reviews = [], schoolId = null) => {
-    const normalizedSchoolId = schoolId ? String(schoolId) : null
+const sortReviewsBySchoolPriority = (reviews = [], schoolIds = []) => {
+    const normalizedSchoolIds = new Set((Array.isArray(schoolIds) ? schoolIds : [schoolIds]).filter(Boolean).map((schoolId) => String(schoolId)))
 
     return [...reviews].sort((a, b) => {
-        const aMatch = normalizedSchoolId && String(a?.schoolId ?? '') === normalizedSchoolId ? 1 : 0
-        const bMatch = normalizedSchoolId && String(b?.schoolId ?? '') === normalizedSchoolId ? 1 : 0
+        const aMatch = normalizedSchoolIds.has(String(a?.schoolId ?? '')) ? 1 : 0
+        const bMatch = normalizedSchoolIds.has(String(b?.schoolId ?? '')) ? 1 : 0
         if(bMatch !== aMatch) {
             return bMatch - aMatch
         }
@@ -78,4 +85,5 @@ export {
     formatScoreLabel,
     sortReviewsBySchoolPriority,
     getSchoolNameById,
+    SCORE_OPTIONS
 }

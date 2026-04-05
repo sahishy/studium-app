@@ -1,8 +1,12 @@
 import { FaBook, FaThumbsUp } from 'react-icons/fa6'
 import Card from '../main/Card'
 import { formatScoreLabel } from '../../utils/reviewUtils'
+import { SUBJECT_ICONS } from '../../utils/courseUtils';
 
 const CoursePaletteGridCard = ({ course, onAdd, loading, isTaking, score = null }) => {
+
+    const SubjectIcon = SUBJECT_ICONS[course.subject];
+
     return (
         <button
             onClick={onAdd}
@@ -11,7 +15,7 @@ const CoursePaletteGridCard = ({ course, onAdd, loading, isTaking, score = null 
         >
             <Card hoverable className={'text-start p-2! gap-1! h-full'}>
                 <div className='h-24 bg-neutral5 flex items-center justify-center text-neutral2 rounded-lg'>
-                    <FaBook className='text-3xl' />
+                    <SubjectIcon className='text-3xl' />
                 </div>
                 <div className='p-2 flex flex-col gap-2 min-h-0'>
                     <div>
