@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, getFirestore, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore'
+import { collection, deleteDoc, doc, getDoc, getDocs, getFirestore, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
 import coursesCatalog from '../data/courses.json'
 
@@ -160,23 +160,42 @@ const buildEnrollmentId = (courseId, studentId) => {
     return `${String(courseId)}_${String(studentId)}`
 }
 
-const joinCourse = async (studentId, courseId) => {
+const joinCourse = async (studentId, courseId, options = {}) => {
     const db = getFirestore()
     const now = serverTimestamp()
+    const {
+        day = 'A',
+        teacherId = null,
+        customization = { bgColor: '#1f2937', iconColor: '#ffffff' }
+    } = options
     const enrollmentId = buildEnrollmentId(courseId, studentId)
     const enrollmentRef = doc(db, 'courses', enrollmentId)
     const existingEnrollment = await getDoc(enrollmentRef)
 
     if(existingEnrollment.exists()) {
-        await updateDoc(enrollmentRef, {
-            updatedAt: now
-        })
+        await setDoc(enrollmentRef, {
+            courseId: String(courseId),
+            studentId: String(studentId),
+            day: day === 'B' ? 'B' : 'A',
+            teacherId: teacherId ? String(teacherId) : null,
+            customization: {
+                bgColor: customization?.bgColor ?? '#1f2937',
+                iconColor: customization?.iconColor ?? '#ffffff'
+            },
+            lastUpdated: now
+        }, { merge: true })
     } else {
         await setDoc(enrollmentRef, {
             courseId: String(courseId),
             studentId: String(studentId),
-            joinedAt: now,
-            updatedAt: now
+            day: day === 'B' ? 'B' : 'A',
+            teacherId: teacherId ? String(teacherId) : null,
+            customization: {
+                bgColor: customization?.bgColor ?? '#1f2937',
+                iconColor: customization?.iconColor ?? '#ffffff'
+            },
+            createdAt: now,
+            lastUpdated: now
         })
     }
 

@@ -10,6 +10,10 @@ const toDateKeyFromSeconds = (seconds) => toDateFromSeconds(seconds).toLocaleDat
 
 const formatDateFromSeconds = (seconds) => toDateFromSeconds(seconds).toLocaleDateString();
 
+const toTitleCase = (value = '') => String(value ?? '')
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+
 const formatRelativeTaskDate = (seconds) => {
     const now = Date.now();
     const dateMs = seconds * 1000;
@@ -58,4 +62,5 @@ export {
     toDateKeyFromSeconds,
     formatDateFromSeconds,
     formatRelativeTaskDate,
+    toTitleCase,
 }

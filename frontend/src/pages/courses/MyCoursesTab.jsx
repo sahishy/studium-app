@@ -1,22 +1,29 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import Button from '../../components/main/Button'
-import BottomFade from '../../components/main/BottomFade'
-import CommandPalette from '../../components/main/CommandPalette'
-import CourseCard from '../../components/courses/CourseCard'
-import CourseSearchResultRow from '../../components/courses/CourseSearchResultRow'
-import CoursePaletteGridCard from '../../components/courses/CoursePaletteGridCard'
+import MyCoursesCard from '../../components/courses/MyCoursesCard'
+import CourseCommandPalette from '../../components/commandPalettes/CourseCommandPalette'
 import { useCourses } from '../../contexts/CoursesContext'
-import { getCourseSubjects, joinCourse, leaveCourse, searchCourses } from '../../services/courseService'
-import { FaMagnifyingGlass } from 'react-icons/fa6'
+import { getCourseSubjects, leaveCourse, searchCourses } from '../../services/courseService'
+import { FaArrowUp, FaMagnifyingGlass } from 'react-icons/fa6'
+import { useModal } from '../../contexts/ModalContext'
+import AddCourseModal from '../../components/modals/AddCourseModal'
+import { useUserStats } from '../../contexts/UserStatsContext'
+import { getAverageScoreByCourseIds } from '../../services/reviewService'
+
+const RESULTS_PAGE_SIZE = 10
 
 const MyCoursesTab = () => {
 
     const { profile } = useOutletContext()
+    const { userStats } = useUserStats()
+    const { openModal, closeModal } = useModal()
     const { selectedCourses = [], courseIds = [] } = useCourses()
     const [loadingCourseId, setLoadingCourseId] = useState(null)
     const [isPaletteOpen, setIsPaletteOpen] = useState(false)
     const [query, setQuery] = useState('')
+    const [searchVisibleCount, setSearchVisibleCount] = useState(RESULTS_PAGE_SIZE)
+    const [subjectVisibleCount, setSubjectVisibleCount] = useState(RESULTS_PAGE_SIZE)
+    const [scoreMap, setScoreMap] = useState({})
 
     const subjects = useMemo(() => getCourseSubjects(), [])
     const [activeSubject, setActiveSubject] = useState(subjects[0] ?? null)
@@ -50,6 +57,8 @@ const MyCoursesTab = () => {
 
     const openPalette = () => {
         setQuery('')
+        setSearchVisibleCount(RESULTS_PAGE_SIZE)
+        setSubjectVisibleCount(RESULTS_PAGE_SIZE)
         setIsPaletteOpen(true)
     }
 
@@ -57,22 +66,58 @@ const MyCoursesTab = () => {
         setIsPaletteOpen(false)
     }
 
-    const handleJoinCourse = async (courseId) => {
-        if (!profile?.uid) {
+    const visibleSearchResults = useMemo(() => {
+        return searchResults.slice(0, searchVisibleCount)
+    }, [searchResults, searchVisibleCount])
+
+    const visibleSubjectCourses = useMemo(() => {
+        return subjectCourses.slice(0, subjectVisibleCount)
+    }, [subjectCourses, subjectVisibleCount])
+
+    const canLoadMoreSearch = searchResults.length > visibleSearchResults.length
+    const canLoadMoreSubject = subjectCourses.length > visibleSubjectCourses.length
+
+    useEffect(() => {
+        const visibleCourseIds = normalizedQuery
+            ? visibleSearchResults.map((course) => String(course.courseId))
+            : visibleSubjectCourses.map((course) => String(course.courseId))
+
+        if (visibleCourseIds.length === 0) {
+            setScoreMap({})
             return
         }
 
-        setLoadingCourseId(String(courseId))
-        try {
-            await joinCourse(profile.uid, courseId)
-            closePalette()
-        } finally {
-            setLoadingCourseId(null)
+        const loadScores = async () => {
+            const nextMap = await getAverageScoreByCourseIds(visibleCourseIds)
+            setScoreMap(nextMap)
         }
+
+        loadScores()
+    }, [normalizedQuery, visibleSearchResults, visibleSubjectCourses])
+
+    useEffect(() => {
+        setSearchVisibleCount(RESULTS_PAGE_SIZE)
+    }, [normalizedQuery])
+
+    useEffect(() => {
+        setSubjectVisibleCount(RESULTS_PAGE_SIZE)
+    }, [activeSubject])
+
+    const handleOpenAddCourseModal = (course) => {
+        closePalette()
+        openModal(
+            <AddCourseModal
+                profile={profile}
+                course={course}
+                schoolId={userStats?.schoolId ?? null}
+                closeModal={closeModal}
+            />
+        )
     }
 
     const handleLeaveCourse = async (courseId) => {
-        if (!profile?.uid) {
+
+        if(!profile?.uid) {
             return
         }
 
@@ -82,11 +127,13 @@ const MyCoursesTab = () => {
         } finally {
             setLoadingCourseId(null)
         }
+
     }
 
     return (
         <>
             <div className='w-full h-full flex flex-col gap-4 lg:flex-row lg:gap-16 lg:items-start m-auto'>
+
                 <div className='flex-1 flex flex-col items-start pb-16'>
 
                     <div className='w-full flex justify-center py-8'>
@@ -96,20 +143,23 @@ const MyCoursesTab = () => {
                             className='px-6 py-3 bg-neutral5 rounded-full text-neutral1 hover:bg-neutral4 cursor-pointer
                                 flex gap-3 items-center w-96 hover:w-104 transition-all'
                         >
-                            <FaMagnifyingGlass className='text-neutral0'/>
+                            <FaMagnifyingGlass className='text-neutral0' />
                             Add a course...
                         </button>
                     </div>
 
                     {selectedCourses.length === 0 ? (
-                        <p className='text-sm text-neutral1'>You haven&apos;t added any courses yet.</p>
+                        <div className='w-full flex flex-col items-center justify-center py-16 gap-3'>
+                            <FaArrowUp className='text-neutral1'/>
+                            <p className='text-sm text-neutral1'>You haven't added any courses yet.</p>
+                        </div>
                     ) : (
                         <div className='w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4'>
                             {selectedCourses
                                 .slice()
                                 .sort((a, b) => a.title.localeCompare(b.title))
                                 .map((course) => (
-                                    <CourseCard
+                                    <MyCoursesCard
                                         key={course.courseId}
                                         course={course}
                                         loading={loadingCourseId === String(course.courseId)}
@@ -121,67 +171,26 @@ const MyCoursesTab = () => {
                 </div>
             </div>
 
-            <CommandPalette
+            <CourseCommandPalette
                 isOpen={isPaletteOpen}
                 onClose={closePalette}
                 query={query}
                 onQueryChange={setQuery}
-                placeholder='Search courses by title, subject, id, or tag...'
-            >
-                {normalizedQuery ? (
-                    <div className='h-full p-4 overflow-y-auto flex flex-col gap-2 bg-neutral6'>
-                        {searchResults.length === 0 ? (
-                            <p className='text-sm text-neutral1 p-4'>No courses found for “{normalizedQuery}”.</p>
-                        ) : (
-                            <>
-                                {searchResults.map((course) => (
-                                    <CourseSearchResultRow
-                                        key={course.courseId}
-                                        course={course}
-                                        isTaking={selectedCourseIds.has(String(course.courseId))}
-                                        loading={loadingCourseId === String(course.courseId)}
-                                        onAdd={() => handleJoinCourse(course.courseId)}
-                                    />
-                                ))}
-                            </>
-                        )}
-                    </div>
-                ) : (
-                    <div className='h-full flex min-h-0 bg-neutral6'>
-                        <aside className='w-64 shrink-0 p-3 overflow-y-auto'>
-                            <div className='flex flex-col gap-1'>
-                                {subjects.map((subject) => (
-                                    <button
-                                        key={subject}
-                                        onClick={() => setActiveSubject(subject)}
-                                        className={`text-left rounded-xl px-3 py-2 text-sm transition-colors  cursor-pointer ${activeSubject === subject
-                                            ? 'bg-neutral5 text-neutral0'
-                                            : 'text-neutral1 hover:bg-neutral5 hover:text-neutral0'
-                                            }`}
-                                    >
-                                        {subject}
-                                    </button>
-                                ))}
-                            </div>
-                        </aside>
-
-                        <div className='flex-1 min-h-0 overflow-y-auto p-4'>
-                            <h3 className='text-sm text-neutral1 mb-3'>{activeSubject || 'Courses'}</h3>
-                            <div className='grid grid-cols-2 gap-3'>
-                                {subjectCourses.map((course) => (
-                                    <CoursePaletteGridCard
-                                        key={course.courseId}
-                                        course={course}
-                                        isTaking={selectedCourseIds.has(String(course.courseId))}
-                                        loading={loadingCourseId === String(course.courseId)}
-                                        onAdd={() => handleJoinCourse(course.courseId)}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </CommandPalette>
+                searchResults={searchResults}
+                visibleSearchResults={visibleSearchResults}
+                subjects={subjects}
+                activeSubject={activeSubject}
+                onSubjectChange={setActiveSubject}
+                visibleSubjectCourses={visibleSubjectCourses}
+                canLoadMoreSearch={canLoadMoreSearch}
+                canLoadMoreSubject={canLoadMoreSubject}
+                onLoadMoreSearch={() => setSearchVisibleCount((prev) => prev + RESULTS_PAGE_SIZE)}
+                onLoadMoreSubject={() => setSubjectVisibleCount((prev) => prev + RESULTS_PAGE_SIZE)}
+                scoreMap={scoreMap}
+                getIsTaking={(courseId) => selectedCourseIds.has(String(courseId))}
+                getIsLoading={(courseId) => loadingCourseId === String(courseId)}
+                onSelectCourse={handleOpenAddCourseModal}
+            />
         </>
     )
 }

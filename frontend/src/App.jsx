@@ -11,6 +11,7 @@ import CirclesOverview from './pages/circles/CirclesOverview'
 import Courses from './pages/courses/Courses'
 import MyCoursesTab from './pages/courses/MyCoursesTab'
 import AllCoursesTab from './pages/courses/AllCoursesTab'
+import CourseOverview from './pages/courses/CourseOverview'
 import CoursesIndexRedirect from './routes/CoursesIndexRedirect'
 import Avatar from './pages/avatar/Avatar'
 import Settings from './pages/settings/Settings'
@@ -55,6 +56,7 @@ export default function App() {
 					<Route index element={<CoursesIndexRedirect/>}/>
 					<Route path="me" element={<MyCoursesTab/>}/>
 					<Route path="all" element={<AllCoursesTab/>}/>
+					<Route path="all/:courseId" element={<CourseOverview/>}/>
 				</Route>
 				<Route path="/resources" element={<Resources/>}/>
 				<Route path="/join/:inviteCode" element={<JoinCircle/>}/>

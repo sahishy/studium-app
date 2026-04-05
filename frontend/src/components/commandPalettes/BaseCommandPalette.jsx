@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react'
 import { IoSearch } from 'react-icons/io5'
-import CloseButton from './CloseButton'
+import CloseButton from '../main/CloseButton'
 
-const CommandPalette = ({
+const BaseCommandPalette = ({
     isOpen,
     onClose,
     query,
     onQueryChange,
     placeholder = 'Search... ',
-    children
+    children,
+    emptyState = null,
+    footer = null,
+    maxWidthClass = 'max-w-3xl',
 }) => {
     const [animate, setAnimate] = useState(false)
 
@@ -46,7 +49,7 @@ const CommandPalette = ({
     return (
         <div className={`fixed inset-0 z-50 bg-backdrop flex items-center justify-center p-6
             transition-all ${animate ? 'backdrop-blur-xs' : 'backdrop-blur-none'}`}>
-            <div className={`w-full max-w-3xl h-[72vh] bg-neutral6 rounded-xl shadow-2xl
+            <div className={`w-full ${maxWidthClass} h-[72vh] bg-neutral6 rounded-xl shadow-2xl
                 flex flex-col overflow-hidden transition-all transform
                 ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
                 <div className='px-6 py-4 flex items-center gap-3'>
@@ -58,15 +61,21 @@ const CommandPalette = ({
                         placeholder={placeholder}
                         className='flex-1 bg-transparent text-neutral0 placeholder:text-neutral1 focus:outline-none'
                     />
-                        <CloseButton onClick={onClose}/>
+                    <CloseButton onClick={onClose}/>
                 </div>
 
                 <div className='flex-1 min-h-0'>
-                    {children}
+                    {children ?? emptyState}
                 </div>
+
+                {footer ? (
+                    <div className='px-4 py-3 border-t border-neutral4 bg-neutral6'>
+                        {footer}
+                    </div>
+                ) : null}
             </div>
         </div>
     )
 }
 
-export default CommandPalette
+export default BaseCommandPalette
