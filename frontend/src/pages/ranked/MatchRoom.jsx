@@ -21,12 +21,7 @@ const MatchRoom = () => {
 
     const hasRoomId = useMemo(() => Boolean(roomId), [roomId])
     const initialToastStackRef = useRef(toastStack)
-    const senderName = useMemo(() => (
-        profile?.displayName
-        || profile?.username
-        || profile?.firstName
-        || null
-    ), [profile])
+    const senderName = useMemo(() => (profile?.profile?.displayName), [profile])
 
     const handleDeleteRoom = async () => {
         if(!roomId) {
