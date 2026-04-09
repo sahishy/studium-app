@@ -5,7 +5,8 @@ import { getDoc, setDoc, doc } from 'firebase/firestore'
 import { db } from '../../lib/firebase'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import { createNewUserObject, createNewUserStatsObject } from '../../services/userService'
+import { createNewUserObject } from '../../services/userService'
+import { createUserStatsDocument } from '../../services/statsService'
 
 import { FaGoogle } from "react-icons/fa";
 import { FaCircleExclamation } from "react-icons/fa6";
@@ -57,7 +58,6 @@ const Login = () => {
             const user = res.user
 
             const userRef = doc(db, 'users', user.uid)
-            const userStatsRef = doc(db, 'userStats', user.uid)
             const userSnap = await getDoc(userRef)
 
             if(!userSnap.exists()) {
@@ -65,9 +65,8 @@ const Login = () => {
                 const lastName = rest.join(' ') || ''
 
                 const newUserObject = await createNewUserObject({ firstName: firstName, lastName: lastName, email: user.email })
-                const newUserStatsObject = createNewUserStatsObject({ userId: user.uid })
                 await setDoc(userRef, newUserObject)
-                await setDoc(userStatsRef, newUserStatsObject)
+                await createUserStatsDocument({ userId: user.uid })
             }
 
             navigate('/agenda')

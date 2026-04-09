@@ -249,8 +249,8 @@ const MyCoursesTab = () => {
             <AddCourseModal
                 profile={profile}
                 course={course}
-                schoolId={userStats?.schoolId ?? null}
-                schoolAffiliations={userStats?.schoolAffiliations ?? []}
+                schoolId={userStats?.academic?.schoolId ?? null}
+                schoolAffiliations={userStats?.academic?.schoolAffiliations ?? []}
                 closeModal={closeModal}
             />
         )

@@ -28,7 +28,8 @@ const uploadAvatarThumbnailToSupabase = async (uid, thumbnailBlob) => {
 }
 
 const scheduleProfilePictureUpload = ({ uid, profileForThumbnail }) => {
-    if (!uid || !profileForThumbnail) {
+
+    if(!uid || !profileForThumbnail) {
         return
     }
 
@@ -40,17 +41,19 @@ const scheduleProfilePictureUpload = ({ uid, profileForThumbnail }) => {
     }
 
     const timerId = setTimeout(async () => {
+
         const activeEntry = pendingProfilePictureUploads.get(uid)
-        if (!activeEntry || activeEntry.seq !== nextSeq) {
+        if(!activeEntry || activeEntry.seq !== nextSeq) {
             return
         }
 
         try {
+
             const thumbnailBlob = await generateAvatarThumbnailBlob(activeEntry.profileForThumbnail)
             const profilePictureUrl = await uploadAvatarThumbnailToSupabase(uid, thumbnailBlob)
 
             const latestEntry = pendingProfilePictureUploads.get(uid)
-            if (!latestEntry || latestEntry.seq !== nextSeq) {
+            if(!latestEntry || latestEntry.seq !== nextSeq) {
                 return
             }
 
@@ -60,6 +63,7 @@ const scheduleProfilePictureUpload = ({ uid, profileForThumbnail }) => {
                     lastUpdated: new Date(),
                 },
             })
+
         } catch (error) {
             console.error('Profile picture pipeline failed:', error)
         } finally {
@@ -75,6 +79,7 @@ const scheduleProfilePictureUpload = ({ uid, profileForThumbnail }) => {
         seq: nextSeq,
         profileForThumbnail,
     })
+
 }
 
 const cancelScheduledProfilePictureUpload = (uid) => {

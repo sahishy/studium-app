@@ -35,7 +35,7 @@ const CourseCommandPalette = ({
             placeholder='Search courses by title, subject, id, or tag...'
         >
             {normalizedQuery ? (
-                <div className='h-full px-4 overflow-y-auto flex flex-col gap-2 bg-neutral6'>
+                <div className='h-full px-4 pb-4 overflow-y-auto flex flex-col gap-2 bg-neutral6'>
                     {searchResults.length === 0 ? (
                         <p className='text-sm text-neutral1 p-4'>No courses found for "{normalizedQuery}".</p>
                     ) : (

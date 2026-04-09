@@ -1,9 +1,10 @@
-import { doc, updateDoc, collection, getAggregateFromServer, getCountFromServer, getFirestore, onSnapshot, query, sum, where, increment, documentId, getDocs, getDoc, setDoc } from 'firebase/firestore'
+import { doc, updateDoc, collection, getAggregateFromServer, getCountFromServer, getFirestore, onSnapshot, query, sum, where, increment, documentId, getDocs } from 'firebase/firestore'
 import { useEffect, useState } from 'react';
 import { getRandomAvatarColor } from '../utils/avatarUtils';
 import { generateRandomDisplayName, isDisplayNameFormatValid } from '../utils/userUtils';
 
 const isDisplayNameAvailable = async (displayName, excludeUid = null) => {
+    
     if(!isDisplayNameFormatValid(displayName)) {
         return false;
     }
@@ -22,9 +23,11 @@ const isDisplayNameAvailable = async (displayName, excludeUid = null) => {
     }
 
     return querySnapshot.docs.every((docSnap) => docSnap.id === excludeUid)
+
 }
 
 const generateUniqueDisplayName = async (maxAttempts = 20) => {
+
     for(let i = 0; i < maxAttempts; i++) {
         const displayName = generateRandomDisplayName();
         const available = await isDisplayNameAvailable(displayName);
@@ -35,9 +38,11 @@ const generateUniqueDisplayName = async (maxAttempts = 20) => {
     }
 
     throw new Error('Unable to generate an available display name.');
+
 }
 
 const createNewUserObject = async ({ firstName, lastName, email }) => {
+
     const displayName = await generateUniqueDisplayName();
 
     return {
@@ -63,41 +68,20 @@ const createNewUserObject = async ({ firstName, lastName, email }) => {
             tasksCompleted: 0,
         }
     }
-}
 
-const createNewUserStatsObject = ({ userId }) => {
-    return {
-        userId,
-        schoolId: null,
-        schoolAffiliations: [],
-        targetMajors: [],
-        scores: {
-            sat: null,
-            act: null,
-        },
-        gpa: {
-            unweighted: null,
-            weighted: null,
-        },
-        extracurriculars: [],
-        awards: [],
-        college: {
-            committed: null,
-            acceptances: [],
-        },
-        createdAt: new Date(),
-        lastUpdated: new Date(),
-    }
 }
 
 const updateUserInfo = async (uid, userData) => {
+
     const db = getFirestore();
     const userRef = doc(db, 'users', uid)
 
     await updateDoc(userRef, userData)
+
 }
 
 const getActiveUserCount = (setActiveUserCount) => {
+
     const db = getFirestore();
     const users = collection(db, 'users')
 
@@ -108,18 +92,22 @@ const getActiveUserCount = (setActiveUserCount) => {
     })
 
     return unsubscribe;
+
 }
 
 const getTotalUsers = async () => {
+
     const db = getFirestore();
     const users = collection(db, 'users');
 
     const totalUsersSnapshot = await getCountFromServer(users);
 
     return totalUsersSnapshot.data().count
+
 }
 
 const getTotalTasksCompleted = async () => {
+
     const db = getFirestore();
     const users = collection(db, 'users');
 
@@ -128,9 +116,11 @@ const getTotalTasksCompleted = async () => {
     });
 
     return totalTasksCompletedSnapshot.data().totalTasksCompleted
+
 }
 
 const userCompleteTask = async (profile) => {
+
     const db = getFirestore();
     const userRef = doc(db, 'users', profile.uid)
     const currentTasksCompleted = profile?.progress?.tasksCompleted ?? profile?.tasksCompleted ?? 0
@@ -138,9 +128,11 @@ const userCompleteTask = async (profile) => {
     await updateDoc(userRef, {
         'progress.tasksCompleted': currentTasksCompleted + 1
     })
+
 }
 
 const updateStatus = async (profile, status) => {
+
     const db = getFirestore();
     const userRef = doc(db, 'users', profile.uid);
 
@@ -148,9 +140,11 @@ const updateStatus = async (profile, status) => {
         lastSeen: new Date(),
         status: status
     })
+
 }
 
 const updateStreak = async (profile, reset = false) => {
+
     const db = getFirestore();
     const docRef = doc(db, 'users', profile.uid);
 
@@ -159,9 +153,11 @@ const updateStreak = async (profile, reset = false) => {
     } else {
         await updateDoc(docRef, { 'progress.streak': increment(1) });
     }
+
 }
 
 const getUsersByIds = (userIds, setUsers) => {
+
     const db = getFirestore();
     const usersRef = collection(db, "users");
 
@@ -196,73 +192,11 @@ const getUsersByIds = (userIds, setUsers) => {
             if(typeof unsub === "function") unsub();
         }
     }
-}
 
-const getUserStatsByUserId = async (userId) => {
-    if(!userId) {
-        return null;
-    }
-
-    const db = getFirestore();
-    const userStatsRef = doc(db, 'userStats', userId);
-    const userStatsSnap = await getDoc(userStatsRef);
-
-    if(!userStatsSnap.exists()) {
-        return null;
-    }
-
-    return {
-        uid: userStatsSnap.id,
-        ...userStatsSnap.data()
-    }
-}
-
-const subscribeToUserStatsByUserId = (userId, setUserStats, setLoading = () => {}, setError = () => {}) => {
-    if(!userId) {
-        setUserStats(null);
-        setLoading(false);
-        return () => {};
-    }
-
-    const db = getFirestore();
-    const userStatsRef = doc(db, 'userStats', userId);
-
-    const unsubscribe = onSnapshot(userStatsRef, (docSnap) => {
-        if(docSnap.exists()) {
-            setUserStats({
-                uid: docSnap.id,
-                ...docSnap.data()
-            });
-        } else {
-            setUserStats(null);
-        }
-
-        setError(null);
-        setLoading(false);
-    }, (error) => {
-        setError(error);
-        setLoading(false);
-    });
-
-    return unsubscribe;
-}
-
-const updateUserStatsByUserId = async (userId, userStatsData) => {
-    if(!userId) {
-        throw new Error('A valid userId is required to update user stats.');
-    }
-
-    const db = getFirestore();
-    const userStatsRef = doc(db, 'userStats', userId);
-
-    await setDoc(userStatsRef, {
-        ...userStatsData,
-        userId,
-        lastUpdated: new Date(),
-    }, { merge: true });
 }
 
 const useMembersList = (memberIds = []) => {
+
     const [members, setMembers] = useState([]);
 
     useEffect(() => {
@@ -305,7 +239,6 @@ const useMembersList = (memberIds = []) => {
 
 export {
     createNewUserObject,
-    createNewUserStatsObject,
     isDisplayNameAvailable,
     generateUniqueDisplayName,
     updateUserInfo,
@@ -316,8 +249,5 @@ export {
     updateStreak,
     updateStatus,
     getUsersByIds,
-    useMembersList,
-    getUserStatsByUserId,
-    subscribeToUserStatsByUserId,
-    updateUserStatsByUserId
+    useMembersList
 }

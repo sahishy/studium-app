@@ -10,9 +10,9 @@ const CloseButton = ({
             onClick={onClick}
             type={'tertiary'}
             aria-label={'Close'}
-            className={`!p-2 ${className}`}
+            className={`!p-2 text-xl ${className}`}
         >
-            <IoClose className={'text-xl'}/>
+            <IoClose/>
         </Button>
     )
 }

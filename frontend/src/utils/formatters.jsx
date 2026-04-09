@@ -14,6 +14,32 @@ const toTitleCase = (value = '') => String(value ?? '')
     // .toLowerCase()
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
+const toDateFromFirestoreLike = (value) => {
+    if(!value) {
+        return null
+    }
+
+    if(value instanceof Date) {
+        return value
+    }
+
+    if(value?.toDate) {
+        return value.toDate()
+    }
+
+    return null
+}
+
+const toMillisFromFirestoreLike = (value) => {
+    const dateValue = toDateFromFirestoreLike(value)
+    return dateValue ? dateValue.getTime() : 0
+}
+
+const formatTimeFromFirestoreLike = (value, options = { hour: 'numeric', minute: '2-digit' }) => {
+    const dateValue = toDateFromFirestoreLike(value)
+    return dateValue ? dateValue.toLocaleTimeString([], options) : ''
+}
+
 const formatRelativeTaskDate = (seconds) => {
     const now = Date.now();
     const dateMs = seconds * 1000;
@@ -62,5 +88,8 @@ export {
     toDateKeyFromSeconds,
     formatDateFromSeconds,
     formatRelativeTaskDate,
+    formatTimeFromFirestoreLike,
+    toDateFromFirestoreLike,
+    toMillisFromFirestoreLike,
     toTitleCase,
 }

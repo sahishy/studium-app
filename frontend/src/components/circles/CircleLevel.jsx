@@ -1,16 +1,9 @@
 import { PiStarFourFill } from "react-icons/pi"
 import Card from "../main/Card"
+import ProgressBar from "../main/ProgressBar"
 
 const CircleGreeting = ( { circle } ) => {
-
-    const getXPBarWidth = () => {
-
-        const xp = circle.xp
-        const xpToNextLevel = Math.pow(2, circle.level) * 100
-
-        return (xp / xpToNextLevel) * 100
-
-    }
+    const xpToNextLevel = Math.pow(2, circle.level) * 100
 
     return (
         <Card className={'flex-1'}>
@@ -25,17 +18,13 @@ const CircleGreeting = ( { circle } ) => {
             </div>
 
             <div className="flex items-center gap-2 mt-3">
-                <div className="flex-1 bg-background3 w-full h-4 rounded-full overflow-hidden">
-                    <div 
-                        className="bg-sky-400 rounded-full h-full transition-all duration-1000"
-                        style={{ width: `${getXPBarWidth()}%` }}
-                    >
-                        <div className="h-[30%] translate-y-[3px] mx-[3px] rounded-full bg-sky-300"></div>
-                    </div>
-                </div>
+                <ProgressBar
+                    value={circle.xp}
+                    max={xpToNextLevel}
+                />
 
                 <h1 className="inset-0 flex items-center justify-center text-sm font-semibold text-text2">
-                    {circle.xp} / {Math.pow(2, circle.level) * 100} XP
+                    {circle.xp} / {xpToNextLevel} XP
                 </h1>
             </div>
 

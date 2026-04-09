@@ -1,8 +1,9 @@
 import { MdDeleteOutline } from 'react-icons/md'
 import Card from '../main/Card'
 import { FaBook } from 'react-icons/fa6'
-import { FaChalkboardTeacher } from 'react-icons/fa'
+import { FaChalkboardTeacher, FaExternalLinkAlt } from 'react-icons/fa'
 import { SUBJECT_ICONS } from '../../utils/courseUtils'
+import { useNavigate } from 'react-router-dom'
 
 const MyCoursesCard = ({
     course,
@@ -13,12 +14,19 @@ const MyCoursesCard = ({
     teacherLoading = false
 }) => {
 
+    const navigate = useNavigate();
+
     const bgColor = customization?.bgColor ?? '#f3f4f6'
     const iconColor = customization?.iconColor ?? '#9ca3af'
     const SubjectIcon = SUBJECT_ICONS[course.subject];
 
+    const openCourse = (courseId) => {
+        navigate(`/courses/all/${courseId}`)
+    }
+
     return (
         <Card>
+
             <div className='w-full text-left'>
                 <div
                     className={`h-28 rounded-xl flex items-center justify-center text-neutral2 ${loading ? 'animate-pulse' : ''}`}
@@ -30,20 +38,26 @@ const MyCoursesCard = ({
                 <div className='mt-4 flex flex-col gap-1'>
                     <p className={`font-semibold text-neutral0 truncate ${loading ? 'opacity-70' : ''}`}>{course.title}</p>
                     <p className='text-xs text-neutral1 truncate flex items-center gap-2'>
-                        <SubjectIcon/>
+                        <SubjectIcon />
                         {course.subject}
                     </p>
                     {teacherLoading ? (
                         <div className='h-3.5 w-32 rounded bg-neutral5 animate-pulse mt-0.5' />
                     ) : teacherName && (
                         <p className='text-xs text-neutral1 truncate flex items-center gap-2'>
-                            <FaChalkboardTeacher/> {teacherName}
+                            <FaChalkboardTeacher /> {teacherName}
                         </p>
                     )}
                 </div>
             </div>
-            
+
             <div className='flex justify-end'>
+                <button
+                    onClick={() => openCourse(course.courseId)}
+                    className='p-2 aspect-square flex justify-center items-center rounded-lg text-neutral1 hover:bg-neutral5 hover:text-neutral0 transition-colors cursor-pointer'
+                >
+                    <FaExternalLinkAlt className='text-sm'/>
+                </button>
                 <button
                     onClick={onRemove}
                     disabled={loading}

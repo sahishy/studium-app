@@ -17,7 +17,7 @@ const Sidebar = ({ profile }) => {
     const navigate = useNavigate();
     const location = useLocation()
 
-    const displayName = profile?.profile?.displayName || profile?.displayName || ''
+    const displayName = profile?.profile?.displayName || ''
 
     return (
         <aside className={`bg-neutral5 p-4 flex flex-col justify-between shrink-0 w-64 border-r border-neutral4`}>
@@ -67,10 +67,11 @@ const Sidebar = ({ profile }) => {
 const PlayButton = () => {
 
     const navigate = useNavigate();
+    const location = useLocation()
     
     return (
         <button
-            onClick={() => navigate('')}
+            onClick={() => navigate('/ranked')}
             className='px-3 py-2 flex items-center justify-center gap-2 rounded-xl bg-neutral0 text-neutral6 text-sm
                 mb-3 cursor-pointer hover:opacity-90 transition'
         >

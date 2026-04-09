@@ -20,9 +20,12 @@ import Login from './pages/auth/Login'
 import Signup from './pages/auth/Signup'
 import Landing from './pages/landing/Landing'
 import { ModalProvider } from './contexts/ModalContext'
+import { ToastProvider } from './contexts/ToastContext'
 import JoinCircle from './pages/circles/JoinCircle'
 import ErrorState from './components/main/ErrorState'
 import Resources from './pages/resources/Resources'
+import Ranked from './pages/ranked/Ranked'
+import MatchRoom from './pages/ranked/MatchRoom'
 
 export default function App() {
 	return (
@@ -35,9 +38,11 @@ export default function App() {
 			<Route
 				element={
 					<PrivateRoute>
-						<ModalProvider>
-							<MainScreen/>
-						</ModalProvider>
+						<ToastProvider>
+							<ModalProvider>
+								<MainScreen/>
+							</ModalProvider>
+						</ToastProvider>
 					</PrivateRoute>
 				}
 			>
@@ -59,6 +64,8 @@ export default function App() {
 					<Route path="all/:courseId" element={<CourseOverview/>}/>
 				</Route>
 				<Route path="/resources" element={<Resources/>}/>
+				<Route path="/ranked" element={<Ranked/>}/>
+				<Route path="/ranked/room/:roomId" element={<MatchRoom/>}/>
 				<Route path="/join/:inviteCode" element={<JoinCircle/>}/>
 				<Route path="/avatar" element={<Avatar/>}/>
 				<Route path="/settings" element={<Settings/>}/>
@@ -73,7 +80,7 @@ export default function App() {
 					<ErrorState
 						fullPage
 						title="Page not found"
-						description="The page you’re looking for doesn’t exist or may have been moved."
+						description="The page you're looking for doesn't exist or may have been moved."
 					/>
 				}
 			/>

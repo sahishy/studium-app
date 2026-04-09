@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { subscribeToUserStatsByUserId } from '../services/userService'
+import { subscribeToUserStatsByUserId } from '../services/statsService'
 
 const UserStatsContext = createContext({
     userStats: null,
@@ -8,6 +8,7 @@ const UserStatsContext = createContext({
 })
 
 const UserStatsProvider = ({ userId, children }) => {
+    
     const [userStats, setUserStats] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
@@ -25,6 +26,7 @@ const UserStatsProvider = ({ userId, children }) => {
             {children}
         </UserStatsContext.Provider>
     )
+
 }
 
 const useUserStats = () => useContext(UserStatsContext)

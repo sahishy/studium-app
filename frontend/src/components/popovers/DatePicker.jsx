@@ -105,7 +105,7 @@ const DatePicker = ({ children, selectedDate, onSelect, className = '' }) => {
                 <div className='flex flex-col gap-1'>
 
                     <div className="grid grid-cols-7 gap-1">
-                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Ff', 'Sa'].map((day, index) => (
+                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, index) => (
                             <div key={index} className="text-center text-xs p-1 text-neutral1">
                                 {day}
                             </div>

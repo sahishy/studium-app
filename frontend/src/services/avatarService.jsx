@@ -207,6 +207,7 @@ const generateAvatarThumbnailBlob = async (profile) => {
 
         renderer.dispose()
     }
+
 }
 
 export {

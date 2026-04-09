@@ -2,7 +2,10 @@ import Card from '../main/Card'
 import { getSchoolNameById, SCORE_OPTIONS } from '../../utils/reviewUtils'
 import AvatarPicture from '../avatar/AvatarPicture';
 import { FaSchool } from 'react-icons/fa6';
-import { FaChalkboardTeacher } from 'react-icons/fa';
+import { FaChalkboardTeacher, FaEdit } from 'react-icons/fa';
+import Button from '../main/Button';
+import { MdDeleteOutline } from 'react-icons/md';
+import { BiEdit } from 'react-icons/bi';
 
 const CourseReviewCard = ({ review, reviewer, teacherName }) => {
 
@@ -14,7 +17,16 @@ const CourseReviewCard = ({ review, reviewer, teacherName }) => {
     const ScoreIcon = scoreOption.icon;
 
     return (
-        <Card className='gap-3'>
+        <Card className='group gap-3'>
+
+            <div className='absolute right-4 hidden group-hover:flex gap-3 text-neutral1'>
+                <button className='cursor-pointer'>
+                    <FaEdit className='text-sm'/>
+                </button>
+                <button className='cursor-pointer'>
+                    <MdDeleteOutline className='text-lg'/>
+                </button>
+            </div>
 
             <div className='flex gap-3 items-center'>
 
@@ -25,7 +37,7 @@ const CourseReviewCard = ({ review, reviewer, teacherName }) => {
 
                 <div className='flex flex-col gap-1'>
                     <p className='font-semibold text-neutral0'>
-                        {reviewer?.displayName || 'Anonymous'}
+                        {reviewer?.profile?.displayName || 'Anonymous'}
                     </p>
                     <p className='text-xs text-neutral1 flex items-center gap-2'>
                         <FaSchool /> Attends {(schoolName ? `${schoolName} High School` : 'an unknown high school')}

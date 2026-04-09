@@ -23,6 +23,7 @@ const CourseOverview = () => {
     const reviews = useCourseReviews(courseId)
     const [reviewText, setReviewText] = useState('')
     const [score, setScore] = useState(1)
+    const [isReviewComposerOpen, setIsReviewComposerOpen] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [usersMap, setUsersMap] = useState({})
     const [teachersMap, setTeachersMap] = useState({})
@@ -50,12 +51,12 @@ const CourseOverview = () => {
 
     const sortedReviews = useMemo(() => {
         const effectiveSchoolIds = getEffectiveSchoolIds({
-            schoolId: userStats?.schoolId ?? null,
-            schoolAffiliations: userStats?.schoolAffiliations ?? [],
+            schoolId: userStats?.academic?.schoolId ?? null,
+            schoolAffiliations: userStats?.academic?.schoolAffiliations ?? [],
         })
 
         return sortReviewsBySchoolPriority(reviews, effectiveSchoolIds)
-    }, [reviews, userStats?.schoolId, userStats?.schoolAffiliations])
+    }, [reviews, userStats?.academic?.schoolId, userStats?.academic?.schoolAffiliations])
 
     const handleSubmitReview = async (event) => {
         event.preventDefault()
@@ -68,7 +69,7 @@ const CourseOverview = () => {
             await upsertCourseReview({
                 courseId,
                 userId: profile.uid,
-                schoolId: userStats?.schoolId ?? null,
+                schoolId: userStats?.academic?.schoolId ?? null,
                 teacherId: myEnrollment?.teacherId ?? null,
                 review: reviewText,
                 score,
@@ -76,9 +77,16 @@ const CourseOverview = () => {
 
             setReviewText('')
             setScore(1)
+            setIsReviewComposerOpen(false)
         } finally {
             setIsSubmitting(false)
         }
+    }
+
+    const handleCancelReview = () => {
+        setReviewText('')
+        setScore(1)
+        setIsReviewComposerOpen(false)
     }
 
     if (!course) {
@@ -104,43 +112,60 @@ const CourseOverview = () => {
             <section className='flex flex-col gap-3'>
                 <h2 className='text-2xl font-semibold'>Reviews</h2>
 
-                <form onSubmit={handleSubmitReview} className='rounded-xl border border-neutral4 bg-neutral6 p-4 flex flex-col gap-3'>
-                    <h3 className='font-semibold text-neutral0'>Add a review</h3>
+                {isReviewComposerOpen ? (
+                    <form onSubmit={handleSubmitReview} className='flex flex-col rounded-3xl overflow-hidden border border-neutral4'>
 
-                    <div className='flex gap-2'>
-                        {SCORE_OPTIONS.map((option) => {
-                            const Icon = option.icon
-                            return (
-                                <button
-                                    key={option.value}
-                                    type='button'
-                                    onClick={() => setScore(option.value)}
-                                    className={`px-3 py-2 rounded-lg border text-sm flex items-center gap-2 cursor-pointer ${score === option.value
-                                        ? 'border-neutral0 text-neutral0 bg-neutral5'
-                                        : 'border-neutral4 text-neutral1 hover:bg-neutral5'
-                                        }`}
-                                >
-                                    <Icon />
-                                    {option.label}
-                                </button>
-                            )
-                        })}
-                    </div>
+                        <textarea
+                            value={reviewText}
+                            onChange={(event) => setReviewText(event.target.value)}
+                            rows={4}
+                            placeholder='Share your experience...'
+                            className='w-full px-4 py-3 text-sm text-neutral0 focus:outline-none'
+                            autoFocus
+                        />
 
-                    <textarea
-                        value={reviewText}
-                        onChange={(event) => setReviewText(event.target.value)}
-                        rows={4}
-                        placeholder='Share your experience...'
-                        className='w-full rounded-xl border border-neutral4 p-3 text-sm text-neutral0 bg-transparent focus:outline-none'
-                    />
+                        <div className='flex justify-between p-3'>
+                            <div className='flex gap-2'>
+                                {SCORE_OPTIONS.map((option) => {
+                                    const Icon = option.icon
+                                    return (
+                                        <button
+                                            key={option.value}
+                                            type='button'
+                                            onClick={() => setScore(option.value)}
+                                            className={`px-3 py-1 rounded-full border text-xs flex items-center gap-2 cursor-pointer transition
+                                                 ${score === option.value
+                                                    ? 'text-neutral6 bg-neutral0'
+                                                    : 'border-neutral4 text-neutral1 hover:bg-neutral5'
+                                                }`}
+                                        >
+                                            <Icon />
+                                            {option.label}
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                            <div className='flex gap-3'>
+                                <Button type='secondary' onClick={handleCancelReview} disabled={isSubmitting}>
+                                    Cancel
+                                </Button>
+                                <Button type='primary' htmlType='submit' disabled={isSubmitting}>
+                                    {isSubmitting ? 'Posting...' : 'Post Review'}
+                                </Button>
+                            </div>
 
-                    <div className='flex justify-end'>
-                        <Button type='secondary' htmlType='submit' disabled={isSubmitting}>
-                            {isSubmitting ? 'Posting...' : 'Post Review'}
-                        </Button>
-                    </div>
-                </form>
+                        </div>
+
+                    </form>
+                ) : (
+                    <button
+                        type='button'
+                        onClick={() => setIsReviewComposerOpen(true)}
+                        className='w-full text-left text-sm text-neutral1 rounded-full border border-neutral4 px-4 py-3 hover:bg-neutral5 transition-colors cursor-pointer'
+                    >
+                        Share your experience...
+                    </button>
+                )}
 
                 <div className='grid grid-cols-2 gap-3'>
                     {sortedReviews.length === 0 ? (
