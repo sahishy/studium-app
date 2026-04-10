@@ -9,12 +9,16 @@ import { useUserStats } from '../../profile/contexts/UserStatsContext'
 import { useMultiplayer } from '../contexts/MultiplayerContext'
 import { useToast } from '../../../shared/contexts/ToastContext'
 import MatchmakingToast from '../components/toasts/MatchmakingToast'
-import { RANK_TIERS, getRankInfoFromElo, getRankedModeStats } from '../../profile/utils/statsUtils'
 import podium from '../../../assets/images/podium.png'
 import { HiChevronDoubleUp } from 'react-icons/hi'
-
-const DEFAULT_MODE_ID = 'sat_1v1'
-const MATCH_JOIN_DELAY_SECONDS = 3
+import {
+    buildRankedUiState,
+    DEFAULT_MODE_ID,
+    formatQueueTimeLabel,
+    getQueueState,
+    getQueueTimeSeconds,
+    MATCH_JOIN_DELAY_SECONDS,
+} from '../utils/multiplayerUtils'
 
 const Ranked = () => {
 
@@ -28,51 +32,31 @@ const Ranked = () => {
     const matchmakingToastIdRef = useRef(null)
     const autoJoinRoomIdRef = useRef(null)
 
-    const rankedStats = getRankedModeStats(userStats, DEFAULT_MODE_ID)
-    const rankInfo = getRankInfoFromElo(rankedStats.elo)
+    const {
+        rankedStats,
+        rankInfo,
+        currentTierMinElo,
+        currentTierSpan,
+        currentTierProgress,
+        eloToNextTier,
+        rankLabel,
+        nextTierLabel,
+        nextTierThreshold,
+    } = buildRankedUiState({ userStats, modeId: DEFAULT_MODE_ID })
 
-    const currentTierThreshold = RANK_TIERS.find((entry) => (
-        entry.tierName === rankInfo.tierName
-        && entry.tier === rankInfo.tier
-    )) ?? RANK_TIERS[RANK_TIERS.length - 1]
-
-    const ascendingTiers = [...RANK_TIERS].sort((a, b) => a.minElo - b.minElo)
-    const nextTierThreshold = ascendingTiers.find((entry) => entry.minElo > rankedStats.elo)
-
-    const currentTierMinElo = currentTierThreshold.minElo
-    const nextTierMinElo = nextTierThreshold?.minElo ?? (currentTierMinElo + 100)
-    const currentTierSpan = Math.max(1, nextTierMinElo - currentTierMinElo)
-    const currentTierProgress = Math.max(0, rankedStats.elo - currentTierMinElo)
-    const eloToNextTier = Math.max(0, nextTierMinElo - rankedStats.elo)
-
-    const rankLabel = rankInfo.tier ? `${rankInfo.tierName} ${rankInfo.tier}` : rankInfo.tierName
-    const nextTierLabel = nextTierThreshold
-        ? `${nextTierThreshold.tierName} ${nextTierThreshold.tier}`
-        : 'Max tier reached'
-
-    const queueState = session?.status === 'in_room'
-        ? 'matched'
-        : (session?.status === 'queue' ? 'queueing' : 'idle')
+    const queueState = getQueueState(session)
 
     const isQueueing = queueState === 'queueing'
 
     const queueTimeSeconds = useMemo(() => {
-        const queuedAtMs = matchmaking?.queuedAt?.toDate
-            ? matchmaking.queuedAt.toDate().getTime()
-            : null
-
-        if(!queuedAtMs || !isQueueing) {
-            return 0
-        }
-
-        return Math.max(0, Math.floor((nowMs - queuedAtMs) / 1000))
+        return getQueueTimeSeconds({
+            matchmaking,
+            isQueueing,
+            nowMs,
+        })
     }, [matchmaking?.queuedAt, isQueueing, nowMs])
 
-    const queueTimeLabel = useMemo(() => {
-        const minutes = Math.floor(queueTimeSeconds / 60)
-        const seconds = queueTimeSeconds % 60
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`
-    }, [queueTimeSeconds])
+    const queueTimeLabel = useMemo(() => formatQueueTimeLabel(queueTimeSeconds), [queueTimeSeconds])
 
     const handleLeaveQueue = async () => {
         await leaveQueue()
@@ -109,6 +93,7 @@ const Ranked = () => {
     }
 
     const handlePlayClick = async () => {
+
         if(!profile?.uid || queueState !== 'idle') {
             return
         }
@@ -116,6 +101,7 @@ const Ranked = () => {
         await joinQueue({
             modeId: DEFAULT_MODE_ID,
             elo: rankedStats.elo,
+            displayName: profile?.profile?.displayName || 'A player',
         })
 
         showOrUpdateMatchmakingToast('queueing')

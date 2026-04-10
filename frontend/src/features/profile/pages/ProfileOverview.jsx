@@ -70,7 +70,7 @@ const ProfileOverview = () => {
                                 animation={'Idle'}
                                 className='absolute w-full! h-64! top-0'
                             />
-                            <div className='absolute w-36 h-36 -bottom-12 left-8 rounded-full border-8 border-neutral6'>
+                            <div className='absolute w-36 h-36 -bottom-12 left-8 rounded-full border-8 border-neutral6 bg-neutral3'>
                                 <AvatarPicture
                                     profile={profile}
                                     className='w-full h-full'

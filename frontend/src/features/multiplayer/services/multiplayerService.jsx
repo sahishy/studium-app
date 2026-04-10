@@ -19,7 +19,42 @@ const MATCHMAKING_COLLECTION = 'multiplayerMatchmaking'
 const ROOMS_COLLECTION = 'multiplayerRooms'
 const SESSIONS_COLLECTION = 'multiplayerSessions'
 
-const joinQueue = async ({ userId, modeId, elo = 0 }) => {
+const joinRoom = async ({ roomId, userId, joinedAt = new Date(), joinerName = 'A player', transaction = null, db: providedDb = null }) => {
+
+    if(!roomId || !userId) {
+        throw new Error('roomId and userId are required to join a room.')
+    }
+
+    const db = providedDb ?? getFirestore()
+
+    const applyJoin = async (activeTransaction) => {
+        const roomPlayerRef = doc(db, ROOMS_COLLECTION, roomId, 'players', userId)
+        activeTransaction.set(roomPlayerRef, {
+            userId,
+            state: {},
+        })
+
+        const roomChatMessageRef = doc(collection(db, ROOMS_COLLECTION, roomId, 'chat'))
+
+        activeTransaction.set(roomChatMessageRef, {
+            messageType: 'server',
+            text: `${joinerName?.trim() || 'A player'} has joined the game.`,
+            createdAt: joinedAt,
+        })
+    }
+
+    if(transaction) {
+        await applyJoin(transaction)
+        return
+    }
+
+    await runTransaction(db, async (transactionRef) => {
+        await applyJoin(transactionRef)
+    })
+
+}
+
+const joinQueue = async ({ userId, modeId, elo = 0, displayName = 'A player' }) => {
 
     if(!userId || !modeId) {
         throw new Error('userId and modeId are required to join queue.')
@@ -33,6 +68,7 @@ const joinQueue = async ({ userId, modeId, elo = 0 }) => {
 
     batch.set(matchmakingRef, {
         userId,
+        displayName: displayName?.trim() || 'A player',
         modeId,
         elo: Number(elo) || 0,
         queuedAt: now,
@@ -71,6 +107,87 @@ const cancelQueue = async ({ userId }) => {
     }, { merge: true })
 
     await batch.commit()
+
+}
+
+const leaveRoom = async ({ roomId, userId, leaverName = null }) => {
+
+    if(!roomId || !userId) {
+        throw new Error('roomId and userId are required to leave a room.')
+    }
+
+    const db = getFirestore()
+    const roomRef = doc(db, ROOMS_COLLECTION, roomId)
+    const roomPlayerRef = doc(db, ROOMS_COLLECTION, roomId, 'players', userId)
+    const matchmakingRef = doc(db, MATCHMAKING_COLLECTION, userId)
+    const sessionRef = doc(db, SESSIONS_COLLECTION, userId)
+    const roomChatRef = collection(db, ROOMS_COLLECTION, roomId, 'chat')
+
+    const shouldCleanupRoomSubcollections = await runTransaction(db, async (transaction) => {
+        const roomSnap = await transaction.get(roomRef)
+        const now = new Date()
+
+        transaction.delete(matchmakingRef)
+        transaction.delete(roomPlayerRef)
+        transaction.set(sessionRef, {
+            userId,
+            status: 'idle',
+            modeId: null,
+            currentRoomId: null,
+            updatedAt: now,
+        }, { merge: true })
+
+        if(!roomSnap.exists()) {
+            return false
+        }
+
+        const roomData = roomSnap.data() ?? {}
+        const currentPlayerIds = Array.isArray(roomData.playerIds) ? roomData.playerIds : []
+        const remainingPlayerIds = currentPlayerIds.filter((playerId) => playerId && playerId !== userId)
+
+        if(remainingPlayerIds.length > 0) {
+            const serverMessageRef = doc(roomChatRef)
+            const resolvedLeaverName = leaverName?.trim() || 'A player'
+
+            transaction.set(serverMessageRef, {
+                messageType: 'server',
+                text: `${resolvedLeaverName} has left the game.`,
+                createdAt: now,
+            })
+        }
+
+        if(remainingPlayerIds.length === 0) {
+            transaction.delete(roomRef)
+            return true
+        }
+
+        transaction.set(roomRef, {
+            playerIds: remainingPlayerIds,
+            updatedAt: now,
+        }, { merge: true })
+
+        return false
+    })
+
+    if(shouldCleanupRoomSubcollections) {
+        const subcollections = ['players', 'events', 'chat']
+
+        for(const subcollectionName of subcollections) {
+
+            const subcollectionRef = collection(db, ROOMS_COLLECTION, roomId, subcollectionName)
+            const subcollectionSnap = await getDocs(subcollectionRef)
+
+            if(subcollectionSnap.empty) {
+                continue
+            }
+
+            const batch = writeBatch(db)
+            subcollectionSnap.docs.forEach((docSnap) => {
+                batch.delete(docSnap.ref)
+            })
+            await batch.commit()
+        }
+    }
 
 }
 
@@ -265,10 +382,14 @@ const setRoomPlayerState = async ({ roomId, userId, state = {} }) => {
     }, { merge: true })
 }
 
-const sendRoomChatMessage = async ({ roomId, userId, text, senderName = null, clientMessageId = null }) => {
+const sendRoomChatMessage = async ({ roomId, userId = null, text, senderName = null, clientMessageId = null, messageType = 'user' }) => {
 
-    if(!roomId || !userId || !text?.trim()) {
-        throw new Error('roomId, userId, and non-empty text are required to send a chat message.')
+    if(!roomId || !text?.trim()) {
+        throw new Error('roomId and non-empty text are required to send a chat message.')
+    }
+
+    if(messageType === 'user' && !userId) {
+        throw new Error('userId is required for user chat messages.')
     }
 
     const db = getFirestore()
@@ -277,6 +398,7 @@ const sendRoomChatMessage = async ({ roomId, userId, text, senderName = null, cl
     await setDoc(messageRef, {
         userId,
         senderName,
+        messageType,
         text: text.trim(),
         clientMessageId,
         createdAt: new Date(),
@@ -334,6 +456,10 @@ const tryMatchmake = async ({ userId, modeId }) => {
 
         const now = new Date()
         const playerIds = [userId, candidateDoc.id]
+        const playerDisplayNames = [
+            ownData?.displayName?.trim() || 'A player',
+            opponentData?.displayName?.trim() || 'A player',
+        ]
 
         transaction.set(roomRef, {
             modeId,
@@ -348,13 +474,16 @@ const tryMatchmake = async ({ userId, modeId }) => {
             state: {},
         })
 
-        playerIds.forEach((playerId) => {
-            const roomPlayerRef = doc(db, ROOMS_COLLECTION, roomRef.id, 'players', playerId)
-            transaction.set(roomPlayerRef, {
+        for(const [index, playerId] of playerIds.entries()) {
+            await joinRoom({
+                roomId: roomRef.id,
                 userId: playerId,
-                state: {},
+                joinedAt: now,
+                joinerName: playerDisplayNames[index],
+                transaction,
+                db,
             })
-        })
+        }
 
         transaction.delete(ownMatchRef)
         transaction.delete(opponentMatchRef)
@@ -388,6 +517,8 @@ const tryMatchmake = async ({ userId, modeId }) => {
 export {
     joinQueue,
     cancelQueue,
+    joinRoom,
+    leaveRoom,
     deleteRoom,
     setRoomPlayerState,
     sendRoomChatMessage,

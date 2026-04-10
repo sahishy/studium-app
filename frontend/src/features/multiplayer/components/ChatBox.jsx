@@ -61,6 +61,7 @@ const ChatBox = ({ roomId, userId, senderName }) => {
             clientMessageId,
             userId,
             senderName: senderName ?? null,
+            messageType: 'user',
             text: trimmedInput,
             createdAt: new Date(),
             pending: true,
@@ -90,6 +91,8 @@ const ChatBox = ({ roomId, userId, senderName }) => {
                 className='flex-1 min-h-0 overflow-y-auto flex flex-col justify-end text-[10px]'
             >
                 {mergedMessages.map((message) => {
+                    const messageType = message.messageType ?? 'user'
+                    const isServerMessage = messageType === 'server'
                     const isOwnMessage = message.userId === userId
                     const senderLabel = isOwnMessage ? 'You' : (message.senderName ?? 'Opponent')
                     const timestamp = formatTimeFromFirestoreLike(message.createdAt)
@@ -99,9 +102,15 @@ const ChatBox = ({ roomId, userId, senderName }) => {
                             key={message.uid}
                             className={`p-1 whitespace-pre-wrap break-words bg-neutral0/5 flex justify-between gap-2 ${message.pending ? 'text-neutral1' : ''}`}
                         >
-                            <div>
-                                <span className='font-semibold'>{senderLabel}:</span> {message.text}{' '}
-                            </div>
+                            {isServerMessage ? (
+                                <div className='text-neutral1'>
+                                    {message.text}
+                                </div>
+                            ) : (
+                                <div>
+                                    <span className='font-semibold'>{senderLabel}:</span> {message.text}{' '}
+                                </div>
+                            )}
                             {timestamp ? <span className='text-neutral1 text-[8px] shrink-0'>{timestamp}</span> : null}
                         </div>
                     )

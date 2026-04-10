@@ -1,8 +1,10 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import logo from '../../../assets/images/logo_lg.png'
-import { FaArrowRight, FaChild, FaGraduationCap, FaUserGroup, FaBookOpen, FaBoxArchive } from 'react-icons/fa6';
+import { FaArrowRight, FaChild, FaGraduationCap, FaUserGroup, FaBookOpen, FaBoxArchive, FaCircle, FaArrowLeft } from 'react-icons/fa6';
 import { RiSwordFill } from 'react-icons/ri';
 import AvatarPicture from '../avatar/AvatarPicture.jsx';
+import { useMultiplayer } from '../../../features/multiplayer/contexts/MultiplayerContext.jsx'
+import { leaveRoom } from '../../../features/multiplayer/services/multiplayerService.jsx'
 
 const navItems = [
     { title: 'Agenda', path: '/agenda', icon: <FaBookOpen /> },
@@ -16,6 +18,8 @@ const Sidebar = ({ profile }) => {
 
     const navigate = useNavigate();
     const location = useLocation()
+    const { session } = useMultiplayer()
+    const inRoom = session?.status === 'in_room' && Boolean(session?.currentRoomId)
 
     const displayName = profile?.profile?.displayName || ''
 
@@ -39,14 +43,19 @@ const Sidebar = ({ profile }) => {
 
                     <div className='flex flex-col items-center'>
                         <h1 className='font-semibold'>{profile.firstName} {profile.lastName}</h1>
-                        <p className='text-xs text-text2'>@{displayName}</p>
+                        <p className='text-xs text-neutral1'>@{displayName}</p>
                     </div>
                 </div>
 
                 <div className='flex flex-col'>
-                    <PlayButton />
+                    <MultiplayerButton profile={profile} inRoom={inRoom} />
                     {navItems.map((item, index) => (
-                        <SidebarNavLink key={index} item={item} isActive={location.pathname.startsWith(item.path)} />
+                        <SidebarNavLink
+                            key={index}
+                            item={item}
+                            isActive={location.pathname.startsWith(item.path)}
+                            disabled={inRoom}
+                        />
                     ))}
                 </div>
 
@@ -54,14 +63,26 @@ const Sidebar = ({ profile }) => {
             </div>
 
             <div className='flex flex-col gap-4'>
-                <div className='flex justify-center gap-6 mb-6 text-xs'>
-                    <Link to={`/profile/${profile?.uid}`} className='text-neutral1 hover:text-neutral0 transition'>
+                <div className={`flex justify-center gap-6 mb-6 text-xs ${inRoom && 'opacity-40'}`}>
+                    <Link
+                        to={`/profile/${profile?.uid}`}
+                        onClick={inRoom ? (event) => event.preventDefault() : undefined}
+                        className={`transition text-neutral1 ${!inRoom && 'hover:text-neutral0'} cursor-not-allowed`}
+                    >
                         Profile
                     </Link>
-                    <Link to='/settings' className='text-neutral1 hover:text-neutral0 transition'>
+                    <Link
+                        to='/settings'
+                        onClick={inRoom ? (event) => event.preventDefault() : undefined}
+                        className={`transition text-neutral1 ${!inRoom && 'hover:text-neutral0'} cursor-not-allowed`}
+                    >
                         Settings
                     </Link>
-                    <Link to='/settings' className='text-neutral1 hover:text-neutral0 transition'>
+                    <Link
+                        to='/settings'
+                        onClick={inRoom ? (event) => event.preventDefault() : undefined}
+                        className={`transition text-neutral1 ${!inRoom && 'hover:text-neutral0'} cursor-not-allowed`}
+                    >
                         FAQ
                     </Link>
                 </div>
@@ -72,24 +93,55 @@ const Sidebar = ({ profile }) => {
     )
 }
 
-const PlayButton = () => {
+const MultiplayerButton = ({ profile, inRoom }) => {
 
     const navigate = useNavigate();
-    const location = useLocation()
+    const { session } = useMultiplayer()
+
+    const handleClick = async () => {
+        if (!inRoom) {
+            navigate('/ranked')
+            return
+        }
+
+        const roomId = session?.currentRoomId
+        const userId = profile?.uid
+
+        if (!roomId || !userId) {
+            return
+        }
+
+        const leaverName = profile?.profile?.displayName || `${profile?.firstName ?? ''} ${profile?.lastName ?? ''}`.trim() || 'Player'
+
+        await leaveRoom({ roomId, userId, leaverName })
+        navigate('/ranked')
+    }
 
     return (
         <button
-            onClick={() => navigate('/ranked')}
-            className='px-3 py-2 flex items-center justify-center gap-2 rounded-xl bg-neutral0 text-neutral6 text-sm
-                mb-3 cursor-pointer hover:opacity-90 transition'
+            onClick={handleClick}
+            className={`px-3 py-2 flex items-center justify-center gap-2 rounded-xl text-neutral6 text-sm
+                ${inRoom ? 'bg-red-400 hover:bg-red-500' : 'bg-neutral0 hover:opacity-90'} mb-3 cursor-pointer transition`}
         >
-            <RiSwordFill />
-            SAT Ranked
+            {inRoom ? <FaArrowLeft /> : <RiSwordFill />}
+            {inRoom ? 'Leave Game' : 'SAT Ranked'}
         </button>
     )
 }
 
-const SidebarNavLink = ({ item, isActive }) => {
+const SidebarNavLink = ({ item, isActive, disabled = false }) => {
+
+    if (disabled) {
+        return (
+            <div
+                className='flex items-center px-3 py-2 gap-2 rounded-xl text-neutral1 cursor-not-allowed opacity-40'
+            >
+                <div className='text-sm'>{item.icon}</div>
+                <div className='text-sm text-nowrap'>{item.title}</div>
+            </div>
+        )
+    }
+
     return (
         <NavLink
             key={item.title}

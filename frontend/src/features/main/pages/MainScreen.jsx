@@ -13,6 +13,24 @@ import { UserStatsProvider } from '../../profile/contexts/UserStatsContext'
 import { MultiplayerProvider } from '../../multiplayer/contexts/MultiplayerContext'
 import LoadingState from '../../../shared/components/ui/LoadingState'
 
+const MainScreenLayout = ({ profile }) => {
+
+    return (
+        <>
+            <ActivityHandler profile={profile}/>
+
+            <div className="flex min-h-screen">
+
+                <Sidebar profile={profile}/>
+                <main className="flex-1 h-screen max-w-[2560px] mx-auto">
+                    <Outlet context={{ profile }}/>
+                </main>
+
+            </div>
+        </>
+    )
+}
+
 const MainScreen = () => {
     
     const { user, loading } = useAuth()
@@ -51,17 +69,7 @@ const MainScreen = () => {
                     <CoursesProvider profile={profile}>
                         <MembersProvider>
                             <TasksProvider profile={profile}>
-
-                                <ActivityHandler profile={profile}/>
-
-                                <div className="flex min-h-screen">
-
-                                    <Sidebar profile={profile}/>
-                                    <main className="flex-1 h-screen max-w-[2560px] mx-auto">
-                                        <Outlet context={{ profile }}/>
-                                    </main>
-
-                                </div>
+                                <MainScreenLayout profile={profile}/>
 
                             </TasksProvider>
                         </MembersProvider>

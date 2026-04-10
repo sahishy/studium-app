@@ -13,6 +13,7 @@ import MyCoursesTab from './features/courses/pages/MyCoursesTab'
 import AllCoursesTab from './features/courses/pages/AllCoursesTab'
 import CourseOverview from './features/courses/pages/CourseOverview'
 import CoursesIndexRedirect from './routes/CoursesIndexRedirect'
+import MultiplayerSessionRedirect from './routes/MultiplayerSessionRedirect'
 import Avatar from './features/profile/pages/Avatar'
 import Settings from './features/profile/pages/Settings'
 import ProfileOverview from './features/profile/pages/ProfileOverview'
@@ -47,29 +48,31 @@ export default function App() {
 				}
 			>
 
-				<Route path="/agenda" element={<Agenda/>}>
-					<Route index element={<AgendaIndexRedirect/>}/>
-					<Route path="list" element={<ListTab/>} />
-					<Route path="calendar" element={<CalendarTab/>} />
-					<Route path="board" element={<BoardTab/>} />
+				<Route element={<MultiplayerSessionRedirect/>}>
+					<Route path="/agenda" element={<Agenda/>}>
+						<Route index element={<AgendaIndexRedirect/>}/>
+						<Route path="list" element={<ListTab/>} />
+						<Route path="calendar" element={<CalendarTab/>} />
+						<Route path="board" element={<BoardTab/>} />
+					</Route>
+					<Route path="/circles">
+						<Route index element={<Circles/>}/>
+						<Route path=":circleId" element={<CirclesOverview/>}/>
+					</Route>
+					<Route path="/courses" element={<Courses/>}>
+						<Route index element={<CoursesIndexRedirect/>}/>
+						<Route path="me" element={<MyCoursesTab/>}/>
+						<Route path="all" element={<AllCoursesTab/>}/>
+						<Route path="all/:courseId" element={<CourseOverview/>}/>
+					</Route>
+					<Route path="/resources" element={<Resources/>}/>
+					<Route path="/ranked" element={<Ranked/>}/>
+					<Route path="/ranked/room/:roomId" element={<MatchRoom/>}/>
+					<Route path="/join/:inviteCode" element={<JoinCircle/>}/>
+					<Route path="/avatar" element={<Avatar/>}/>
+					<Route path="/settings" element={<Settings/>}/>
+					<Route path="/profile/:userId" element={<ProfileOverview/>}/>
 				</Route>
-				<Route path="/circles">
-					<Route index element={<Circles/>}/>
-					<Route path=":circleId" element={<CirclesOverview/>}/>
-				</Route>
-				<Route path="/courses" element={<Courses/>}>
-					<Route index element={<CoursesIndexRedirect/>}/>
-					<Route path="me" element={<MyCoursesTab/>}/>
-					<Route path="all" element={<AllCoursesTab/>}/>
-					<Route path="all/:courseId" element={<CourseOverview/>}/>
-				</Route>
-				<Route path="/resources" element={<Resources/>}/>
-				<Route path="/ranked" element={<Ranked/>}/>
-				<Route path="/ranked/room/:roomId" element={<MatchRoom/>}/>
-				<Route path="/join/:inviteCode" element={<JoinCircle/>}/>
-				<Route path="/avatar" element={<Avatar/>}/>
-				<Route path="/settings" element={<Settings/>}/>
-				<Route path="/profile/:userId" element={<ProfileOverview/>}/>
 
 
 			</Route>

@@ -2,12 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
 import Card from '../../../shared/components/ui/Card'
-import Button from '../../../shared/components/ui/Button'
 import { useMultiplayer } from '../contexts/MultiplayerContext'
 import { useToast } from '../../../shared/contexts/ToastContext'
 import MatchmakingToast from '../components/toasts/MatchmakingToast'
 import ChatBox from '../components/ChatBox'
-import { deleteRoom, subscribeToRoomById } from '../services/multiplayerService'
+import { subscribeToRoomById } from '../services/multiplayerService'
 
 const MatchRoom = () => {
     const { roomId } = useParams()
@@ -22,15 +21,6 @@ const MatchRoom = () => {
     const hasRoomId = useMemo(() => Boolean(roomId), [roomId])
     const initialToastStackRef = useRef(toastStack)
     const senderName = useMemo(() => (profile?.profile?.displayName), [profile])
-
-    const handleDeleteRoom = async () => {
-        if(!roomId) {
-            return
-        }
-
-        await deleteRoom({ roomId })
-        navigate('/ranked')
-    }
 
     useEffect(() => {
         initialToastStackRef.current.forEach((toastEntry) => {
@@ -90,14 +80,6 @@ const MatchRoom = () => {
                         <p className='text-sm text-text2'>Room status: {room.status}</p>
                     ) : null}
 
-                    <Button
-                        type='negative'
-                        className='!px-5 !py-3'
-                        onClick={handleDeleteRoom}
-                        disabled={!hasRoomId}
-                    >
-                        Delete room
-                    </Button>
                 </Card>
             </div>
 
