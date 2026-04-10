@@ -1,4 +1,4 @@
-import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import logo from '../../assets/images/logo_lg.png'
 import { FaArrowRight, FaChild, FaGraduationCap, FaUserGroup, FaBookOpen, FaBoxArchive } from 'react-icons/fa6';
 import { RiSwordFill } from 'react-icons/ri';
@@ -9,7 +9,7 @@ const navItems = [
     { title: 'Courses', path: '/courses', icon: <FaGraduationCap /> },
     { title: 'Circles', path: '/circles', icon: <FaUserGroup /> },
     { title: 'Resources', path: '/resources', icon: <FaBoxArchive /> },
-    { title: 'Avatar', path: '/avatar', icon: <FaChild/> },
+    { title: 'Avatar', path: '/avatar', icon: <FaChild /> },
 ]
 
 const Sidebar = ({ profile }) => {
@@ -32,7 +32,7 @@ const Sidebar = ({ profile }) => {
                             <div className={`absolute -bottom-1 -right-1 bg-neutral3/60 backdrop-blur-xs rounded-full p-2
                                 opacity-0 group-hover/avatar:opacity-100 transition
                             `}>
-                                <FaArrowRight className='text-sm group-hover/avatar:-rotate-45 transition'/>
+                                <FaArrowRight className='text-sm group-hover/avatar:-rotate-45 transition' />
                             </div>
                         </AvatarPicture>
                     </button>
@@ -44,7 +44,7 @@ const Sidebar = ({ profile }) => {
                 </div>
 
                 <div className='flex flex-col'>
-                    <PlayButton/>
+                    <PlayButton />
                     {navItems.map((item, index) => (
                         <SidebarNavLink key={index} item={item} isActive={location.pathname.startsWith(item.path)} />
                     ))}
@@ -54,9 +54,17 @@ const Sidebar = ({ profile }) => {
             </div>
 
             <div className='flex flex-col gap-4'>
-
-                
-
+                <div className='flex justify-center gap-6 mb-6 text-xs'>
+                    <Link to={`/profile/${profile?.uid}`} className='text-neutral1 hover:text-neutral0 transition'>
+                        Profile
+                    </Link>
+                    <Link to='/settings' className='text-neutral1 hover:text-neutral0 transition'>
+                        Settings
+                    </Link>
+                    <Link to='/settings' className='text-neutral1 hover:text-neutral0 transition'>
+                        FAQ
+                    </Link>
+                </div>
             </div>
 
 
@@ -68,15 +76,15 @@ const PlayButton = () => {
 
     const navigate = useNavigate();
     const location = useLocation()
-    
+
     return (
         <button
             onClick={() => navigate('/ranked')}
             className='px-3 py-2 flex items-center justify-center gap-2 rounded-xl bg-neutral0 text-neutral6 text-sm
                 mb-3 cursor-pointer hover:opacity-90 transition'
         >
-            <RiSwordFill/>
-            SAT 1v1s
+            <RiSwordFill />
+            SAT Ranked
         </button>
     )
 }

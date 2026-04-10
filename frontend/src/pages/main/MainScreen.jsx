@@ -40,7 +40,7 @@ const MainScreen = () => {
 
     }, [user, loading])
 
-    if(profileLoading) {
+    if(profileLoading || !profile) {
         return <LoadingState fullPage label='Loading profile...' />
     }
 
