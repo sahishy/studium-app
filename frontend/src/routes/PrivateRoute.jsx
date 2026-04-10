@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import LoadingState from '../components/main/LoadingState'
+import { useAuth } from '../features/auth/contexts/AuthContext'
+import LoadingState from '../shared/components/ui/LoadingState'
 
 const PrivateRoute = ( { children } ) => {
     const { user, loading } = useAuth()
