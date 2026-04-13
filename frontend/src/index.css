@@ -51,6 +51,9 @@ html {
         --color-neutral5: #F3F4F6;
         --color-neutral6: white;
 
+        --color-sat0: #325fcd;
+        --color-sat1: #4772de;
+
         --color-primary0: theme(--color-gray-800);
         --color-primary1: theme(--color-gray-900);
 

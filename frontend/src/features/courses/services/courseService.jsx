@@ -1,7 +1,8 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, getFirestore, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
+import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
 import coursesCatalog from '../../../data/courses.json'
 import { buildEnrollmentId, normalizeSearchText, tokenizeText } from '../utils/courseUtils'
+import { db } from '../../../lib/firebase'
 
 const getAllCourses = () => {
     return coursesCatalog
@@ -20,6 +21,7 @@ const getCourseSubjects = () => {
 }
 
 const searchCourses = (queryText = '', options = {}) => {
+
     const { subject = null, excludeCourseIds = [] } = options
 
     const query = normalizeSearchText(queryText)
@@ -96,9 +98,11 @@ const searchCourses = (queryText = '', options = {}) => {
             return a.course.title.localeCompare(b.course.title)
         })
         .map(({ course }) => course)
+
 }
 
 const getFeaturedCourses = (options = {}) => {
+
     const { subject = null, excludeCourseIds = [], limit = 8 } = options
     const filtered = searchCourses('', { subject, excludeCourseIds })
 
@@ -107,9 +111,11 @@ const getFeaturedCourses = (options = {}) => {
         .sort(() => Math.random() - 0.5)
 
     return shuffled.slice(0, limit)
+
 }
 
 const getCoursesByIds = (courseIds = []) => {
+
     if(!Array.isArray(courseIds) || courseIds.length === 0) {
         return []
     }
@@ -117,6 +123,7 @@ const getCoursesByIds = (courseIds = []) => {
     return courseIds
         .map((courseId) => getCourseById(courseId))
         .filter(Boolean)
+
 }
 
 const getAvailableCoursesByCourseIds = (courseIds = []) => {
@@ -126,7 +133,6 @@ const getAvailableCoursesByCourseIds = (courseIds = []) => {
 
 const joinCourse = async (studentId, courseId, options = {}) => {
 
-    const db = getFirestore()
     const now = serverTimestamp()
     const {
         day = 'A',
@@ -173,44 +179,51 @@ const joinCourse = async (studentId, courseId, options = {}) => {
     }
 
     return enrollmentId
+
 }
 
 const leaveCourse = async (studentId, courseId) => {
-    const db = getFirestore()
+
     const enrollmentId = buildEnrollmentId(courseId, studentId)
     const enrollmentRef = doc(db, 'courses', enrollmentId)
 
     await deleteDoc(enrollmentRef)
+
 }
 
 const isStudentInCourse = async (studentId, courseId) => {
-    const db = getFirestore()
+
     const enrollmentId = buildEnrollmentId(courseId, studentId)
     const enrollmentRef = doc(db, 'courses', enrollmentId)
     const enrollmentSnap = await getDoc(enrollmentRef)
 
     return enrollmentSnap.exists()
+
 }
 
 const getStudentCourseIds = async (studentId) => {
-    const db = getFirestore()
+
     const coursesRef = collection(db, 'courses')
     const q = query(coursesRef, where('studentId', '==', String(studentId)))
     const snapshot = await getDocs(q)
 
     return snapshot.docs.map((courseDoc) => courseDoc.data().courseId)
+
 }
 
 const getAvailableCoursesForStudent = async (studentId) => {
+
     if(!studentId) {
         return getAllCourses()
     }
 
     const courseIds = await getStudentCourseIds(studentId)
     return getAvailableCoursesByCourseIds(courseIds)
+
 }
 
 const toggleCourseEnrollment = async (studentId, courseId) => {
+
     const enrolled = await isStudentInCourse(studentId, courseId)
 
     if(enrolled) {
@@ -220,9 +233,11 @@ const toggleCourseEnrollment = async (studentId, courseId) => {
 
     await joinCourse(studentId, courseId)
     return { enrolled: true, courseId: String(courseId) }
+
 }
 
 const useStudentCourses = (studentId) => {
+
     const [enrollments, setEnrollments] = useState([])
     const [loading, setLoading] = useState(false)
 
@@ -235,7 +250,6 @@ const useStudentCourses = (studentId) => {
 
         setLoading(true)
 
-        const db = getFirestore()
         const coursesRef = collection(db, 'courses')
         const q = query(coursesRef, where('studentId', '==', String(studentId)))
 
@@ -265,9 +279,11 @@ const useStudentCourses = (studentId) => {
     }, [courseIds])
 
     return { enrollments, courseIds, courses, loading }
+
 }
 
 const useCourseLibrary = (studentId) => {
+
     const { enrollments, courseIds, courses, loading } = useStudentCourses(studentId)
 
     const availableCourses = useMemo(() => {
@@ -281,6 +297,7 @@ const useCourseLibrary = (studentId) => {
         availableCourses,
         loading
     }
+
 }
 
 export {

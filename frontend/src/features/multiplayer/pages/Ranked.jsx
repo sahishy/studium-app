@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
 import Button from '../../../shared/components/ui/Button'
@@ -14,9 +14,7 @@ import { HiChevronDoubleUp } from 'react-icons/hi'
 import {
     buildRankedUiState,
     DEFAULT_MODE_ID,
-    formatQueueTimeLabel,
     getQueueState,
-    getQueueTimeSeconds,
     MATCH_JOIN_DELAY_SECONDS,
 } from '../utils/multiplayerUtils'
 
@@ -26,8 +24,7 @@ const Ranked = () => {
     const navigate = useNavigate()
     const { userStats } = useUserStats()
     const { matchmaking, session, joinQueue, leaveQueue, findMatch } = useMultiplayer()
-    const { showToast, updateToast, hideToast } = useToast()
-    const [nowMs, setNowMs] = useState(Date.now())
+    const { toastStack, showToast, updateToast, hideToast } = useToast()
     const [matchCountdownSeconds, setMatchCountdownSeconds] = useState(MATCH_JOIN_DELAY_SECONDS)
     const matchmakingToastIdRef = useRef(null)
     const autoJoinRoomIdRef = useRef(null)
@@ -46,17 +43,28 @@ const Ranked = () => {
 
     const queueState = getQueueState(session)
 
-    const isQueueing = queueState === 'queueing'
+    useEffect(() => {
+        if(queueState === 'idle') {
+            return
+        }
 
-    const queueTimeSeconds = useMemo(() => {
-        return getQueueTimeSeconds({
-            matchmaking,
-            isQueueing,
-            nowMs,
+        const existingMatchmakingToasts = toastStack.filter((toastEntry) => toastEntry.component === MatchmakingToast)
+
+        if(existingMatchmakingToasts.length === 0) {
+            return
+        }
+
+        const currentToastStillExists = existingMatchmakingToasts.some((toastEntry) => toastEntry.id === matchmakingToastIdRef.current)
+        if(!currentToastStillExists) {
+            matchmakingToastIdRef.current = existingMatchmakingToasts[0].id
+        }
+
+        existingMatchmakingToasts.forEach((toastEntry) => {
+            if(toastEntry.id !== matchmakingToastIdRef.current) {
+                hideToast(toastEntry.id, { force: true })
+            }
         })
-    }, [matchmaking?.queuedAt, isQueueing, nowMs])
-
-    const queueTimeLabel = useMemo(() => formatQueueTimeLabel(queueTimeSeconds), [queueTimeSeconds])
+    }, [queueState, toastStack, hideToast])
 
     const handleLeaveQueue = async () => {
         await leaveQueue()
@@ -68,9 +76,23 @@ const Ranked = () => {
     }
 
     const showOrUpdateMatchmakingToast = (state) => {
+        if(!matchmakingToastIdRef.current) {
+            const existingMatchmakingToasts = toastStack.filter((toastEntry) => toastEntry.component === MatchmakingToast)
+            if(existingMatchmakingToasts.length > 0) {
+                matchmakingToastIdRef.current = existingMatchmakingToasts[0].id
+            }
+        }
+
+        if(matchmakingToastIdRef.current) {
+            const toastExists = toastStack.some((toastEntry) => toastEntry.id === matchmakingToastIdRef.current)
+            if(!toastExists) {
+                matchmakingToastIdRef.current = null
+            }
+        }
+
         const toastProps = {
             state,
-            queueTimeLabel,
+            queuedAt: matchmaking?.queuedAt,
             matchCountdownSeconds,
             onLeaveQueue: handleLeaveQueue,
         }
@@ -102,26 +124,13 @@ const Ranked = () => {
             modeId: DEFAULT_MODE_ID,
             elo: rankedStats.elo,
             displayName: profile?.profile?.displayName || 'A player',
+            profilePicture: profile?.profile?.profilePicture ?? null,
         })
-
-        showOrUpdateMatchmakingToast('queueing')
 
         await findMatch({
             modeId: DEFAULT_MODE_ID,
         })
     }
-
-    useEffect(() => {
-        if(!isQueueing) {
-            return
-        }
-
-        const intervalId = setInterval(() => {
-            setNowMs(Date.now())
-        }, 1000)
-
-        return () => clearInterval(intervalId)
-    }, [isQueueing])
 
     useEffect(() => {
         if(queueState !== 'matched' || !session?.currentRoomId) {
@@ -167,7 +176,7 @@ const Ranked = () => {
         }
 
         showOrUpdateMatchmakingToast(queueState === 'matched' ? 'matched' : 'queueing')
-    }, [queueState, queueTimeLabel, matchCountdownSeconds])
+    }, [queueState, matchCountdownSeconds, matchmaking?.queuedAt])
 
     return (
         <div className='flex flex-col h-full overflow-hidden'>
@@ -189,7 +198,7 @@ const Ranked = () => {
                     <Card className='max-w-xl p-8! gap-3'>
                         <div className='flex flex-col items-center gap-3'>
 
-                            <div className="w-16 h-16 overflow-hidden flex items-center justify-center">
+                            <div className="w-32 h-32 overflow-hidden flex items-center justify-center">
                                 <img
                                     src={rankInfo.imageSrc}
                                     alt={`${rankLabel} icon`}

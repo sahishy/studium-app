@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { getFirestore, writeBatch, doc, collection, getDocs } from 'firebase/firestore';
+import { writeBatch, doc, collection, getDocs } from 'firebase/firestore';
 import { useCircleTasks }    from '../../../agenda/services/taskService';
 import { useNavigate } from "react-router-dom";
 import Button from "../../../../shared/components/ui/Button";
+import { db } from "../../../../lib/firebase";
 
 const DeleteCircleModal = ( { circle, closeModal } ) => {
 
@@ -20,7 +21,6 @@ const DeleteCircleModal = ( { circle, closeModal } ) => {
 
         setIsDeleting(true);
     
-        const db = getFirestore();
         const batch = writeBatch(db);
         tasks.forEach(task => {
             const ref = doc(db, 'tasks', task.uid);

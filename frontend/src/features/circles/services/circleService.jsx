@@ -1,8 +1,9 @@
-import { getFirestore, collection, query, where, onSnapshot, addDoc, getDocs, doc, updateDoc, getDoc, getCountFromServer, writeBatch, increment } from 'firebase/firestore'
+import { collection, query, where, onSnapshot, addDoc, getDocs, doc, updateDoc, getDoc, getCountFromServer, writeBatch, increment } from 'firebase/firestore'
 import { useEffect, useState } from 'react';
+import { db } from '../../../lib/firebase';
 
 const createCircle = async (uid, circleData) => {
-    const db = getFirestore();
+
     const circlesRef = collection(db, 'circles')
 
     const generateCircleCode = async () => {
@@ -50,10 +51,11 @@ const createCircle = async (uid, circleData) => {
     await batch.commit()
 
     return circleRef
+
 }
 
 const joinCircle = async (uid, circleId) => {
-    const db = getFirestore()
+    
     const circleRef = doc(db, 'circles', circleId)
     const now = new Date()
     const batch = writeBatch(db)
@@ -70,10 +72,11 @@ const joinCircle = async (uid, circleId) => {
     }, { merge: true })
 
     await batch.commit()
+
 }
 
 const leaveCircle = async (uid, circleId) => {
-    const db = getFirestore()
+
     const circleRef = doc(db, 'circles', circleId)
     const now = new Date()
     const batch = writeBatch(db)
@@ -87,17 +90,16 @@ const leaveCircle = async (uid, circleId) => {
     batch.delete(memberRef)
 
     await batch.commit()
+
 }
 
 const updateCircle = async (circleId, circleData) => {
-    const db = getFirestore()
     const circleRef = doc(db, 'circles', circleId)
-
     await updateDoc(circleRef, circleData)
 }
 
 const canJoinCircle = async (uid, inviteCode) => {
-    const db = getFirestore()
+
     const circlesRef = collection(db, 'circles');
 
     const q = query(circlesRef, where('inviteCode', '==', inviteCode))
@@ -113,32 +115,35 @@ const canJoinCircle = async (uid, inviteCode) => {
     const userAlreadyInCircle = memberSnap.exists()
 
     return { circleId: circle.id, canJoin: !userAlreadyInCircle }
+
 }
 
 const getCircle = async (circleId) => {
-    const db = getFirestore()
+
     const circleRef = doc(db, 'circles', circleId)
     const circleSnap = await getDoc(circleRef);
+
     return circleSnap.exists() ? { uid: circleSnap.id, ...circleSnap.data() } : null
+
 }
 
 const getTotalCircles = async () => {
-    const db = getFirestore();
-    const circles = collection(db, 'circles');
 
+    const circles = collection(db, 'circles');
     const totalCirclesSnapshot = await getCountFromServer(circles);
 
     return totalCirclesSnapshot.data().count
+
 }
 
 const useCircle = (circleId) => {
+
     const [circle, setCircle] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if(!circleId) return;
 
-        const db = getFirestore();
         const ref = doc(db, 'circles', circleId);
         const unsubscribe = onSnapshot(ref, (snap) => {
             if(snap.exists()) {
@@ -152,6 +157,7 @@ const useCircle = (circleId) => {
     }, [circleId]);
 
     return { circle, loading };
+
 }
 
 const useUserCircles = (userId) => {
@@ -165,7 +171,6 @@ const useUserCircles = (userId) => {
             return;
         }
 
-        const db = getFirestore();
         const circlesRef = collection(db, 'circles');
 
         const unsubscribe = onSnapshot(circlesRef, async (snapshot) => {
@@ -193,6 +198,7 @@ const useUserCircles = (userId) => {
     }, [userId]);
 
     return { circles, loading };
+
 }
 
 const useCircleMembers = (circleId) => {
@@ -207,7 +213,6 @@ const useCircleMembers = (circleId) => {
             return;
         }
 
-        const db = getFirestore();
         const membersRef = collection(db, 'circles', circleId, 'members');
 
         const unsubscribe = onSnapshot(membersRef, (snapshot) => {
@@ -224,9 +229,11 @@ const useCircleMembers = (circleId) => {
     }, [circleId]);
 
     return { members, loading };
+
 }
 
 const useCircleMemberIds = (circleIds = []) => {
+
     const [memberIds, setMemberIds] = useState([]);
 
     useEffect(() => {
@@ -235,7 +242,6 @@ const useCircleMemberIds = (circleIds = []) => {
             return;
         }
 
-        const db = getFirestore();
         const unsubscribes = [];
         const batches = [];
 
@@ -256,6 +262,7 @@ const useCircleMemberIds = (circleIds = []) => {
     }, [circleIds.join(',')]);
 
     return memberIds;
+
 }
 
 export { createCircle, joinCircle, leaveCircle, updateCircle, canJoinCircle, getCircle, getTotalCircles, useCircle, useUserCircles, useCircleMembers, useCircleMemberIds }

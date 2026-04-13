@@ -1,7 +1,6 @@
 import {
     collection,
     getDocs,
-    getFirestore,
     limit,
     orderBy,
     query,
@@ -12,12 +11,14 @@ import {
     documentId,
     startAfter,
 } from 'firebase/firestore'
+import { db } from '../../../lib/firebase'
 
 const normalizeTeacherName = (value = '') => {
     return String(value ?? '').trim().replace(/\s+/g, ' ')
 }
 
 const buildTeacherQueryBase = ({ schoolId, normalizedQuery = '' }) => {
+    
     const qBase = [
         where('schoolId', '==', String(schoolId)),
         orderBy('nameLowercase', 'asc'),
@@ -33,14 +34,11 @@ const buildTeacherQueryBase = ({ schoolId, normalizedQuery = '' }) => {
     }
 
     return qBase
+
 }
 
-const searchTeachersByName = async ({
-    queryText = '',
-    schoolId = null,
-    limitCount = 12,
-    cursor = null,
-}) => {
+const searchTeachersByName = async ({ queryText = '', schoolId = null, limitCount = 12, cursor = null }) => {
+
     if(!schoolId) {
         return {
             teachers: [],
@@ -51,7 +49,6 @@ const searchTeachersByName = async ({
 
     const normalizedQuery = normalizeTeacherName(queryText).toLowerCase()
 
-    const db = getFirestore()
     const teachersRef = collection(db, 'schoolTeachers')
     const qBase = buildTeacherQueryBase({ schoolId, normalizedQuery })
 
@@ -84,14 +81,11 @@ const searchTeachersByName = async ({
         nextCursor,
         hasMore,
     }
+
 }
 
-const searchTeachersBySchoolIds = async ({
-    queryText = '',
-    schoolIds = [],
-    limitCount = 12,
-    cursor = null,
-}) => {
+const searchTeachersBySchoolIds = async ({ queryText = '', schoolIds = [], limitCount = 12, cursor = null }) => {
+
     const normalizedSchoolIds = Array.from(new Set((schoolIds ?? []).map((id) => String(id)).filter(Boolean)))
     if(normalizedSchoolIds.length === 0) {
         return {
@@ -102,7 +96,6 @@ const searchTeachersBySchoolIds = async ({
     }
 
     const normalizedQuery = normalizeTeacherName(queryText).toLowerCase()
-    const db = getFirestore()
     const teachersRef = collection(db, 'schoolTeachers')
 
     const cursorBySchoolId = cursor?.bySchoolId ?? {}
@@ -172,6 +165,7 @@ const searchTeachersBySchoolIds = async ({
         nextCursor: hasMore ? { bySchoolId: nextCursorBySchoolId } : null,
         hasMore,
     }
+
 }
 
 const createTeacher = async ({ name, schoolId, createdBy }) => {
@@ -181,7 +175,6 @@ const createTeacher = async ({ name, schoolId, createdBy }) => {
         throw new Error('Teacher name is required.')
     }
 
-    const db = getFirestore()
     const teacherRef = doc(collection(db, 'schoolTeachers'))
 
     await setDoc(teacherRef, {
@@ -193,15 +186,16 @@ const createTeacher = async ({ name, schoolId, createdBy }) => {
     })
 
     return teacherRef.id
+
 }
 
 const getTeachersByIdsMap = async (teacherIds = []) => {
+
     const normalized = Array.from(new Set((teacherIds ?? []).map((id) => String(id)).filter(Boolean)))
     if(normalized.length === 0) {
         return {}
     }
 
-    const db = getFirestore()
     const teachersRef = collection(db, 'schoolTeachers')
     const results = {}
 
@@ -215,6 +209,7 @@ const getTeachersByIdsMap = async (teacherIds = []) => {
     }
 
     return results
+
 }
 
 export {

@@ -27,7 +27,19 @@ const toDateFromFirestoreLike = (value) => {
         return value.toDate()
     }
 
+    if(typeof value === 'number' || typeof value === 'string') {
+        const dateValue = new Date(value)
+        return Number.isNaN(dateValue.getTime()) ? null : dateValue
+    }
+
     return null
+}
+
+const formatDurationMmSs = (totalSeconds = 0) => {
+    const safeSeconds = Math.max(0, Math.floor(Number(totalSeconds) || 0))
+    const minutes = Math.floor(safeSeconds / 60)
+    const seconds = safeSeconds % 60
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
 const toMillisFromFirestoreLike = (value) => {
@@ -88,6 +100,7 @@ export {
     toDateKeyFromSeconds,
     formatDateFromSeconds,
     formatRelativeTaskDate,
+    formatDurationMmSs,
     formatTimeFromFirestoreLike,
     toDateFromFirestoreLike,
     toMillisFromFirestoreLike,

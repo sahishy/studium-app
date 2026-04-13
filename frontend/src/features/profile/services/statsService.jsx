@@ -1,4 +1,5 @@
-import { doc, getDoc, getFirestore, onSnapshot, setDoc } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot, runTransaction, setDoc } from 'firebase/firestore'
+import { db } from '../../../lib/firebase'
 
 const createUserStatsDocument = async ({ userId }) => {
 
@@ -6,7 +7,6 @@ const createUserStatsDocument = async ({ userId }) => {
         throw new Error('A valid userId is required to create user stats.')
     }
 
-    const db = getFirestore()
     const userStatsRef = doc(db, 'userStats', userId)
 
     await setDoc(userStatsRef, {
@@ -42,7 +42,6 @@ const getUserStatsByUserId = async (userId) => {
         return null
     }
 
-    const db = getFirestore()
     const userStatsRef = doc(db, 'userStats', userId)
     const userStatsSnap = await getDoc(userStatsRef)
 
@@ -65,7 +64,6 @@ const subscribeToUserStatsByUserId = (userId, setUserStats, setLoading = () => {
         return () => {}
     }
 
-    const db = getFirestore()
     const userStatsRef = doc(db, 'userStats', userId)
 
     const unsubscribe = onSnapshot(userStatsRef, (docSnap) => {
@@ -95,7 +93,6 @@ const updateUserStatsByUserId = async (userId, userStatsData) => {
         throw new Error('A valid userId is required to update user stats.')
     }
 
-    const db = getFirestore()
     const userStatsRef = doc(db, 'userStats', userId)
 
     await setDoc(userStatsRef, {
@@ -106,9 +103,53 @@ const updateUserStatsByUserId = async (userId, userStatsData) => {
     
 }
 
+const applyRankedMatchResult = async ({ userId, modeId, eloDelta = 0, transaction = null }) => {
+
+    if(!userId || !modeId) {
+        throw new Error('userId and modeId are required to apply ranked match result.')
+    }
+
+    const resolvedEloDelta = Number(eloDelta) || 0
+    if(!resolvedEloDelta) {
+        return
+    }
+
+    const userStatsRef = doc(db, 'userStats', userId)
+
+    const applyUpdate = async (activeTransaction) => {
+        const userStatsSnap = await activeTransaction.get(userStatsRef)
+        const userStatsData = userStatsSnap.exists() ? (userStatsSnap.data() ?? {}) : {}
+        const modeStats = userStatsData?.ranked?.[modeId] ?? {}
+
+        const currentElo = Number(modeStats?.elo) || 0
+        const currentPeakElo = Number(modeStats?.peakElo) || currentElo
+
+        const nextElo = Math.max(0, currentElo + resolvedEloDelta)
+        const nextPeakElo = Math.max(currentPeakElo, nextElo)
+
+        activeTransaction.set(userStatsRef, {
+            userId,
+            [`ranked.${modeId}.elo`]: nextElo,
+            [`ranked.${modeId}.peakElo`]: nextPeakElo,
+            lastUpdated: new Date(),
+        }, { merge: true })
+    }
+
+    if(transaction) {
+        await applyUpdate(transaction)
+        return
+    }
+
+    await runTransaction(db, async (transactionRef) => {
+        await applyUpdate(transactionRef)
+    })
+
+}
+
 export {
     createUserStatsDocument,
     getUserStatsByUserId,
     subscribeToUserStatsByUserId,
     updateUserStatsByUserId,
+    applyRankedMatchResult,
 }

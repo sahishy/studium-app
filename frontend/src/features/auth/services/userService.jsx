@@ -1,7 +1,8 @@
-import { doc, updateDoc, collection, getAggregateFromServer, getCountFromServer, getFirestore, onSnapshot, query, sum, where, increment, documentId, getDocs } from 'firebase/firestore'
+import { doc, updateDoc, collection, getAggregateFromServer, getCountFromServer, onSnapshot, query, sum, where, increment, documentId, getDocs } from 'firebase/firestore'
 import { useEffect, useState } from 'react';
 import { getRandomAvatarColor } from '../../profile/utils/avatarUtils';
 import { generateRandomDisplayName, isDisplayNameFormatValid } from '../utils/userUtils';
+import { db } from '../../../lib/firebase';
 
 const isDisplayNameAvailable = async (displayName, excludeUid = null) => {
     
@@ -9,7 +10,6 @@ const isDisplayNameAvailable = async (displayName, excludeUid = null) => {
         return false;
     }
 
-    const db = getFirestore();
     const usersRef = collection(db, 'users');
     const q = query(usersRef, where('profile.displayName', '==', displayName));
     const querySnapshot = await getDocs(q);
@@ -73,7 +73,6 @@ const createNewUserObject = async ({ firstName, lastName, email }) => {
 
 const updateUserInfo = async (uid, userData) => {
 
-    const db = getFirestore();
     const userRef = doc(db, 'users', uid)
 
     await updateDoc(userRef, userData)
@@ -82,7 +81,6 @@ const updateUserInfo = async (uid, userData) => {
 
 const getActiveUserCount = (setActiveUserCount) => {
 
-    const db = getFirestore();
     const users = collection(db, 'users')
 
     const activeUsersQuery = query(users, where('status', '==', 'active'))
@@ -97,7 +95,6 @@ const getActiveUserCount = (setActiveUserCount) => {
 
 const getTotalUsers = async () => {
 
-    const db = getFirestore();
     const users = collection(db, 'users');
 
     const totalUsersSnapshot = await getCountFromServer(users);
@@ -108,7 +105,6 @@ const getTotalUsers = async () => {
 
 const getTotalTasksCompleted = async () => {
 
-    const db = getFirestore();
     const users = collection(db, 'users');
 
     const totalTasksCompletedSnapshot = await getAggregateFromServer(users, {
@@ -121,7 +117,6 @@ const getTotalTasksCompleted = async () => {
 
 const userCompleteTask = async (profile) => {
 
-    const db = getFirestore();
     const userRef = doc(db, 'users', profile.uid)
     const currentTasksCompleted = profile?.progress?.tasksCompleted ?? profile?.tasksCompleted ?? 0
 
@@ -133,7 +128,6 @@ const userCompleteTask = async (profile) => {
 
 const updateStatus = async (profile, status) => {
 
-    const db = getFirestore();
     const userRef = doc(db, 'users', profile.uid);
 
     await updateDoc(userRef, {
@@ -145,7 +139,6 @@ const updateStatus = async (profile, status) => {
 
 const updateStreak = async (profile, reset = false) => {
 
-    const db = getFirestore();
     const docRef = doc(db, 'users', profile.uid);
 
     if(reset) {
@@ -158,7 +151,6 @@ const updateStreak = async (profile, reset = false) => {
 
 const getUsersByIds = (userIds, setUsers) => {
 
-    const db = getFirestore();
     const usersRef = collection(db, "users");
 
     const batches = [];
@@ -205,7 +197,6 @@ const useMembersList = (memberIds = []) => {
             return;
         }
 
-        const db = getFirestore();
         const unsubscribes = [];
         const batches = [];
 

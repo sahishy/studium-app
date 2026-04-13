@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
-import Card from '../../../shared/components/ui/Card'
 import { useMultiplayer } from '../contexts/MultiplayerContext'
 import { useToast } from '../../../shared/contexts/ToastContext'
 import MatchmakingToast from '../components/toasts/MatchmakingToast'
 import ChatBox from '../components/ChatBox'
 import { subscribeToRoomById } from '../services/multiplayerService'
+import GameHandler from '../games/GameHandler'
 
 const MatchRoom = () => {
+    
     const { roomId } = useParams()
     const { profile } = useOutletContext()
     const { session } = useMultiplayer()
@@ -71,16 +72,13 @@ const MatchRoom = () => {
             <Topbar profile={profile} />
 
             <div className='w-full flex-1 min-h-0 px-24 pb-24 pt-2 flex items-center justify-center'>
-                <Card className='w-full max-w-xl p-8! gap-4'>
-                    <h1 className='text-2xl font-semibold'>Match Room</h1>
-                    <p className='text-sm text-text2'>
-                        {hasRoomId ? `Room ID: ${roomId}` : 'Missing room id.'}
-                    </p>
-                    {room?.status ? (
-                        <p className='text-sm text-text2'>Room status: {room.status}</p>
-                    ) : null}
-
-                </Card>
+                <div className='w-full max-w-5xl h-full min-h-[420px] max-h-[72vh]'>
+                    <GameHandler
+                        modeId={room?.modeId || session?.modeId}
+                        roomId={roomId}
+                        userId={profile?.uid}
+                    />
+                </div>
             </div>
 
             <ChatBox

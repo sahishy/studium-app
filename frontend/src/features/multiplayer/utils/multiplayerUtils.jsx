@@ -1,6 +1,6 @@
 import { RANK_TIERS, getRankInfoFromElo, getRankedModeStats } from '../../profile/utils/statsUtils'
 
-const DEFAULT_MODE_ID = 'sat_1v1'
+const DEFAULT_MODE_ID = 'sat-classic'
 const MATCH_JOIN_DELAY_SECONDS = 3
 
 const getQueueState = (session) => (
@@ -28,6 +28,7 @@ const formatQueueTimeLabel = (queueTimeSeconds = 0) => {
 }
 
 const buildRankedUiState = ({ userStats, modeId = DEFAULT_MODE_ID }) => {
+
     const rankedStats = getRankedModeStats(userStats, modeId)
     const rankInfo = getRankInfoFromElo(rankedStats.elo)
 
@@ -45,10 +46,11 @@ const buildRankedUiState = ({ userStats, modeId = DEFAULT_MODE_ID }) => {
     const currentTierProgress = Math.max(0, rankedStats.elo - currentTierMinElo)
     const eloToNextTier = Math.max(0, nextTierMinElo - rankedStats.elo)
 
-    const rankLabel = rankInfo.tier ? `${rankInfo.tierName} ${rankInfo.tier}` : rankInfo.tierName
+    const isFinalRank = rankInfo.tierName === 'Grandmaster';
+    const rankLabel = isFinalRank ? rankInfo.tierName : `${rankInfo.tierName} ${rankInfo.tier}`;
     const nextTierLabel = nextTierThreshold
         ? `${nextTierThreshold.tierName} ${nextTierThreshold.tier}`
-        : 'Max tier reached'
+        : 'Global Ranking: #?'
 
     return {
         rankedStats,
@@ -61,6 +63,7 @@ const buildRankedUiState = ({ userStats, modeId = DEFAULT_MODE_ID }) => {
         nextTierLabel,
         nextTierThreshold,
     }
+
 }
 
 export {

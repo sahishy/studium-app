@@ -3,7 +3,6 @@ import {
     doc,
     getDoc,
     getDocs,
-    getFirestore,
     onSnapshot,
     orderBy,
     query,
@@ -20,20 +19,14 @@ import {
 } from '../utils/reviewUtils'
 import { createCacheKey, deleteCacheEntry } from '../../../shared/services/cacheService'
 import { CACHE_NAMESPACES } from '../../../shared/utils/cacheUtils'
+import { db } from '../../../lib/firebase'
 
 const COURSE_SCORE_CACHE_NAMESPACE = CACHE_NAMESPACES.COURSE_SCORE
 
 const buildReviewId = (courseId, userId) => `${String(courseId)}_${String(userId)}`
 
-const upsertCourseReview = async ({
-    courseId,
-    userId,
-    schoolId = null,
-    teacherId = null,
-    review = '',
-    score = 0.5,
-}) => {
-    const db = getFirestore()
+const upsertCourseReview = async ({ courseId, userId, schoolId = null, teacherId = null, review = '', score = 0.5 }) => {
+
     const reviewId = buildReviewId(courseId, userId)
     const reviewRef = doc(db, 'courseReviews', reviewId)
     const existing = await getDoc(reviewRef)
@@ -63,10 +56,11 @@ const upsertCourseReview = async ({
     deleteCacheEntry(createCacheKey(COURSE_SCORE_CACHE_NAMESPACE, courseId))
 
     return reviewId
+
 }
 
 const getCourseReviews = async (courseId) => {
-    const db = getFirestore()
+
     const reviewsRef = collection(db, 'courseReviews')
     const q = query(
         reviewsRef,
@@ -76,9 +70,11 @@ const getCourseReviews = async (courseId) => {
 
     const snapshot = await getDocs(q)
     return snapshot.docs.map((reviewDoc) => ({ uid: reviewDoc.id, ...reviewDoc.data() }))
+
 }
 
 const useCourseReviews = (courseId) => {
+
     const [reviews, setReviews] = useState([])
 
     useEffect(() => {
@@ -87,7 +83,6 @@ const useCourseReviews = (courseId) => {
             return
         }
 
-        const db = getFirestore()
         const reviewsRef = collection(db, 'courseReviews')
         const q = query(
             reviewsRef,
@@ -103,15 +98,16 @@ const useCourseReviews = (courseId) => {
     }, [courseId])
 
     return reviews
+
 }
 
 const getCourseReviewsForCourseIds = async (courseIds = []) => {
+
     const normalized = Array.from(new Set((courseIds ?? []).map((id) => String(id)).filter(Boolean)))
     if(normalized.length === 0) {
         return []
     }
 
-    const db = getFirestore()
     const reviewsRef = collection(db, 'courseReviews')
     const results = []
 
@@ -125,6 +121,7 @@ const getCourseReviewsForCourseIds = async (courseIds = []) => {
     }
 
     return results
+
 }
 
 const getAverageScoreByCourseIds = async (courseIds = []) => {
@@ -133,12 +130,12 @@ const getAverageScoreByCourseIds = async (courseIds = []) => {
 }
 
 const getUsersByIdsMap = async (userIds = []) => {
+
     const normalized = Array.from(new Set((userIds ?? []).map((id) => String(id)).filter(Boolean)))
     if(normalized.length === 0) {
         return {}
     }
 
-    const db = getFirestore()
     const usersRef = collection(db, 'users')
     const results = {}
 
@@ -152,6 +149,7 @@ const getUsersByIdsMap = async (userIds = []) => {
     }
 
     return results
+
 }
 
 export {

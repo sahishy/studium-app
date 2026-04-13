@@ -7,7 +7,7 @@ const ProgressBar = ({
     trackClassName = '',
     secondaryClassName = '',
     fillClassName = '',
-    shineClassName = '',
+    fillStyle,
 }) => {
 
     const safeMax = Number(max) > 0 ? Number(max) : 1
@@ -23,16 +23,16 @@ const ProgressBar = ({
         <div className={`relative w-full h-4 rounded-full overflow-hidden bg-background3 ${trackClassName} ${className}`}>
             {hasSecondary ? (
                 <div
-                    className={`absolute left-0 top-0 h-full rounded-full bg-sky-300/35 ${secondaryClassName}`}
+                    className={`absolute left-0 top-0 h-full rounded-full bg-sky-300/35 ${secondaryClassName}!`}
                     style={{ width: `${secondaryWidth}%` }}
                 />
             ) : null}
 
             <div
-                className={`relative h-full rounded-full transition-all duration-1000 bg-sky-400 ${fillClassName}`}
-                style={{ width: `${width}%` }}
+                className={`relative h-full rounded-full transition-all duration-1000 bg-sky-400 ${fillClassName}!`}
+                style={{ width: `${width}%`, ...fillStyle }}
             >
-                <div className={`h-[30%] translate-y-[3px] mx-[3px] rounded-full bg-sky-300 ${shineClassName}`} />
+                <div className={`h-[30%] translate-y-[3px] mx-[3px] rounded-full bg-white/30`} />
             </div>
         </div>
     )

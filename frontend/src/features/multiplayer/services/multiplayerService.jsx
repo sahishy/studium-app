@@ -4,7 +4,6 @@ import {
     doc,
     getDoc,
     getDocs,
-    getFirestore,
     limit,
     onSnapshot,
     orderBy,
@@ -14,23 +13,24 @@ import {
     writeBatch,
     where,
 } from 'firebase/firestore'
+import { db } from '../../../lib/firebase'
 
 const MATCHMAKING_COLLECTION = 'multiplayerMatchmaking'
 const ROOMS_COLLECTION = 'multiplayerRooms'
 const SESSIONS_COLLECTION = 'multiplayerSessions'
 
-const joinRoom = async ({ roomId, userId, joinedAt = new Date(), joinerName = 'A player', transaction = null, db: providedDb = null }) => {
+const joinRoom = async ({ roomId, userId, joinedAt = new Date(), joinerName, profilePicture = null, transaction = null }) => {
 
     if(!roomId || !userId) {
         throw new Error('roomId and userId are required to join a room.')
     }
 
-    const db = providedDb ?? getFirestore()
-
     const applyJoin = async (activeTransaction) => {
         const roomPlayerRef = doc(db, ROOMS_COLLECTION, roomId, 'players', userId)
         activeTransaction.set(roomPlayerRef, {
             userId,
+            displayName: joinerName,
+            profilePicture,
             state: {},
         })
 
@@ -38,7 +38,7 @@ const joinRoom = async ({ roomId, userId, joinedAt = new Date(), joinerName = 'A
 
         activeTransaction.set(roomChatMessageRef, {
             messageType: 'server',
-            text: `${joinerName?.trim() || 'A player'} has joined the game.`,
+            text: `${joinerName} has joined the game.`,
             createdAt: joinedAt,
         })
     }
@@ -54,13 +54,12 @@ const joinRoom = async ({ roomId, userId, joinedAt = new Date(), joinerName = 'A
 
 }
 
-const joinQueue = async ({ userId, modeId, elo = 0, displayName = 'A player' }) => {
+const joinQueue = async ({ userId, modeId, elo = 0, displayName = 'A player', profilePicture = null }) => {
 
     if(!userId || !modeId) {
         throw new Error('userId and modeId are required to join queue.')
     }
 
-    const db = getFirestore()
     const now = new Date()
     const matchmakingRef = doc(db, MATCHMAKING_COLLECTION, userId)
     const sessionRef = doc(db, SESSIONS_COLLECTION, userId)
@@ -69,6 +68,7 @@ const joinQueue = async ({ userId, modeId, elo = 0, displayName = 'A player' }) 
     batch.set(matchmakingRef, {
         userId,
         displayName: displayName?.trim() || 'A player',
+        profilePicture,
         modeId,
         elo: Number(elo) || 0,
         queuedAt: now,
@@ -92,7 +92,6 @@ const cancelQueue = async ({ userId }) => {
         throw new Error('userId is required to cancel queue.')
     }
 
-    const db = getFirestore()
     const matchmakingRef = doc(db, MATCHMAKING_COLLECTION, userId)
     const sessionRef = doc(db, SESSIONS_COLLECTION, userId)
 
@@ -116,7 +115,6 @@ const leaveRoom = async ({ roomId, userId, leaverName = null }) => {
         throw new Error('roomId and userId are required to leave a room.')
     }
 
-    const db = getFirestore()
     const roomRef = doc(db, ROOMS_COLLECTION, roomId)
     const roomPlayerRef = doc(db, ROOMS_COLLECTION, roomId, 'players', userId)
     const matchmakingRef = doc(db, MATCHMAKING_COLLECTION, userId)
@@ -197,7 +195,6 @@ const deleteRoom = async ({ roomId, playerIds = [] }) => {
         throw new Error('roomId is required to delete a room.')
     }
 
-    const db = getFirestore()
     const subcollections = ['players', 'events', 'chat']
 
     for(const subcollectionName of subcollections) {
@@ -254,7 +251,6 @@ const subscribeToMatchmakingByUserId = ( userId, onChange, setLoading = () => {}
         return () => {}
     }
 
-    const db = getFirestore()
     const matchmakingRef = doc(db, MATCHMAKING_COLLECTION, userId)
 
     return onSnapshot(matchmakingRef, (docSnap) => {
@@ -278,7 +274,6 @@ const subscribeToSessionByUserId = ( userId, onChange, setLoading = () => {}, se
         return () => {}
     }
 
-    const db = getFirestore()
     const sessionRef = doc(db, SESSIONS_COLLECTION, userId)
 
     return onSnapshot(sessionRef, (docSnap) => {
@@ -302,7 +297,6 @@ const subscribeToRoomById = ( roomId, onChange, setLoading = () => {}, setError 
         return () => {}
     }
 
-    const db = getFirestore()
     const roomRef = doc(db, ROOMS_COLLECTION, roomId)
 
     return onSnapshot(roomRef, (docSnap) => {
@@ -326,7 +320,6 @@ const subscribeToRoomChat = ( roomId, onChange, setLoading = () => {}, setError 
         return () => {}
     }
 
-    const db = getFirestore()
     const chatRef = collection(db, ROOMS_COLLECTION, roomId, 'chat')
     const chatQuery = query(chatRef, orderBy('createdAt', 'asc'))
 
@@ -349,7 +342,6 @@ const subscribeToRoomPlayers = ( roomId, onChange, setLoading = () => {}, setErr
         return () => {}
     }
 
-    const db = getFirestore()
     const playersRef = collection(db, ROOMS_COLLECTION, roomId, 'players')
 
     return onSnapshot(playersRef, (snapshot) => {
@@ -363,6 +355,66 @@ const subscribeToRoomPlayers = ( roomId, onChange, setLoading = () => {}, setErr
 
 }
 
+const subscribeToRoomEvents = ( roomId, onChange, setLoading = () => {}, setError = () => {} ) => {
+
+    if(!roomId) {
+        onChange?.([])
+        setLoading(false)
+        return () => {}
+    }
+
+    const eventsRef = collection(db, ROOMS_COLLECTION, roomId, 'events')
+    const eventsQuery = query(eventsRef, orderBy('sequence', 'asc'))
+
+    return onSnapshot(eventsQuery, (snapshot) => {
+        onChange?.(snapshot.docs.map((docSnap) => ({ uid: docSnap.id, ...docSnap.data() })))
+        setError(null)
+        setLoading(false)
+    }, (error) => {
+        setError(error)
+        setLoading(false)
+    })
+
+}
+
+const appendRoomEvent = async ({
+    roomId,
+    type,
+    modeId = null,
+    actorUserId = null,
+    sequence,
+    data = {},
+    transaction = null,
+}) => {
+
+    if(!roomId || !type) {
+        throw new Error('roomId and type are required to append a room event.')
+    }
+
+    if(!Number.isFinite(sequence)) {
+        throw new Error('A numeric sequence is required to append a room event.')
+    }
+
+    const eventRef = doc(collection(db, ROOMS_COLLECTION, roomId, 'events'))
+    const eventPayload = {
+        type,
+        modeId,
+        actorUserId,
+        sequence,
+        data,
+        createdAt: new Date(),
+    }
+
+    if(transaction) {
+        transaction.set(eventRef, eventPayload)
+        return eventRef.id
+    }
+
+    await setDoc(eventRef, eventPayload)
+    return eventRef.id
+
+}
+
 const setRoomPlayerState = async ({ roomId, userId, state = {} }) => {
 
     if(!roomId || !userId) {
@@ -373,7 +425,6 @@ const setRoomPlayerState = async ({ roomId, userId, state = {} }) => {
         throw new Error('state must be an object when setting room player state.')
     }
 
-    const db = getFirestore()
     const roomPlayerRef = doc(db, ROOMS_COLLECTION, roomId, 'players', userId)
 
     await setDoc(roomPlayerRef, {
@@ -392,7 +443,6 @@ const sendRoomChatMessage = async ({ roomId, userId = null, text, senderName = n
         throw new Error('userId is required for user chat messages.')
     }
 
-    const db = getFirestore()
     const messageRef = doc(collection(db, ROOMS_COLLECTION, roomId, 'chat'))
 
     await setDoc(messageRef, {
@@ -412,7 +462,6 @@ const tryMatchmake = async ({ userId, modeId }) => {
         return { matched: false, roomId: null }
     }
 
-    const db = getFirestore()
     const matchmakingRef = collection(db, MATCHMAKING_COLLECTION)
     const candidateQuery = query(
         matchmakingRef,
@@ -457,8 +506,12 @@ const tryMatchmake = async ({ userId, modeId }) => {
         const now = new Date()
         const playerIds = [userId, candidateDoc.id]
         const playerDisplayNames = [
-            ownData?.displayName?.trim() || 'A player',
-            opponentData?.displayName?.trim() || 'A player',
+            ownData.displayName,
+            opponentData.displayName,
+        ]
+        const playerProfilePictures = [
+            ownData.profilePicture ?? null,
+            opponentData.profilePicture ?? null,
         ]
 
         transaction.set(roomRef, {
@@ -467,10 +520,6 @@ const tryMatchmake = async ({ userId, modeId }) => {
             createdAt: now,
             startedAt: now,
             playerIds,
-            turnIndex: 0,
-            currentActorId: null,
-            winnerId: null,
-            questionSetId: null,
             state: {},
         })
 
@@ -480,8 +529,8 @@ const tryMatchmake = async ({ userId, modeId }) => {
                 userId: playerId,
                 joinedAt: now,
                 joinerName: playerDisplayNames[index],
+                profilePicture: playerProfilePictures[index],
                 transaction,
-                db,
             })
         }
 
@@ -526,6 +575,8 @@ export {
     subscribeToRoomChat,
     subscribeToRoomById,
     subscribeToRoomPlayers,
+    subscribeToRoomEvents,
     subscribeToSessionByUserId,
     tryMatchmake,
+    appendRoomEvent,
 }

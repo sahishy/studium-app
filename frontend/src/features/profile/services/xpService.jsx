@@ -1,8 +1,9 @@
-import { doc, getFirestore, updateDoc } from 'firebase/firestore'
+import { doc, updateDoc } from 'firebase/firestore'
 import confetti from 'canvas-confetti';
+import { db } from '../../../lib/firebase';
 
 const updateUserXP = async (profile, value) => {
-    const db = getFirestore();
+
     const docRef = doc(db, 'users', profile.uid)
     const currentXP = profile?.progress?.xp ?? profile?.xp ?? 0
     const currentLevel = profile?.progress?.level ?? profile?.level ?? 1
@@ -14,12 +15,13 @@ const updateUserXP = async (profile, value) => {
     if(currentXP + value >= Math.pow(2, currentLevel) * 100) {
         await userLevelUp({ profile })
     }
+
 }
 
 const userLevelUp = async ({ profile }) => {
+
     levelUpAnimation(false);
 
-    const db = getFirestore();
     const docRef = doc(db, 'users', profile.uid)
     const currentLevel = profile?.progress?.level ?? profile?.level ?? 1
 
@@ -27,10 +29,11 @@ const userLevelUp = async ({ profile }) => {
         'progress.level': currentLevel + 1,
         'progress.xp': 0
     })
+
 }
 
 const updateCircleXP = async (circle, value) => {
-    const db = getFirestore();
+
     const docRef = doc(db, 'circles', circle.uid)
 
     await updateDoc(docRef, {
@@ -40,21 +43,24 @@ const updateCircleXP = async (circle, value) => {
     if(circle.xp + value >= Math.pow(2, circle.level) * 100) {
         await circleLevelUp({ circle })
     }
+
 }
 
 const circleLevelUp = async ({ circle }) => {
+
     levelUpAnimation(true);
 
-    const db = getFirestore();
     const docRef = doc(db, 'circles', circle.uid)
 
     await updateDoc(docRef, {
         level: circle.level + 1,
         xp: 0
     })
+
 }
 
 const levelUpAnimation = (isCircle) => {
+
     var duration = 3000;
     var animationEnd = Date.now() + duration;
     var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0, colors: (isCircle ? ['#38bdf8'] : ['#facc15']) };
@@ -75,6 +81,7 @@ const levelUpAnimation = (isCircle) => {
         confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
         confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
     }, 250);
+
 }
 
 export { updateUserXP, updateCircleXP }

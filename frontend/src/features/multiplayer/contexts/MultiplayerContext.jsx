@@ -60,12 +60,12 @@ const MultiplayerProvider = ({ userId, children }) => {
         session,
         loading,
         error,
-        joinQueue: async ({ modeId, elo = 0, displayName = 'A player' }) => {
+        joinQueue: async ({ modeId, elo = 0, displayName = 'A player', profilePicture = null }) => {
             if(!userId) {
                 throw new Error('A valid userId is required to join queue.')
             }
 
-            await joinQueue({ userId, modeId, elo, displayName })
+            await joinQueue({ userId, modeId, elo, displayName, profilePicture })
         },
         leaveQueue: async () => {
             if(!userId) {

@@ -1,12 +1,13 @@
-import { doc, setDoc, updateDoc, deleteDoc, getFirestore, collection, onSnapshot, where, query, getDoc, getDocs, writeBatch } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, where, query, getDoc, getDocs, writeBatch } from 'firebase/firestore'
 import { updateCircleXP, updateUserXP } from '../../profile/services/xpService';
 import confetti from 'canvas-confetti';
 import { userCompleteTask } from '../../auth/services/userService';
 import { useEffect, useMemo, useState } from 'react';
 import { normalizeTaskTitle } from '../utils/naturalLanguage';
+import { db } from '../../../lib/firebase';
 
 const createTask = async ({ title, dueAt, status, listIndex, boardIndex, ownerType, ownerId, taskId, parentTaskId, siblingIndex, type }) => {
-    const db = getFirestore();
+
     const collectionRef = collection(db, 'tasks')
     const now = new Date()
 
@@ -31,10 +32,11 @@ const createTask = async ({ title, dueAt, status, listIndex, boardIndex, ownerTy
     await setDoc(taskRef, task)
 
     return taskRef
+
 }
 
 const updateTask = async (taskId, taskData) => {
-    const db = getFirestore()
+
     const taskRef = doc(db, 'tasks', taskId)
     const taskSnap = await getDoc(taskRef)
 
@@ -66,17 +68,15 @@ const updateTask = async (taskId, taskData) => {
     }
 
     await updateDoc(taskRef, { ...normalizedTaskData, updatedAt: new Date() })
+
 }
 
 const deleteTask = async (taskId) => {
-    const db = getFirestore();
     const taskRef = doc(db, 'tasks', taskId)
-
     await deleteDoc(taskRef);
 }
 
 const completeTask = async (taskId) => {
-    const db = getFirestore()
 
     const taskRef = doc(db, 'tasks', taskId)
     const taskSnap = await getDoc(taskRef);
@@ -102,10 +102,11 @@ const completeTask = async (taskId) => {
     }
 
     await deleteDoc(taskRef);
+
 }
 
 const deleteCircleTasks = async (circleId) => {
-    const db = getFirestore()
+
     const tasksRef = collection(db, 'tasks')
     const q = query(tasksRef, where('ownerType', '==', 'circle'), where('ownerId', '==', circleId))
 
@@ -135,6 +136,7 @@ const deleteCircleTasks = async (circleId) => {
     }
 
     await Promise.all(batches)
+
 }
 
 const completeTaskAnimation = (isCircle) => {
@@ -148,6 +150,7 @@ const completeTaskAnimation = (isCircle) => {
 }
 
 const useUserTasks = (userId) => {
+
     const [userTasks, setUserTasks] = useState([]);
     const [isReady, setIsReady] = useState(false);
 
@@ -160,7 +163,6 @@ const useUserTasks = (userId) => {
             return;
         }
 
-        const db = getFirestore();
         const tasksRef = collection(db, 'tasks');
         const q = query(tasksRef, where('ownerType', '==', 'user'), where('ownerId', '==', userId));
 
@@ -183,9 +185,11 @@ const useUserTasks = (userId) => {
     }, [userId]);
 
     return { tasks: userTasks, isReady };
+
 }
 
 const useCircleTasks = (circleIds = []) => {
+
     const [circleTasks, setCircleTasks] = useState([]);
     const [isReady, setIsReady] = useState(false);
     const CIRCLE_BATCH_SIZE = 10;
@@ -204,7 +208,6 @@ const useCircleTasks = (circleIds = []) => {
             return;
         }
 
-        const db = getFirestore();
         const tasksRef = collection(db, 'tasks');
 
         if(validIds.length <= CIRCLE_BATCH_SIZE) {
@@ -265,6 +268,7 @@ const useCircleTasks = (circleIds = []) => {
     }, [validIds])
 
     return { tasks: circleTasks, isReady }
+
 }
 
 export {

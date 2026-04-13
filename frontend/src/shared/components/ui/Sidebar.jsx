@@ -5,6 +5,7 @@ import { RiSwordFill } from 'react-icons/ri';
 import AvatarPicture from '../avatar/AvatarPicture.jsx';
 import { useMultiplayer } from '../../../features/multiplayer/contexts/MultiplayerContext.jsx'
 import { leaveRoom } from '../../../features/multiplayer/services/multiplayerService.jsx'
+import Button from './Button.jsx';
 
 const navItems = [
     { title: 'Agenda', path: '/agenda', icon: <FaBookOpen /> },
@@ -67,21 +68,21 @@ const Sidebar = ({ profile }) => {
                     <Link
                         to={`/profile/${profile?.uid}`}
                         onClick={inRoom ? (event) => event.preventDefault() : undefined}
-                        className={`transition text-neutral1 ${!inRoom && 'hover:text-neutral0'} cursor-not-allowed`}
+                        className={`transition text-neutral1 ${inRoom ? 'cursor-not-allowed' : 'hover:text-neutral0'}`}
                     >
                         Profile
                     </Link>
                     <Link
                         to='/settings'
                         onClick={inRoom ? (event) => event.preventDefault() : undefined}
-                        className={`transition text-neutral1 ${!inRoom && 'hover:text-neutral0'} cursor-not-allowed`}
+                        className={`transition text-neutral1 ${inRoom ? 'cursor-not-allowed' : 'hover:text-neutral0'}`}
                     >
                         Settings
                     </Link>
                     <Link
                         to='/settings'
                         onClick={inRoom ? (event) => event.preventDefault() : undefined}
-                        className={`transition text-neutral1 ${!inRoom && 'hover:text-neutral0'} cursor-not-allowed`}
+                        className={`transition text-neutral1 ${inRoom ? 'cursor-not-allowed' : 'hover:text-neutral0'}`}
                     >
                         FAQ
                     </Link>
@@ -118,14 +119,14 @@ const MultiplayerButton = ({ profile, inRoom }) => {
     }
 
     return (
-        <button
+        <Button
             onClick={handleClick}
-            className={`px-3 py-2 flex items-center justify-center gap-2 rounded-xl text-neutral6 text-sm
-                ${inRoom ? 'bg-red-400 hover:bg-red-500' : 'bg-neutral0 hover:opacity-90'} mb-3 cursor-pointer transition`}
+            type={inRoom ? 'negative' : 'primary'}
+            className='mb-3'
         >
             {inRoom ? <FaArrowLeft /> : <RiSwordFill />}
             {inRoom ? 'Leave Game' : 'SAT Ranked'}
-        </button>
+        </Button>
     )
 }
 

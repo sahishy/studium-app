@@ -15,7 +15,7 @@ const Resources = () => {
 
                 <div className='flex-1 flex flex-col gap-3 items-center justify-center'>
                     <h1 className='text-4xl font-semibold'>Coming Soon</h1>
-                    <p className='text-sm text-neutral1'>A hub for students to post and recommend their favorite resources for studying.</p>
+                    <p className='text-sm text-neutral1'>A place for students to post and recommend their favorite resources for studying.</p>
                 </div>
 
             </div>
