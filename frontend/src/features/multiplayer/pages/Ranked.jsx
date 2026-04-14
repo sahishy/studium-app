@@ -237,7 +237,7 @@ const Ranked = () => {
                         onClick={handlePlayClick}
                         disabled={queueState !== 'idle'}
                     >
-                        {queueState === 'queueing' ? 'Queueing...' : queueState === 'matched' ? 'Joining...' : 'Play'}
+                        {queueState === 'queueing' ? 'Queueing...' : queueState === 'matched' ? 'Joining...' : 'Join Queue'}
                     </Button>
                 </div>
             </div>

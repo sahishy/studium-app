@@ -1,8 +1,5 @@
-const LoadingState = ({
-    label = 'Loading...',
-    fullPage = false,
-    className = '',
-}) => {
+const LoadingState = ({ label = 'Loading...', fullPage = false, className = '' }) => {
+    
     const layoutClass = fullPage
         ? 'w-full min-h-screen flex items-center justify-center'
         : 'w-full h-full min-h-[120px] flex items-center justify-center'
@@ -15,6 +12,7 @@ const LoadingState = ({
             </div>
         </div>
     )
+
 }
 
 export default LoadingState

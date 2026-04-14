@@ -27,10 +27,12 @@ import ErrorState from './shared/components/ui/ErrorState'
 import Resources from './features/resources/pages/Resources'
 import Ranked from './features/multiplayer/pages/Ranked'
 import MatchRoom from './features/multiplayer/pages/MatchRoom'
+import MaintenanceRoute from './routes/MaintenanceRoute'
 
 export default function App() {
 	return (
-		<Routes>
+		<MaintenanceRoute>
+			<Routes>
 
 			<Route path="/" element={<Landing/>}/>
 			<Route path="/login" element={<Login/>}/>
@@ -88,6 +90,7 @@ export default function App() {
 				}
 			/>
 
-		</Routes>
+			</Routes>
+		</MaintenanceRoute>
 	)
 }

@@ -2627,7 +2627,9 @@
 		"description": "Full-year introduction to statistics and probability. Covers representing and analyzing quantitative data sets, probability theory, binomial and normal distributions, and inferential statistics.",
 		"tags": [],
 		"subject": "Math",
-		"alias": []
+		"alias": [
+			"stats"
+		]
 	},
 	{
 		"courseId": "LCPS-597700",
@@ -2635,7 +2637,9 @@
 		"description": "Semester introduction to probability and statistics. Covers binomial and normal distributions, probability, linear correlation, regression, and statistical methods. Students design and conduct statistical experiments.",
 		"tags": [],
 		"subject": "Math",
-		"alias": []
+		"alias": [
+			"stats"
+		]
 	},
 	{
 		"courseId": "LCPS-598100",
@@ -2645,7 +2649,9 @@
 			"AP"
 		],
 		"subject": "Math",
-		"alias": []
+		"alias": [
+			"stats"
+		]
 	},
 	{
 		"courseId": "LCPS-599700",
@@ -4031,7 +4037,9 @@
 			"ACL"
         ],
         "subject": "Math",
-        "alias": []
+        "alias": [
+			"stats"
+		]
     },
     {
         "courseId": "LCPS-583300",
