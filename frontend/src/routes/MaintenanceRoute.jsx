@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { subscribeToPublicConfig } from '../features/config/services/configService'
+import { useAuth } from '../features/auth/contexts/AuthContext'
 import LoadingState from '../shared/components/ui/LoadingState'
 import ErrorState from '../shared/components/ui/ErrorState'
 
 const MaintenanceRoute = ({ children }) => {
     
-    const [config, setConfig] = useState({ maintenance: false, message: '' })
+    const { user } = useAuth()
+    const [config, setConfig] = useState({ maintenance: false, message: '', whitelist: [] })
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -17,7 +19,9 @@ const MaintenanceRoute = ({ children }) => {
         return <LoadingState fullPage label='Loading...' />
     }
 
-    if(config?.maintenance) {
+    const isWhitelisted = Boolean(user?.uid) && (config?.whitelist ?? []).includes(user.uid)
+
+    if(config?.maintenance && !isWhitelisted) {
         return (
             <ErrorState
                 fullPage
