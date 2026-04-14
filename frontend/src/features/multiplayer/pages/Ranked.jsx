@@ -13,10 +13,11 @@ import podium from '../../../assets/images/podium.png'
 import { HiChevronDoubleUp } from 'react-icons/hi'
 import {
     buildRankedUiState,
-    DEFAULT_MODE_ID,
     getQueueState,
     MATCH_JOIN_DELAY_SECONDS,
 } from '../utils/multiplayerUtils'
+
+const SAT_CLASSIC_MODE_ID = 'sat-classic'
 
 const Ranked = () => {
 
@@ -39,7 +40,7 @@ const Ranked = () => {
         rankLabel,
         nextTierLabel,
         nextTierThreshold,
-    } = buildRankedUiState({ userStats, modeId: DEFAULT_MODE_ID })
+    } = buildRankedUiState({ userStats, modeId: SAT_CLASSIC_MODE_ID })
 
     const queueState = getQueueState(session)
 
@@ -121,14 +122,14 @@ const Ranked = () => {
         }
 
         await joinQueue({
-            modeId: DEFAULT_MODE_ID,
+            modeId: SAT_CLASSIC_MODE_ID,
             elo: rankedStats.elo,
             displayName: profile?.profile?.displayName || 'A player',
             profilePicture: profile?.profile?.profilePicture ?? null,
         })
 
         await findMatch({
-            modeId: DEFAULT_MODE_ID,
+            modeId: SAT_CLASSIC_MODE_ID,
         })
     }
 

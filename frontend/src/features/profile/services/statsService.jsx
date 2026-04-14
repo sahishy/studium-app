@@ -103,7 +103,13 @@ const updateUserStatsByUserId = async (userId, userStatsData) => {
     
 }
 
-const applyRankedMatchResult = async ({ userId, modeId, eloDelta = 0, transaction = null }) => {
+const applyRankedMatchResult = async ({
+    userId,
+    modeId,
+    eloDelta = 0,
+    transaction = null,
+    userStatsData = null,
+}) => {
 
     if(!userId || !modeId) {
         throw new Error('userId and modeId are required to apply ranked match result.')
@@ -117,9 +123,15 @@ const applyRankedMatchResult = async ({ userId, modeId, eloDelta = 0, transactio
     const userStatsRef = doc(db, 'userStats', userId)
 
     const applyUpdate = async (activeTransaction) => {
-        const userStatsSnap = await activeTransaction.get(userStatsRef)
-        const userStatsData = userStatsSnap.exists() ? (userStatsSnap.data() ?? {}) : {}
-        const modeStats = userStatsData?.ranked?.[modeId] ?? {}
+        let resolvedUserStatsData = userStatsData
+
+        if(!resolvedUserStatsData || typeof resolvedUserStatsData !== 'object') {
+            const userStatsSnap = await activeTransaction.get(userStatsRef)
+            resolvedUserStatsData = userStatsSnap.exists() ? (userStatsSnap.data() ?? {}) : {}
+        }
+
+        const currentRanked = resolvedUserStatsData?.ranked ?? {}
+        const modeStats = currentRanked?.[modeId] ?? {}
 
         const currentElo = Number(modeStats?.elo) || 0
         const currentPeakElo = Number(modeStats?.peakElo) || currentElo
@@ -127,10 +139,18 @@ const applyRankedMatchResult = async ({ userId, modeId, eloDelta = 0, transactio
         const nextElo = Math.max(0, currentElo + resolvedEloDelta)
         const nextPeakElo = Math.max(currentPeakElo, nextElo)
 
+        const nextRanked = {
+            ...currentRanked,
+            [modeId]: {
+                ...modeStats,
+                elo: nextElo,
+                peakElo: nextPeakElo,
+            },
+        }
+
         activeTransaction.set(userStatsRef, {
             userId,
-            [`ranked.${modeId}.elo`]: nextElo,
-            [`ranked.${modeId}.peakElo`]: nextPeakElo,
+            ranked: nextRanked,
             lastUpdated: new Date(),
         }, { merge: true })
     }

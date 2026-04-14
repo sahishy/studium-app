@@ -63,11 +63,14 @@ const getRankInfoFromElo = (elo = 0) => {
 
 const getRankedModeStats = (userStats, modeId) => {
     const modeStats = userStats?.ranked?.[modeId]
+    const legacyElo = userStats?.[`ranked.${modeId}.elo`]
+    const legacyPeakElo = userStats?.[`ranked.${modeId}.peakElo`]
+    const legacyGamesPlayed = userStats?.[`ranked.${modeId}.gamesPlayed`]
 
     return {
-        elo: modeStats?.elo ?? 0,
-        peakElo: modeStats?.peakElo ?? 0,
-        gamesPlayed: modeStats?.gamesPlayed ?? 0,
+        elo: modeStats?.elo ?? legacyElo ?? 0,
+        peakElo: modeStats?.peakElo ?? legacyPeakElo ?? 0,
+        gamesPlayed: modeStats?.gamesPlayed ?? legacyGamesPlayed ?? 0,
     }
 }
 

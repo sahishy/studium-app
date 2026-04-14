@@ -14,6 +14,8 @@ const SAT_CLASSIC_MAX_QUESTIONS = 10
 const SAT_CLASSIC_MIN_TIME_MULTIPLIER = 0.35
 const SAT_CLASSIC_TIME_SCALE_SEC = 8
 const ANSWERED_FIRST_MULTIPLIER = 1.5
+const SAT_CLASSIC_WIN_ELO_DELTA = 20
+const SAT_CLASSIC_LOSS_ELO_DELTA = -20
 
 const SAT_CLASSIC_BASE_DAMAGE = {
     Easy: 800,
@@ -206,10 +208,18 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
         const playerRefs = playerIds.map((playerId) => doc(db, ROOMS_COLLECTION, roomId, 'players', playerId))
         const playerSnaps = await Promise.all(playerRefs.map((playerRef) => transaction.get(playerRef)))
         const playerStateMap = {}
+        const userStatsRefs = playerIds.map((playerId) => doc(db, 'userStats', playerId))
+        const userStatsSnaps = await Promise.all(userStatsRefs.map((userStatsRef) => transaction.get(userStatsRef)))
+        const userStatsByUserId = {}
 
         playerSnaps.forEach((playerSnap, index) => {
             const playerId = playerIds[index]
             playerStateMap[playerId] = playerSnap.exists() ? (playerSnap.data()?.state ?? {}) : {}
+        })
+
+        userStatsSnaps.forEach((userStatsSnap, index) => {
+            const playerId = playerIds[index]
+            userStatsByUserId[playerId] = userStatsSnap.exists() ? (userStatsSnap.data() ?? {}) : {}
         })
 
         const currentPlayerState = playerStateMap[userId] ?? {}
@@ -459,9 +469,21 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
                 await applyRankedMatchResult({
                     userId: winnerUserId,
                     modeId: MODE_ID,
-                    eloDelta: 20,
+                    eloDelta: SAT_CLASSIC_WIN_ELO_DELTA,
                     transaction,
+                    userStatsData: userStatsByUserId[winnerUserId] ?? {},
                 })
+
+                const loserUserId = playerIds.find((playerId) => playerId && playerId !== winnerUserId) ?? null
+                if(loserUserId) {
+                    await applyRankedMatchResult({
+                        userId: loserUserId,
+                        modeId: MODE_ID,
+                        eloDelta: SAT_CLASSIC_LOSS_ELO_DELTA,
+                        transaction,
+                        userStatsData: userStatsByUserId[loserUserId] ?? {},
+                    })
+                }
             }
 
             transaction.set(roomRef, {
