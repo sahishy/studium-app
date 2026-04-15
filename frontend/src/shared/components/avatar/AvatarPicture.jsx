@@ -12,7 +12,7 @@ const AvatarPicture = ({ profile, className = '', children }) => {
             <img
                 src={profilePictureUrl}
                 alt="profile picture"
-                className="w-full h-full rounded-full object-cover select-none pointer-events-none"
+                className={`w-full h-full rounded-full object-cover select-none pointer-events-none ${!rawUrl && 'animate-pulse'}`}
             />
             {/* <span
                 className={`absolute bottom-0 right-0 w-3 h-3 ${statusColorClass} border-2 ${isOpen ? 'border-background4' : 'border-background0'} group-hover:border-background4 rounded-full transition-colors`}

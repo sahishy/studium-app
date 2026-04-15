@@ -133,11 +133,23 @@ const Avatar = () => {
                 <div className='flex-1 flex gap-8'>
 
                     <div className='relative flex-1 rounded-xl bg-white flex justify-center overflow-hidden'>
-                        <img src={background} className='opacity-40' />
+                        <img
+                            src={background}
+                            alt='Avatar preview background'
+                            className='absolute inset-0 w-full h-full object-cover opacity-60 z-0'
+                        />
+
+                        <div className='pointer-events-none absolute inset-0 z-10'>
+                            <div className='absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-neutral6 to-transparent' />
+                            <div className='absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-neutral6 to-transparent' />
+                            <div className='absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-neutral6 to-transparent' />
+                            <div className='absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-neutral6 to-transparent' />
+                        </div>
+
                         <AvatarModel
                             profile={previewProfile || profile}
                             animation={'Idle'}
-                            className='absolute w-144! h-144!'
+                            className='absolute z-20 w-144! h-144!'
                         />
                     </div>
 

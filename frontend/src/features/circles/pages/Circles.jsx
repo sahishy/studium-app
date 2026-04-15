@@ -20,18 +20,25 @@ const Circles = () => {
             <div className='w-full h-full flex flex-col gap-4 lg:flex-row lg:gap-16 lg:items-start px-24 pb-8 pt-2 m-auto'>
                 <div className='flex-2 flex flex-col gap-4 pb-16'>
 
-                    <h1 className="text-2xl font-semibold">Circles</h1>
+                    <div className='flex justify-between items-start'>
+
+                        <div className='flex flex-col gap-1'>
+                            <h1 className='text-2xl font-semibold'>Circles</h1>
+                            <h2 className='text-sm text-neutral1'>Join study circles with friends to share tasks.</h2>
+                        </div>
+
+                        <div className='flex gap-2'>
+                            <CreateCircleButton profile={profile} />
+                            <JoinCircleButton profile={profile} />
+                        </div>
+                        
+                    </div>
+
 
                     <div className='w-full flex flex-col gap-4'>
 
                         {/* <h1 className='text-lg text-text1 font-semibold'>Your Circles</h1> */}
 
-                        <div className='flex gap-2'>
-
-                            <CreateCircleButton profile={profile}/>
-                            <JoinCircleButton profile={profile}/>
-
-                        </div>
 
                         <div className='w-full grid grid-cols-2 auto-rows-auto gap-4'>
 
@@ -45,7 +52,7 @@ const Circles = () => {
                                             key={circle.uid}
                                             to={circle.uid}
                                         >
-                                            <CircleCard circle={circle}/>
+                                            <CircleCard circle={circle} />
                                         </Link>
 
                                     ))}
@@ -57,21 +64,21 @@ const Circles = () => {
                     </div>
 
 
-                    
+
 
                 </div>
             </div>
-            <BottomFade/>
+            <BottomFade />
         </div>
     )
 }
 
-const CreateCircleButton = ( { profile } ) => {
+const CreateCircleButton = ({ profile }) => {
 
     const { openModal, closeModal } = useModal()
 
     const handleClick = () => {
-        openModal(<CreateCircleModal profile={profile} closeModal={closeModal}/>)
+        openModal(<CreateCircleModal profile={profile} closeModal={closeModal} />)
     }
 
     return (
@@ -81,12 +88,12 @@ const CreateCircleButton = ( { profile } ) => {
     )
 }
 
-const JoinCircleButton = ( { profile } ) => {
+const JoinCircleButton = ({ profile }) => {
 
     const { openModal, closeModal } = useModal()
 
     const handleClick = () => {
-        openModal(<JoinCircleModal profile={profile} closeModal={closeModal}/>)
+        openModal(<JoinCircleModal profile={profile} closeModal={closeModal} />)
     }
 
     return (

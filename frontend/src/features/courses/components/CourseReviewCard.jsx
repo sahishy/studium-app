@@ -3,9 +3,7 @@ import { getSchoolNameById, SCORE_OPTIONS } from '../utils/reviewUtils'
 import AvatarPicture from '../../../shared/components/avatar/AvatarPicture';
 import { FaSchool } from 'react-icons/fa6';
 import { FaChalkboardTeacher, FaEdit } from 'react-icons/fa';
-import Button from '../../../shared/components/ui/Button';
 import { MdDeleteOutline } from 'react-icons/md';
-import { BiEdit } from 'react-icons/bi';
 
 const CourseReviewCard = ({ review, reviewer, teacherName }) => {
 
@@ -37,7 +35,7 @@ const CourseReviewCard = ({ review, reviewer, teacherName }) => {
 
                 <div className='flex flex-col gap-1'>
                     <p className='font-semibold text-neutral0'>
-                        {reviewer?.profile?.displayName || 'Anonymous'}
+                        {reviewer?.profile?.displayName || 'Loading...'}
                     </p>
                     <p className='text-xs text-neutral1 flex items-center gap-2'>
                         <FaSchool /> Attends {(schoolName ? `${schoolName} High School` : 'an unknown high school')}
