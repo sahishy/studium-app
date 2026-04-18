@@ -1,5 +1,8 @@
 import { RANK_TIERS, getRankInfoFromElo, getRankedModeStats } from '../../profile/utils/statsUtils'
 
+const ROOMS_COLLECTION = 'multiplayerRooms'
+const MATCHMAKING_COLLECTION = 'multiplayerMatchmaking'
+const SESSIONS_COLLECTION = 'multiplayerSessions'
 const DEFAULT_MODE_ID = 'sat-classic'
 const MATCH_JOIN_DELAY_SECONDS = 3
 
@@ -67,6 +70,9 @@ const buildRankedUiState = ({ userStats, modeId = DEFAULT_MODE_ID }) => {
 }
 
 export {
+    ROOMS_COLLECTION,
+    MATCHMAKING_COLLECTION,
+    SESSIONS_COLLECTION,
     DEFAULT_MODE_ID,
     MATCH_JOIN_DELAY_SECONDS,
     getQueueState,

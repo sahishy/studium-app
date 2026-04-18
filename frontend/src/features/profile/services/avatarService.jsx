@@ -9,6 +9,33 @@ const AVATAR_THUMBNAIL_SIZE = 128
 const AVATAR_THUMBNAIL_BACKGROUND = '#E5E7EB'
 const AVATAR_DEFAULT_COLOR = AVATAR_COLORS[2];
 const AVATAR_THUMBNAIL_ANIMATION_NAME = 'Idle'
+const AVATAR_SAVE_COOLDOWN_SECONDS = 10
+
+let avatarSaveCooldownEndsAtMs = 0
+
+const getAvatarSaveCooldownSecondsLeft = (nowMs = Date.now()) => {
+
+    const millisecondsLeft = avatarSaveCooldownEndsAtMs - nowMs
+
+    if(millisecondsLeft <= 0) {
+        avatarSaveCooldownEndsAtMs = 0
+        return 0
+    }
+
+    return Math.ceil(millisecondsLeft / 1000)
+
+}
+
+const isAvatarSaveOnCooldown = (nowMs = Date.now()) => {
+    return getAvatarSaveCooldownSecondsLeft(nowMs) > 0
+}
+
+const startAvatarSaveCooldown = (nowMs = Date.now()) => {
+
+    avatarSaveCooldownEndsAtMs = nowMs + (AVATAR_SAVE_COOLDOWN_SECONDS * 1000)
+    return getAvatarSaveCooldownSecondsLeft(nowMs)
+
+}
 
 const cameraPosition = new THREE.Vector3(0, 1, 4)
 const cameraLookAt = new THREE.Vector3(0, 0.8, 0)
@@ -213,5 +240,9 @@ const generateAvatarThumbnailBlob = async (profile) => {
 export {
     AVATAR_THUMBNAIL_SIZE,
     AVATAR_THUMBNAIL_BACKGROUND,
+    AVATAR_SAVE_COOLDOWN_SECONDS,
     generateAvatarThumbnailBlob,
+    getAvatarSaveCooldownSecondsLeft,
+    isAvatarSaveOnCooldown,
+    startAvatarSaveCooldown,
 }

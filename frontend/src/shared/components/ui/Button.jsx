@@ -32,7 +32,7 @@ const Button = ( {
                 text-sm font-semibold
                 ${getClass()}
                 px-4 py-2 rounded-2xl cursor-pointer
-                disabled:opacity-60 disabled:cursor-not-allowed transition-all `}
+                disabled:opacity-60 disabled:cursor-not-allowed transition-all`}
         >
             {children}
         </button>

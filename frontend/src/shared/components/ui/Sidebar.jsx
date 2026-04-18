@@ -4,7 +4,7 @@ import { FaArrowRight, FaChild, FaGraduationCap, FaUserGroup, FaBookOpen, FaBoxA
 import { RiSwordFill } from 'react-icons/ri';
 import AvatarPicture from '../avatar/AvatarPicture.jsx';
 import { useMultiplayer } from '../../../features/multiplayer/contexts/MultiplayerContext.jsx'
-import { leaveRoom } from '../../../features/multiplayer/services/multiplayerService.jsx'
+import { leaveRoom } from '../../../features/multiplayer/services/roomService.jsx'
 import Button from './Button.jsx';
 
 const navItems = [

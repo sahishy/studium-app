@@ -11,11 +11,7 @@ import { useToast } from '../../../shared/contexts/ToastContext'
 import MatchmakingToast from '../components/toasts/MatchmakingToast'
 import podium from '../../../assets/images/podium.png'
 import { HiChevronDoubleUp } from 'react-icons/hi'
-import {
-    buildRankedUiState,
-    getQueueState,
-    MATCH_JOIN_DELAY_SECONDS,
-} from '../utils/multiplayerUtils'
+import { buildRankedUiState, getQueueState, MATCH_JOIN_DELAY_SECONDS } from '../utils/multiplayerUtils'
 
 const SAT_CLASSIC_MODE_ID = 'sat-classic'
 
@@ -27,6 +23,7 @@ const Ranked = () => {
     const { matchmaking, session, joinQueue, leaveQueue, findMatch } = useMultiplayer()
     const { toastStack, showToast, updateToast, hideToast } = useToast()
     const [matchCountdownSeconds, setMatchCountdownSeconds] = useState(MATCH_JOIN_DELAY_SECONDS)
+    const [isQueueingOptimistic, setIsQueueingOptimistic] = useState(false)
     const matchmakingToastIdRef = useRef(null)
     const autoJoinRoomIdRef = useRef(null)
 
@@ -43,6 +40,17 @@ const Ranked = () => {
     } = buildRankedUiState({ userStats, modeId: SAT_CLASSIC_MODE_ID })
 
     const queueState = getQueueState(session)
+    const effectiveQueueState = (
+        queueState === 'matched'
+            ? 'matched'
+            : (queueState === 'queueing' || isQueueingOptimistic ? 'queueing' : 'idle')
+    )
+
+    useEffect(() => {
+        if(queueState !== 'idle') {
+            setIsQueueingOptimistic(false)
+        }
+    }, [queueState])
 
     useEffect(() => {
         if(queueState === 'idle') {
@@ -117,20 +125,27 @@ const Ranked = () => {
 
     const handlePlayClick = async () => {
 
-        if(!profile?.uid || queueState !== 'idle') {
+        if(!profile?.uid || effectiveQueueState !== 'idle') {
             return
         }
 
-        await joinQueue({
-            modeId: SAT_CLASSIC_MODE_ID,
-            elo: rankedStats.elo,
-            displayName: profile?.profile?.displayName || 'A player',
-            profilePicture: profile?.profile?.profilePicture ?? null,
-        })
+        setIsQueueingOptimistic(true)
 
-        await findMatch({
-            modeId: SAT_CLASSIC_MODE_ID,
-        })
+        try {
+            await joinQueue({
+                modeId: SAT_CLASSIC_MODE_ID,
+                elo: rankedStats.elo,
+                displayName: profile?.profile?.displayName || 'A player',
+                profilePicture: profile?.profile?.profilePicture ?? null,
+            })
+
+            await findMatch({
+                modeId: SAT_CLASSIC_MODE_ID,
+            })
+        } catch(error) {
+            setIsQueueingOptimistic(false)
+            throw error
+        }
     }
 
     useEffect(() => {
@@ -235,9 +250,9 @@ const Ranked = () => {
                         type='primary'
                         className='p-6! text-2xl!'
                         onClick={handlePlayClick}
-                        disabled={queueState !== 'idle'}
+                        disabled={effectiveQueueState !== 'idle'}
                     >
-                        {queueState === 'queueing' ? 'Queueing...' : queueState === 'matched' ? 'Joining...' : 'Join Queue'}
+                        {effectiveQueueState === 'queueing' ? 'Queueing...' : effectiveQueueState === 'matched' ? 'Joining...' : 'Play'}
                     </Button>
                 </div>
             </div>

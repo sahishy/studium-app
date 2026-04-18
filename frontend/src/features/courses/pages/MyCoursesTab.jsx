@@ -292,7 +292,7 @@ const MyCoursesTab = () => {
                     {coursesLoading ? (
                         <LoadingState label='Loading your courses...' />
                     ) : selectedCourses.length === 0 ? (
-                        <div className='w-full flex flex-col items-center justify-center py-16 gap-3'>
+                        <div className='w-full  flex flex-col items-center justify-center py-16 gap-3'>
                             <FaArrowUp className='text-neutral1' />
                             <p className='text-sm text-neutral1'>You haven't added any courses yet.</p>
                         </div>

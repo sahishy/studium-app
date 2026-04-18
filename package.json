@@ -1,0 +1,21 @@
+{
+	"name": "studium",
+	"version": "1.0.0",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+   		"emulators": "firebase emulators:start --only functions,auth,firestore,storage --import=./emulator-data --export-on-exit"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/sahishy/studium-app.git"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/sahishy/studium-app/issues"
+	},
+	"homepage": "https://github.com/sahishy/studium-app#readme",
+	"description": ""
+}

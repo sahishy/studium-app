@@ -1,5 +1,5 @@
 import { FaHeart } from 'react-icons/fa6'
-import { SAT_CLASSIC_INITIAL_HEALTH } from '../services/satClassicGameService'
+import { SAT_CLASSIC_INITIAL_HEALTH } from '../utils/satClassicGameUtils'
 import AvatarPicture from '../../../../../shared/components/avatar/AvatarPicture'
 import ProgressBar from '../../../../../shared/components/ui/ProgressBar'
 import { evaluateGradientColor } from '../../../../../shared/utils/colorUtils'

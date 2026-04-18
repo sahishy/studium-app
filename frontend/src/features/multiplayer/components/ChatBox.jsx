@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { sendRoomChatMessage, subscribeToRoomChat } from '../services/multiplayerService'
+import { sendRoomChatMessage, subscribeToRoomChat } from '../services/chatService'
 import { formatTimeFromFirestoreLike, toMillisFromFirestoreLike } from '../../../shared/utils/formatters'
 
 const ChatBox = ({ roomId, userId, senderName }) => {

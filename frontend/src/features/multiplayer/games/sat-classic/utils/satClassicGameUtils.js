@@ -1,10 +1,5 @@
-import { getQuestionById } from '../../../services/questionService'
-
-const getRoundDamageMultiplier = (questionIndex = 0) => {
-    const safeRoundIndex = Math.max(0, Number(questionIndex) || 0)
-    const multiplier = 1 + (safeRoundIndex * 0.1)
-    return Number(multiplier.toFixed(1))
-}
+const SAT_CLASSIC_INITIAL_HEALTH = 3000
+const SAT_CLASSIC_MAX_QUESTIONS = 10
 
 const getCurrentQuestionId = (gameState = {}) => (
     gameState?.currentQuestionId
@@ -16,7 +11,7 @@ const getCurrentQuestion = (gameState = {}) => {
     const questionId = getCurrentQuestionId(gameState)
     return {
         questionId,
-        question: getQuestionById(questionId),
+        question: gameState?.questionsById?.[questionId] ?? null,
     }
 }
 
@@ -46,8 +41,9 @@ const getHealthBoard = ({ players = [], userId }) => {
 }
 
 export {
+    SAT_CLASSIC_INITIAL_HEALTH,
+    SAT_CLASSIC_MAX_QUESTIONS,
     getCurrentQuestion,
-    getRoundDamageMultiplier,
     getMyPlayer,
     hasAnsweredQuestion,
     getHealthBoard,

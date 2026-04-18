@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { createNewUserObject } from '../services/userService'
 import { createUserStatsDocument } from '../../profile/services/statsService'
+import { uploadProfilePicture } from '../../../shared/services/storageService'
 
 import { FaGoogle } from "react-icons/fa";
 import { FaCircleExclamation } from "react-icons/fa6";
@@ -67,6 +68,10 @@ const Login = () => {
                 const newUserObject = await createNewUserObject({ firstName: firstName, lastName: lastName, email: user.email })
                 await setDoc(userRef, newUserObject)
                 await createUserStatsDocument({ userId: user.uid })
+                await uploadProfilePicture({
+                    uid: user.uid,
+                    profileForThumbnail: newUserObject,
+                })
             }
 
             navigate('/agenda')

@@ -5,7 +5,7 @@ import {
     subscribeToMatchmakingByUserId,
     subscribeToSessionByUserId,
     tryMatchmake,
-} from '../services/multiplayerService'
+} from '../services/matchmakingService'
 
 const MultiplayerContext = createContext({
     matchmaking: null,

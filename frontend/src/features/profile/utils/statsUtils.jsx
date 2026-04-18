@@ -32,14 +32,17 @@ const rankedIconModules = import.meta.glob('../../../assets/images/ranked/*.svg'
 })
 
 const rankedIconMap = Object.entries(rankedIconModules).reduce((acc, [path, src]) => {
+
     const fileName = path.split('/').pop()?.replace('.svg', '')
     if(fileName) {
         acc[fileName] = src
     }
     return acc
+
 }, {})
 
 const getRankInfoFromElo = (elo = 0) => {
+
     const safeElo = Number.isFinite(Number(elo)) ? Math.max(0, Number(elo)) : 0
     const matched = RANK_TIERS.find((entry) => safeElo >= entry.minElo)
 
@@ -59,9 +62,11 @@ const getRankInfoFromElo = (elo = 0) => {
         tier: matched.tier,
         imageSrc: rankedIconMap[iconKey] ?? rankedIconMap.unranked,
     }
+
 }
 
 const getRankedModeStats = (userStats, modeId) => {
+
     const modeStats = userStats?.ranked?.[modeId]
     const legacyElo = userStats?.[`ranked.${modeId}.elo`]
     const legacyPeakElo = userStats?.[`ranked.${modeId}.peakElo`]
@@ -72,6 +77,7 @@ const getRankedModeStats = (userStats, modeId) => {
         peakElo: modeStats?.peakElo ?? legacyPeakElo ?? 0,
         gamesPlayed: modeStats?.gamesPlayed ?? legacyGamesPlayed ?? 0,
     }
+    
 }
 
 export {

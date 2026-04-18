@@ -5,7 +5,7 @@ import { useMultiplayer } from '../contexts/MultiplayerContext'
 import { useToast } from '../../../shared/contexts/ToastContext'
 import MatchmakingToast from '../components/toasts/MatchmakingToast'
 import ChatBox from '../components/ChatBox'
-import { subscribeToRoomById } from '../services/multiplayerService'
+import { subscribeToRoomById } from '../services/roomService'
 import GameHandler from '../games/GameHandler'
 
 const MatchRoom = () => {

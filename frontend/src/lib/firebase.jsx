@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
+import { browserLocalPersistence, connectAuthEmulator, getAuth, setPersistence } from 'firebase/auth'
+import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore'
+import { connectStorageEmulator, getStorage } from 'firebase/storage'
 import { getAI, GoogleAIBackend } from "firebase/ai"
 
 const firebaseConfig = {
@@ -17,4 +18,30 @@ const app = initializeApp(firebaseConfig)
 
 export const auth = getAuth(app)
 export const db = getFirestore(app)
+export const storage = getStorage(app)
 export const ai = getAI(app, { backend: new GoogleAIBackend() })
+
+const shouldUseEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true'
+if(shouldUseEmulators) {
+
+    connectAuthEmulator(
+        auth,
+        'http://127.0.0.1:9099',
+        { disableWarnings: true }
+    )
+
+    connectFirestoreEmulator(
+        db,
+        '127.0.0.1',
+        8080
+    )
+
+    connectStorageEmulator(
+        storage,
+        '127.0.0.1',
+        9199
+    )
+
+}
+
+await setPersistence(auth, browserLocalPersistence)

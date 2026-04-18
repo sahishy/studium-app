@@ -1,20 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import {
-    subscribeToRoomById,
-    subscribeToRoomEvents,
-    subscribeToRoomPlayers,
-} from '../../services/multiplayerService'
-import {
-    initializeSatClassicGame,
-    submitSatClassicAnswer,
-} from './services/satClassicGameService'
-import {
-    getCurrentQuestion,
-    getHealthBoard,
-    getMyPlayer,
-    getRoundDamageMultiplier,
-    hasAnsweredQuestion,
-} from './utils/satClassicGameUtils'
+import { subscribeToRoomById, subscribeToRoomEvents, subscribeToRoomPlayers } from '../../services/roomService'
+import { submitSatClassicAnswer } from './services/satClassicGameService'
+import { getCurrentQuestion, getHealthBoard, getMyPlayer, hasAnsweredQuestion } from './utils/satClassicGameUtils'
 import LoadingState from '../../../../shared/components/ui/LoadingState'
 import { toDateFromFirestoreLike } from '../../../../shared/utils/formatters'
 import { useToast } from '../../../../shared/contexts/ToastContext'
@@ -64,12 +51,6 @@ const SatClassicGame = ({ roomId, userId }) => {
             unsubEvents()
         }
     }, [roomId])
-
-    useEffect(() => {
-        const questionIds = room?.state?.questionIds
-        if(!roomId || room?.modeId !== MODE_ID || questionIds?.length > 0) return
-        void initializeSatClassicGame({ roomId })
-    }, [roomId, room])
 
     const gameState = room?.state ?? {}
 
@@ -258,7 +239,7 @@ const SatClassicGame = ({ roomId, userId }) => {
         })
     }, [events, userId])
 
-    const currentRoundMultiplier = getRoundDamageMultiplier(gameState?.questionIndex ?? 0)
+    const currentRoundMultiplier = Number(gameState?.currentRoundMultiplier) || 1
     const isMatchFinished = gameState?.phase === 'finished'
     const winnerUserId = gameState?.winnerUserId ?? null
     const latestGameEndedEvent = [...events].reverse().find((eventEntry) => eventEntry?.type === 'GAME_ENDED')

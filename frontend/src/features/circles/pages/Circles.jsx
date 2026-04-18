@@ -7,6 +7,7 @@ import JoinCircleModal from '../components/modals/JoinCircleModal'
 import { useCircles } from '../contexts/CirclesContext'
 import Button from '../../../shared/components/ui/Button'
 import BottomFade from '../../../shared/components/ui/BottomFade'
+import { FaArrowUp } from 'react-icons/fa6'
 
 const Circles = () => {
 
@@ -31,7 +32,7 @@ const Circles = () => {
                             <CreateCircleButton profile={profile} />
                             <JoinCircleButton profile={profile} />
                         </div>
-                        
+
                     </div>
 
 
@@ -39,27 +40,25 @@ const Circles = () => {
 
                         {/* <h1 className='text-lg text-text1 font-semibold'>Your Circles</h1> */}
 
+                        {circles.length === 0 ? (
+                            <div className='w-full flex flex-col items-center justify-center py-48 gap-3'>
+                                <FaArrowUp className='text-neutral1 rotate-45' />
+                                <p className='text-sm text-neutral1'>You haven't joined any study circles yet.</p>
+                            </div>
+                        ) : (
+                            <div className='w-full grid grid-cols-2 auto-rows-auto gap-4'>
+                                {circles.sort((a, b) => a.title.localeCompare(b.title)).map((circle) => (
 
-                        <div className='w-full grid grid-cols-2 auto-rows-auto gap-4'>
+                                    <Link
+                                        key={circle.uid}
+                                        to={circle.uid}
+                                    >
+                                        <CircleCard circle={circle} />
+                                    </Link>
 
-                            {circles.length === 0 ? (
-                                <p className='text-sm text-text2'>You aren't in any study circles.</p>
-                            ) : (
-                                <>
-                                    {circles.sort((a, b) => a.title.localeCompare(b.title)).map((circle) => (
-
-                                        <Link
-                                            key={circle.uid}
-                                            to={circle.uid}
-                                        >
-                                            <CircleCard circle={circle} />
-                                        </Link>
-
-                                    ))}
-                                </>
-                            )}
-
-                        </div>
+                                ))}
+                            </div>
+                        )}
 
                     </div>
 
