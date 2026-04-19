@@ -4,7 +4,7 @@ const AgendaIndexRedirect = () => {
 
     const pages = ['list', 'calendar', 'board']
 
-    const lastPage = localStorage.getItem('agenda:lastTab');
+    let lastPage = localStorage.getItem('agenda:lastTab');
     if(lastPage && !pages.includes(lastPage)) {
         lastPage = 'list';
     }

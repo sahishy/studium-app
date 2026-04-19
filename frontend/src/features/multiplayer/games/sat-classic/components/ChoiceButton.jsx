@@ -1,4 +1,4 @@
-import HtmlContent from "../../../../../shared/components/ui/HTMLContent"
+import HtmlContent from "../../../../../shared/components/ui/HtmlContent"
 
 const ChoiceButton = ({ choice, isSelected, isDisabled, onSelect }) => {
 

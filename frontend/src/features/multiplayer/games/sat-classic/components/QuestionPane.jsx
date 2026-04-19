@@ -1,4 +1,4 @@
-import HtmlContent from '../../../../../shared/components/ui/HTMLContent'
+import HtmlContent from '../../../../../shared/components/ui/HtmlContent'
 import ChoiceButton from './ChoiceButton'
 import { FaCalculator } from 'react-icons/fa6'
 
