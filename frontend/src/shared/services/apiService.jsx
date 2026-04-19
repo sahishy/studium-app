@@ -1,7 +1,4 @@
-const USE_FIREBASE_EMULATORS = import.meta.env.VITE_USE_FIREBASE_EMULATORS
-const API_BASE_URL = USE_FIREBASE_EMULATORS ? 
-    import.meta.env.VITE_EMULATED_BACKEND_API_BASE_URL
-    : import.meta.env.VITE_BACKEND_API_BASE_URL
+const API_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE_URL
 
 const buildUrl = (path) => {
     if(!API_BASE_URL) {

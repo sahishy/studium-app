@@ -1,5 +1,8 @@
 const SAT_CLASSIC_INITIAL_HEALTH = 3000
 const SAT_CLASSIC_MAX_QUESTIONS = 10
+const MODE_ID = 'sat-classic'
+const OVERLAY_DURATION_MS = 3000
+const ROUND_DURATION_MS = 180000 + OVERLAY_DURATION_MS
 
 const getCurrentQuestionId = (gameState = {}) => (
     gameState?.currentQuestionId
@@ -41,6 +44,9 @@ const getHealthBoard = ({ players = [], userId }) => {
 }
 
 export {
+    MODE_ID,
+    OVERLAY_DURATION_MS,
+    ROUND_DURATION_MS,
     SAT_CLASSIC_INITIAL_HEALTH,
     SAT_CLASSIC_MAX_QUESTIONS,
     getCurrentQuestion,

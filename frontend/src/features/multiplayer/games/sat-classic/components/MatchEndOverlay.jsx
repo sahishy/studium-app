@@ -25,7 +25,11 @@ const MatchEndOverlay = ({
     const title = isDraw ? 'Draw' : (isMyWin ? 'Victory' : 'Defeat')
     const reasonLabel = endReason === 'knockout'
         ? (isMyWin ? 'You bested your opponent.' : 'You lost all of your health.')
-        : (endReason === 'max_questions' ? 'Reached max questions' : null)
+        : (endReason === 'max_questions'
+            ? 'Reached max questions'
+            : (endReason === 'player_left'
+                ? (isMyWin ? 'Your opponent left the match.' : 'You left the match.')
+                : null))
 
     const hasNextRank = Boolean(rankedProgression?.nextTierThreshold)
 

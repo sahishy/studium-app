@@ -1,8 +1,81 @@
 import { deleteQueueEntry } from '../repositories/matchmakingRepository.js'
-import { deleteRefsBatch, deleteRoom, deleteRoomPlayer, getRoomById, getRoomPlayersSubcollectionRefs, updateRoomPlayerIds } from '../repositories/roomRepository.js'
+import { deleteRoom, deleteRoomPlayer, getRoomById, updateRoomPlayerIds } from '../repositories/roomRepository.js'
 import { setSessionState } from '../repositories/sessionRepository.js'
 import { db } from '../../../lib/firebaseAdmin.js'
-import { clearRoomEvents } from './roomEventsService.js'
+import { sendRoomSystemMessage } from './chatService.js'
+import { MULTIPLAYER_MODE_IDS } from '../utils/multiplayerUtils.js'
+import { endSatClassicGameInTransaction } from '../games/sat-classic/services/satClassicService.js'
+
+const prefetchUserStatsByUserId = async ({ playerIds = [], transaction }) => {
+
+    if(!playerIds.length || !transaction) {
+        return {}
+    }
+
+    const userStatsRefs = playerIds.map((playerId) => db.collection('userStats').doc(playerId))
+    const userStatsSnaps = await Promise.all(userStatsRefs.map((ref) => transaction.get(ref)))
+
+    const userStatsByUserId = {}
+    playerIds.forEach((playerId, index) => {
+        const snap = userStatsSnaps[index]
+        userStatsByUserId[playerId] = snap.exists ? (snap.data() ?? {}) : {}
+    })
+
+    return userStatsByUserId
+
+}
+
+const trySatClassicLeaveRoomCallback = async ({ room, roomId, remainingPlayerIds = [], transaction, now, userStatsByUserId = {} }) => {
+
+    const roomState = room?.state ?? {}
+    const isActiveSatClassicMatch = room?.status === 'active' && roomState?.phase !== 'finished'
+
+    if(!isActiveSatClassicMatch || remainingPlayerIds.length !== 1) {
+        return
+    }
+
+    const winnerUserId = remainingPlayerIds[0]
+    const roomPlayerIds = Array.isArray(room?.playerIds) ? room.playerIds.filter(Boolean) : []
+
+    await endSatClassicGameInTransaction({
+        transaction,
+        roomId,
+        roomData: room,
+        playerIds: roomPlayerIds,
+        winnerUserId,
+        endReason: 'player_left',
+        now,
+        userStatsByUserId,
+    })
+
+}
+
+const tryLeaveRoomCallbacks = async ({ room, roomId, userId, remainingPlayerIds = [], transaction, now, userStatsByUserId = {} }) => {
+
+    if(!room || !roomId || !userId || !transaction) {
+        return
+    }
+
+    const leaveCallbacksByMode = {
+        [MULTIPLAYER_MODE_IDS.SAT_CLASSIC]: trySatClassicLeaveRoomCallback,
+    }
+
+    const leaveCallback = leaveCallbacksByMode[room.modeId]
+    if(!leaveCallback) {
+        return
+    }
+
+    await leaveCallback({
+        room,
+        roomId,
+        userId,
+        remainingPlayerIds,
+        transaction,
+        now,
+        userStatsByUserId,
+    })
+
+}
 
 const leaveRoom = async ({ roomId, userId }) => {
 
@@ -13,7 +86,26 @@ const leaveRoom = async ({ roomId, userId }) => {
     const shouldCleanupSubcollections = await db.runTransaction(async (transaction) => {
 
         const room = await getRoomById({ roomId, transaction })
+
+        const roomPlayerRef = db.collection('multiplayerRooms').doc(roomId).collection('players').doc(userId)
+        const roomPlayerSnap = await transaction.get(roomPlayerRef)
+
+        const roomPlayerIds = Array.isArray(room?.playerIds) ? room.playerIds.filter(Boolean) : []
+        const userStatsByUserId = await prefetchUserStatsByUserId({ playerIds: roomPlayerIds, transaction })
+
         const now = new Date()
+        const leaverDisplayName = roomPlayerSnap.data()?.displayName || 'A player'
+        const currentPlayerIds = Array.isArray(room?.playerIds) ? room.playerIds : []
+        const remainingPlayerIds = currentPlayerIds.filter((playerId) => playerId && playerId !== userId)
+
+        if(room) {
+            await sendRoomSystemMessage({
+                roomId,
+                text: `${leaverDisplayName} has left the game.`,
+                transaction,
+                createdAt: now,
+            })
+        }
 
         deleteQueueEntry({ userId, transaction })
         deleteRoomPlayer({ roomId, userId, transaction })
@@ -30,11 +122,17 @@ const leaveRoom = async ({ roomId, userId }) => {
             return false
         }
 
-        const currentPlayerIds = Array.isArray(room.playerIds) ? room.playerIds : []
-        const remainingPlayerIds = currentPlayerIds.filter((playerId) => playerId && playerId !== userId)
+        await tryLeaveRoomCallbacks({
+            room,
+            roomId,
+            userId,
+            remainingPlayerIds,
+            transaction,
+            now,
+            userStatsByUserId,
+        })
 
         if(remainingPlayerIds.length === 0) {
-            deleteRoom({ roomId, transaction })
             return true
         }
 
@@ -50,12 +148,7 @@ const leaveRoom = async ({ roomId, userId }) => {
     })
 
     if(shouldCleanupSubcollections) {
-        const playerRefs = await getRoomPlayersSubcollectionRefs({ roomId })
-
-        await Promise.all([
-            deleteRefsBatch({ refs: playerRefs }),
-            clearRoomEvents({ roomId }),
-        ])
+        await deleteRoom({ roomId })
     }
 
     return { ok: true }
@@ -72,13 +165,6 @@ const deleteRoomById = async ({ roomId, playerIds = [] }) => {
     const resolvedPlayerIds = playerIds.length
         ? playerIds
         : (room?.playerIds ?? [])
-
-    const playerRefs = await getRoomPlayersSubcollectionRefs({ roomId })
-
-    await Promise.all([
-        deleteRefsBatch({ refs: playerRefs }),
-        clearRoomEvents({ roomId }),
-    ])
 
     await deleteRoom({ roomId })
 

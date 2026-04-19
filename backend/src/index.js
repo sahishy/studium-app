@@ -3,7 +3,7 @@ import cors from 'cors'
 import { onRequest } from 'firebase-functions/v2/https'
 import multiplayerRoutes from './features/multiplayer/routes/multiplayerRoutes.js'
 
-const USE_FIREBASE_EMULATORS = process.env.USE_FIREBASE_EMULATORS
+const USE_FIREBASE_EMULATORS = process.env.USE_FIREBASE_EMULATORS === 'true'
 
 const app = express()
 

@@ -4,7 +4,8 @@
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-   		"emulators": "firebase emulators:start --only functions,auth,firestore,storage --import=./emulator-data --export-on-exit"
+		"emulators:stop": "npx kill-port 4000 9099 8080 9199 5001",
+   		"emulators:start": "firebase emulators:start --only functions,auth,firestore,storage --import=./emulator-data --export-on-exit"
 	},
 	"repository": {
 		"type": "git",

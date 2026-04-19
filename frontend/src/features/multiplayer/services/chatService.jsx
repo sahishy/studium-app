@@ -24,14 +24,14 @@ const subscribeToRoomChat = ( roomId, onChange, setLoading = () => {}, setError 
 
 }
 
-const sendRoomChatMessage = async ({ roomId, userId = null, text, senderName = null, clientMessageId = null, messageType = 'user' }) => {
+const sendRoomChatMessage = async ({ roomId, userId, text, senderName = null, clientMessageId = null }) => {
 
     if(!roomId || !text?.trim()) {
         throw new Error('roomId and non-empty text are required to send a chat message.')
     }
 
-    if(messageType === 'user' && !userId) {
-        throw new Error('userId is required for user chat messages.')
+    if(!userId) {
+        throw new Error('userId is required for chat messages.')
     }
 
     const messageRef = doc(collection(db, ROOMS_COLLECTION, roomId, 'chat'))
@@ -39,7 +39,6 @@ const sendRoomChatMessage = async ({ roomId, userId = null, text, senderName = n
     await setDoc(messageRef, {
         userId,
         senderName,
-        messageType,
         text: text.trim(),
         clientMessageId,
         createdAt: new Date(),

@@ -93,16 +93,11 @@ const updateRoomState = async ({ roomId, state, updatedAt = new Date(), transact
 
 }
 
-const deleteRoom = async ({ roomId, transaction = null }) => {
+const deleteRoom = async ({ roomId }) => {
 
     const roomRef = db.collection(ROOMS_COLLECTION).doc(roomId)
 
-    if(transaction) {
-        transaction.delete(roomRef)
-        return
-    }
-
-    await roomRef.delete()
+    await db.recursiveDelete(roomRef)
 
 }
 

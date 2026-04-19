@@ -3,7 +3,24 @@ import { asDate } from '../../../../../utils/formatters.js'
 import { getRandomQuestions } from '../../../services/questionsService.js'
 import { addRoomEvent } from '../../../services/roomEventsService.js'
 import { MULTIPLAYER_MODE_IDS } from '../../../utils/multiplayerUtils.js'
-import { ANSWERED_FIRST_MULTIPLIER, SAT_CLASSIC_INITIAL_HEALTH, SAT_CLASSIC_LOSS_ELO_DELTA, SAT_CLASSIC_MAX_QUESTIONS, SAT_CLASSIC_WIN_ELO_DELTA, calculateDamage, deriveWinnerFromHealth, getBaseDamageByDifficulty, getRoundDamageMultiplier, resolveRoundAnswers } from '../utils/satClassicUtils.js'
+import {
+    ANSWERED_FIRST_MULTIPLIER,
+    SAT_CLASSIC_INITIAL_HEALTH,
+    SAT_CLASSIC_LOSS_ELO_DELTA,
+    SAT_CLASSIC_MAX_QUESTIONS,
+    SAT_CLASSIC_POST_SUBMIT_GRACE_MS,
+    SAT_CLASSIC_ROUND_DURATION_MS,
+    SAT_CLASSIC_WIN_ELO_DELTA,
+    buildPlayerStateMap,
+    buildUserStatsByUserId,
+    calculateDamage,
+    deriveWinnerFromHealth,
+    evaluateQuestionAnswer,
+    getBaseDamageByDifficulty,
+    getRoundDamageMultiplier,
+    resolveRoundAnswers,
+    resolveRoundDamageOutcome,
+} from '../utils/satClassicUtils.js'
 
 const MODE_ID = MULTIPLAYER_MODE_IDS.SAT_CLASSIC
 
@@ -52,6 +69,97 @@ const applyRankedMatchResult = async ({ transaction, userId, modeId, eloDelta = 
 
 }
 
+const endSatClassicGameInTransaction = async ({
+    transaction,
+    roomId,
+    roomData = {},
+    playerIds = [],
+    winnerUserId = null,
+    endReason = 'max_questions',
+    now = new Date(),
+    userStatsByUserId = {},
+    health = [],
+    eventSequence = null,
+}) => {
+
+    if(!transaction || !roomId) {
+        throw new Error('transaction and roomId are required to end SAT Classic game.')
+    }
+
+    const roomModeId = roomData?.modeId ?? MODE_ID
+    const state = roomData?.state ?? {}
+
+    if(roomModeId !== MODE_ID || state?.phase === 'finished') {
+        return {
+            ok: false,
+            ended: false,
+            eventSequence: Number(state?.eventSequence) || 0,
+        }
+    }
+
+    const resolvedPlayerIds = Array.isArray(playerIds) ? playerIds.filter(Boolean) : []
+    const resolvedWinnerUserId = resolvedPlayerIds.includes(winnerUserId) ? winnerUserId : null
+
+    if(resolvedWinnerUserId) {
+        await applyRankedMatchResult({
+            transaction,
+            userId: resolvedWinnerUserId,
+            modeId: MODE_ID,
+            eloDelta: SAT_CLASSIC_WIN_ELO_DELTA,
+            userStatsData: userStatsByUserId[resolvedWinnerUserId] ?? null,
+        })
+
+        const loserUserId = resolvedPlayerIds.find((playerId) => playerId && playerId !== resolvedWinnerUserId) ?? null
+        if(loserUserId) {
+            await applyRankedMatchResult({
+                transaction,
+                userId: loserUserId,
+                modeId: MODE_ID,
+                eloDelta: SAT_CLASSIC_LOSS_ELO_DELTA,
+                userStatsData: userStatsByUserId[loserUserId] ?? null,
+            })
+        }
+    }
+
+    const resolvedEventSequence = Number.isFinite(eventSequence)
+        ? Number(eventSequence)
+        : ((Number(state?.eventSequence) || 0) + 1)
+    const roomRef = db.collection('multiplayerRooms').doc(roomId)
+
+    transaction.set(roomRef, {
+        state: {
+            phase: 'finished',
+            winnerUserId: resolvedWinnerUserId,
+            roundWinnerUserId: null,
+            eventSequence: resolvedEventSequence,
+            updatedAt: now,
+        },
+        updatedAt: now,
+    }, { merge: true })
+
+    await addRoomEvent({
+        roomId,
+        type: 'GAME_ENDED',
+        modeId: MODE_ID,
+        actorUserId: null,
+        sequence: resolvedEventSequence,
+        data: {
+            winnerUserId: resolvedWinnerUserId,
+            health: Array.isArray(health) ? health : [],
+            endReason,
+        },
+        transaction,
+    })
+
+    return {
+        ok: true,
+        ended: true,
+        winnerUserId: resolvedWinnerUserId,
+        eventSequence: resolvedEventSequence,
+    }
+
+}
+
 const initializeSatClassicRoomState = ({ roomId, playerIds = [], transaction, now = new Date() }) => {
 
     if(!roomId || !transaction) {
@@ -75,9 +183,10 @@ const initializeSatClassicRoomState = ({ roomId, playerIds = [], transaction, no
             questionsById,
             currentQuestionId: questionIds[0] ?? null,
             currentRoundStartedAt: now,
+            currentRoundDeadlineAt: new Date(now.getTime() + SAT_CLASSIC_ROUND_DURATION_MS),
             roundWinnerUserId: null,
             winnerUserId: null,
-            eventSequence: 0,
+            eventSequence: 1,
             startedAt: now,
             updatedAt: now,
         },
@@ -106,10 +215,10 @@ const initializeSatClassicRoomState = ({ roomId, playerIds = [], transaction, no
 
 }
 
-const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
+const submitSatClassicAnswer = async ({ roomId, userId, submittedResponse = null, isTimeout = false }) => {
 
-    if(!roomId || !userId || !selectedChoiceId) {
-        throw new Error('roomId, userId, and selectedChoiceId are required.')
+    if(!roomId || !userId) {
+        throw new Error('roomId and userId are required.')
     }
 
     const roomRef = db.collection('multiplayerRooms').doc(roomId)
@@ -142,21 +251,11 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
 
         const playerRefs = playerIds.map((playerId) => db.collection('multiplayerRooms').doc(roomId).collection('players').doc(playerId))
         const playerSnaps = await Promise.all(playerRefs.map((playerRef) => transaction.get(playerRef)))
-        const playerStateMap = {}
+        const playerStateMap = buildPlayerStateMap({ playerIds, playerSnaps })
 
         const userStatsRefs = playerIds.map((playerId) => db.collection('userStats').doc(playerId))
         const userStatsSnaps = await Promise.all(userStatsRefs.map((userStatsRef) => transaction.get(userStatsRef)))
-        const userStatsByUserId = {}
-
-        playerSnaps.forEach((playerSnap, index) => {
-            const playerId = playerIds[index]
-            playerStateMap[playerId] = playerSnap.exists ? (playerSnap.data()?.state ?? {}) : {}
-        })
-
-        userStatsSnaps.forEach((userStatsSnap, index) => {
-            const playerId = playerIds[index]
-            userStatsByUserId[playerId] = userStatsSnap.exists ? (userStatsSnap.data() ?? {}) : {}
-        })
+        const userStatsByUserId = buildUserStatsByUserId({ playerIds, userStatsSnaps })
 
         const currentPlayerState = playerStateMap[userId] ?? {}
         const alreadyAnswered = Array.isArray(currentPlayerState.answeredQuestionIds)
@@ -167,11 +266,30 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
             return
         }
 
-        const isCorrect = selectedChoiceId === currentQuestion.correctAnswer
-        const answeredQuestionIds = [...(currentPlayerState.answeredQuestionIds ?? []), currentQuestionId]
-
         const now = new Date()
         const currentRoundStartedAt = asDate(state.currentRoundStartedAt) ?? asDate(state.updatedAt) ?? asDate(state.startedAt) ?? now
+        const currentRoundDeadlineAt = asDate(state.currentRoundDeadlineAt)
+            ?? new Date(currentRoundStartedAt.getTime() + SAT_CLASSIC_ROUND_DURATION_MS)
+        const questionType = String(currentQuestion?.questionType ?? 'mcq').toLowerCase()
+        const normalizedSubmittedResponse = typeof submittedResponse === 'string' ? submittedResponse.trim() : ''
+        const isTimeoutSubmission = Boolean(isTimeout)
+
+        if(!normalizedSubmittedResponse && !isTimeoutSubmission) {
+            throw new Error('submittedResponse is required.')
+        }
+
+        const isCorrect = (!isTimeoutSubmission && normalizedSubmittedResponse)
+            ? evaluateQuestionAnswer({
+                question: currentQuestion,
+                submittedResponse: normalizedSubmittedResponse,
+            }).isCorrect
+            : false
+
+        const selectedChoiceId = (questionType === 'spr' || isTimeoutSubmission || !normalizedSubmittedResponse)
+            ? null
+            : normalizedSubmittedResponse.toUpperCase()
+        const answeredQuestionIds = [...(currentPlayerState.answeredQuestionIds ?? []), currentQuestionId]
+
         const elapsedMs = Math.max(0, now.getTime() - currentRoundStartedAt.getTime())
         const elapsedSec = elapsedMs / 1000
 
@@ -195,7 +313,7 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
             })
 
             nextSequence += 1
-            
+
         }
 
         transaction.set(db.collection('multiplayerRooms').doc(roomId).collection('players').doc(userId), {
@@ -206,6 +324,8 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
                 lastAnswer: {
                     questionId: currentQuestionId,
                     selectedChoiceId,
+                    submittedResponse: normalizedSubmittedResponse || null,
+                    isTimeout: isTimeoutSubmission,
                     difficulty: currentQuestion?.difficulty ?? null,
                     isCorrect,
                     elapsedMs,
@@ -225,6 +345,8 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
             data: {
                 questionId: currentQuestionId,
                 selectedChoiceId,
+                submittedResponse: normalizedSubmittedResponse || null,
+                isTimeout: isTimeoutSubmission,
             },
         })
 
@@ -238,8 +360,14 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
         })
 
         if(!allAnsweredCurrentQuestion) {
+            const shortenedDeadlineAt = new Date(Math.min(
+                currentRoundDeadlineAt.getTime(),
+                now.getTime() + SAT_CLASSIC_POST_SUBMIT_GRACE_MS,
+            ))
+
             transaction.set(roomRef, {
                 state: {
+                    currentRoundDeadlineAt: shortenedDeadlineAt,
                     eventSequence: nextSequence - 1,
                     updatedAt: now,
                 },
@@ -255,6 +383,8 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
             lastAnswer: {
                 questionId: currentQuestionId,
                 selectedChoiceId,
+                submittedResponse: normalizedSubmittedResponse || null,
+                isTimeout: isTimeoutSubmission,
                 difficulty: currentQuestion?.difficulty ?? null,
                 isCorrect,
                 elapsedMs,
@@ -298,49 +428,16 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
             }
         }
 
-        const healthBeforeByUserId = Object.fromEntries(playerIds.map((playerId) => ([
-            playerId,
-            Number(latestPlayerStateMap[playerId]?.health) || SAT_CLASSIC_INITIAL_HEALTH,
-        ])))
-        const nextHealthByUserId = { ...healthBeforeByUserId }
-
-        const [firstUserId, secondUserId] = playerIds
-        const firstRawDamage = Number(roundResultsByUserId[firstUserId]?.damageRaw) || 0
-        const secondRawDamage = Number(roundResultsByUserId[secondUserId]?.damageRaw) || 0
-
-        const sourceUserId = firstRawDamage > secondRawDamage ? firstUserId : secondUserId
-        const targetUserId = sourceUserId === firstUserId ? secondUserId : firstUserId
-
-        const sourceRawDamage = Math.max(firstRawDamage, secondRawDamage)
-        const targetRawDamage = Math.min(firstRawDamage, secondRawDamage)
-        const netDamage = Math.max(0, sourceRawDamage - targetRawDamage)
-
-        const damageTransfer = {
-            bothCorrect: firstRawDamage > 0 && secondRawDamage > 0,
-            isTie: firstRawDamage === secondRawDamage,
-            sourceUserId: netDamage > 0
-                ? sourceUserId
-                : (firstRawDamage === secondRawDamage ? firstUserId : null),
-            targetUserId: netDamage > 0
-                ? targetUserId
-                : (firstRawDamage === secondRawDamage ? secondUserId : null),
-            sourceRawDamage,
-            targetRawDamage,
-            netDamage,
-        }
-
-        if(netDamage > 0 && targetUserId) {
-            nextHealthByUserId[targetUserId] = Math.max(
-                0,
-                (nextHealthByUserId[targetUserId] ?? SAT_CLASSIC_INITIAL_HEALTH) - netDamage,
-            )
-
-            roundResultsByUserId[sourceUserId] = {
-                ...roundResultsByUserId[sourceUserId],
-                damageDealt: netDamage,
-                targetUserId,
-            }
-        }
+        const {
+            nextHealthByUserId,
+            damageTransfer,
+            roundResultsByUserId: resolvedRoundResultsByUserId,
+        } = resolveRoundDamageOutcome({
+            playerIds,
+            playerStateMap: latestPlayerStateMap,
+            roundResultsByUserId,
+            initialHealth: SAT_CLASSIC_INITIAL_HEALTH,
+        })
 
         playerIds.forEach((playerId) => {
             transaction.set(db.collection('multiplayerRooms').doc(roomId).collection('players').doc(playerId), {
@@ -352,7 +449,7 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
         })
 
         for(const attackerUserId of playerIds) {
-            const attackerResult = roundResultsByUserId[attackerUserId]
+            const attackerResult = resolvedRoundResultsByUserId[attackerUserId]
             if(!(Number(attackerResult?.damageDealt) > 0)) {
                 continue
             }
@@ -380,8 +477,8 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
             type: 'ROUND_RESOLVED',
             data: {
                 questionId: currentQuestionId,
-                correctAnswer: currentQuestion.correctAnswer,
-                roundResults: playerIds.map((playerId) => roundResultsByUserId[playerId]),
+                correctAnswer: currentQuestion.correctAnswerDisplay ?? currentQuestion.correctAnswer,
+                roundResults: playerIds.map((playerId) => resolvedRoundResultsByUserId[playerId]),
                 damageTransfer,
             },
         })
@@ -400,51 +497,22 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
                 ? (updatedHealth.find((entry) => entry.health > 0)?.userId ?? null)
                 : deriveWinnerFromHealth(updatedHealth)
 
-            if(winnerUserId) {
-                await applyRankedMatchResult({
-                    transaction,
-                    userId: winnerUserId,
-                    modeId: MODE_ID,
-                    eloDelta: SAT_CLASSIC_WIN_ELO_DELTA,
-                    userStatsData: userStatsByUserId[winnerUserId] ?? {},
-                })
-
-                const loserUserId = playerIds.find((playerId) => playerId && playerId !== winnerUserId) ?? null
-                if(loserUserId) {
-                    await applyRankedMatchResult({
-                        transaction,
-                        userId: loserUserId,
-                        modeId: MODE_ID,
-                        eloDelta: SAT_CLASSIC_LOSS_ELO_DELTA,
-                        userStatsData: userStatsByUserId[loserUserId] ?? {},
-                    })
-                }
-            }
-
-            transaction.set(roomRef, {
-                state: {
-                    phase: 'finished',
-                    winnerUserId,
-                    roundWinnerUserId: null,
-                    eventSequence: nextSequence,
-                    updatedAt: now,
-                },
-                updatedAt: now,
-            }, { merge: true })
-
-            await emitEvent({
-                type: 'GAME_ENDED',
-                actorUserId: null,
-                data: {
-                    winnerUserId,
-                    health: updatedHealth,
-                    endReason: hasKnockout ? 'knockout' : 'max_questions',
-                },
+            await endSatClassicGameInTransaction({
+                transaction,
+                roomId,
+                roomData,
+                playerIds,
+                winnerUserId,
+                endReason: hasKnockout ? 'knockout' : 'max_questions',
+                now,
+                userStatsByUserId,
+                health: updatedHealth,
+                eventSequence: nextSequence,
             })
 
             transaction.set(roomRef, {
                 state: {
-                    eventSequence: nextSequence - 1,
+                    eventSequence: nextSequence,
                 },
             }, { merge: true })
 
@@ -462,6 +530,7 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
                 currentRoundMultiplier: nextRoundMultiplier,
                 currentQuestionId: nextQuestionId,
                 currentRoundStartedAt: now,
+                currentRoundDeadlineAt: new Date(now.getTime() + SAT_CLASSIC_ROUND_DURATION_MS),
                 roundWinnerUserId: null,
                 eventSequence: nextSequence,
                 updatedAt: now,
@@ -476,6 +545,7 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
                 questionIndex: nextQuestionIndex,
                 questionId: nextQuestionId,
                 roundStartedAt: now,
+                roundDeadlineAt: new Date(now.getTime() + SAT_CLASSIC_ROUND_DURATION_MS),
             },
         })
 
@@ -494,4 +564,5 @@ const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
 export {
     initializeSatClassicRoomState,
     submitSatClassicAnswer,
+    endSatClassicGameInTransaction,
 }

@@ -1,4 +1,4 @@
-import { collection, doc, onSnapshot, orderBy, query, runTransaction, setDoc } from 'firebase/firestore'
+import { doc, onSnapshot, orderBy, query, runTransaction, setDoc, collection } from 'firebase/firestore'
 import { db } from '../../../lib/firebase'
 import { post } from '../../../shared/services/apiService'
 import { ROOMS_COLLECTION } from '../utils/multiplayerUtils'
@@ -17,13 +17,6 @@ const joinRoom = async ({ roomId, userId, joinedAt = new Date(), joinerName, pro
             displayName: joinerName,
             profilePicture,
             state: {},
-        })
-
-        const roomChatMessageRef = doc(collection(db, ROOMS_COLLECTION, roomId, 'chat'))
-        activeTransaction.set(roomChatMessageRef, {
-            messageType: 'server',
-            text: `${joinerName} has joined the game.`,
-            createdAt: joinedAt,
         })
 
     }

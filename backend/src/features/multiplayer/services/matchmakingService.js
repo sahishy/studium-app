@@ -3,6 +3,7 @@ import { createQueueEntry, deleteQueueEntry, getQueueCandidatesByMode, getQueueE
 import { createRoom, createRoomPlayer } from '../repositories/roomRepository.js'
 import { setSessionState } from '../repositories/sessionRepository.js'
 import { addRoomEvent } from './roomEventsService.js'
+import { sendRoomSystemMessage } from './chatService.js'
 import { initializeSatClassicRoomState } from '../games/sat-classic/services/satClassicService.js'
 import { MULTIPLAYER_MODE_IDS, isSupportedMultiplayerMode } from '../utils/multiplayerUtils.js'
 
@@ -137,6 +138,20 @@ const attemptMatchmake = async ({ userId, modeId }) => {
             displayName: opponentQueueEntry.displayName || 'A player',
             profilePicture: opponentQueueEntry.profilePicture ?? null,
             transaction,
+        })
+
+        await sendRoomSystemMessage({
+            roomId,
+            text: `${ownQueueEntry.displayName || 'A player'} has joined the game.`,
+            transaction,
+            createdAt: now,
+        })
+
+        await sendRoomSystemMessage({
+            roomId,
+            text: `${opponentQueueEntry.displayName || 'A player'} has joined the game.`,
+            transaction,
+            createdAt: now,
         })
 
         await initializeGameByMode({

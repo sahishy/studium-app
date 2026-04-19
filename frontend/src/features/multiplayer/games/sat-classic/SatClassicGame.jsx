@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { subscribeToRoomById, subscribeToRoomEvents, subscribeToRoomPlayers } from '../../services/roomService'
 import { submitSatClassicAnswer } from './services/satClassicGameService'
-import { getCurrentQuestion, getHealthBoard, getMyPlayer, hasAnsweredQuestion } from './utils/satClassicGameUtils'
+import { getCurrentQuestion, getHealthBoard, getMyPlayer, hasAnsweredQuestion, MODE_ID, OVERLAY_DURATION_MS, ROUND_DURATION_MS } from './utils/satClassicGameUtils'
 import LoadingState from '../../../../shared/components/ui/LoadingState'
 import { toDateFromFirestoreLike } from '../../../../shared/utils/formatters'
 import { useToast } from '../../../../shared/contexts/ToastContext'
@@ -11,11 +11,9 @@ import ResultOverlay from './components/ResultOverlay'
 import QuestionPane from './components/QuestionPane'
 import GameHeader from './components/GameHeader'
 import MatchEndOverlay from './components/MatchEndOverlay'
+import CalculatorWindow from '../../components/windows/CalculatorWindow'
 import { buildRankedUiState } from '../../utils/multiplayerUtils'
 import { getRankInfoFromElo } from '../../../profile/utils/statsUtils'
-
-const MODE_ID = 'sat-classic'
-const OVERLAY_DURATION_MS = 3000
 
 const SatClassicGame = ({ roomId, userId }) => {
 
@@ -24,7 +22,8 @@ const SatClassicGame = ({ roomId, userId }) => {
     const [events, setEvents] = useState([])
     const [submittingChoiceId, setSubmittingChoiceId] = useState(null)
     const [lockedQuestionId, setLockedQuestionId] = useState(null)
-    const [selectedChoiceId, setSelectedChoiceId] = useState(null)
+    const [submittedResponse, setSubmittedResponse] = useState('')
+    const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
     const [nowMs, setNowMs] = useState(Date.now())
     const [resultOverlay, setResultOverlay] = useState(null)
     const [damageIndicators, setDamageIndicators] = useState({ left: null, right: null })
@@ -34,6 +33,7 @@ const SatClassicGame = ({ roomId, userId }) => {
     const shownAnswerToastEventIdsRef = useRef(new Set())
     const shownAnswerToastQuestionIdsRef = useRef(new Set())
     const lastProcessedAnswerSubmitSequenceRef = useRef(null)
+    const timeoutSubmittedQuestionIdsRef = useRef(new Set())
 
     const { showToast } = useToast()
     const { userStats } = useUserStats()
@@ -70,11 +70,18 @@ const SatClassicGame = ({ roomId, userId }) => {
     )
 
     const roundStartedAt = toDateFromFirestoreLike(gameState?.currentRoundStartedAt)
+    const roundDeadlineAt = toDateFromFirestoreLike(gameState?.currentRoundDeadlineAt)
+        ?? (roundStartedAt ? new Date(roundStartedAt.getTime() + ROUND_DURATION_MS) : null)
     const matchStartedAt = toDateFromFirestoreLike(gameState?.startedAt)
 
     const elapsedRoundSeconds = roundStartedAt
         ? Math.max(0, Math.floor((nowMs - roundStartedAt.getTime()) / 1000))
         : 999
+
+    const remainingRoundSeconds = roundDeadlineAt
+        ? Math.max(0, Math.floor((roundDeadlineAt.getTime() - nowMs) / 1000))
+        : 0
+    const displayRoundSeconds = Math.min(Math.floor((ROUND_DURATION_MS - OVERLAY_DURATION_MS) / 1000), remainingRoundSeconds)
 
     const roundCountdown = Math.max(0, 3 - elapsedRoundSeconds)
 
@@ -116,8 +123,29 @@ const SatClassicGame = ({ roomId, userId }) => {
     }, [hasAnswered, lockedQuestionId, currentQuestionId])
 
     useEffect(() => {
-        setSelectedChoiceId(null)
+        setSubmittedResponse('')
     }, [currentQuestionId])
+
+    useEffect(() => {
+        if(!roomId || !userId || !currentQuestionId || !roundDeadlineAt || hasAnswered) return
+
+        if(nowMs < roundDeadlineAt.getTime()) return
+        if(timeoutSubmittedQuestionIdsRef.current.has(currentQuestionId)) return
+
+        timeoutSubmittedQuestionIdsRef.current.add(currentQuestionId)
+
+        void submitSatClassicAnswer({
+            roomId,
+            userId,
+            submittedResponse: '',
+            isTimeout: true,
+        }).catch(() => {
+            timeoutSubmittedQuestionIdsRef.current.delete(currentQuestionId)
+        })
+    }, [roomId, userId, currentQuestionId, roundDeadlineAt, hasAnswered, nowMs])
+
+    const questionType = String(currentQuestion?.questionType ?? 'mcq').toLowerCase()
+    const isSprQuestion = questionType === 'spr'
 
     useEffect(() => {
         const intervalId = setInterval(() => setNowMs(Date.now()), 50)
@@ -164,38 +192,48 @@ const SatClassicGame = ({ roomId, userId }) => {
         if(!answerSubmittedEvents.length) return
 
         if(lastProcessedAnswerSubmitSequenceRef.current == null) {
-            const latestSequence = answerSubmittedEvents.reduce((max, e) => {
+            const latestNonAnswerSequence = events.reduce((max, e) => {
+                if(e?.type === 'ANSWER_SUBMITTED') return max
+
                 const s = Number(e?.sequence)
                 return Number.isFinite(s) ? Math.max(max, s) : max
             }, -Infinity)
 
-            if(Number.isFinite(latestSequence)) {
-                lastProcessedAnswerSubmitSequenceRef.current = latestSequence
-            }
-
-            return
+            lastProcessedAnswerSubmitSequenceRef.current = Number.isFinite(latestNonAnswerSequence)
+                ? latestNonAnswerSequence
+                : -Infinity
         }
 
-        answerSubmittedEvents.forEach((eventEntry) => {
+        const currentCursor = Number.isFinite(lastProcessedAnswerSubmitSequenceRef.current)
+            ? lastProcessedAnswerSubmitSequenceRef.current
+            : -Infinity
+
+        const incomingAnswerSubmittedEvents = answerSubmittedEvents
+            .map((eventEntry) => ({
+                eventEntry,
+                sequence: Number(eventEntry?.sequence),
+            }))
+            .filter(({ sequence }) => Number.isFinite(sequence) && sequence > currentCursor)
+            .sort((a, b) => a.sequence - b.sequence)
+
+        if(!incomingAnswerSubmittedEvents.length) return
+
+        let maxProcessedSequence = currentCursor
+
+        incomingAnswerSubmittedEvents.forEach(({ eventEntry, sequence }) => {
+            maxProcessedSequence = Math.max(maxProcessedSequence, sequence)
+
             if(!eventEntry?.uid) return
+            if(eventEntry?.data?.isTimeout) return
 
             const questionId = eventEntry?.data?.questionId
             if(!questionId || shownAnswerToastQuestionIdsRef.current.has(questionId)) return
             if(shownAnswerToastEventIdsRef.current.has(eventEntry.uid)) return
 
-            const eventSequence = Number(eventEntry?.sequence)
-            if(!Number.isFinite(eventSequence) || eventSequence <= lastProcessedAnswerSubmitSequenceRef.current) {
-                return
-            }
-
             const submitter = players.find((e) => e?.userId === eventEntry?.actorUserId)
 
             shownAnswerToastEventIdsRef.current.add(eventEntry.uid)
             shownAnswerToastQuestionIdsRef.current.add(questionId)
-            lastProcessedAnswerSubmitSequenceRef.current = Math.max(
-                lastProcessedAnswerSubmitSequenceRef.current,
-                eventSequence
-            )
 
             showToast({
                 component: SatClassicSubmittedToast,
@@ -207,6 +245,8 @@ const SatClassicGame = ({ roomId, userId }) => {
             })
 
         })
+
+        lastProcessedAnswerSubmitSequenceRef.current = maxProcessedSequence
     }, [events, players, showToast, room?.status, room?.modeId])
 
     useEffect(() => {
@@ -306,18 +346,33 @@ const SatClassicGame = ({ roomId, userId }) => {
         : (roundOverlayRemainingMs > 0 ? 'round_start' : null)
     const showMatchEndOverlay = isMatchFinished && !isResultOverlayActive
 
+    useEffect(() => {
+        if((isResultOverlayActive || showMatchEndOverlay) && isCalculatorOpen) {
+            setIsCalculatorOpen(false)
+        }
+    }, [isResultOverlayActive, showMatchEndOverlay, isCalculatorOpen])
+
     const handleChoiceSelect = (choiceId) => {
-        if(!isBusy) setSelectedChoiceId(choiceId)
+        if(!isBusy) {
+            setSubmittedResponse(String(choiceId ?? ''))
+        }
+    }
+
+    const handleResponseChange = (value) => {
+        if(!isBusy) {
+            setSubmittedResponse(value)
+        }
     }
 
     const handleSubmitAnswer = async () => {
-        if(!roomId || !userId || !selectedChoiceId || isBusy) return
+        const trimmedResponse = String(submittedResponse ?? '').trim()
+        if(!roomId || !userId || !trimmedResponse || isBusy) return
 
         setLockedQuestionId(currentQuestionId)
-        setSubmittingChoiceId(selectedChoiceId)
+        setSubmittingChoiceId(trimmedResponse)
 
         try {
-            await submitSatClassicAnswer({ roomId, userId, selectedChoiceId })
+            await submitSatClassicAnswer({ roomId, userId, submittedResponse: trimmedResponse })
         } finally {
             setSubmittingChoiceId(null)
         }
@@ -347,7 +402,7 @@ const SatClassicGame = ({ roomId, userId }) => {
             <GameHeader
                 healthBoard={healthBoard}
                 damageIndicators={damageIndicators}
-                elapsedSeconds={Math.max(0, elapsedRoundSeconds - (OVERLAY_DURATION_MS / 1000))}
+                elapsedSeconds={displayRoundSeconds}
                 currentRoundMultiplier={currentRoundMultiplier}
             />
 
@@ -355,10 +410,14 @@ const SatClassicGame = ({ roomId, userId }) => {
                 <QuestionPane
                     gameState={gameState}
                     currentQuestion={currentQuestion}
-                    selectedChoiceId={selectedChoiceId}
+                    submittedResponse={submittedResponse}
+                    isSprQuestion={isSprQuestion}
+                    isCalculatorOpen={isCalculatorOpen}
+                    onToggleCalculator={() => setIsCalculatorOpen((previous) => !previous)}
                     isBusy={isBusy}
                     hasAnswered={hasAnswered}
                     onChoiceSelect={handleChoiceSelect}
+                    onResponseChange={handleResponseChange}
                     onSubmit={() => void handleSubmitAnswer()}
                 />
 
@@ -374,6 +433,11 @@ const SatClassicGame = ({ roomId, userId }) => {
                 />
 
             </div>
+
+            <CalculatorWindow
+                isOpen={isCalculatorOpen}
+                onClose={() => setIsCalculatorOpen(false)}
+            />
 
         </div>
     )

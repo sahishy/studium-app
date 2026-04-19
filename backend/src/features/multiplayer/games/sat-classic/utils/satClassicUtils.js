@@ -1,5 +1,8 @@
 const SAT_CLASSIC_INITIAL_HEALTH = 3000
 const SAT_CLASSIC_MAX_QUESTIONS = 10
+const OVERLAY_DURATION_MS = 3000
+const SAT_CLASSIC_ROUND_DURATION_MS = 180000 + OVERLAY_DURATION_MS
+const SAT_CLASSIC_POST_SUBMIT_GRACE_MS = 16000
 const SAT_CLASSIC_MIN_TIME_MULTIPLIER = 0.35
 const SAT_CLASSIC_TIME_SCALE_SEC = 8
 const ANSWERED_FIRST_MULTIPLIER = 1.5
@@ -54,6 +57,65 @@ const deriveWinnerFromHealth = (healthEntries = []) => {
     return null
 }
 
+const normalizeSprComparableValue = (value) => String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '')
+
+const evaluateQuestionAnswer = ({ question = {}, submittedResponse }) => {
+    const questionType = String(question?.questionType ?? '').toLowerCase()
+    const normalizedSubmittedResponse = String(submittedResponse ?? '').trim()
+
+    if(questionType === 'spr') {
+        const comparableSubmitted = normalizeSprComparableValue(normalizedSubmittedResponse)
+        if(!comparableSubmitted) {
+            return { isCorrect: false }
+        }
+
+        const comparableAcceptableAnswers = Array.isArray(question?.acceptableAnswersComparable)
+            ? question.acceptableAnswersComparable
+            : (Array.isArray(question?.acceptableAnswers)
+                ? question.acceptableAnswers.map(normalizeSprComparableValue)
+                : [])
+
+        return {
+            isCorrect: comparableAcceptableAnswers.includes(comparableSubmitted),
+        }
+    }
+
+    const normalizedChoiceId = normalizedSubmittedResponse.toUpperCase()
+
+    return {
+        isCorrect: normalizedChoiceId === question?.correctAnswer,
+    }
+}
+
+const buildPlayerStateMap = ({ playerIds = [], playerSnaps = [] }) => {
+
+    const playerStateMap = {}
+
+    playerSnaps.forEach((playerSnap, index) => {
+        const playerId = playerIds[index]
+        playerStateMap[playerId] = playerSnap.exists ? (playerSnap.data()?.state ?? {}) : {}
+    })
+
+    return playerStateMap
+
+}
+
+const buildUserStatsByUserId = ({ playerIds = [], userStatsSnaps = [] }) => {
+
+    const userStatsByUserId = {}
+
+    userStatsSnaps.forEach((userStatsSnap, index) => {
+        const playerId = playerIds[index]
+        userStatsByUserId[playerId] = userStatsSnap.exists ? (userStatsSnap.data() ?? {}) : {}
+    })
+
+    return userStatsByUserId
+
+}
+
 const resolveRoundAnswers = ({
     playerIds = [],
     playerStateMap = {},
@@ -68,7 +130,10 @@ const resolveRoundAnswers = ({
         const lastAnswer = playerState?.lastAnswer ?? {}
         const answeredThisQuestion = lastAnswer?.questionId === questionId
         const selectedChoiceId = answeredThisQuestion ? (lastAnswer?.selectedChoiceId ?? null) : null
-        const isCorrect = answeredThisQuestion ? selectedChoiceId === correctAnswer : false
+        const submittedResponse = answeredThisQuestion ? (lastAnswer?.submittedResponse ?? null) : null
+        const isCorrect = answeredThisQuestion
+            ? (typeof lastAnswer?.isCorrect === 'boolean' ? lastAnswer.isCorrect : selectedChoiceId === correctAnswer)
+            : false
         const elapsedMs = Math.max(0, Number(lastAnswer?.elapsedMs) || 0)
         const baseDamage = isCorrect ? getBaseDamageByDifficulty(lastAnswer?.difficulty) : 0
         const { damage, timeMultiplier } = calculateDamage({ baseDamage, elapsedMs, roundMultiplier })
@@ -76,6 +141,7 @@ const resolveRoundAnswers = ({
         roundResultsByUserId[playerId] = {
             userId: playerId,
             selectedChoiceId,
+            submittedResponse,
             isCorrect,
             elapsedMs,
             elapsedSec: elapsedMs / 1000,
@@ -92,9 +158,70 @@ const resolveRoundAnswers = ({
     return roundResultsByUserId
 }
 
+const resolveRoundDamageOutcome = ({
+    playerIds = [],
+    playerStateMap = {},
+    roundResultsByUserId = {},
+    initialHealth = SAT_CLASSIC_INITIAL_HEALTH,
+}) => {
+
+    const healthBeforeByUserId = Object.fromEntries(playerIds.map((playerId) => ([
+        playerId,
+        Number(playerStateMap[playerId]?.health) || initialHealth,
+    ])))
+    const nextHealthByUserId = { ...healthBeforeByUserId }
+
+    const [firstUserId, secondUserId] = playerIds
+    const firstRawDamage = Number(roundResultsByUserId[firstUserId]?.damageRaw) || 0
+    const secondRawDamage = Number(roundResultsByUserId[secondUserId]?.damageRaw) || 0
+
+    const sourceUserId = firstRawDamage > secondRawDamage ? firstUserId : secondUserId
+    const targetUserId = sourceUserId === firstUserId ? secondUserId : firstUserId
+
+    const sourceRawDamage = Math.max(firstRawDamage, secondRawDamage)
+    const targetRawDamage = Math.min(firstRawDamage, secondRawDamage)
+    const netDamage = Math.max(0, sourceRawDamage - targetRawDamage)
+
+    const damageTransfer = {
+        bothCorrect: firstRawDamage > 0 && secondRawDamage > 0,
+        isTie: firstRawDamage === secondRawDamage,
+        sourceUserId: netDamage > 0
+            ? sourceUserId
+            : (firstRawDamage === secondRawDamage ? firstUserId : null),
+        targetUserId: netDamage > 0
+            ? targetUserId
+            : (firstRawDamage === secondRawDamage ? secondUserId : null),
+        sourceRawDamage,
+        targetRawDamage,
+        netDamage,
+    }
+
+    if(netDamage > 0 && targetUserId) {
+        nextHealthByUserId[targetUserId] = Math.max(
+            0,
+            (nextHealthByUserId[targetUserId] ?? initialHealth) - netDamage,
+        )
+
+        roundResultsByUserId[sourceUserId] = {
+            ...roundResultsByUserId[sourceUserId],
+            damageDealt: netDamage,
+            targetUserId,
+        }
+    }
+
+    return {
+        nextHealthByUserId,
+        damageTransfer,
+        roundResultsByUserId,
+    }
+
+}
+
 export {
     SAT_CLASSIC_INITIAL_HEALTH,
     SAT_CLASSIC_MAX_QUESTIONS,
+    SAT_CLASSIC_ROUND_DURATION_MS,
+    SAT_CLASSIC_POST_SUBMIT_GRACE_MS,
     ANSWERED_FIRST_MULTIPLIER,
     SAT_CLASSIC_WIN_ELO_DELTA,
     SAT_CLASSIC_LOSS_ELO_DELTA,
@@ -102,5 +229,10 @@ export {
     getBaseDamageByDifficulty,
     calculateDamage,
     deriveWinnerFromHealth,
+    normalizeSprComparableValue,
+    evaluateQuestionAnswer,
+    buildPlayerStateMap,
+    buildUserStatsByUserId,
     resolveRoundAnswers,
+    resolveRoundDamageOutcome,
 }

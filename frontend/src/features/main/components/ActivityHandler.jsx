@@ -1,7 +1,12 @@
 import { useEffect, useRef } from "react";
 import { updateStatus, updateStreak } from "../../auth/services/userService";
+import { useMultiplayer } from "../../multiplayer/contexts/MultiplayerContext";
+import { cancelQueue } from "../../multiplayer/services/matchmakingService";
+import { leaveRoom } from "../../multiplayer/services/roomService";
 
-const ActivityHandler = ( { profile } ) => {
+const ActivityHandler = ({ profile }) => {
+
+    const { session } = useMultiplayer();
 
     const inactivityPeriod = 24 * (60 * 60 * 1000);
     const checkPeriod = 5 * (1000);
@@ -10,7 +15,42 @@ const ActivityHandler = ( { profile } ) => {
     const lastActivityTimeRef = useRef(Date.now());
     const lastCheckRef = useRef(Date.now());
     const lastSeen = useRef(profile.lastSeen);
-    
+    const sessionRef = useRef(session);
+
+    useEffect(() => {
+
+        const handleMultiplayerDisconnect = () => {
+            const currentSession = sessionRef.current;
+            const userId = profile?.uid;
+
+            if(!currentSession || !userId) {
+                return;
+            }
+
+            if(currentSession.status === "queue") {
+                void cancelQueue({ userId });
+                return;
+            }
+
+            if(currentSession.status === "in_room" && currentSession.currentRoomId) {
+                void leaveRoom({ roomId: currentSession.currentRoomId, userId });
+            }
+        };
+
+        window.addEventListener("beforeunload", handleMultiplayerDisconnect);
+        window.addEventListener("offline", handleMultiplayerDisconnect);
+
+        return () => {
+            window.removeEventListener("beforeunload", handleMultiplayerDisconnect);
+            window.removeEventListener("offline", handleMultiplayerDisconnect);
+        };
+
+    }, [profile?.uid]);
+
+    useEffect(() => {
+        sessionRef.current = session;
+    }, [session]);
+
     useEffect(() => {
         lastSeen.current = profile.lastSeen;
     }, [profile.lastSeen])
@@ -28,34 +68,34 @@ const ActivityHandler = ( { profile } ) => {
         return Math.floor((todayMid - seenMid) / msPerDay);
 
     };
-    
+
     const tryUpdateStreak = () => {
         const daysDiff = getDaysDifference(lastSeen.current?.seconds || 0);
         const streak = profile?.progress?.streak ?? profile?.streak ?? 0
-    
-        if(daysDiff === 1) {
+
+        if (daysDiff === 1) {
 
             updateStreak(profile);
             updateStatus(profile, "active");
 
-        } else if(daysDiff > 1 && streak !== 0) {
+        } else if (daysDiff > 1 && streak !== 0) {
 
             updateStreak(profile, true);
 
         }
 
-      };
+    };
 
     const tryUpdateStatus = () => {
 
         const isActive = Date.now() - lastActivityTimeRef.current <= inactivityPeriod;
 
-        if(isActive && lastStatus.current !== "active") {
+        if (isActive && lastStatus.current !== "active") {
 
             updateStatus(profile, 'active');
             lastStatus.current = "active";
 
-        } else if(!isActive && lastStatus.current !== "inactive") {
+        } else if (!isActive && lastStatus.current !== "inactive") {
 
             updateStatus(profile, 'inactive');
             lastStatus.current = "inactive";
@@ -66,7 +106,7 @@ const ActivityHandler = ( { profile } ) => {
 
     const tryUpdateActivity = () => {
 
-        if(Date.now() - lastCheckRef.current < checkPeriod) {
+        if (Date.now() - lastCheckRef.current < checkPeriod) {
             return;
         }
 

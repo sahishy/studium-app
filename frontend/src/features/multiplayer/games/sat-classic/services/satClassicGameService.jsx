@@ -1,15 +1,19 @@
 import { post } from '../../../../../shared/services/apiService'
 
-const submitSatClassicAnswer = async ({ roomId, userId, selectedChoiceId }) => {
+const submitSatClassicAnswer = async ({ roomId, userId, submittedResponse = '', isTimeout = false }) => {
 
-    if(!roomId || !userId || !selectedChoiceId) {
-        throw new Error('roomId, userId, and selectedChoiceId are required to submit an answer.')
+    const normalizedResponse = String(submittedResponse ?? '').trim()
+    const timeoutSubmission = Boolean(isTimeout)
+
+    if(!roomId || !userId || (!timeoutSubmission && !normalizedResponse)) {
+        throw new Error('roomId, userId, and submittedResponse are required to submit an answer.')
     }
 
     await post('/multiplayer/games/sat-classic/answer/submit', {
         roomId,
         userId,
-        selectedChoiceId,
+        submittedResponse: normalizedResponse,
+        isTimeout: timeoutSubmission,
     })
 
 }
