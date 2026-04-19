@@ -43,5 +43,3 @@ if(shouldUseEmulators) {
     )
 
 }
-
-await setPersistence(auth, browserLocalPersistence)
