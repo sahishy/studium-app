@@ -9,10 +9,12 @@ import { createNewUserObject } from '../services/userService'
 import { createUserStatsDocument } from '../../profile/services/statsService'
 import { uploadProfilePicture } from '../../../shared/services/storageService'
 
-import { FaGoogle } from "react-icons/fa";
 import { FaCircleExclamation } from 'react-icons/fa6'
+import Button from '../../../shared/components/ui/Button'
 
-import favicon from '../../../../public/favicon.ico'
+import logoSmall from '../../../assets/images/logo_sm.png'
+import authImage from '../../../assets/images/landing/auth.jpg'
+import googleIcon from '../../../assets/images/google.svg'
 
 const Signup = () => {
 
@@ -24,20 +26,20 @@ const Signup = () => {
     const [errors, setErrors] = useState({})
     const navigate = useNavigate()
     const { user } = useAuth()
-  
+
     useEffect(() => {
 
-        if(user) {
+        if (user) {
             navigate('/')
         }
 
     }, [user, navigate])
-  
+
     const handleSignup = async (e) => {
 
         e.preventDefault()
 
-        if(validateForm()) {
+        if (validateForm()) {
             try {
                 const res = await createUserWithEmailAndPassword(auth, email, password)
                 const user = res.user
@@ -51,7 +53,7 @@ const Signup = () => {
                     uid: user.uid,
                     profileForThumbnail: newUserObject,
                 })
-            
+
                 navigate('/agenda')
             } catch (err) {
                 setFirebaseError(err)
@@ -68,15 +70,15 @@ const Signup = () => {
         provider.setCustomParameters({
             prompt: 'select_account'
         });
-    
+
         try {
             const res = await signInWithPopup(auth, provider)
             const user = res.user
-    
+
             const userRef = doc(db, 'users', user.uid)
             const userSnap = await getDoc(userRef)
-    
-            if(!userSnap.exists()) {
+
+            if (!userSnap.exists()) {
                 const [firstName, ...rest] = (user.displayName || '').split(' ')
                 const lastName = rest.join(' ') || ''
 
@@ -88,7 +90,7 @@ const Signup = () => {
                     profileForThumbnail: newUserObject,
                 })
             }
-    
+
             navigate('/agenda')
         } catch (err) {
             setFirebaseError(err)
@@ -99,18 +101,18 @@ const Signup = () => {
     const validateForm = () => {
         let isValid = true;
         const newErrors = {};
-    
-        if(firstName === '') {
+
+        if (firstName === '') {
             newErrors.firstName = 'First name is required'
             isValid = false;
         }
 
-        if(lastName === '') {
+        if (lastName === '') {
             newErrors.lastName = 'Last name is required'
             isValid = false;
         }
 
-        if(email === '') {
+        if (email === '') {
             newErrors.email = 'Email is required';
             isValid = false;
         } else if (!/\S+@\S+\.\S+/.test(email)) {
@@ -118,21 +120,21 @@ const Signup = () => {
             isValid = false;
         }
 
-        if(password === '') {
+        if (password === '') {
             newErrors.password = 'Password is required';
             isValid = false;
-        } else if(password.length < 8) {
+        } else if (password.length < 8) {
             newErrors.password = 'Password is too short';
             isValid = false;
         }
-        
+
         setErrors(newErrors);
         return isValid;
     };
 
     const formatFirebaseError = () => {
         let message = 'An unexpected error occurred. Please try again.';
-        switch(firebaseError.code) {
+        switch (firebaseError.code) {
 
             case 'auth/email-already-in-use':
                 message = 'The provided email is already in use'
@@ -141,123 +143,122 @@ const Signup = () => {
         }
         return message;
     }
-  
+
     return (
-        <div className="h-screen flex justify-center items-center bg-background2">
+        <div className='min-h-screen bg-neutral6 text-neutral0 lg:flex'>
+            <section className='flex min-h-screen flex-1 items-center justify-center px-6 py-10 md:px-10'>
+                <div className='w-full flex flex-col items-center gap-8 max-w-sm'>
 
-            <div className="h-full w-full max-w-5xl">
-
-                <header className="w-full max-w-5xl flex justify-between items-center p-4">
-                    <button 
-                        className='"w-full max-w-5xl flex items-center gap-2 py-[4px] cursor-pointer'
+                    <img
+                        src={logoSmall}
+                        alt='Studium'
+                        className='h-10 w-10 cursor-pointer object-contain'
                         onClick={() => navigate('/')}
-                    >
-                        <img src={favicon} alt="Logo" className="w-8 h-8"/>
-                        <h2 className="text-lg font-semibold">Studium</h2>
-                    </button>
-                </header>
+                    />
 
-                <div className="flex flex-col gap-8 p-8 max-w-lg bg-background0 border-2 border-neutral4 rounded-xl mx-auto mt-2">
+                    <div className='flex flex-col items-center gap-2'>
+                        <h1 className='text-3xl font-bold'>Create an account</h1>
+                        <p className='text-sm text-center text-neutral1'>
+                            Begin your productivity journey in seconds.
+                        </p>
+                    </div>
 
-                    <h2 className="text-2xl font-semibold text-center">Create Account</h2>
-
-                    <form onSubmit={handleSignup} noValidate={true} className="space-y-4">
-
-                        <div className='flex gap-4'>
-                            <div className='flex-1 flex flex-col'>
+                    <form onSubmit={handleSignup} noValidate={true} className='w-full flex flex-col gap-4'>
+                        <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
+                            <div className='flex flex-col gap-1.5'>
                                 <input
-                                    type="text"
-                                    placeholder="First Name"
+                                    type='text'
+                                    placeholder='First Name'
                                     value={firstName}
                                     onChange={(e) => setFirstName(e.target.value)}
-                                    className="w-full p-4 border-2 border-neutral4 rounded-xl focus:outline-yellow-400"
+                                    className='w-full rounded-full bg-neutral5 px-4 py-3 text-sm outline-neutral3 transition-colors'
                                     autoComplete='given-name'
-                                    name="firstName"
-                                />      
-                                {errors.firstName && <p className='text-red-400 flex items-center gap-2'><FaCircleExclamation/>{errors.firstName}</p>}                          
+                                    name='firstName'
+                                />
+                                {errors.firstName && <p className='flex items-center gap-2 text-xs text-red-400'><FaCircleExclamation />{errors.firstName}</p>}
                             </div>
 
-                            <div className='flex-1 flex flex-col'>
+                            <div className='flex flex-col gap-1.5'>
                                 <input
-                                    type="text"
-                                    placeholder="Last Name"
+                                    type='text'
+                                    placeholder='Last Name'
                                     value={lastName}
                                     onChange={(e) => setLastName(e.target.value)}
-                                    className="w-full p-4 border-2 border-neutral4 rounded-xl focus:outline-yellow-400"
+                                    className='w-full rounded-full bg-neutral5 px-4 py-3 text-sm outline-neutral3 transition-colors'
                                     autoComplete='family-name'
-                                    name="lastName"
+                                    name='lastName'
                                 />
-                                {errors.lastName && <p className='text-red-400 flex items-center gap-2'><FaCircleExclamation/>{errors.lastName}</p>}                         
+                                {errors.lastName && <p className='flex items-center gap-2 text-xs text-red-400'><FaCircleExclamation />{errors.lastName}</p>}
                             </div>
-
                         </div>
-                        
-                        <div className='flex flex-col'>
+
+                        <div className='flex flex-col gap-1.5'>
                             <input
-                                type="email"
-                                placeholder="Email"
+                                type='email'
+                                placeholder='Email'
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full p-4 border-2 border-neutral4 rounded-xl focus:outline-yellow-400"
+                                className='w-full rounded-full bg-neutral5 px-4 py-3 text-sm outline-neutral3 transition-colors'
                                 autoComplete='email'
-                                name="email"
+                                name='email'
                             />
-                            {errors.email && <p className='text-red-400 flex items-center gap-2'><FaCircleExclamation/>{errors.email}</p>}
+                            {errors.email && <p className='flex items-center gap-2 text-xs text-red-400'><FaCircleExclamation />{errors.email}</p>}
                         </div>
 
-                        <div className='flex flex-col'>
+                        <div className='flex flex-col gap-1.5'>
                             <input
-                                type="password"
-                                placeholder="Password"
+                                type='password'
+                                placeholder='Password'
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full p-4 border-2 border-neutral4 rounded-xl focus:outline-yellow-400"
-                                name="password"
+                                className='w-full rounded-full bg-neutral5 px-4 py-3 text-sm outline-neutral3 transition-colors'
+                                name='password'
                                 autoComplete='new-password'
                             />
-                            {errors.password && <p className='text-red-400 flex items-center gap-2'><FaCircleExclamation/>{errors.password}</p>}
+                            {errors.password && <p className='flex items-center gap-2 text-xs text-red-400'><FaCircleExclamation />{errors.password}</p>}
                         </div>
 
-                        {firebaseError.code && <p className="text-red-400 flex justify-center items-center gap-2"><FaCircleExclamation/>{formatFirebaseError()}</p>}
+                        {firebaseError.code && <p className='flex items-center justify-center gap-2 text-xs text-red-400'><FaCircleExclamation />{formatFirebaseError()}</p>}
 
-                        <button className="w-full p-4 font-semibold border-yellow-500 border-b-4 rounded-xl bg-yellow-400 hover:bg-yellow-500 active:mt-[2px] active:border-b-2 cursor-pointer transition-all ">
+                        <Button htmlType='submit' type='primary' className='w-full rounded-full py-3'>
                             Sign Up
-                        </button>
+                        </Button>
 
-                        <div className='flex items-center gap-2'>
-                            <hr className='flex-1 border-2 border-neutral4 rounded-full'></hr>
-                            <p className='text-text2 font-semibold'>OR</p>
-                            <hr className='flex-1 border-2 border-neutral4 rounded-full'></hr>
+                        <div className='flex items-center gap-3'>
+                            <hr className='flex-1 border-neutral4' />
+                            <p className='text-xs font-medium uppercase tracking-wide text-neutral1'>or</p>
+                            <hr className='flex-1 border-neutral4' />
                         </div>
 
-                        <button
-                            type="button"
+                        <Button
+                            htmlType='button'
                             onClick={handleGoogleContinue}
-                            className="w-full p-4 text-white font-semibold border-black border-b-4 rounded-xl bg-gray-800 hover:bg-black active:translate-y-[2px] active:mb-[18px] active:border-b-2 cursor-pointer transition-all  flex items-center justify-center gap-2"
+                            type='secondary'
+                            className='w-full rounded-full py-3'
                         >
-                            <FaGoogle/>
+                            <img src={googleIcon} alt='Google' className='h-4 w-4' />
                             Continue with Google
-                        </button>
-
-                        <p className="text-center text-gray-500 flex justify-center">
-                            Already have an account?&nbsp;
-                            <a
-                                onClick={() => navigate('/login')} 
-                                className="text-yellow-400 font-semibold group transition-all cursor-pointer"
-                            >
-                                Log In
-                                <span className="block max-w-0 group-hover:max-w-full transition-all  h-0.5 bg-yellow-400"></span>
-                            </a>
-                        </p>
+                        </Button>
 
                     </form>
 
-                    <p className='text-sm text-text2 text-center'>Note: Some schools may block Google sign-ins or account creation. If you're experiencing this, please use the regular sign-up method instead.</p>
-                
+                    <p className='pt-1 text-center text-sm text-neutral1'>
+                        Already have an account?{' '}
+                        <span
+                            onClick={() => navigate('/login')}
+                            className='cursor-pointer font-semibold text-neutral0 hover:opacity-80 transition'
+                        >
+                            Log In
+                        </span>
+                    </p>
+
                 </div>
+            </section>
 
-            </div>
-
+            <section className='relative hidden min-h-screen flex-1 lg:block'>
+                <img src={authImage} className='h-full w-full object-cover'/>
+            </section>
+            
         </div>
     )
 

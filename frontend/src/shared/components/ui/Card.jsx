@@ -1,8 +1,11 @@
 import { FaArrowRight } from "react-icons/fa6"
+import { forwardRef } from 'react'
 
-const Card = ( { hoverable, className, children } ) => {
+const Card = forwardRef(( { hoverable, className, children, ...props }, ref ) => {
     return (
         <div
+            ref={ref}
+            {...props}
             className={`relative flex flex-col gap-4 p-4 bg-neutral6 rounded-xl border border-neutral4 shadow-lg shadow-shadow min-w-0 
                 ${hoverable && 'group/card cursor-pointer'}
                 ${className}`}
@@ -17,6 +20,6 @@ const Card = ( { hoverable, className, children } ) => {
             </div>
         </div>
     )
-}
+})
 
 export default Card
