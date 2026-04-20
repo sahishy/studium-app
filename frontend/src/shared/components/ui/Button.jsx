@@ -1,16 +1,8 @@
-const Button = ( {
-    children,
-    onClick,
-    type = 'secondary',
-    htmlType = 'button',
-    className = '',
-    disabled = false,
-    ...props
-} ) => {
+const Button = ( { children, onClick, type = 'secondary', htmlType = 'button', className = '', disabled = false, ...props } ) => {
 
     const getClass = () => {
         if(type === 'primary') {
-            return 'text-neutral6 bg-neutral0 border border-slate-900 not-disabled:hover:opacity-90 border-b-4 not-disabled:active:border-b-1 not-disabled:active:mt-[3.2px]';
+            return 'text-neutral6 bg-neutral0 border border-slate-900 not-disabled:hover:bg-[#2e3947] border-b-4 not-disabled:active:border-b-1 not-disabled:active:mt-[3.2px]';
         } else if(type === 'secondary') {
             return 'text-neutral0 bg-neutral6 border border-neutral4 not-disabled:hover:bg-neutral5 border-b-4 not-disabled:active:border-b-1 not-disabled:active:mt-[3.2px]';
         } else if(type === 'tertiary') {
@@ -37,6 +29,7 @@ const Button = ( {
             {children}
         </button>
     )
+    
 }
 
 export default Button;

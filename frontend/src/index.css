@@ -44,7 +44,7 @@ html {
 
 * {
     -webkit-user-drag: none;
-    @apply focus:outline-gray-200;
+    @apply focus:outline-neutral0;
 }
 
 @media (prefers-color-scheme: light) {

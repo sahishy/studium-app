@@ -17,9 +17,8 @@ import MultiplayerSessionRedirect from './routes/MultiplayerSessionRedirect'
 import Avatar from './features/profile/pages/Avatar'
 import Settings from './features/profile/pages/Settings'
 import ProfileOverview from './features/profile/pages/ProfileOverview'
-import Login from './features/auth/pages/Login'
-import Signup from './features/auth/pages/Signup'
 import Landing from './features/main/pages/Landing'
+import Welcome from './features/auth/pages/Welcome'
 import { ModalProvider } from './shared/contexts/ModalContext'
 import { ToastProvider } from './shared/contexts/ToastContext'
 import JoinCircle from './features/circles/pages/JoinCircle'
@@ -31,66 +30,65 @@ import MaintenanceRoute from './routes/MaintenanceRoute'
 
 export default function App() {
 	return (
-		<MaintenanceRoute>
-			<Routes>
+		<ModalProvider>
+			<MaintenanceRoute>
+				<Routes>
 
-			<Route path="/" element={<Landing/>}/>
-			<Route path="/login" element={<Login/>}/>
-			<Route path="/signup" element={<Signup/>}/>
+				<Route path="/" element={<Landing/>}/>
+				<Route path="/welcome" element={<Welcome/>}/>
 
-			<Route
-				element={
-					<PrivateRoute>
-						<ToastProvider>
-							<ModalProvider>
+				<Route
+					element={
+						<PrivateRoute>
+							<ToastProvider>
 								<MainScreen/>
-							</ModalProvider>
-						</ToastProvider>
-					</PrivateRoute>
-				}
-			>
+							</ToastProvider>
+						</PrivateRoute>
+					}
+				>
 
-				<Route element={<MultiplayerSessionRedirect/>}>
-					<Route path="/agenda" element={<Agenda/>}>
-						<Route index element={<AgendaIndexRedirect/>}/>
-						<Route path="list" element={<ListTab/>} />
-						<Route path="calendar" element={<CalendarTab/>} />
-						<Route path="board" element={<BoardTab/>} />
+					<Route element={<MultiplayerSessionRedirect/>}>
+						<Route path="/agenda" element={<Agenda/>}>
+							<Route index element={<AgendaIndexRedirect/>}/>
+							<Route path="list" element={<ListTab/>} />
+							<Route path="calendar" element={<CalendarTab/>} />
+							<Route path="board" element={<BoardTab/>} />
+						</Route>
+						<Route path="/circles">
+							<Route index element={<Circles/>}/>
+							<Route path=":circleId" element={<CirclesOverview/>}/>
+						</Route>
+						<Route path="/courses" element={<Courses/>}>
+							<Route index element={<CoursesIndexRedirect/>}/>
+							<Route path="me" element={<MyCoursesTab/>}/>
+							<Route path="all" element={<AllCoursesTab/>}/>
+							<Route path="all/:courseId" element={<CourseOverview/>}/>
+						</Route>
+						<Route path="/resources" element={<Resources/>}/>
+						<Route path="/ranked" element={<Ranked/>}/>
+						<Route path="/ranked/room/:roomId" element={<MatchRoom/>}/>
+						<Route path="/join/:inviteCode" element={<JoinCircle/>}/>
+						<Route path="/avatar" element={<Avatar/>}/>
+						<Route path="/settings" element={<Settings/>}/>
+						<Route path="/profile/:userId" element={<ProfileOverview/>}/>
 					</Route>
-					<Route path="/circles">
-						<Route index element={<Circles/>}/>
-						<Route path=":circleId" element={<CirclesOverview/>}/>
-					</Route>
-					<Route path="/courses" element={<Courses/>}>
-						<Route index element={<CoursesIndexRedirect/>}/>
-						<Route path="me" element={<MyCoursesTab/>}/>
-						<Route path="all" element={<AllCoursesTab/>}/>
-						<Route path="all/:courseId" element={<CourseOverview/>}/>
-					</Route>
-					<Route path="/resources" element={<Resources/>}/>
-					<Route path="/ranked" element={<Ranked/>}/>
-					<Route path="/ranked/room/:roomId" element={<MatchRoom/>}/>
-					<Route path="/join/:inviteCode" element={<JoinCircle/>}/>
-					<Route path="/avatar" element={<Avatar/>}/>
-					<Route path="/settings" element={<Settings/>}/>
-					<Route path="/profile/:userId" element={<ProfileOverview/>}/>
+
+
 				</Route>
 
+				<Route
+					path="*"
+					element={
+						<ErrorState
+							fullPage
+							title="Page not found"
+							description="The page you're looking for doesn't exist or may have been moved."
+						/>
+					}
+				/>
 
-			</Route>
-
-			<Route
-				path="*"
-				element={
-					<ErrorState
-						fullPage
-						title="Page not found"
-						description="The page you're looking for doesn't exist or may have been moved."
-					/>
-				}
-			/>
-
-			</Routes>
-		</MaintenanceRoute>
+				</Routes>
+			</MaintenanceRoute>
+		</ModalProvider>
 	)
 }
