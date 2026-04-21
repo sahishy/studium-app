@@ -44,13 +44,13 @@ const CirclesOverview = () => {
     }
 
     if(loading) {
-        return <LoadingState fullPage label='Loading circle...' />
+        return <LoadingState fullPage/>
     }
     if(!circle) {
         return <ErrorState fullPage title='Circle not found' />
     }
     if(circleMembersLoading) {
-        return <LoadingState fullPage label='Loading circle members...' />
+        return <LoadingState fullPage/>
     }
     if(!circleMembers.some((member) => member.userId === profile.uid)) {
         return <ErrorState fullPage title="You aren't in that circle" />

@@ -1,13 +1,14 @@
 import { collection, doc, onSnapshot, orderBy, query, setDoc } from 'firebase/firestore'
 import { db } from '../../../lib/firebase'
 import { ROOMS_COLLECTION } from '../utils/multiplayerUtils'
+import { cleanText } from '../../../shared/services/censorService'
 
-const subscribeToRoomChat = ( roomId, onChange, setLoading = () => {}, setError = () => {} ) => {
+const subscribeToRoomChat = (roomId, onChange, setLoading = () => { }, setError = () => { }) => {
 
-    if(!roomId) {
+    if (!roomId) {
         onChange?.([])
         setLoading(false)
-        return () => {}
+        return () => { }
     }
 
     const chatRef = collection(db, ROOMS_COLLECTION, roomId, 'chat')
@@ -26,11 +27,11 @@ const subscribeToRoomChat = ( roomId, onChange, setLoading = () => {}, setError 
 
 const sendRoomChatMessage = async ({ roomId, userId, text, senderName = null, clientMessageId = null }) => {
 
-    if(!roomId || !text?.trim()) {
+    if (!roomId || !text?.trim()) {
         throw new Error('roomId and non-empty text are required to send a chat message.')
     }
 
-    if(!userId) {
+    if (!userId) {
         throw new Error('userId is required for chat messages.')
     }
 
@@ -39,7 +40,7 @@ const sendRoomChatMessage = async ({ roomId, userId, text, senderName = null, cl
     await setDoc(messageRef, {
         userId,
         senderName,
-        text: text.trim(),
+        text: cleanText(text),
         clientMessageId,
         createdAt: new Date(),
     })

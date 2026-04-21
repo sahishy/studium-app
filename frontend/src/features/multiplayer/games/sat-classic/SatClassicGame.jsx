@@ -379,7 +379,7 @@ const SatClassicGame = ({ roomId, userId }) => {
     }
 
     if(isGameLoading) {
-        return <LoadingState label='Loading SAT Classic...' className='min-h-[420px]' />
+        return <LoadingState className='min-h-[420px]' />
     }
 
     if(showMatchEndOverlay) {

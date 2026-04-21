@@ -6,7 +6,7 @@ const Button = ( { children, onClick, type = 'secondary', htmlType = 'button', c
         } else if(type === 'secondary') {
             return 'text-neutral0 bg-neutral6 border border-neutral4 not-disabled:hover:bg-neutral5 border-b-4 not-disabled:active:border-b-1 not-disabled:active:mt-[3.2px]';
         } else if(type === 'tertiary') {
-            return 'text-neutral0 bg-neutral3/60 backdrop-blur-xs not-disabled:hover:bg-neutral3';
+            return 'text-neutral0 bg-neutral3/60 backdrop-blur-xs not-disabled:hover:bg-neutral3 rounded-full';
         } else if(type === 'negative') {
             return 'text-white bg-red-400 border border-red-500 not-disabled:hover:bg-red-500 border-b-4 not-disabled:active:border-b-1 not-disabled:active:mt-[3.2px]';
         } else {
@@ -29,7 +29,7 @@ const Button = ( { children, onClick, type = 'secondary', htmlType = 'button', c
             {children}
         </button>
     )
-    
+
 }
 
 export default Button;

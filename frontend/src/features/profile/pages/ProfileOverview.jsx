@@ -49,7 +49,7 @@ const ProfileOverview = () => {
 
             <div className='w-full flex-1 flex flex-col gap-4 px-24 pb-24 pt-2'>
 
-                {loading ? <LoadingState label='Loading profile...' /> : null}
+                {loading ? <LoadingState/> : null}
 
                 {!loading && !profile ? (
                     <ErrorState

@@ -7,7 +7,7 @@ const PrivateRoute = ( { children } ) => {
     const { user, loading } = useAuth()
 
     if(loading) {
-        return <LoadingState fullPage label='Loading...' />
+        return <LoadingState fullPage/>
     }
 
     return user ? children : <Navigate to="/" replace/>

@@ -27,15 +27,6 @@ const Courses = () => {
         return activeTab?.label || 'My Courses'
     }
 
-    const getTabDescription = () => {
-        const tabTitle = getTabTitle();
-        if (tabTitle === 'My Courses') {
-            return 'Select which courses you are taking to aid in task management.'
-        } else {
-            return 'Learn more about courses and talk about your experiences.'
-        }
-    }
-
     const handleClick = (tab) => {
         navigate(`/courses/${tab}`)
     }
@@ -49,16 +40,13 @@ const Courses = () => {
 
                     {onOverviewPage ? (
                         <Button
-                            onClick={() => navigate('/courses/all')}
+                            onClick={() => navigate(-1)}
                         >
                             <FaArrowLeft />
                             Back
                         </Button>
                     ) : (
-                        <div className='flex flex-col gap-1'>
-                            <h1 className='text-2xl font-semibold'>{getTabTitle()}</h1>
-                            <h2 className='text-sm text-neutral1'>{getTabDescription()}</h2>
-                        </div>
+                        <h1 className='text-2xl font-semibold'>{getTabTitle()}</h1>
                     )}
 
                     <TextTabSelector
@@ -66,7 +54,7 @@ const Courses = () => {
                         currentIndex={currentTab}
                         onSelect={(tab) => handleClick(tab.name)}
                     />
-                    
+
                 </div>
                 <Outlet context={{ profile }} />
                 <BottomFade scrollRef={scrollRef} />

@@ -65,7 +65,7 @@ const JoinCircle = () => {
 
             {(loading || !circle) ? (
                 loading ? (
-                    <LoadingState label="Loading invite..." />
+                    <LoadingState/>
                 ) : (
                     <ErrorState title="Circle doesn't exist or can't be joined" />
                 )

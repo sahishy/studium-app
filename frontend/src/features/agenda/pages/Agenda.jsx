@@ -43,7 +43,7 @@ const Agenda = () => {
                 </div>
 
                 {!tasksReady
-                    ? <LoadingState label='Loading tasks...' />
+                    ? <LoadingState/>
                     : <Outlet context={{ profile }} />}
 
 

@@ -1,763 +1,3807 @@
 [
-    "Agriculture",
-    "Agricultural Business",
-    "Agricultural Business and Technology",
-    "Agricultural Economics",
-    "Farm and Ranch Management",
-    "Agricultural Extension Services",
-    "Agriculture Operations",
-    "Agricultural Mechanics and Machinery",
-    "Agricultural Production Operations",
-    "Animal Sciences and Husbandry",
-    "Animal Husbandry",
-    "Animal Sciences",
-    "Equine Studies",
-    "Botany and Plant Sciences",
-    "Aquaculture",
-    "Botany and Plant Physiology",
-    "Plant Science",
-    "Crop and Soil Studies",
-    "Agronomy, Range, and Crop Science",
-    "Crop Production",
-    "Soil Sciences",
-    "Food Science and Technology",
-    "Agricultural and Food Products Processing",
-    "Food Science",
-    "Horticultural",
-    "Greenhouse, Nursery, and Floristry Operations",
-    "Horticultural Sciences",
-    "Horticulture Business Services",
-    "Landscaping and Groundskeeping",
-    "Turf and Turfgrass Management",
-    "Architecture and Planning",
-    "Architecture Studies",
-    "Architectural Sciences and Technology",
-    "Architecture",
-    "Environmental Architecture and Design",
-    "Interior Architecture",
-    "Landscape Architecture",
-    "Historic Preservation and Conservation",
-    "Planning and Development",
-    "Land Use Planning and Development",
-    "Real Estate Development",
-    "Urban, Community and Regional Planning",
-    "Arts",
-    "Art History",
-    "Art Studies",
-    "Arts, Entertainment, and Media Management",
-    "Fine and Studio Arts Management",
-    "Music Management",
-    "Theatre, Arts, and Media Management",
-    "Design and Applied Arts",
-    "Commercial and Advertising Art",
-    "Commercial Photography",
-    "Design and Visual Communications",
-    "Fashion and Apparel Design",
-    "Game and Interactive Media Design",
-    "Graphic Design",
-    "Illustration",
-    "Industrial and Product Design",
-    "Interior Design",
-    "Film, Video, and Photography",
-    "Cinematography and Video Production",
-    "Film and Video Studies",
-    "Photography",
-    "Fine Arts",
-    "Ceramics",
-    "Crafts and Artisanry",
-    "Drawing",
-    "Fiber, Textile and Weaving",
-    "Metal and Jewelry Arts",
-    "Multimedia",
-    "Painting",
-    "Printmaking",
-    "Sculpture",
-    "Studio Arts",
-    "Music",
-    "Conducting",
-    "Music History and Literature",
-    "Music Performance",
-    "Music Technology",
-    "Music Theory and Composition",
-    "Musical Instruments",
-    "Voice and Opera",
-    "Performing Arts",
-    "Acting",
-    "Dance",
-    "Drama and Theatre Production",
-    "Theatre Design",
-    "Visual Arts",
-    "Biological Sciences",
-    "Anatomy",
-    "Animal Biology",
-    "Animal Physiology and Behavior",
-    "Zoology and Entomology",
-    "Biochemistry and Molecular Biology",
-    "Bioinformatics",
-    "Biology",
-    "Biological and Physical Sciences",
-    "Biology and Biological Sciences",
-    "Biology Laboratory Technician",
-    "Biomedical Sciences and Molecular Medicine",
-    "Biotechnology",
-    "Cellular Biology",
-    "Ecology, Evolution, and Population Biology",
-    "Ecology and Evolutionary Biology",
-    "Epidemiology",
-    "Marine Biology and Oceanography",
-    "Population Biology",
-    "Genetics",
-    "Microbiology",
-    "Molecular Biology",
-    "Neuroscience and Neurobiology",
-    "Neuroanatomy",
-    "Neuroscience",
-    "Pharmacology and Toxicology",
-    "Pharmacology",
-    "Toxicology",
-    "Physiology and Pathology",
-    "Exercise Physiology",
-    "Pathology",
-    "Physiology",
-    "Business",
-    "Business Management",
-    "Business Administration and Management",
-    "Construction Management",
-    "Corporate Communications",
-    "E-Commerce",
-    "International Business",
-    "Logistics and Supply Chain Management",
-    "Managerial Economics",
-    "Non-Profit and Public Management",
-    "Office Management",
-    "Operations Management",
-    "Procurement and Contracts Management",
-    "Business Support Services",
-    "Administrative Assistant and Secretarial Science",
-    "Clerical Services",
-    "Customer Service Support and Call Center Operation",
-    "Executive Assistant",
-    "Entrepreneurship and Small Business Operations",
-    "Entrepreneurship",
-    "Franchise Operations",
-    "Small Business Management",
-    "Finance and Accounting",
-    "Accounting",
-    "Accounting Technician and Bookkeeping",
-    "Actuarial Science",
-    "Banking and Finance",
-    "Finance",
-    "Financial Planning",
-    "Financial Services Marketing",
-    "Insurance",
-    "Investments and Securities",
-    "Taxation",
-    "Hospitality and Tourism Management",
-    "Hospitality Management",
-    "Hotel and Resort Management",
-    "Restaurant and Food Services Management",
-    "Tourism and Travel Services Management",
-    "Human Resources",
-    "Human Resources Development",
-    "Human Resources Management",
-    "Labor and Industrial Relations",
-    "Organizational Behavior Studies",
-    "Management Sciences and Information Systems",
-    "Management Information Systems",
-    "Management Sciences and Statistics",
-    "Sales and Marketing",
-    "Fashion and Apparel Merchandising",
-    "Marketing",
-    "Merchandising and Buying Operations",
-    "Real Estate",
-    "Retailing",
-    "Selling and Sales",
-    "Communications",
-    "Advertising",
-    "Communication and Media Studies",
-    "Communications Technicians",
-    "Digital and Print Journalism",
-    "Broadcast Journalism",
-    "Journalism",
-    "Photojournalism",
-    "Digital and Print Publishing",
-    "Desktop Publishing and Digital Imaging Design",
-    "Publishing",
-    "Graphic Communications",
-    "Animation, Video Graphics and Special Effects",
-    "Graphic and Printing Equipment Operation",
-    "Graphic Communication and Printing",
-    "Mass Communications and Media",
-    "Mass Communication",
-    "Public Relations",
-    "Radio and Television Broadcasting Technician",
-    "Radio, Television, and Digital Communication",
-    "Recording Arts Technician",
-    "Organizational Communication",
-    "Speech Communication and Rhetoric",
-    "Computer and Information Sciences",
-    "Computer and IT Administration",
-    "Computer and Information Systems Security",
-    "IT Services Administration",
-    "Multimedia Management and Webmaster",
-    "Network, Database, and System Administration",
-    "System, Networking, and LAN/WAN Management",
-    "Computer Programming",
-    "Computer Science",
-    "Computer Systems",
-    "Computer Systems Analysis",
-    "Computer Systems Networking and Telecommunications",
-    "Data Processing",
-    "Data Entry",
-    "Data Processing Technician",
-    "Digital Design",
-    "Computer Graphics",
-    "Web Page and Digital Design",
-    "Information Studies",
-    "Artificial Intelligence",
-    "Computer and Information Studies",
-    "Information Technology",
-    "Education",
-    "Education Studies and Research",
-    "Bilingual and Multicultural Education",
-    "Curriculum",
-    "Educational Media Design",
-    "Educational Research",
-    "Foundations of Education",
-    "Educational Administration and Supervision",
-    "Educational Administration",
-    "Educational, Instructional, and Curriculum Supervision",
-    "Elementary and Middle School Administration",
-    "High School Administration",
-    "Higher Education Administration",
-    "Superintendence and Educational System Administration",
-    "Library Science",
-    "Library and Archives Assisting",
-    "Library Science and Administration",
-    "School Librarian",
-    "School Counseling",
-    "College Student Counseling and Personnel Services",
-    "School Counseling and Guidance Services",
-    "Special Education",
-    "Education of Individuals with Impairments and Disabilities",
-    "Education of the Gifted and Talented",
-    "Special Education and Teaching",
-    "Teaching",
-    "Adult and Continuing Education",
-    "Agricultural Teacher Education",
-    "Art Teacher Education",
-    "Business Teacher Education",
-    "Computer Teacher Education",
-    "Early Childhood Education",
-    "Elementary Education",
-    "English and Speech Teacher Education",
-    "Foreign Language Teacher Education",
-    "Health Teacher Education",
-    "High School Education",
-    "History Teacher Education",
-    "Kindergarten and Preschool Education",
-    "Mathematics Teacher Education",
-    "Middle School Education",
-    "Music Teacher Education",
-    "Physical Education Teaching and Coaching",
-    "Reading Teacher Education",
-    "Science Teacher Education",
-    "Social Science Teacher Education",
-    "Social Studies Teacher Education",
-    "Teacher Education for Multiple Levels",
-    "Teaching English as a Second Language",
-    "Technical Teacher Education",
-    "Technology Teacher Education",
-    "Trade and Industrial Teacher Education",
-    "Teaching Assistant",
-    "Engineering",
-    "Aerospace Engineering",
-    "Aerospace and Aeronautical Engineering",
-    "Aerospace Engineering Technician",
-    "Agricultural and Environmental Engineering",
-    "Agricultural Engineering",
-    "Environmental Engineering",
-    "Environmental Engineering Technician",
-    "Water, Wastewater, and Recycling Technician",
-    "Architectural Engineering and Technology",
-    "Architectural Engineering",
-    "Architectural Engineering Technician",
-    "Biological Engineering",
-    "Bioengineering and Biomedical Engineering",
-    "Biomedical Technician",
-    "Chemical Engineering",
-    "Civil and Surveying Engineering",
-    "Civil Engineering",
-    "Civil Engineering Technician",
-    "Surveying Engineering",
-    "Surveying Technician",
-    "Computer Engineering",
-    "Computer Engineering Technician",
-    "Computer Hardware Engineering",
-    "Computer Software Engineering",
-    "Computer Systems Technician",
-    "Construction Engineering and Technology",
-    "Construction Engineering",
-    "Construction Engineering Technician",
-    "Welding Engineering Technician",
-    "Electrical and Communications Engineering",
-    "Electrical and Electronics Engineering",
-    "Electrical Engineering Technician",
-    "Telecommunications Technician",
-    "Engineering Drafting and Design",
-    "Architectural Drafting (CAD/CADD)",
-    "Drafting and Design Engineering Technician (CAD/CADD)",
-    "Engineering Design",
-    "Mechanical Drafting (CAD/CADD)",
-    "Engineering Sciences and Mechanics",
-    "Engineering Mechanics",
-    "Engineering Physics",
-    "Engineering Science",
-    "Engineering Studies",
-    "Industrial Engineering and Technology",
-    "Industrial and Engineering Management",
-    "Industrial Engineering",
-    "Industrial Production Technician",
-    "Industrial Technician",
-    "Manufacturing Engineering and Technology",
-    "Hazardous Materials and Industrial Safety Technician",
-    "Manufacturing Engineering",
-    "Manufacturing Engineering Technician",
-    "Occupational Safety and Health Technician",
-    "Quality Control Technician",
-    "Mechanical Engineering and Technology",
-    "Automotive Engineering Technician",
-    "HVAC and Refrigeration Engineering Technician",
-    "Instrumentation Technician",
-    "Mechanical Engineering",
-    "Mechanical Engineering Technician",
-    "Robotics and Automation Engineering",
-    "Robotics and Automation Engineering Technician",
-    "Mineral and Petroleum Engineering",
-    "Mining and Mineral Engineering",
-    "Mining and Petroleum Technician",
-    "Petroleum Engineering",
-    "Nuclear Engineering and Technology",
-    "Nuclear Engineering",
-    "Nuclear Engineering Technician",
-    "Operations Research",
-    "Plastics and Materials Engineering",
-    "Materials Engineering",
-    "Textile and Plastics Engineering",
-    "Systems Engineering",
-    "Environmental Sciences",
-    "Conservation and Environmental Studies",
-    "Environmental and Marine Sciences",
-    "Environmental Studies",
-    "Natural Resources Conservation",
-    "Sustainability Studies",
-    "Forest Sciences",
-    "Forest and Wood Sciences",
-    "Forestry",
-    "Natural Resource Management",
-    "Forest Resources Management",
-    "Natural Resource Recreation and Tourism",
-    "Natural Resources Management and Policy",
-    "Wildlife and Fisheries Management",
-    "Health Care",
-    "Alternative Medicine",
-    "Acupuncture and Oriental Medicine",
-    "Alternative Medical Systems and Holistic Health",
-    "Midwifery",
-    "Traditional Chinese Medicine",
-    "Chiropractic Studies",
-    "Communication Disorders",
-    "Audiology",
-    "Communication Sciences and Disorders",
-    "Speech Language Pathology",
-    "Speech Language Pathology Assistant",
-    "Dental Studies",
-    "Advanced Dentistry and Oral Sciences",
-    "Dental Assisting",
-    "Dental Hygiene",
-    "Dentistry",
-    "Diagnostics",
-    "Cardiovascular Technician",
-    "Clinical Laboratory Technician",
-    "Diagnostic Technician",
-    "Medical Laboratory Technician",
-    "Nuclear and Industrial Radiologic Technology",
-    "Phlebotomy Technician",
-    "Radiologic Technician",
-    "Sonographer and Ultrasound Technician",
-    "Dietetics and Clinical Nutrition",
-    "Emergency Care Attendant (EMT)",
-    "Emergency Medical Technician (EMT Paramedic)",
-    "Health and Medical Administrative Services",
-    "Health Care Management",
-    "Health Unit Coordinator and Manager",
-    "Hospital Management",
-    "Medical Insurance Billing and Claims",
-    "Medical Insurance Coding",
-    "Medical Management and Clinical Assistant",
-    "Medical Office Assistant",
-    "Medical Office Computer Specialist",
-    "Medical Office Management",
-    "Medical Reception",
-    "Medical Records Administration",
-    "Medical Records Technician",
-    "Medical Secretary",
-    "Medical Transcription",
-    "Intervention and Treatment",
-    "Athletic Training",
-    "Intervention and Treatment Professions",
-    "Nuclear Medical Technician",
-    "Radiation Therapy",
-    "Respiratory Care Therapy",
-    "Surgical Technologist",
-    "Medical Assisting",
-    "Anesthesiologist Assistant",
-    "Clinical Laboratory Assistant",
-    "Medical Assistant",
-    "Radiologist Assistant",
-    "Respiratory Therapy Technician",
-    "Medicine and Medical Studies",
-    "Health Service Preparatory Studies",
-    "Medicine",
-    "Osteopathy",
-    "Podiatry",
-    "Pre-Medicine Studies",
-    "Mental and Social Health Services",
-    "Community Health Services and Counseling",
-    "Marriage and Family Therapy and Counseling",
-    "Medical Social Work",
-    "Mental and Social Health Studies",
-    "Mental Health Counseling",
-    "Psychiatric and Mental Health Services",
-    "Substance Abuse and Addiction Counseling",
-    "Nursing",
-    "Adult Health Nursing",
-    "Family Practice and Pediatric Nursing",
-    "Licensed Practical Nurse Training (LPN)",
-    "Nurse Anesthetist",
-    "Nursing Administration",
-    "Nursing Assistant",
-    "Nursing Science, Education, and Practice",
-    "Registered Nursing (RN)",
-    "Optometry",
-    "Pharmacy and Pharmaceutical Sciences",
-    "Pharmaceutical Sciences",
-    "Pharmacy Studies",
-    "Pharmacy Technician",
-    "Physician Assistant",
-    "Public Health",
-    "Community Health and Preventive Medicine",
-    "Environmental Health",
-    "Health Services Administration",
-    "Occupational Health and Industrial Hygiene",
-    "Public Health Education",
-    "Public Health Studies",
-    "Rehabilitation and Therapy",
-    "Alternative Therapeutic Professions",
-    "Aromatherapy, Herbalism, and Reiki",
-    "Health Aides and Attendants",
-    "Massage Therapy and Bodywork",
-    "Occupational Therapist Assistant",
-    "Occupational Therapy",
-    "Physical Therapy",
-    "Physical Therapy Technician",
-    "Therapeutic Recreation",
-    "Vocational Rehabilitation Counseling",
-    "Yoga and Movement Therapy",
-    "Veterinary Studies",
-    "Veterinary Medicine",
-    "Veterinary Sciences",
-    "Veterinary Technician and Assistant",
-    "Languages and Literature",
-    "English",
-    "Creative Writing",
-    "English Language Studies",
-    "Literature",
-    "Professional, Technical, Business, and Scientific Writing",
-    "Rhetoric and Composition",
-    "Language Studies and Linguistics",
-    "Comparative Literature",
-    "Foreign Languages and Literatures",
-    "Linguistics, Interpretation, and Translation",
-    "Regional Language and Literature Studies",
-    "Arabic Language and Literature",
-    "Chinese Language and Literature",
-    "East Asian Languages and Literatures",
-    "German Language and Literature",
-    "Hebrew Language and Literature",
-    "Japanese Language and Literature",
-    "Latin and Ancient Greek Studies",
-    "Russian and Eastern European Languages and Literature",
-    "South and Southeast Asian Languages and Literatures",
-    "Romance Languages",
-    "French Language and Literature",
-    "Italian Language and Literature",
-    "Romance Languages and Literatures",
-    "Spanish Language and Literature",
-    "Sign Language",
-    "American Sign Language (ASL)",
-    "Sign Language Interpretation and Translation",
-    "Law",
-    "Advanced Legal Studies",
-    "Advanced Legal Research",
-    "Banking, Corporate, and Tax Law",
-    "Energy, Environment, and Natural Resources Law",
-    "Health Law",
-    "Intellectual Property Law",
-    "International Legal Studies",
-    "Programs for Foreign Lawyers",
-    "US Law",
-    "Court Reporting",
-    "Law and Legal Studies",
-    "Law Studies",
-    "Legal Studies",
-    "Pre-Law Studies",
-    "Legal Administrative Assistant",
-    "Paralegal",
-    "Mathematics & Statistics",
-    "Computational and Applied Mathematics",
-    "Mathematics",
-    "Statistics",
-    "Mechanics and Repair",
-    "Electronics Maintenance and Repair",
-    "Communications Systems Installation and Repair",
-    "Computer Installation and Repair",
-    "Electronics Equipment Installation and Repair",
-    "Industrial Electronics Technician",
-    "Equipment Maintenance",
-    "Heavy Equipment Maintenance Technician",
-    "Industrial Mechanics and Maintenance Technician",
-    "General Mechanics and Repair",
-    "HVAC Technician",
-    "Precision Systems Maintenance and Repair",
-    "Vehicle Maintenance and Repair Technologies",
-    "Aircraft Maintenance",
-    "Aircraft Powerplant Technician",
-    "Autobody and Collision Repair",
-    "Automotive Mechanics",
-    "Avionics Maintenance Technician",
-    "Bicycle Mechanics and Repair",
-    "Diesel Mechanics",
-    "Motorcycle Maintenance and Repair",
-    "Small Engine Mechanics and Repair",
-    "Vehicle Maintenance and Repair",
-    "Military Science",
-    "Intelligence and Information",
-    "Information Operations",
-    "Intelligence",
-    "Military Applied Sciences",
-    "Combat Systems Engineering and Stealth Technology",
-    "Space and Undersea Systems Operations",
-    "Military Systems Technology",
-    "Air, Space, and Radar Technology",
-    "Military Information Systems and Missile Technology",
-    "Military Technologies",
-    "Philosophy and Religion",
-    "Philosophy Studies",
-    "Ethics",
-    "Logic",
-    "Philosophy",
-    "Religion",
-    "Buddhism",
-    "Christianity",
-    "Hinduism",
-    "Islam",
-    "Judaism",
-    "Religious Studies",
-    "Theology and Religious Vocations",
-    "Biblical Studies",
-    "Divinity, Ministry, and Pre-Theology",
-    "Missionary Studies",
-    "Pastoral Counseling and Specialized Ministries",
-    "Religious Education",
-    "Talmudic and Rabbinical Studies",
-    "Theological and Ministerial Studies",
-    "Physical Sciences",
-    "Astronomy and Astrophysics",
-    "Astronomy",
-    "Astrophysics",
-    "Atmospheric Sciences and Meteorology",
-    "Atmospheric Sciences",
-    "Climatology",
-    "Meteorology",
-    "Chemistry and Chemical Technology",
-    "Chemical Technician",
-    "Chemistry",
-    "Earth Sciences",
-    "Geology and Earth Science",
-    "Natural Sciences",
-    "Materials Science",
-    "Optics",
-    "Physical Science Studies",
-    "Physics",
-    "Systems Science and Theory",
-    "Protective Services",
-    "Criminal Justice and Corrections",
-    "Corrections and Corrections Administration",
-    "Criminal Justice and Law Enforcement Administration",
-    "Criminal Justice and Safety Studies",
-    "Fire Protection",
-    "Fire Prevention and Safety Technology",
-    "Fire Science and Fire Fighting",
-    "Fire Services Administration",
-    "Forensic Science and Technology",
-    "Cyber/Computer Forensics and Counterterrorism",
-    "Homeland Security",
-    "Police and Criminal Science",
-    "Security and Loss Prevention Services",
-    "Psychology & Counseling",
-    "Clinical Psychology and Counseling",
-    "Clinical Psychology",
-    "Community Psychology",
-    "Counseling Psychology",
-    "Forensic Psychology",
-    "Industrial and Organizational Psychology",
-    "School Psychology",
-    "Psychology",
-    "Psychology Studies",
-    "Developmental and Child Psychology",
-    "Physiological Psychology",
-    "Research and Experimental Psychology",
-    "Social Psychology",
-    "Recreation & Fitness",
-    "Health and Physical Fitness Education",
-    "Kinesiology and Exercise Science",
-    "Parks and Recreation",
-    "Parks, Recreation and Leisure Facilities Management",
-    "Parks, Recreation and Leisure Studies",
-    "Sport and Fitness Management",
-    "Services",
-    "Animal Services",
-    "Animal Grooming",
-    "Animal Training",
-    "Taxidermy",
-    "Child Care Services",
-    "Child Care Management",
-    "Child Care Provider",
-    "Cosmetology and Personal Grooming Services",
-    "Barbering",
-    "Cosmetology",
-    "Cosmetology Instruction and Salon Management",
-    "Esthetician and Skin Care",
-    "Facial Treatment",
-    "Hair Styling and Design",
-    "Make-Up Artist and Tattooing",
-    "Nail Technician",
-    "Personal Services",
-    "Culinary Arts and Food Service",
-    "Baking and Pastry Arts",
-    "Bartending",
-    "Cooking and Culinary Science",
-    "Culinary Arts",
-    "Food Preparation and Service",
-    "Restaurant, Culinary, and Catering Management",
-    "Funeral Service and Mortuary Science",
-    "Funeral Service and Direction",
-    "Mortuary Science and Embalming",
-    "Skilled Trades and Construction",
-    "Boilermaker",
-    "Carpentry and Construction",
-    "Carpentry",
-    "General Construction Trades",
-    "Woodworking",
-    "Concrete and Masonry",
-    "Concrete Finishing",
-    "Masonry",
-    "Construction Finishing and Inspection",
-    "Building Construction Inspection",
-    "Building Construction Technology",
-    "Carpet, Floor, and Tile Worker",
-    "Drywall Installation",
-    "Glazier",
-    "Industrial Painting",
-    "Insulator",
-    "Metal Building Assembly",
-    "Property Maintenance and Site Management",
-    "Roofer",
-    "Electrical Trades",
-    "Electrical and Power Transmission Installation",
-    "Electrician",
-    "Lineworker",
-    "Leatherworking and Upholstery",
-    "Machine and Metal Working",
-    "Machine Shop Assistant",
-    "Machinist",
-    "Sheet Metal Technology",
-    "Tool and Die Technician",
-    "Plumbing Trades",
-    "Pipefitting",
-    "Plumbing",
-    "Precision Production",
-    "Welding",
-    "Social Sciences & Liberal Arts",
-    "Area and Ethnic Studies",
-    "African American Studies",
-    "African Studies",
-    "Asian Studies",
-    "European and Russian Studies",
-    "Hispanic American Studies",
-    "Latin American Studies",
-    "Minority and Group Studies",
-    "North American Studies",
-    "Regional and Area Studies",
-    "Women's Studies",
-    "Consumer and Retail Merchandising",
-    "Apparel and Textile Science",
-    "Retailing Management",
-    "Economics",
-    "Economic Development",
-    "Economics and Econometrics",
-    "Family and Consumer Economics",
-    "Family Studies and Consumer Sciences",
-    "Food and Nutrition Studies",
-    "Food Service Systems Management",
-    "Foods, Nutrition, and Wellness Studies",
-    "Nutrition Sciences",
-    "History",
-    "Human Development",
-    "Adult Development and Aging",
-    "Behavioral Sciences",
-    "Child Development",
-    "Cognitive Science",
-    "Family and Community Services",
-    "International Studies and Government",
-    "International Relations and National Security Studies",
-    "International Studies",
-    "Peace Studies and Conflict Resolution",
-    "Political Science and Government",
-    "Liberal Arts and Humanities",
-    "Social Sciences",
-    "Anthropology and Archaeology",
-    "Criminology",
-    "Geography",
-    "Gerontology",
-    "Social Science Research Methods",
-    "Sociology",
-    "Urban Studies and Affairs",
-    "Social Services",
-    "Community Organization and Advocacy",
-    "Human Services",
-    "Public Policy, Administration, and Social Work",
-    "Public Administration",
-    "Public Policy Analysis",
-    "Social Work and Youth Services",
-    "Transportation",
-    "Air Transportation",
-    "Aeronautics and Aviation Technology",
-    "Air Traffic Control",
-    "Airline Flight Attendant",
-    "Aviation Management and Operations",
-    "Flight Instructor",
-    "Professional Pilot",
-    "Ground Transportation",
-    "Construction and Heavy Equipment Operation",
-    "Truck, Bus, and Commercial Vehicle Operation",
-    "Marine Transportation",
-    "Commercial Fishing",
-    "Marine Science",
-    "Professional Diver and Instructor",
-    "Transportation and Materials Moving",
-    "Railroad and Railway Transportation",
-    "Undecided",
-    "Other"
+    {
+        "majorId": "MAJ0001",
+        "name": "Agriculture",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0002",
+        "name": "Agricultural Business",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0003",
+        "name": "Agricultural Business and Technology",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0004",
+        "name": "Agricultural Economics",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0005",
+        "name": "Farm and Ranch Management",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0006",
+        "name": "Agricultural Extension Services",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0007",
+        "name": "Agriculture Operations",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0008",
+        "name": "Agricultural Mechanics and Machinery",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0009",
+        "name": "Agricultural Production Operations",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0010",
+        "name": "Animal Sciences and Husbandry",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0011",
+        "name": "Animal Husbandry",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0012",
+        "name": "Animal Sciences",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0013",
+        "name": "Equine Studies",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0014",
+        "name": "Botany and Plant Sciences",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0015",
+        "name": "Aquaculture",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0016",
+        "name": "Botany and Plant Physiology",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0017",
+        "name": "Plant Science",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0018",
+        "name": "Crop and Soil Studies",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0019",
+        "name": "Agronomy, Range, and Crop Science",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0020",
+        "name": "Crop Production",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0021",
+        "name": "Soil Sciences",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0022",
+        "name": "Food Science and Technology",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0023",
+        "name": "Agricultural and Food Products Processing",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0024",
+        "name": "Food Science",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0025",
+        "name": "Horticultural",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0026",
+        "name": "Greenhouse, Nursery, and Floristry Operations",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0027",
+        "name": "Horticultural Sciences",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0028",
+        "name": "Horticulture Business Services",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0029",
+        "name": "Landscaping and Groundskeeping",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0030",
+        "name": "Turf and Turfgrass Management",
+        "metaMajor": "Agriculture"
+    },
+    {
+        "majorId": "MAJ0031",
+        "name": "Architecture and Planning",
+        "metaMajor": "Architecture and Planning"
+    },
+    {
+        "majorId": "MAJ0032",
+        "name": "Architecture Studies",
+        "metaMajor": "Architecture and Planning"
+    },
+    {
+        "majorId": "MAJ0033",
+        "name": "Architectural Sciences and Technology",
+        "metaMajor": "Architecture and Planning"
+    },
+    {
+        "majorId": "MAJ0034",
+        "name": "Architecture",
+        "metaMajor": "Architecture and Planning"
+    },
+    {
+        "majorId": "MAJ0035",
+        "name": "Environmental Architecture and Design",
+        "metaMajor": "Architecture and Planning"
+    },
+    {
+        "majorId": "MAJ0036",
+        "name": "Interior Architecture",
+        "metaMajor": "Architecture and Planning"
+    },
+    {
+        "majorId": "MAJ0037",
+        "name": "Landscape Architecture",
+        "metaMajor": "Architecture and Planning"
+    },
+    {
+        "majorId": "MAJ0038",
+        "name": "Historic Preservation and Conservation",
+        "metaMajor": "Architecture and Planning"
+    },
+    {
+        "majorId": "MAJ0039",
+        "name": "Planning and Development",
+        "metaMajor": "Architecture and Planning"
+    },
+    {
+        "majorId": "MAJ0040",
+        "name": "Land Use Planning and Development",
+        "metaMajor": "Architecture and Planning"
+    },
+    {
+        "majorId": "MAJ0041",
+        "name": "Real Estate Development",
+        "metaMajor": "Architecture and Planning"
+    },
+    {
+        "majorId": "MAJ0042",
+        "name": "Urban, Community and Regional Planning",
+        "metaMajor": "Architecture and Planning"
+    },
+    {
+        "majorId": "MAJ0043",
+        "name": "Arts",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0044",
+        "name": "Art History",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0045",
+        "name": "Art Studies",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0046",
+        "name": "Arts, Entertainment, and Media Management",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0047",
+        "name": "Fine and Studio Arts Management",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0048",
+        "name": "Music Management",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0049",
+        "name": "Theatre, Arts, and Media Management",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0050",
+        "name": "Design and Applied Arts",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0051",
+        "name": "Commercial and Advertising Art",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0052",
+        "name": "Commercial Photography",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0053",
+        "name": "Design and Visual Communications",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0054",
+        "name": "Fashion and Apparel Design",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0055",
+        "name": "Game and Interactive Media Design",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0056",
+        "name": "Graphic Design",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0057",
+        "name": "Illustration",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0058",
+        "name": "Industrial and Product Design",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0059",
+        "name": "Interior Design",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0060",
+        "name": "Film, Video, and Photography",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0061",
+        "name": "Cinematography and Video Production",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0062",
+        "name": "Film and Video Studies",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0063",
+        "name": "Photography",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0064",
+        "name": "Fine Arts",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0065",
+        "name": "Ceramics",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0066",
+        "name": "Crafts and Artisanry",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0067",
+        "name": "Drawing",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0068",
+        "name": "Fiber, Textile and Weaving",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0069",
+        "name": "Metal and Jewelry Arts",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0070",
+        "name": "Multimedia",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0071",
+        "name": "Painting",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0072",
+        "name": "Printmaking",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0073",
+        "name": "Sculpture",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0074",
+        "name": "Studio Arts",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0075",
+        "name": "Music",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0076",
+        "name": "Conducting",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0077",
+        "name": "Music History and Literature",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0078",
+        "name": "Music Performance",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0079",
+        "name": "Music Technology",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0080",
+        "name": "Music Theory and Composition",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0081",
+        "name": "Musical Instruments",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0082",
+        "name": "Voice and Opera",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0083",
+        "name": "Performing Arts",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0084",
+        "name": "Acting",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0085",
+        "name": "Dance",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0086",
+        "name": "Drama and Theatre Production",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0087",
+        "name": "Theatre Design",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0088",
+        "name": "Visual Arts",
+        "metaMajor": "Arts"
+    },
+    {
+        "majorId": "MAJ0089",
+        "name": "Biological Sciences",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0090",
+        "name": "Anatomy",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0091",
+        "name": "Animal Biology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0092",
+        "name": "Animal Physiology and Behavior",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0093",
+        "name": "Zoology and Entomology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0094",
+        "name": "Biochemistry and Molecular Biology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0095",
+        "name": "Bioinformatics",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0096",
+        "name": "Biology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0097",
+        "name": "Biological and Physical Sciences",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0098",
+        "name": "Biology and Biological Sciences",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0099",
+        "name": "Biology Laboratory Technician",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0100",
+        "name": "Biomedical Sciences and Molecular Medicine",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0101",
+        "name": "Biotechnology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0102",
+        "name": "Cellular Biology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0103",
+        "name": "Ecology, Evolution, and Population Biology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0104",
+        "name": "Ecology and Evolutionary Biology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0105",
+        "name": "Epidemiology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0106",
+        "name": "Marine Biology and Oceanography",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0107",
+        "name": "Population Biology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0108",
+        "name": "Genetics",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0109",
+        "name": "Microbiology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0110",
+        "name": "Molecular Biology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0111",
+        "name": "Neuroscience and Neurobiology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0112",
+        "name": "Neuroanatomy",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0113",
+        "name": "Neuroscience",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0114",
+        "name": "Pharmacology and Toxicology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0115",
+        "name": "Pharmacology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0116",
+        "name": "Toxicology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0117",
+        "name": "Physiology and Pathology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0118",
+        "name": "Exercise Physiology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0119",
+        "name": "Pathology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0120",
+        "name": "Physiology",
+        "metaMajor": "Biological Sciences"
+    },
+    {
+        "majorId": "MAJ0121",
+        "name": "Business",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0122",
+        "name": "Business Management",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0123",
+        "name": "Business Administration and Management",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0124",
+        "name": "Construction Management",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0125",
+        "name": "Corporate Communications",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0126",
+        "name": "E-Commerce",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0127",
+        "name": "International Business",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0128",
+        "name": "Logistics and Supply Chain Management",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0129",
+        "name": "Managerial Economics",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0130",
+        "name": "Non-Profit and Public Management",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0131",
+        "name": "Office Management",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0132",
+        "name": "Operations Management",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0133",
+        "name": "Procurement and Contracts Management",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0134",
+        "name": "Business Support Services",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0135",
+        "name": "Administrative Assistant and Secretarial Science",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0136",
+        "name": "Clerical Services",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0137",
+        "name": "Customer Service Support and Call Center Operation",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0138",
+        "name": "Executive Assistant",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0139",
+        "name": "Entrepreneurship and Small Business Operations",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0140",
+        "name": "Entrepreneurship",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0141",
+        "name": "Franchise Operations",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0142",
+        "name": "Small Business Management",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0143",
+        "name": "Finance and Accounting",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0144",
+        "name": "Accounting",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0145",
+        "name": "Accounting Technician and Bookkeeping",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0146",
+        "name": "Actuarial Science",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0147",
+        "name": "Banking and Finance",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0148",
+        "name": "Finance",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0149",
+        "name": "Financial Planning",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0150",
+        "name": "Financial Services Marketing",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0151",
+        "name": "Insurance",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0152",
+        "name": "Investments and Securities",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0153",
+        "name": "Taxation",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0154",
+        "name": "Hospitality and Tourism Management",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0155",
+        "name": "Hospitality Management",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0156",
+        "name": "Hotel and Resort Management",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0157",
+        "name": "Restaurant and Food Services Management",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0158",
+        "name": "Tourism and Travel Services Management",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0159",
+        "name": "Human Resources",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0160",
+        "name": "Human Resources Development",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0161",
+        "name": "Human Resources Management",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0162",
+        "name": "Labor and Industrial Relations",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0163",
+        "name": "Organizational Behavior Studies",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0164",
+        "name": "Management Sciences and Information Systems",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0165",
+        "name": "Management Information Systems",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0166",
+        "name": "Management Sciences and Statistics",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0167",
+        "name": "Sales and Marketing",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0168",
+        "name": "Fashion and Apparel Merchandising",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0169",
+        "name": "Marketing",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0170",
+        "name": "Merchandising and Buying Operations",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0171",
+        "name": "Real Estate",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0172",
+        "name": "Retailing",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0173",
+        "name": "Selling and Sales",
+        "metaMajor": "Business"
+    },
+    {
+        "majorId": "MAJ0174",
+        "name": "Communications",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0175",
+        "name": "Advertising",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0176",
+        "name": "Communication and Media Studies",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0177",
+        "name": "Communications Technicians",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0178",
+        "name": "Digital and Print Journalism",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0179",
+        "name": "Broadcast Journalism",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0180",
+        "name": "Journalism",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0181",
+        "name": "Photojournalism",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0182",
+        "name": "Digital and Print Publishing",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0183",
+        "name": "Desktop Publishing and Digital Imaging Design",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0184",
+        "name": "Publishing",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0185",
+        "name": "Graphic Communications",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0186",
+        "name": "Animation, Video Graphics and Special Effects",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0187",
+        "name": "Graphic and Printing Equipment Operation",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0188",
+        "name": "Graphic Communication and Printing",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0189",
+        "name": "Mass Communications and Media",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0190",
+        "name": "Mass Communication",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0191",
+        "name": "Public Relations",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0192",
+        "name": "Radio and Television Broadcasting Technician",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0193",
+        "name": "Radio, Television, and Digital Communication",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0194",
+        "name": "Recording Arts Technician",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0195",
+        "name": "Organizational Communication",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0196",
+        "name": "Speech Communication and Rhetoric",
+        "metaMajor": "Communications"
+    },
+    {
+        "majorId": "MAJ0197",
+        "name": "Computer and Information Sciences",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0198",
+        "name": "Computer and IT Administration",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0199",
+        "name": "Computer and Information Systems Security",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0200",
+        "name": "IT Services Administration",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0201",
+        "name": "Multimedia Management and Webmaster",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0202",
+        "name": "Network, Database, and System Administration",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0203",
+        "name": "System, Networking, and LAN/WAN Management",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0204",
+        "name": "Computer Programming",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0205",
+        "name": "Computer Science",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0206",
+        "name": "Computer Systems",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0207",
+        "name": "Computer Systems Analysis",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0208",
+        "name": "Computer Systems Networking and Telecommunications",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0209",
+        "name": "Data Processing",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0210",
+        "name": "Data Entry",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0211",
+        "name": "Data Processing Technician",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0212",
+        "name": "Digital Design",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0213",
+        "name": "Computer Graphics",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0214",
+        "name": "Web Page and Digital Design",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0215",
+        "name": "Information Studies",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0216",
+        "name": "Artificial Intelligence",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0217",
+        "name": "Computer and Information Studies",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0218",
+        "name": "Information Technology",
+        "metaMajor": "Computer and Information Sciences"
+    },
+    {
+        "majorId": "MAJ0219",
+        "name": "Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0220",
+        "name": "Education Studies and Research",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0221",
+        "name": "Bilingual and Multicultural Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0222",
+        "name": "Curriculum",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0223",
+        "name": "Educational Media Design",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0224",
+        "name": "Educational Research",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0225",
+        "name": "Foundations of Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0226",
+        "name": "Educational Administration and Supervision",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0227",
+        "name": "Educational Administration",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0228",
+        "name": "Educational, Instructional, and Curriculum Supervision",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0229",
+        "name": "Elementary and Middle School Administration",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0230",
+        "name": "High School Administration",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0231",
+        "name": "Higher Education Administration",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0232",
+        "name": "Superintendence and Educational System Administration",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0233",
+        "name": "Library Science",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0234",
+        "name": "Library and Archives Assisting",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0235",
+        "name": "Library Science and Administration",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0236",
+        "name": "School Librarian",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0237",
+        "name": "School Counseling",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0238",
+        "name": "College Student Counseling and Personnel Services",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0239",
+        "name": "School Counseling and Guidance Services",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0240",
+        "name": "Special Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0241",
+        "name": "Education of Individuals with Impairments and Disabilities",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0242",
+        "name": "Education of the Gifted and Talented",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0243",
+        "name": "Special Education and Teaching",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0244",
+        "name": "Teaching",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0245",
+        "name": "Adult and Continuing Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0246",
+        "name": "Agricultural Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0247",
+        "name": "Art Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0248",
+        "name": "Business Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0249",
+        "name": "Computer Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0250",
+        "name": "Early Childhood Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0251",
+        "name": "Elementary Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0252",
+        "name": "English and Speech Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0253",
+        "name": "Foreign Language Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0254",
+        "name": "Health Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0255",
+        "name": "High School Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0256",
+        "name": "History Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0257",
+        "name": "Kindergarten and Preschool Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0258",
+        "name": "Mathematics Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0259",
+        "name": "Middle School Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0260",
+        "name": "Music Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0261",
+        "name": "Physical Education Teaching and Coaching",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0262",
+        "name": "Reading Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0263",
+        "name": "Science Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0264",
+        "name": "Social Science Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0265",
+        "name": "Social Studies Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0266",
+        "name": "Teacher Education for Multiple Levels",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0267",
+        "name": "Teaching English as a Second Language",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0268",
+        "name": "Technical Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0269",
+        "name": "Technology Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0270",
+        "name": "Trade and Industrial Teacher Education",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0271",
+        "name": "Teaching Assistant",
+        "metaMajor": "Education"
+    },
+    {
+        "majorId": "MAJ0272",
+        "name": "Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0273",
+        "name": "Aerospace Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0274",
+        "name": "Aerospace and Aeronautical Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0275",
+        "name": "Aerospace Engineering Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0276",
+        "name": "Agricultural and Environmental Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0277",
+        "name": "Agricultural Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0278",
+        "name": "Environmental Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0279",
+        "name": "Environmental Engineering Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0280",
+        "name": "Water, Wastewater, and Recycling Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0281",
+        "name": "Architectural Engineering and Technology",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0282",
+        "name": "Architectural Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0283",
+        "name": "Architectural Engineering Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0284",
+        "name": "Biological Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0285",
+        "name": "Bioengineering and Biomedical Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0286",
+        "name": "Biomedical Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0287",
+        "name": "Chemical Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0288",
+        "name": "Civil and Surveying Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0289",
+        "name": "Civil Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0290",
+        "name": "Civil Engineering Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0291",
+        "name": "Surveying Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0292",
+        "name": "Surveying Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0293",
+        "name": "Computer Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0294",
+        "name": "Computer Engineering Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0295",
+        "name": "Computer Hardware Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0296",
+        "name": "Computer Software Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0297",
+        "name": "Computer Systems Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0298",
+        "name": "Construction Engineering and Technology",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0299",
+        "name": "Construction Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0300",
+        "name": "Construction Engineering Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0301",
+        "name": "Welding Engineering Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0302",
+        "name": "Electrical and Communications Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0303",
+        "name": "Electrical and Electronics Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0304",
+        "name": "Electrical Engineering Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0305",
+        "name": "Telecommunications Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0306",
+        "name": "Engineering Drafting and Design",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0307",
+        "name": "Architectural Drafting (CAD/CADD)",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0308",
+        "name": "Drafting and Design Engineering Technician (CAD/CADD)",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0309",
+        "name": "Engineering Design",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0310",
+        "name": "Mechanical Drafting (CAD/CADD)",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0311",
+        "name": "Engineering Sciences and Mechanics",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0312",
+        "name": "Engineering Mechanics",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0313",
+        "name": "Engineering Physics",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0314",
+        "name": "Engineering Science",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0315",
+        "name": "Engineering Studies",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0316",
+        "name": "Industrial Engineering and Technology",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0317",
+        "name": "Industrial and Engineering Management",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0318",
+        "name": "Industrial Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0319",
+        "name": "Industrial Production Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0320",
+        "name": "Industrial Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0321",
+        "name": "Manufacturing Engineering and Technology",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0322",
+        "name": "Hazardous Materials and Industrial Safety Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0323",
+        "name": "Manufacturing Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0324",
+        "name": "Manufacturing Engineering Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0325",
+        "name": "Occupational Safety and Health Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0326",
+        "name": "Quality Control Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0327",
+        "name": "Mechanical Engineering and Technology",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0328",
+        "name": "Automotive Engineering Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0329",
+        "name": "HVAC and Refrigeration Engineering Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0330",
+        "name": "Instrumentation Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0331",
+        "name": "Mechanical Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0332",
+        "name": "Mechanical Engineering Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0333",
+        "name": "Robotics and Automation Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0334",
+        "name": "Robotics and Automation Engineering Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0335",
+        "name": "Mineral and Petroleum Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0336",
+        "name": "Mining and Mineral Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0337",
+        "name": "Mining and Petroleum Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0338",
+        "name": "Petroleum Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0339",
+        "name": "Nuclear Engineering and Technology",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0340",
+        "name": "Nuclear Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0341",
+        "name": "Nuclear Engineering Technician",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0342",
+        "name": "Operations Research",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0343",
+        "name": "Plastics and Materials Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0344",
+        "name": "Materials Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0345",
+        "name": "Textile and Plastics Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0346",
+        "name": "Systems Engineering",
+        "metaMajor": "Engineering"
+    },
+    {
+        "majorId": "MAJ0347",
+        "name": "Environmental Sciences",
+        "metaMajor": "Environmental Sciences"
+    },
+    {
+        "majorId": "MAJ0348",
+        "name": "Conservation and Environmental Studies",
+        "metaMajor": "Environmental Sciences"
+    },
+    {
+        "majorId": "MAJ0349",
+        "name": "Environmental and Marine Sciences",
+        "metaMajor": "Environmental Sciences"
+    },
+    {
+        "majorId": "MAJ0350",
+        "name": "Environmental Studies",
+        "metaMajor": "Environmental Sciences"
+    },
+    {
+        "majorId": "MAJ0351",
+        "name": "Natural Resources Conservation",
+        "metaMajor": "Environmental Sciences"
+    },
+    {
+        "majorId": "MAJ0352",
+        "name": "Sustainability Studies",
+        "metaMajor": "Environmental Sciences"
+    },
+    {
+        "majorId": "MAJ0353",
+        "name": "Forest Sciences",
+        "metaMajor": "Environmental Sciences"
+    },
+    {
+        "majorId": "MAJ0354",
+        "name": "Forest and Wood Sciences",
+        "metaMajor": "Environmental Sciences"
+    },
+    {
+        "majorId": "MAJ0355",
+        "name": "Forestry",
+        "metaMajor": "Environmental Sciences"
+    },
+    {
+        "majorId": "MAJ0356",
+        "name": "Natural Resource Management",
+        "metaMajor": "Environmental Sciences"
+    },
+    {
+        "majorId": "MAJ0357",
+        "name": "Forest Resources Management",
+        "metaMajor": "Environmental Sciences"
+    },
+    {
+        "majorId": "MAJ0358",
+        "name": "Natural Resource Recreation and Tourism",
+        "metaMajor": "Environmental Sciences"
+    },
+    {
+        "majorId": "MAJ0359",
+        "name": "Natural Resources Management and Policy",
+        "metaMajor": "Environmental Sciences"
+    },
+    {
+        "majorId": "MAJ0360",
+        "name": "Wildlife and Fisheries Management",
+        "metaMajor": "Environmental Sciences"
+    },
+    {
+        "majorId": "MAJ0361",
+        "name": "Health Care",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0362",
+        "name": "Alternative Medicine",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0363",
+        "name": "Acupuncture and Oriental Medicine",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0364",
+        "name": "Alternative Medical Systems and Holistic Health",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0365",
+        "name": "Midwifery",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0366",
+        "name": "Traditional Chinese Medicine",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0367",
+        "name": "Chiropractic Studies",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0368",
+        "name": "Communication Disorders",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0369",
+        "name": "Audiology",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0370",
+        "name": "Communication Sciences and Disorders",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0371",
+        "name": "Speech Language Pathology",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0372",
+        "name": "Speech Language Pathology Assistant",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0373",
+        "name": "Dental Studies",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0374",
+        "name": "Advanced Dentistry and Oral Sciences",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0375",
+        "name": "Dental Assisting",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0376",
+        "name": "Dental Hygiene",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0377",
+        "name": "Dentistry",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0378",
+        "name": "Diagnostics",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0379",
+        "name": "Cardiovascular Technician",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0380",
+        "name": "Clinical Laboratory Technician",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0381",
+        "name": "Diagnostic Technician",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0382",
+        "name": "Medical Laboratory Technician",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0383",
+        "name": "Nuclear and Industrial Radiologic Technology",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0384",
+        "name": "Phlebotomy Technician",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0385",
+        "name": "Radiologic Technician",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0386",
+        "name": "Sonographer and Ultrasound Technician",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0387",
+        "name": "Dietetics and Clinical Nutrition",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0388",
+        "name": "Emergency Care Attendant (EMT)",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0389",
+        "name": "Emergency Medical Technician (EMT Paramedic)",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0390",
+        "name": "Health and Medical Administrative Services",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0391",
+        "name": "Health Care Management",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0392",
+        "name": "Health Unit Coordinator and Manager",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0393",
+        "name": "Hospital Management",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0394",
+        "name": "Medical Insurance Billing and Claims",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0395",
+        "name": "Medical Insurance Coding",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0396",
+        "name": "Medical Management and Clinical Assistant",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0397",
+        "name": "Medical Office Assistant",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0398",
+        "name": "Medical Office Computer Specialist",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0399",
+        "name": "Medical Office Management",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0400",
+        "name": "Medical Reception",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0401",
+        "name": "Medical Records Administration",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0402",
+        "name": "Medical Records Technician",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0403",
+        "name": "Medical Secretary",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0404",
+        "name": "Medical Transcription",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0405",
+        "name": "Intervention and Treatment",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0406",
+        "name": "Athletic Training",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0407",
+        "name": "Intervention and Treatment Professions",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0408",
+        "name": "Nuclear Medical Technician",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0409",
+        "name": "Radiation Therapy",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0410",
+        "name": "Respiratory Care Therapy",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0411",
+        "name": "Surgical Technologist",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0412",
+        "name": "Medical Assisting",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0413",
+        "name": "Anesthesiologist Assistant",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0414",
+        "name": "Clinical Laboratory Assistant",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0415",
+        "name": "Medical Assistant",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0416",
+        "name": "Radiologist Assistant",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0417",
+        "name": "Respiratory Therapy Technician",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0418",
+        "name": "Medicine and Medical Studies",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0419",
+        "name": "Health Service Preparatory Studies",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0420",
+        "name": "Medicine",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0421",
+        "name": "Osteopathy",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0422",
+        "name": "Podiatry",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0423",
+        "name": "Pre-Medicine Studies",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0424",
+        "name": "Mental and Social Health Services",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0425",
+        "name": "Community Health Services and Counseling",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0426",
+        "name": "Marriage and Family Therapy and Counseling",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0427",
+        "name": "Medical Social Work",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0428",
+        "name": "Mental and Social Health Studies",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0429",
+        "name": "Mental Health Counseling",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0430",
+        "name": "Psychiatric and Mental Health Services",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0431",
+        "name": "Substance Abuse and Addiction Counseling",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0432",
+        "name": "Nursing",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0433",
+        "name": "Adult Health Nursing",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0434",
+        "name": "Family Practice and Pediatric Nursing",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0435",
+        "name": "Licensed Practical Nurse Training (LPN)",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0436",
+        "name": "Nurse Anesthetist",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0437",
+        "name": "Nursing Administration",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0438",
+        "name": "Nursing Assistant",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0439",
+        "name": "Nursing Science, Education, and Practice",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0440",
+        "name": "Registered Nursing (RN)",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0441",
+        "name": "Optometry",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0442",
+        "name": "Pharmacy and Pharmaceutical Sciences",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0443",
+        "name": "Pharmaceutical Sciences",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0444",
+        "name": "Pharmacy Studies",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0445",
+        "name": "Pharmacy Technician",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0446",
+        "name": "Physician Assistant",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0447",
+        "name": "Public Health",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0448",
+        "name": "Community Health and Preventive Medicine",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0449",
+        "name": "Environmental Health",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0450",
+        "name": "Health Services Administration",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0451",
+        "name": "Occupational Health and Industrial Hygiene",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0452",
+        "name": "Public Health Education",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0453",
+        "name": "Public Health Studies",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0454",
+        "name": "Rehabilitation and Therapy",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0455",
+        "name": "Alternative Therapeutic Professions",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0456",
+        "name": "Aromatherapy, Herbalism, and Reiki",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0457",
+        "name": "Health Aides and Attendants",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0458",
+        "name": "Massage Therapy and Bodywork",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0459",
+        "name": "Occupational Therapist Assistant",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0460",
+        "name": "Occupational Therapy",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0461",
+        "name": "Physical Therapy",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0462",
+        "name": "Physical Therapy Technician",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0463",
+        "name": "Therapeutic Recreation",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0464",
+        "name": "Vocational Rehabilitation Counseling",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0465",
+        "name": "Yoga and Movement Therapy",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0466",
+        "name": "Veterinary Studies",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0467",
+        "name": "Veterinary Medicine",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0468",
+        "name": "Veterinary Sciences",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0469",
+        "name": "Veterinary Technician and Assistant",
+        "metaMajor": "Health Care"
+    },
+    {
+        "majorId": "MAJ0470",
+        "name": "Languages and Literature",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0471",
+        "name": "English",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0472",
+        "name": "Creative Writing",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0473",
+        "name": "English Language Studies",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0474",
+        "name": "Literature",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0475",
+        "name": "Professional, Technical, Business, and Scientific Writing",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0476",
+        "name": "Rhetoric and Composition",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0477",
+        "name": "Language Studies and Linguistics",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0478",
+        "name": "Comparative Literature",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0479",
+        "name": "Foreign Languages and Literatures",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0480",
+        "name": "Linguistics, Interpretation, and Translation",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0481",
+        "name": "Regional Language and Literature Studies",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0482",
+        "name": "Arabic Language and Literature",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0483",
+        "name": "Chinese Language and Literature",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0484",
+        "name": "East Asian Languages and Literatures",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0485",
+        "name": "German Language and Literature",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0486",
+        "name": "Hebrew Language and Literature",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0487",
+        "name": "Japanese Language and Literature",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0488",
+        "name": "Latin and Ancient Greek Studies",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0489",
+        "name": "Russian and Eastern European Languages and Literature",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0490",
+        "name": "South and Southeast Asian Languages and Literatures",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0491",
+        "name": "Romance Languages",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0492",
+        "name": "French Language and Literature",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0493",
+        "name": "Italian Language and Literature",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0494",
+        "name": "Romance Languages and Literatures",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0495",
+        "name": "Spanish Language and Literature",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0496",
+        "name": "Sign Language",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0497",
+        "name": "American Sign Language (ASL)",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0498",
+        "name": "Sign Language Interpretation and Translation",
+        "metaMajor": "Languages and Literature"
+    },
+    {
+        "majorId": "MAJ0499",
+        "name": "Law",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0500",
+        "name": "Advanced Legal Studies",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0501",
+        "name": "Advanced Legal Research",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0502",
+        "name": "Banking, Corporate, and Tax Law",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0503",
+        "name": "Energy, Environment, and Natural Resources Law",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0504",
+        "name": "Health Law",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0505",
+        "name": "Intellectual Property Law",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0506",
+        "name": "International Legal Studies",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0507",
+        "name": "Programs for Foreign Lawyers",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0508",
+        "name": "US Law",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0509",
+        "name": "Court Reporting",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0510",
+        "name": "Law and Legal Studies",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0511",
+        "name": "Law Studies",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0512",
+        "name": "Legal Studies",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0513",
+        "name": "Pre-Law Studies",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0514",
+        "name": "Legal Administrative Assistant",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0515",
+        "name": "Paralegal",
+        "metaMajor": "Law"
+    },
+    {
+        "majorId": "MAJ0516",
+        "name": "Mathematics & Statistics",
+        "metaMajor": "Mathematics and Statistics"
+    },
+    {
+        "majorId": "MAJ0517",
+        "name": "Computational and Applied Mathematics",
+        "metaMajor": "Mathematics and Statistics"
+    },
+    {
+        "majorId": "MAJ0518",
+        "name": "Mathematics",
+        "metaMajor": "Mathematics and Statistics"
+    },
+    {
+        "majorId": "MAJ0519",
+        "name": "Statistics",
+        "metaMajor": "Mathematics and Statistics"
+    },
+    {
+        "majorId": "MAJ0520",
+        "name": "Mechanics and Repair",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0521",
+        "name": "Electronics Maintenance and Repair",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0522",
+        "name": "Communications Systems Installation and Repair",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0523",
+        "name": "Computer Installation and Repair",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0524",
+        "name": "Electronics Equipment Installation and Repair",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0525",
+        "name": "Industrial Electronics Technician",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0526",
+        "name": "Equipment Maintenance",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0527",
+        "name": "Heavy Equipment Maintenance Technician",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0528",
+        "name": "Industrial Mechanics and Maintenance Technician",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0529",
+        "name": "General Mechanics and Repair",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0530",
+        "name": "HVAC Technician",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0531",
+        "name": "Precision Systems Maintenance and Repair",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0532",
+        "name": "Vehicle Maintenance and Repair Technologies",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0533",
+        "name": "Aircraft Maintenance",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0534",
+        "name": "Aircraft Powerplant Technician",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0535",
+        "name": "Autobody and Collision Repair",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0536",
+        "name": "Automotive Mechanics",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0537",
+        "name": "Avionics Maintenance Technician",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0538",
+        "name": "Bicycle Mechanics and Repair",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0539",
+        "name": "Diesel Mechanics",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0540",
+        "name": "Motorcycle Maintenance and Repair",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0541",
+        "name": "Small Engine Mechanics and Repair",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0542",
+        "name": "Vehicle Maintenance and Repair",
+        "metaMajor": "Mechanics and Repair"
+    },
+    {
+        "majorId": "MAJ0543",
+        "name": "Military Science",
+        "metaMajor": "Military Science"
+    },
+    {
+        "majorId": "MAJ0544",
+        "name": "Intelligence and Information",
+        "metaMajor": "Military Science"
+    },
+    {
+        "majorId": "MAJ0545",
+        "name": "Information Operations",
+        "metaMajor": "Military Science"
+    },
+    {
+        "majorId": "MAJ0546",
+        "name": "Intelligence",
+        "metaMajor": "Military Science"
+    },
+    {
+        "majorId": "MAJ0547",
+        "name": "Military Applied Sciences",
+        "metaMajor": "Military Science"
+    },
+    {
+        "majorId": "MAJ0548",
+        "name": "Combat Systems Engineering and Stealth Technology",
+        "metaMajor": "Military Science"
+    },
+    {
+        "majorId": "MAJ0549",
+        "name": "Space and Undersea Systems Operations",
+        "metaMajor": "Military Science"
+    },
+    {
+        "majorId": "MAJ0550",
+        "name": "Military Systems Technology",
+        "metaMajor": "Military Science"
+    },
+    {
+        "majorId": "MAJ0551",
+        "name": "Air, Space, and Radar Technology",
+        "metaMajor": "Military Science"
+    },
+    {
+        "majorId": "MAJ0552",
+        "name": "Military Information Systems and Missile Technology",
+        "metaMajor": "Military Science"
+    },
+    {
+        "majorId": "MAJ0553",
+        "name": "Military Technologies",
+        "metaMajor": "Military Science"
+    },
+    {
+        "majorId": "MAJ0554",
+        "name": "Philosophy and Religion",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0555",
+        "name": "Philosophy Studies",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0556",
+        "name": "Ethics",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0557",
+        "name": "Logic",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0558",
+        "name": "Philosophy",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0559",
+        "name": "Religion",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0560",
+        "name": "Buddhism",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0561",
+        "name": "Christianity",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0562",
+        "name": "Hinduism",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0563",
+        "name": "Islam",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0564",
+        "name": "Judaism",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0565",
+        "name": "Religious Studies",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0566",
+        "name": "Theology and Religious Vocations",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0567",
+        "name": "Biblical Studies",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0568",
+        "name": "Divinity, Ministry, and Pre-Theology",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0569",
+        "name": "Missionary Studies",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0570",
+        "name": "Pastoral Counseling and Specialized Ministries",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0571",
+        "name": "Religious Education",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0572",
+        "name": "Talmudic and Rabbinical Studies",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0573",
+        "name": "Theological and Ministerial Studies",
+        "metaMajor": "Philosophy and Religion"
+    },
+    {
+        "majorId": "MAJ0574",
+        "name": "Physical Sciences",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0575",
+        "name": "Astronomy and Astrophysics",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0576",
+        "name": "Astronomy",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0577",
+        "name": "Astrophysics",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0578",
+        "name": "Atmospheric Sciences and Meteorology",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0579",
+        "name": "Atmospheric Sciences",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0580",
+        "name": "Climatology",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0581",
+        "name": "Meteorology",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0582",
+        "name": "Chemistry and Chemical Technology",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0583",
+        "name": "Chemical Technician",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0584",
+        "name": "Chemistry",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0585",
+        "name": "Earth Sciences",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0586",
+        "name": "Geology and Earth Science",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0587",
+        "name": "Natural Sciences",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0588",
+        "name": "Materials Science",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0589",
+        "name": "Optics",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0590",
+        "name": "Physical Science Studies",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0591",
+        "name": "Physics",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0592",
+        "name": "Systems Science and Theory",
+        "metaMajor": "Physical Sciences"
+    },
+    {
+        "majorId": "MAJ0593",
+        "name": "Protective Services",
+        "metaMajor": "Protective Services"
+    },
+    {
+        "majorId": "MAJ0594",
+        "name": "Criminal Justice and Corrections",
+        "metaMajor": "Protective Services"
+    },
+    {
+        "majorId": "MAJ0595",
+        "name": "Corrections and Corrections Administration",
+        "metaMajor": "Protective Services"
+    },
+    {
+        "majorId": "MAJ0596",
+        "name": "Criminal Justice and Law Enforcement Administration",
+        "metaMajor": "Protective Services"
+    },
+    {
+        "majorId": "MAJ0597",
+        "name": "Criminal Justice and Safety Studies",
+        "metaMajor": "Protective Services"
+    },
+    {
+        "majorId": "MAJ0598",
+        "name": "Fire Protection",
+        "metaMajor": "Protective Services"
+    },
+    {
+        "majorId": "MAJ0599",
+        "name": "Fire Prevention and Safety Technology",
+        "metaMajor": "Protective Services"
+    },
+    {
+        "majorId": "MAJ0600",
+        "name": "Fire Science and Fire Fighting",
+        "metaMajor": "Protective Services"
+    },
+    {
+        "majorId": "MAJ0601",
+        "name": "Fire Services Administration",
+        "metaMajor": "Protective Services"
+    },
+    {
+        "majorId": "MAJ0602",
+        "name": "Forensic Science and Technology",
+        "metaMajor": "Protective Services"
+    },
+    {
+        "majorId": "MAJ0603",
+        "name": "Cyber/Computer Forensics and Counterterrorism",
+        "metaMajor": "Protective Services"
+    },
+    {
+        "majorId": "MAJ0604",
+        "name": "Homeland Security",
+        "metaMajor": "Protective Services"
+    },
+    {
+        "majorId": "MAJ0605",
+        "name": "Police and Criminal Science",
+        "metaMajor": "Protective Services"
+    },
+    {
+        "majorId": "MAJ0606",
+        "name": "Security and Loss Prevention Services",
+        "metaMajor": "Protective Services"
+    },
+    {
+        "majorId": "MAJ0607",
+        "name": "Psychology & Counseling",
+        "metaMajor": "Psychology and Counseling"
+    },
+    {
+        "majorId": "MAJ0608",
+        "name": "Clinical Psychology and Counseling",
+        "metaMajor": "Psychology and Counseling"
+    },
+    {
+        "majorId": "MAJ0609",
+        "name": "Clinical Psychology",
+        "metaMajor": "Psychology and Counseling"
+    },
+    {
+        "majorId": "MAJ0610",
+        "name": "Community Psychology",
+        "metaMajor": "Psychology and Counseling"
+    },
+    {
+        "majorId": "MAJ0611",
+        "name": "Counseling Psychology",
+        "metaMajor": "Psychology and Counseling"
+    },
+    {
+        "majorId": "MAJ0612",
+        "name": "Forensic Psychology",
+        "metaMajor": "Psychology and Counseling"
+    },
+    {
+        "majorId": "MAJ0613",
+        "name": "Industrial and Organizational Psychology",
+        "metaMajor": "Psychology and Counseling"
+    },
+    {
+        "majorId": "MAJ0614",
+        "name": "School Psychology",
+        "metaMajor": "Psychology and Counseling"
+    },
+    {
+        "majorId": "MAJ0615",
+        "name": "Psychology",
+        "metaMajor": "Psychology and Counseling"
+    },
+    {
+        "majorId": "MAJ0616",
+        "name": "Psychology Studies",
+        "metaMajor": "Psychology and Counseling"
+    },
+    {
+        "majorId": "MAJ0617",
+        "name": "Developmental and Child Psychology",
+        "metaMajor": "Psychology and Counseling"
+    },
+    {
+        "majorId": "MAJ0618",
+        "name": "Physiological Psychology",
+        "metaMajor": "Psychology and Counseling"
+    },
+    {
+        "majorId": "MAJ0619",
+        "name": "Research and Experimental Psychology",
+        "metaMajor": "Psychology and Counseling"
+    },
+    {
+        "majorId": "MAJ0620",
+        "name": "Social Psychology",
+        "metaMajor": "Psychology and Counseling"
+    },
+    {
+        "majorId": "MAJ0621",
+        "name": "Recreation & Fitness",
+        "metaMajor": "Recreation and Fitness"
+    },
+    {
+        "majorId": "MAJ0622",
+        "name": "Health and Physical Fitness Education",
+        "metaMajor": "Recreation and Fitness"
+    },
+    {
+        "majorId": "MAJ0623",
+        "name": "Kinesiology and Exercise Science",
+        "metaMajor": "Recreation and Fitness"
+    },
+    {
+        "majorId": "MAJ0624",
+        "name": "Parks and Recreation",
+        "metaMajor": "Recreation and Fitness"
+    },
+    {
+        "majorId": "MAJ0625",
+        "name": "Parks, Recreation and Leisure Facilities Management",
+        "metaMajor": "Recreation and Fitness"
+    },
+    {
+        "majorId": "MAJ0626",
+        "name": "Parks, Recreation and Leisure Studies",
+        "metaMajor": "Recreation and Fitness"
+    },
+    {
+        "majorId": "MAJ0627",
+        "name": "Sport and Fitness Management",
+        "metaMajor": "Recreation and Fitness"
+    },
+    {
+        "majorId": "MAJ0628",
+        "name": "Services",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0629",
+        "name": "Animal Services",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0630",
+        "name": "Animal Grooming",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0631",
+        "name": "Animal Training",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0632",
+        "name": "Taxidermy",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0633",
+        "name": "Child Care Services",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0634",
+        "name": "Child Care Management",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0635",
+        "name": "Child Care Provider",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0636",
+        "name": "Cosmetology and Personal Grooming Services",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0637",
+        "name": "Barbering",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0638",
+        "name": "Cosmetology",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0639",
+        "name": "Cosmetology Instruction and Salon Management",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0640",
+        "name": "Esthetician and Skin Care",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0641",
+        "name": "Facial Treatment",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0642",
+        "name": "Hair Styling and Design",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0643",
+        "name": "Make-Up Artist and Tattooing",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0644",
+        "name": "Nail Technician",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0645",
+        "name": "Personal Services",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0646",
+        "name": "Culinary Arts and Food Service",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0647",
+        "name": "Baking and Pastry Arts",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0648",
+        "name": "Bartending",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0649",
+        "name": "Cooking and Culinary Science",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0650",
+        "name": "Culinary Arts",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0651",
+        "name": "Food Preparation and Service",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0652",
+        "name": "Restaurant, Culinary, and Catering Management",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0653",
+        "name": "Funeral Service and Mortuary Science",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0654",
+        "name": "Funeral Service and Direction",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0655",
+        "name": "Mortuary Science and Embalming",
+        "metaMajor": "Services"
+    },
+    {
+        "majorId": "MAJ0656",
+        "name": "Skilled Trades and Construction",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0657",
+        "name": "Boilermaker",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0658",
+        "name": "Carpentry and Construction",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0659",
+        "name": "Carpentry",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0660",
+        "name": "General Construction Trades",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0661",
+        "name": "Woodworking",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0662",
+        "name": "Concrete and Masonry",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0663",
+        "name": "Concrete Finishing",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0664",
+        "name": "Masonry",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0665",
+        "name": "Construction Finishing and Inspection",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0666",
+        "name": "Building Construction Inspection",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0667",
+        "name": "Building Construction Technology",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0668",
+        "name": "Carpet, Floor, and Tile Worker",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0669",
+        "name": "Drywall Installation",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0670",
+        "name": "Glazier",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0671",
+        "name": "Industrial Painting",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0672",
+        "name": "Insulator",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0673",
+        "name": "Metal Building Assembly",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0674",
+        "name": "Property Maintenance and Site Management",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0675",
+        "name": "Roofer",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0676",
+        "name": "Electrical Trades",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0677",
+        "name": "Electrical and Power Transmission Installation",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0678",
+        "name": "Electrician",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0679",
+        "name": "Lineworker",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0680",
+        "name": "Leatherworking and Upholstery",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0681",
+        "name": "Machine and Metal Working",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0682",
+        "name": "Machine Shop Assistant",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0683",
+        "name": "Machinist",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0684",
+        "name": "Sheet Metal Technology",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0685",
+        "name": "Tool and Die Technician",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0686",
+        "name": "Plumbing Trades",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0687",
+        "name": "Pipefitting",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0688",
+        "name": "Plumbing",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0689",
+        "name": "Precision Production",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0690",
+        "name": "Welding",
+        "metaMajor": "Skilled Trades and Construction"
+    },
+    {
+        "majorId": "MAJ0691",
+        "name": "Social Sciences & Liberal Arts",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0692",
+        "name": "Area and Ethnic Studies",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0693",
+        "name": "African American Studies",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0694",
+        "name": "African Studies",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0695",
+        "name": "Asian Studies",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0696",
+        "name": "European and Russian Studies",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0697",
+        "name": "Hispanic American Studies",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0698",
+        "name": "Latin American Studies",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0699",
+        "name": "Minority and Group Studies",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0700",
+        "name": "North American Studies",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0701",
+        "name": "Regional and Area Studies",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0702",
+        "name": "Women's Studies",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0703",
+        "name": "Consumer and Retail Merchandising",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0704",
+        "name": "Apparel and Textile Science",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0705",
+        "name": "Retailing Management",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0706",
+        "name": "Economics",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0707",
+        "name": "Economic Development",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0708",
+        "name": "Economics and Econometrics",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0709",
+        "name": "Family and Consumer Economics",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0710",
+        "name": "Family Studies and Consumer Sciences",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0711",
+        "name": "Food and Nutrition Studies",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0712",
+        "name": "Food Service Systems Management",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0713",
+        "name": "Foods, Nutrition, and Wellness Studies",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0714",
+        "name": "Nutrition Sciences",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0715",
+        "name": "History",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0716",
+        "name": "Human Development",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0717",
+        "name": "Adult Development and Aging",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0718",
+        "name": "Behavioral Sciences",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0719",
+        "name": "Child Development",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0720",
+        "name": "Cognitive Science",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0721",
+        "name": "Family and Community Services",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0722",
+        "name": "International Studies and Government",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0723",
+        "name": "International Relations and National Security Studies",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0724",
+        "name": "International Studies",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0725",
+        "name": "Peace Studies and Conflict Resolution",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0726",
+        "name": "Political Science and Government",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0727",
+        "name": "Liberal Arts and Humanities",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0728",
+        "name": "Social Sciences",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0729",
+        "name": "Anthropology and Archaeology",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0730",
+        "name": "Criminology",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0731",
+        "name": "Geography",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0732",
+        "name": "Gerontology",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0733",
+        "name": "Social Science Research Methods",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0734",
+        "name": "Sociology",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0735",
+        "name": "Urban Studies and Affairs",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0736",
+        "name": "Social Services",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0737",
+        "name": "Community Organization and Advocacy",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0738",
+        "name": "Human Services",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0739",
+        "name": "Public Policy, Administration, and Social Work",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0740",
+        "name": "Public Administration",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0741",
+        "name": "Public Policy Analysis",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0742",
+        "name": "Social Work and Youth Services",
+        "metaMajor": "Social Sciences and Liberal Arts"
+    },
+    {
+        "majorId": "MAJ0743",
+        "name": "Transportation",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0744",
+        "name": "Air Transportation",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0745",
+        "name": "Aeronautics and Aviation Technology",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0746",
+        "name": "Air Traffic Control",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0747",
+        "name": "Airline Flight Attendant",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0748",
+        "name": "Aviation Management and Operations",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0749",
+        "name": "Flight Instructor",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0750",
+        "name": "Professional Pilot",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0751",
+        "name": "Ground Transportation",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0752",
+        "name": "Construction and Heavy Equipment Operation",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0753",
+        "name": "Truck, Bus, and Commercial Vehicle Operation",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0754",
+        "name": "Marine Transportation",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0755",
+        "name": "Commercial Fishing",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0756",
+        "name": "Marine Science",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0757",
+        "name": "Professional Diver and Instructor",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0758",
+        "name": "Transportation and Materials Moving",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0759",
+        "name": "Railroad and Railway Transportation",
+        "metaMajor": "Transportation"
+    },
+    {
+        "majorId": "MAJ0760",
+        "name": "Undecided",
+        "metaMajor": "Undecided"
+    },
+    {
+        "majorId": "MAJ0761",
+        "name": "Other",
+        "metaMajor": "Other"
+    }
 ]
