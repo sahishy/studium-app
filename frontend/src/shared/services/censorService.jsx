@@ -10,7 +10,7 @@ const matcher = new RegExpMatcher({
 });
 
 
-const cleanText = ( text ) => {
+const cleanText = (text) => {
 
     const input = text.trim();
     const matches = matcher.getAllMatches(input);
@@ -20,7 +20,7 @@ const cleanText = ( text ) => {
 
 }
 
-const hasFlaggedWords = ( text ) => {
+const hasFlaggedWords = (text) => {
 
     const input = text.trim();
     const matches = matcher.getAllMatches(input);

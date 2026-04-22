@@ -131,7 +131,7 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
                 onMouseLeave={hideTooltip}
                 onFocus={showTooltip}
                 onBlur={hideTooltip}
-                onClick={hideTooltip}
+                // onClick={hideTooltip}
                 className={disabled ? '' : 'cursor-pointer'}
             >
                 {children}
@@ -142,11 +142,8 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
                     <div
                         ref={tooltipRef}
                         className={`
-                            absolute z-[9999] py-1 px-2 bg-neutral0 text-neutral6 text-xs rounded-lg
-                            pointer-events-none select-none
-
+                            absolute z-[9999] pointer-events-none select-none
                             transition-all duration-150 ease-out transform
-                            
                             ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
                         `}
                         style={{

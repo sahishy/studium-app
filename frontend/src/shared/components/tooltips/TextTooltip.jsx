@@ -1,9 +1,16 @@
 import BaseTooltip from "./BaseTooltip";
 
 const TextTooltip = ({ children, text, placement = 'auto', className = '', disabled = false }) => {
+
+    const Tooltip = () => (
+        <p className="py-1 px-2 bg-neutral0 text-neutral6 text-xs rounded-lg">
+            {text}
+        </p>
+    )
+
     return (
         <BaseTooltip
-            content={text}
+            content={<Tooltip/>}
             placement={placement}
             className={className}
             disabled={disabled}
@@ -11,6 +18,7 @@ const TextTooltip = ({ children, text, placement = 'auto', className = '', disab
             {children}
         </BaseTooltip>
     )
+
 }
 
 export default TextTooltip;

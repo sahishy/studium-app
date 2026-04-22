@@ -11,7 +11,6 @@ const MyCoursesCard = ({
     teacherName,
     onRemove,
     loading = false,
-    teacherLoading = false
 }) => {
 
     const navigate = useNavigate();
@@ -29,21 +28,19 @@ const MyCoursesCard = ({
 
             <div className='w-full text-left'>
                 <div
-                    className={`h-28 rounded-xl flex items-center justify-center text-neutral2 ${loading ? 'animate-pulse' : ''}`}
+                    className='h-28 rounded-xl flex items-center justify-center text-neutral2'
                     style={{ backgroundColor: bgColor }}
                 >
                     <FaBook className='text-4xl' style={{ color: iconColor }} />
                 </div>
 
                 <div className='mt-4 flex flex-col gap-1'>
-                    <p className={`font-semibold text-neutral0 truncate ${loading ? 'opacity-70' : ''}`}>{course.title}</p>
+                    <p className='font-semibold text-neutral0 truncate'>{course.title}</p>
                     <p className='text-xs text-neutral1 truncate flex items-center gap-2'>
                         <SubjectIcon />
                         {course.subject}
                     </p>
-                    {teacherLoading ? (
-                        <div className='h-3.5 w-32 rounded bg-neutral5 animate-pulse mt-0.5' />
-                    ) : teacherName && (
+                    {teacherName && (
                         <p className='text-xs text-neutral1 truncate flex items-center gap-2'>
                             <FaChalkboardTeacher /> {teacherName}
                         </p>

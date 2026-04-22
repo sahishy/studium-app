@@ -2,14 +2,8 @@ import Button from '../../../../shared/components/ui/Button'
 import { useState } from 'react'
 import Select from '../../../../shared/components/popovers/Select'
 
-const AddTeacherConfirmationModal = ({
-    teacherName = '',
-    schoolOptions = [],
-    defaultSchoolId = null,
-    onCancel = () => { },
-    onConfirm = async () => { },
-    confirmLoading = false,
-}) => {
+const AddTeacherConfirmationModal = ({ teacherName = '', schoolOptions = [], defaultSchoolId = null, onCancel = () => { }, onConfirm = async () => { }, confirmLoading = false }) => {
+
     const [selectedSchoolId, setSelectedSchoolId] = useState(defaultSchoolId)
     const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -24,6 +18,7 @@ const AddTeacherConfirmationModal = ({
         } finally {
             setIsSubmitting(false)
         }
+
     }
 
     return (
@@ -61,6 +56,7 @@ const AddTeacherConfirmationModal = ({
                     {(confirmLoading || isSubmitting) ? 'Adding...' : 'Confirm'}
                 </Button>
             </div>
+
         </div>
     )
 }

@@ -216,8 +216,6 @@ const Welcome = () => {
                     value={step}
                     max={TOTAL_STEPS}
                     className='h-2'
-                    trackClassName='bg-neutral5'
-                    fillClassName='bg-neutral0'
                 />
             </div>
 

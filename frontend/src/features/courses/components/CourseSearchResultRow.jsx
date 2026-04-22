@@ -3,7 +3,7 @@ import { formatScoreLabel } from '../utils/reviewUtils'
 import Card from '../../../shared/components/ui/Card'
 import { SUBJECT_ICONS } from '../utils/courseUtils';
 
-const CourseSearchResultRow = ({ course, onAdd, loading, isTaking, score = null, scoreLoading = false }) => {
+const CourseSearchResultRow = ({ course, onAdd, loading, isTaking, score = null }) => {
 
     const SubjectIcon = SUBJECT_ICONS[course.subject];
 
@@ -27,14 +27,10 @@ const CourseSearchResultRow = ({ course, onAdd, loading, isTaking, score = null,
                         <p className='text-sm font-semibold text-neutral0 truncate'>{course.title}</p>
                         <p className='text-xs text-neutral1 truncate flex items-center gap-1'>
                             {course.subject} •
-                            {scoreLoading ? (
-                                <span className='h-4 w-16 rounded bg-neutral5 animate-pulse' />
-                            ) : (
-                                <span className='flex gap-1 items-center'>
-                                    {score != null && <FaThumbsUp />}
-                                    {formatScoreLabel(score)}
-                                </span>
-                            )}
+                            <span className='flex gap-1 items-center'>
+                                {score != null && <FaThumbsUp />}
+                                {formatScoreLabel(score)}
+                            </span>
                         </p>
                     </div>
                     <p className='text-xs text-neutral1 truncate'>

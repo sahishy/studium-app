@@ -1,6 +1,5 @@
 {
 	"projects": {
-		"development": "studium-io",
-		"production": "studium-io"
+		"default": "studium-io"
 	}
 }
