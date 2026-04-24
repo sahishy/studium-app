@@ -52,11 +52,49 @@ const formatTimeFromFirestoreLike = (value, options = { hour: 'numeric', minute:
     return dateValue ? dateValue.toLocaleTimeString([], options) : ''
 }
 
-const formatRelativeTaskDate = (seconds) => {
+const toDateFromRelativeInput = (value) => {
+    if(value == null) return null
+
+    if(value instanceof Date) {
+        return Number.isNaN(value.getTime()) ? null : value
+    }
+
+    if(typeof value === 'number') {
+        return new Date(value * 1000)
+    }
+
+    if(typeof value === 'string') {
+        const trimmed = value.trim()
+        if(!trimmed) return null
+
+        const isoDateMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+        if(isoDateMatch) {
+            const year = Number(isoDateMatch[1])
+            const monthIndex = Number(isoDateMatch[2]) - 1
+            const day = Number(isoDateMatch[3])
+            const localDate = new Date(year, monthIndex, day)
+            return Number.isNaN(localDate.getTime()) ? null : localDate
+        }
+
+        const parsed = new Date(trimmed)
+        return Number.isNaN(parsed.getTime()) ? null : parsed
+    }
+
+    if(typeof value === 'object' && typeof value.seconds === 'number') {
+        return new Date(value.seconds * 1000)
+    }
+
+    return null
+}
+
+const formatRelativeTaskDate = (value, options = {}) => {
+    const { fallbackLabel = '' } = options
+    const target = toDateFromRelativeInput(value)
+    if(!target) return fallbackLabel
+
     const now = Date.now();
-    const dateMs = seconds * 1000;
+    const dateMs = target.getTime();
     const today = new Date(now);
-    const target = new Date(dateMs);
 
     const isSameDay = (a, b) => a.toDateString() === b.toDateString();
 

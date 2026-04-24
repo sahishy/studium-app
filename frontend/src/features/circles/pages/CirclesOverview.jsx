@@ -144,7 +144,7 @@ const CirclesOverview = () => {
                                     </button>
 
                                     <div className={`w-full flex-col pl-8 ${collapsedDates.includes(date) ? 'hidden' : 'flex mb-4'}`}>
-                                        <TasksHeader/>
+                                        {/* <TasksHeader/> */}
 
                                         {groupedFutureTasks[date].sort((a, b) => a.createdAt.seconds - b.createdAt.seconds).map((task) => (
                                             <LegacyListTask key={task.uid} profile={profile} task={task} autoFocus={task.uid === newTaskId} setNewTaskId={setNewTaskId}/>

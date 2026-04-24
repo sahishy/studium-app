@@ -22,6 +22,7 @@ import EditDisplayNameModal from '../components/modals/EditDisplayNameModal'
 import EditMajorModal from '../components/modals/EditMajorModal'
 import podium from '../../../assets/images/podium.png'
 import { ACT_MAX, ACT_MIN, GPA_MAX, GPA_MIN, SAT_MAX, SAT_MIN, getDraftAcademicFromStats, getParsedNumber, toModeLabel } from '../utils/profileUtils'
+import { useUserStats } from '../contexts/UserStatsContext'
 
 const SAT_CLASSIC_MODE_ID = 'sat-classic'
 
@@ -30,6 +31,7 @@ const ProfileOverview = () => {
     const navigate = useNavigate()
 
     const { profile: currentUserProfile } = useOutletContext()
+    const { userStats: currentUserStats, loading: currentUserStatsLoading } = useUserStats()
     const { openModal, closeModal } = useModal()
     const { userId } = useParams()
 
@@ -41,10 +43,18 @@ const ProfileOverview = () => {
     const [draftAcademic, setDraftAcademic] = useState(getDraftAcademicFromStats({ userStats: null, displayName: '' }))
     const [saveError, setSaveError] = useState('')
 
+    const isCurrentUser = currentUserProfile?.uid === userId
+
     useEffect(() => {
 
         if (!userId) {
             setProfile(null)
+            setProfileLoading(false)
+            return
+        }
+
+        if (isCurrentUser) {
+            setProfile(currentUserProfile ?? null)
             setProfileLoading(false)
             return
         }
@@ -72,12 +82,17 @@ const ProfileOverview = () => {
             isCancelled = true
         }
 
-    }, [userId])
+    }, [userId, isCurrentUser, currentUserProfile])
 
     useEffect(() => {
 
         if (!userId) {
             setUserStats(null)
+            setStatsLoading(false)
+            return
+        }
+
+        if (isCurrentUser) {
             setStatsLoading(false)
             return
         }
@@ -105,20 +120,23 @@ const ProfileOverview = () => {
             isCancelled = true
         }
 
-    }, [userId])
+    }, [userId, isCurrentUser])
+
+    const displayedProfile = isCurrentUser ? currentUserProfile : profile
+    const displayedUserStats = isCurrentUser ? currentUserStats : userStats
 
     useEffect(() => {
         if (!isEditMode) {
-            const currentDisplayName = profile?.profile?.displayName ?? profile?.displayName ?? ''
-            setDraftAcademic(getDraftAcademicFromStats({ userStats, displayName: currentDisplayName }))
+            const currentDisplayName = displayedProfile?.profile?.displayName ?? displayedProfile?.displayName ?? ''
+            setDraftAcademic(getDraftAcademicFromStats({ userStats: displayedUserStats, displayName: currentDisplayName }))
         }
-    }, [userStats, profile, isEditMode])
+    }, [displayedUserStats, displayedProfile, isEditMode])
 
-    const loading = profileLoading || statsLoading
+    const loading = isCurrentUser
+        ? profileLoading || currentUserStatsLoading
+        : profileLoading || statsLoading
 
-    const isCurrentUser = currentUserProfile.uid === userId
-
-    const academic = userStats?.academic ?? {}
+    const academic = displayedUserStats?.academic ?? {}
     const schoolId = academic?.schoolId ?? null
     const schoolAffiliations = Array.isArray(academic?.schoolAffiliations) ? academic.schoolAffiliations : []
     const schoolName = getSchoolNameById(schoolId)
@@ -135,8 +153,8 @@ const ProfileOverview = () => {
     const weightedGpa = academic?.gpa?.weighted
 
     const satClassicRankedUi = useMemo(() => {
-        return buildRankedUiState({ userStats, modeId: SAT_CLASSIC_MODE_ID })
-    }, [userStats])
+        return buildRankedUiState({ userStats: displayedUserStats, modeId: SAT_CLASSIC_MODE_ID })
+    }, [displayedUserStats])
 
     const {
         rankedStats,
@@ -151,8 +169,8 @@ const ProfileOverview = () => {
     } = satClassicRankedUi
 
     const handleCancelEditMode = () => {
-        const currentDisplayName = profile?.profile?.displayName ?? profile?.displayName ?? ''
-        setDraftAcademic(getDraftAcademicFromStats({ userStats, displayName: currentDisplayName }))
+        const currentDisplayName = displayedProfile?.profile?.displayName ?? displayedProfile?.displayName ?? ''
+        setDraftAcademic(getDraftAcademicFromStats({ userStats: displayedUserStats, displayName: currentDisplayName }))
         setSaveError('')
         setIsEditMode(false)
     }
@@ -278,14 +296,14 @@ const ProfileOverview = () => {
 
                 {loading ? <LoadingState /> : null}
 
-                {!loading && !profile ? (
+                {!loading && !displayedProfile ? (
                     <ErrorState
                         title='Profile not found'
                         description='This user profile does not exist.'
                     />
                 ) : null}
 
-                {!loading && profile ? (
+                {!loading && displayedProfile ? (
                     <section className='flex flex-col'>
 
                         <div className='relative w-full h-64'>
@@ -293,13 +311,13 @@ const ProfileOverview = () => {
                                 <img src={background} className='absolute opacity-40 w-full' />
                             </div>
                             <AvatarModel
-                                profile={profile}
+                                profile={displayedProfile}
                                 animation={'Idle'}
                                 className='absolute w-full! h-64! top-0'
                             />
                             <div className='absolute w-36 h-36 -bottom-12 left-8 rounded-full border-8 border-neutral6 bg-neutral3'>
                                 <AvatarPicture
-                                    profile={profile}
+                                    profile={displayedProfile}
                                     className='w-full h-full'
                                 />
                             </div>
@@ -334,7 +352,7 @@ const ProfileOverview = () => {
                         <div className='flex flex-col'>
                             <div className='flex items-center gap-3'>
                                 <h1 className='text-2xl font-semibold'>
-                                    {profile?.profile?.displayName ?? profile?.displayName ?? 'Unknown'}
+                                    {displayedProfile?.profile?.displayName ?? displayedProfile?.displayName ?? 'Unknown'}
                                 </h1>
                                 {isCurrentUser && isEditMode ? (
                                     <button

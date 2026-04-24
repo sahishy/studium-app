@@ -1,15 +1,25 @@
-import { useCallback, useContext } from 'react'
+import { useCallback } from 'react'
 import { ReactEditor, useSlateStatic } from 'slate-react'
 import { Transforms } from 'slate'
 import DatePicker from '../../../shared/components/popovers/DatePicker'
 import Dropdown from '../../../shared/components/popovers/Dropdown'
-import { TaskRowCompletionContext } from './ListTask.jsx'
+import { formatRelativeTaskDate } from '../../../shared/utils/formatters'
+import { isTitleMostlyLowercase } from '../utils/taskParsingSlateUtils'
 
-const TaskWidgetElement = ({ attributes, children, element, isCompleted = false, circles = [], courses = [] }) => {
+const formatLocalDateKey = (value) => {
+    const date = new Date(value)
+    if(Number.isNaN(date.getTime())) return ''
+
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}
+
+const TaskWidgetElement = ({ attributes, children, element, isCompleted = false, circles = [], courses = [], onWidgetCommit, inverted }) => {
 
     const editor = useSlateStatic()
-    const rowIsCompleted = useContext(TaskRowCompletionContext)
-    const resolvedCompleted = rowIsCompleted || isCompleted
+    const resolvedCompleted = isCompleted
     const widgetType = element.segment?.widgetType || 'token'
     const label = element.segment?.rawText || element.segment?.displayText || widgetType
 
@@ -17,16 +27,17 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
         try {
             const path = ReactEditor.findPath(editor, element)
             Transforms.setNodes(editor, { segment: nextSegment }, { at: path })
+            onWidgetCommit?.()
         } catch {
-            // no-op when stale path
+            // stale path
         }
-    }, [editor, element])
+    }, [editor, element, onWidgetCommit])
 
-    const baseChipClass = `mx-[1px] rounded-md px-1.5 py-[1px] text-sm bg-neutral5 hover:bg-neutral4 text-neutral0 transition ${resolvedCompleted ? 'opacity-60 line-through' : 'opacity-100'}`
+    const baseChipClass = `mx-[1px] rounded-md px-1.5 py-[1px] text-sm text-neutral0 transition inline-flex items-center cursor-pointer ${resolvedCompleted ? 'opacity-60 line-through' : 'opacity-100'}`
+    const normalChipClass = `${baseChipClass} bg-neutral5 hover:bg-neutral4`
+    const invertedChipClass = `${baseChipClass} bg-neutral6 hover:bg-neutral6/60`
 
     const preserveEditorSelectionOnMouseDown = (event) => {
-        // Keep Slate focus/selection stable while still allowing click handlers
-        // to run (for opening popovers and selecting chip-like controls).
         event.preventDefault()
     }
 
@@ -43,12 +54,17 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
                     onSelect={(date) => {
                         const nextDueDate = date === -1
                             ? ''
-                            : new Date(date).toISOString().slice(0, 10)
+                            : formatLocalDateKey(date)
+                        const nextDateLabel = nextDueDate
+                            ? formatRelativeTaskDate(nextDueDate, { fallbackLabel: nextDueDate })
+                            : ''
+                        const shouldLowercase = isTitleMostlyLowercase(element.segment?.rawText || label)
+                        const resolvedDateLabel = shouldLowercase ? nextDateLabel.toLowerCase() : nextDateLabel
 
                         updateWidgetSegment({
                             ...element.segment,
-                            rawText: nextDueDate || label,
-                            displayText: nextDueDate || label,
+                            rawText: resolvedDateLabel || label,
+                            displayText: resolvedDateLabel || label,
                             value: {
                                 ...(element.segment?.value || {}),
                                 dueDate: nextDueDate,
@@ -60,7 +76,7 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
                         <button
                             type='button'
                             onMouseDown={preserveEditorSelectionOnMouseDown}
-                            className={`${baseChipClass} inline-flex items-center cursor-pointer ${isOpen && 'bg-neutral4!'}`}
+                            className={`${inverted ? invertedChipClass : normalChipClass} ${isOpen && (inverted ? 'bg-neutral6/80!' : 'bg-neutral4!')}`}
                         >
                             <span>{label}</span>
                         </button>
@@ -107,7 +123,7 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
                         <button
                             type='button'
                             onMouseDown={preserveEditorSelectionOnMouseDown}
-                            className={`${baseChipClass} inline-flex items-center cursor-pointer ${isOpen && 'bg-neutral4!'}`}
+                            className={`${inverted ? invertedChipClass : normalChipClass} ${isOpen && (inverted ? 'bg-neutral6/80!' : 'bg-neutral4!')}`}
                         >
                             <span>{label}</span>
                         </button>
@@ -153,7 +169,7 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
                         <button
                             type='button'
                             onMouseDown={preserveEditorSelectionOnMouseDown}
-                            className={`${baseChipClass} inline-flex items-center cursor-pointer ${isOpen && 'bg-neutral4!'}`}
+                            className={`${baseChipClass} ${isOpen && (inverted ? 'bg-neutral6/80!' : 'bg-neutral4!')}`}
                         >
                             <span>{label}</span>
                         </button>
