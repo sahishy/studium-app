@@ -278,23 +278,32 @@ function convertMatchToWidget(match) {
 const RESERVED_WORDS = new Set([
 	"due",
 	"by",
-	"today",
-	"tonight",
-	"tomorrow",
-	"tmr",
-	"tmrw",
-	"tdy",
+	"to",
 	"in",
 	"and",
 	"or",
 	"the",
 	"a",
 	"an",
+
+	"today",
+	"tdy",
+
+	"tonight",
+
+	"tomorrow",
+	"tomorow",
+	"tommorow",
+	"tomorrow",
+	"tmr",
+	"tmrw",
+
 	"test",
 	"quiz",
 	"exam",
 	"midterm",
 	"final",
+
 	"assignment",
 	"homework",
 	"work",

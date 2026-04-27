@@ -22,7 +22,7 @@ const Topbar = ({ profile }) => {
                         </div>
                     </StreakTooltip>
 
-                    <LevelTooltip level={level} xp={xp}>
+                    <LevelTooltip level={level} xp={xp} placement="bottom">
                         <div className="flex items-center gap-4 px-4 text-yellow-400">
                             <PiStarFourFill className="text-2xl" />
                             <h2>Lv. {level}</h2>

@@ -7,46 +7,63 @@ const LIST_GROUP_BY = {
 
 const sortTasksByListIndex = (tasks = []) => {
     return [...tasks].sort((a, b) => {
-        const aListIndex = typeof a?.listIndex === 'number' ? a.listIndex : -1
-        const bListIndex = typeof b?.listIndex === 'number' ? b.listIndex : -1
+        const aIndex = typeof a?.listIndex === 'number' ? a.listIndex : -1
+        const bIndex = typeof b?.listIndex === 'number' ? b.listIndex : -1
 
-        if(aListIndex !== -1 && bListIndex !== -1) return aListIndex - bListIndex
-        if(aListIndex !== -1) return -1
-        if(bListIndex !== -1) return 1
+        if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex
+        if (aIndex !== -1) return -1
+        if (bIndex !== -1) return 1
 
-        const aCreated = a?.createdAt?.seconds ? a.createdAt.seconds : 0
-        const bCreated = b?.createdAt?.seconds ? b.createdAt.seconds : 0
-
+        const aCreated = a?.createdAt?.seconds ?? 0
+        const bCreated = b?.createdAt?.seconds ?? 0
         return aCreated - bCreated
     })
 }
 
-const taskTitleToDueDateKey = (title) => {
-    const metadata = extractTaskTitleMetadata(normalizeTaskTitle(title))
+const getTaskDueDateKey = (task) => {
+    const metadata = extractTaskTitleMetadata(normalizeTaskTitle(task?.title))
     return metadata?.dueDate || 'none'
 }
 
-const formatDueDateGroupLabel = (dateKey) => {
-    return formatRelativeTaskDate(dateKey, { fallbackLabel: 'No Date' })
-}
-
 const getTaskGroupKey = (task, groupBy = LIST_GROUP_BY.DUE_DATE) => {
-    if(groupBy === LIST_GROUP_BY.DUE_DATE) return taskTitleToDueDateKey(task?.title)
+    if (groupBy === LIST_GROUP_BY.DUE_DATE) return getTaskDueDateKey(task)
     return 'all'
 }
 
 const getGroupLabel = (groupKey, groupBy = LIST_GROUP_BY.DUE_DATE) => {
-    if(groupBy === LIST_GROUP_BY.DUE_DATE) return formatDueDateGroupLabel(groupKey)
+    if (groupBy === LIST_GROUP_BY.DUE_DATE) {
+        return formatRelativeTaskDate(groupKey, { fallbackLabel: 'No Date' })
+    }
     return 'All tasks'
 }
 
-const buildGroupedTaskSections = (tasks = [], groupBy = LIST_GROUP_BY.DUE_DATE) => {
+const isMostlyLowercase = (rawText = '') => {
+    const text = String(rawText || '')
+    return text === text.toLowerCase() && /[a-z]/.test(text)
+}
+
+const buildGroupedTaskSections = (tasks = [], groupBy = LIST_GROUP_BY.DUE_DATE, options = {}) => {
+    const { forcedGroupKeyByTaskId = {} } = options
     const ordered = sortTasksByListIndex(tasks)
+    const tasksById = new Map(ordered.map((task) => [task.uid, task]))
     const groups = new Map()
 
+    const resolveGroupKey = (task) => {
+        // Subtasks inherit their root parent's group key
+        let current = task
+        const seen = new Set()
+        while (current?.parentTaskId && !seen.has(current.parentTaskId)) {
+            seen.add(current.parentTaskId)
+            const parent = tasksById.get(current.parentTaskId)
+            if (!parent) break
+            current = parent
+        }
+        return getTaskGroupKey(current, groupBy)
+    }
+
     ordered.forEach((task) => {
-        const key = getTaskGroupKey(task, groupBy)
-        if(!groups.has(key)) groups.set(key, [])
+        const key = forcedGroupKeyByTaskId[task.uid] || resolveGroupKey(task)
+        if (!groups.has(key)) groups.set(key, [])
         groups.get(key).push(task)
     })
 
@@ -59,13 +76,11 @@ const buildGroupedTaskSections = (tasks = [], groupBy = LIST_GROUP_BY.DUE_DATE) 
 
 const buildChildCounts = (tasks = []) => {
     const counts = new Map()
-
     tasks.forEach((task) => {
         const parentId = task.parentTaskId ?? null
-        if(!parentId) return
+        if (!parentId) return
         counts.set(parentId, (counts.get(parentId) || 0) + 1)
     })
-
     return counts
 }
 
@@ -77,108 +92,96 @@ const buildDepthMap = (tasks = []) => {
         let depth = 0
         let parentId = task.parentTaskId ?? null
         const seen = new Set()
-
-        while(parentId && !seen.has(parentId)) {
+        while (parentId && !seen.has(parentId)) {
             seen.add(parentId)
             const parent = byId.get(parentId)
-            if(!parent) break
-            depth += 1
+            if (!parent) break
+            depth++
             parentId = parent.parentTaskId ?? null
         }
-
         depthMap.set(task.uid, depth)
     })
 
     return depthMap
 }
 
+// Derives whether each parent task should be Completed or Incomplete
+// based on whether all its children are completed. Uses recursion so
+// each task is resolved once in a single pass rather than looping until stable.
 const deriveStatusByTaskId = (tasks = [], overrides = new Map()) => {
-    const childrenByParentId = new Map()
-    const statusById = new Map()
+    const byId = new Map(tasks.map((t) => [t.uid, t]))
+    const childrenByParent = new Map()
 
     tasks.forEach((task) => {
-        const status = overrides.has(task.uid)
-            ? overrides.get(task.uid)
-            : (task.status === 'Completed' ? 'Completed' : 'Incomplete')
-
-        statusById.set(task.uid, status)
-
         const parentId = task.parentTaskId ?? null
-        if(!parentId) return
-        if(!childrenByParentId.has(parentId)) childrenByParentId.set(parentId, [])
-        childrenByParentId.get(parentId).push(task.uid)
+        if (!parentId) return
+        if (!childrenByParent.has(parentId)) childrenByParent.set(parentId, [])
+        childrenByParent.get(parentId).push(task.uid)
     })
 
-    let changed = true
-    let passCount = 0
-    const maxPasses = tasks.length
-
-    while(changed && passCount < maxPasses) {
-        changed = false
-        passCount += 1
-
-        for(const [taskId] of statusById.entries()) {
-            const childIds = childrenByParentId.get(taskId) || []
-            if(childIds.length === 0) continue
-
-            const desiredStatus = childIds.every((childId) => statusById.get(childId) === 'Completed')
-                ? 'Completed'
-                : 'Incomplete'
-
-            if(statusById.get(taskId) !== desiredStatus) {
-                statusById.set(taskId, desiredStatus)
-                changed = true
-            }
+    const resolveStatus = (taskId) => {
+        const children = childrenByParent.get(taskId) || []
+        if (children.length === 0) {
+            if (overrides.has(taskId)) return overrides.get(taskId)
+            return byId.get(taskId)?.status === 'Completed' ? 'Completed' : 'Incomplete'
         }
+        return children.every((id) => resolveStatus(id) === 'Completed') ? 'Completed' : 'Incomplete'
     }
 
-    return statusById
+    return new Map(tasks.map((t) => [t.uid, resolveStatus(t.uid)]))
 }
 
 const buildListReindexUpdates = (tasks = []) => {
-    const ordered = sortTasksByListIndex(tasks)
-
-    return ordered
+    return sortTasksByListIndex(tasks)
         .map((task, index) => ({ taskId: task.uid, listIndex: index, currentListIndex: task.listIndex }))
         .filter((item) => item.currentListIndex !== item.listIndex)
-}
-
-const resolveInsertListIndexForGroup = ({
-    tasks = [],
-    groupBy = LIST_GROUP_BY.DUE_DATE,
-    draftTask = {},
-}) => {
-    const ordered = sortTasksByListIndex(tasks)
-    const currentMaxListIndex = ordered.reduce((max, task) => {
-        if(typeof task?.listIndex !== 'number') return max
-        return Math.max(max, task.listIndex)
-    }, -1)
-
-    const targetGroupKey = getTaskGroupKey(draftTask, groupBy)
-    const tasksInTargetGroup = ordered.filter((task) => getTaskGroupKey(task, groupBy) === targetGroupKey)
-
-    if(tasksInTargetGroup.length === 0) return currentMaxListIndex + 1
-
-    const groupMaxIndex = tasksInTargetGroup.reduce((max, task) => {
-        if(typeof task?.listIndex !== 'number') return max
-        return Math.max(max, task.listIndex)
-    }, -1)
-
-    return groupMaxIndex + 1
 }
 
 const buildShiftedListIndexUpdates = (tasks = [], insertIndex = 0) => {
     return sortTasksByListIndex(tasks)
         .filter((task) => typeof task?.listIndex === 'number' && task.listIndex >= insertIndex)
-        .map((task) => ({
-            taskId: task.uid,
-            listIndex: task.listIndex + 1,
-        }))
+        .map((task) => ({ taskId: task.uid, listIndex: task.listIndex + 1 }))
+}
+
+const buildInheritedGroupTitleFromSourceTask = ({ sourceTask, groupBy = LIST_GROUP_BY.DUE_DATE }) => {
+    if (!sourceTask) return ''
+
+    const sourceGroupKey = getTaskGroupKey(sourceTask, groupBy)
+    if (!sourceGroupKey || sourceGroupKey === 'none') return ''
+
+    if (groupBy === LIST_GROUP_BY.DUE_DATE) {
+        const normalizedTitle = normalizeTaskTitle(sourceTask.title)
+        const dateWidget = normalizedTitle.segments.find(
+            (seg) => seg?.type === 'widget' && seg?.widgetType === 'date'
+        )
+        const rawDateLabel = dateWidget?.rawText || dateWidget?.displayText || ''
+        const formattedLabel = formatRelativeTaskDate(sourceGroupKey, { fallbackLabel: sourceGroupKey })
+        const resolvedLabel = isMostlyLowercase(rawDateLabel) ? formattedLabel.toLowerCase() : formattedLabel
+
+        return {
+            segments: [
+                {
+                    type: 'widget',
+                    widgetType: 'date',
+                    rawText: resolvedLabel,
+                    displayText: resolvedLabel,
+                    value: { dueDate: sourceGroupKey },
+                },
+                {
+                    type: 'text',
+                    rawText: ' ',
+                    displayText: ' ',
+                },
+            ],
+        }
+    }
+
+    return ''
 }
 
 export {
-    sortTasksByListIndex,
     LIST_GROUP_BY,
+    sortTasksByListIndex,
     getTaskGroupKey,
     getGroupLabel,
     buildGroupedTaskSections,
@@ -186,6 +189,6 @@ export {
     buildDepthMap,
     deriveStatusByTaskId,
     buildListReindexUpdates,
-    resolveInsertListIndexForGroup,
     buildShiftedListIndexUpdates,
+    buildInheritedGroupTitleFromSourceTask,
 }

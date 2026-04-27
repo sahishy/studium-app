@@ -4,114 +4,119 @@ import TextTooltip from '../../../shared/components/tooltips/TextTooltip'
 import TaskParsingInput from './TaskParsingInput.jsx'
 import { flattenTaskTitle } from '../utils/naturalLanguage'
 
-const ConditionalTooltip = ({ children, label, isBlockedByChildren }) => {
-    return (
-        <TextTooltip text={label} disabled={!isBlockedByChildren}>
-            {children}
-        </TextTooltip>
-    )
-}
-
-const ListTask = ({ task, depth = 0, hasChildren = false, circles = [], courses = [], onUpdate, onDelete }) => {
-
+const ListTask = ({
+    task,
+    depth = 0,
+    hasChildren = false,
+    circles = [],
+    courses = [],
+    onRegisterFocusHandle,
+    onUpdate,
+    onDelete,
+    onCreateTaskAfter,
+    onTabInTask,
+    onTaskBlur,
+}) => {
     const [titleText, setTitleText] = useState(flattenTaskTitle(task.title))
-    const taskInputContainerRef = useRef(null)
+    const inputContainerRef = useRef(null)
+    const pendingPayloadRef = useRef(null)
+
     const isCompleted = task.status === 'Completed'
     const isEmpty = !titleText.trim()
-    const isBlockedByChildren = hasChildren && !isCompleted
-    const isDisabled = isEmpty || hasChildren
+    const isCheckDisabled = isEmpty || hasChildren
 
-    const focusTaskInput = useCallback(() => {
-        taskInputContainerRef.current?.focusAtEnd?.()
+    const focusInput = useCallback(() => {
+        inputContainerRef.current?.focusAtEnd?.()
     }, [])
 
-    const shouldSkipRowFocus = useCallback((eventTarget) => {
-        if(!(eventTarget instanceof Element)) return false
-
-        return Boolean(
-            eventTarget.closest('[contenteditable="true"]') ||
-            eventTarget.closest('button')
-        )
+    // Clicking the row focuses the input, unless the click was on an interactive element
+    const isInteractiveTarget = useCallback((target) => {
+        if (!(target instanceof Element)) return false
+        return Boolean(target.closest('[contenteditable="true"]') || target.closest('button'))
     }, [])
 
     useEffect(() => {
         setTitleText(flattenTaskTitle(task.title))
+        pendingPayloadRef.current = null
     }, [task.title])
+
+    useEffect(() => {
+        onRegisterFocusHandle?.(task.uid, focusInput)
+        return () => onRegisterFocusHandle?.(task.uid, null)
+    }, [focusInput, onRegisterFocusHandle, task.uid])
 
     return (
         <div
             data-task-completed={isCompleted ? 'true' : 'false'}
-            className={`group flex items-center gap-2 text-sm px-3 rounded-xl hover:bg-neutral5/40 focus-within:bg-neutral5/40 cursor-text
-                ${isCompleted ? 'text-text2' : 'text-text1'} transition-all`}
-            style={{ marginLeft: `${depth * 32 + (depth > 0 ? 6 : 0)}px` }}
-            onMouseDown={(event) => {
-                if(shouldSkipRowFocus(event.target)) return
-                event.preventDefault()
-                focusTaskInput()
-            }}
-            onClick={(event) => {
-                if(shouldSkipRowFocus(event.target)) return
-                focusTaskInput()
-            }}
+            className='group relative flex items-center gap-2 text-sm px-3 rounded-xl hover:bg-neutral5/40 focus-within:bg-neutral5/40 cursor-text transition-all ease-out'
+            style={{ marginLeft: `${depth * 32}px` }}
+            onMouseDown={(e) => { if (!isInteractiveTarget(e.target)) { e.preventDefault(); focusInput() } }}
+            onClick={(e) => { if (!isInteractiveTarget(e.target)) focusInput() }}
         >
-            <span className={isEmpty ? 'cursor-text' : ''}>
-                <ConditionalTooltip
-                    label={'Complete subtasks first'}
-                    isBlockedByChildren={isBlockedByChildren}
-                >
-                    <button
-                        type='button'
-                        disabled={isDisabled}
-                        onMouseDown={async (e) => {
-                            e.preventDefault()
-                            if(isDisabled) return
-
-                            const nextStatus = isCompleted ? 'Incomplete' : 'Completed'
-                            await onUpdate?.(task.uid, { status: nextStatus })
-                        }}
-                        className={`group/check shrink-0 flex h-4 w-4 items-center justify-center rounded-md border bg-transparent transition-all ${isEmpty
-                            ? 'opacity-0 border-transparent cursor-default pointer-events-none'
-                            : hasChildren
-                                ? 'opacity-40 border-neutral2 cursor-not-allowed'
-                                : isCompleted
-                                    ? 'opacity-100 bg-neutral1! border-neutral1 cursor-pointer'
-                                    : 'opacity-100 border-neutral2 hover:border-neutral1 cursor-pointer'
-                        }`}
-                    >
-                        <FaCheck
-                            className={`text-[10px] text-neutral6 ${isCompleted
-                                ? 'opacity-100'
-                                : 'opacity-0'
-                            }`}
+            {depth > 0 && (
+                <span className='pointer-events-none absolute inset-y-0 -left-3'>
+                    {Array.from({ length: depth }).map((_, i) => (
+                        <span
+                            key={i}
+                            className='absolute top-0 bottom-0 w-px bg-neutral5 rounded-full'
+                            style={{ left: `${i * -32}px` }}
                         />
-                    </button>
-                </ConditionalTooltip>
-            </span>
+                    ))}
+                </span>
+            )}
 
-            <div className={`relative isolate w-full border-b border-neutral4 ${isEmpty ? 'py-0' : 'py-3'}`}>
-                {isEmpty && (
-                    <span className='pointer-events-none select-none absolute inset-0 -z-10 text-neutral1'>
-                        Type a {depth > 0 && 'sub'}task
-                    </span>
-                )}
+            <TextTooltip
+                text='Complete subtasks first'
+                disabled={!(hasChildren && !isCompleted)}
+                placement='top'
+            >
+                <button
+                    type='button'
+                    disabled={isCheckDisabled}
+                    onMouseDown={async (e) => {
+                        e.preventDefault()
+                        if (isCheckDisabled) return
+                        await onUpdate?.(task.uid, { status: isCompleted ? 'Incomplete' : 'Completed' })
+                    }}
+                    className={`group/check shrink-0 flex h-4 w-4 items-center justify-center rounded-md border bg-transparent transition-all
+                        ${hasChildren
+                            ? 'opacity-40 border-neutral2 cursor-not-allowed'
+                            : isCompleted
+                                ? 'opacity-100 bg-neutral1! border-neutral1 cursor-pointer'
+                                : 'opacity-100 border-neutral2 hover:border-neutral1 cursor-pointer'
+                        }`}
+                >
+                    <FaCheck className={`text-[10px] text-neutral6 ${isCompleted ? 'opacity-100' : 'opacity-0'}`} />
+                </button>
+            </TextTooltip>
+
+            <div className='relative w-full border-b border-neutral4 py-3'>
                 <TaskParsingInput
-                    inputRef={taskInputContainerRef}
+                    inputRef={inputContainerRef}
                     title={task.title}
                     circles={circles}
                     courses={courses}
                     isCompleted={isCompleted}
-                    commitOnWidgetChange
                     className={`w-full ${isCompleted ? 'line-through text-neutral1' : 'text-neutral0'}`}
-                    placeholder={'No title'}
+                    placeholder='No title'
                     onCommit={(payload) => {
                         setTitleText(payload.plainTitle)
-
-                        onUpdate?.(task.uid, {
-                            title: payload.title,
-                            type: payload.metadata.taskType || payload.parsedTaskType || task.type || 'assignment',
-                        })
+                        pendingPayloadRef.current = payload
                     }}
-                    onEmpty={() => onDelete?.(task.uid)}
+                    onEnterKey={() => onCreateTaskAfter?.(task, pendingPayloadRef.current)}
+                    onTabKey={() => onTabInTask?.(task.uid)}
+                    onBlur={() => {
+                        const payload = pendingPayloadRef.current
+                        if (payload) {
+                            onUpdate?.(task.uid, {
+                                title: payload.title,
+                                type: payload.metadata.taskType || 'assignment',
+                            })
+                            pendingPayloadRef.current = null
+                        }
+                        onTaskBlur?.(task.uid)
+                    }}
+                    onEmpty={(meta) => onDelete?.(task.uid, meta)}
                 />
             </div>
         </div>
