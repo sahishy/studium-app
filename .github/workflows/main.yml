@@ -53,4 +53,4 @@ jobs:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Deploy to Firebase
-        run: firebase deploy --project production
+        run: firebase deploy
