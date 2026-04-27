@@ -1,16 +1,30 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/contexts/AuthContext'
+import { useModal } from '../../../shared/contexts/ModalContext'
 import logoLarge from '../../../assets/images/logo_lg.png'
 import heroImage from '../../../assets/images/landing/hero.jpg'
+import logoLargeWhite from '../../../assets/images/logo_lg_white.png' 
 import Button from '../../../shared/components/ui/Button'
 import Card from '../../../shared/components/ui/Card'
+import LogInModal from '../../auth/components/modals/LogInModal'
 
 const Landing = () => {
 
     const { user, loading } = useAuth()
+    const { openModal } = useModal()
     const navigate = useNavigate()
     const [scrollY, setScrollY] = useState(0)
+
+    const openLogInModal = () => {
+        openModal(
+            <LogInModal
+                onSwitchToSignUp={() => navigate('/welcome')}
+            />
+        )
+    }
+
+    const openWelcomePage = () => navigate('/welcome')
 
     const features = [
         {
@@ -52,10 +66,10 @@ const Landing = () => {
         <div className="relative min-h-screen overflow-x-hidden bg-background0 text-neutral0">
             <LandingBackground scrollY={scrollY} />
 
-            <Navbar navigate={navigate} />
+            <Navbar onOpenLogIn={openLogInModal} onOpenSignUp={openWelcomePage} />
 
             <main className='relative z-10 mx-auto flex w-full max-w-6xl flex-col gap-12 px-6 pb-20 pt-24 md:gap-14 md:px-10'>
-                <HeroSection navigate={navigate} scrollY={scrollY} />
+                <HeroSection onOpenLogIn={openLogInModal} onOpenSignUp={openWelcomePage} scrollY={scrollY} />
 
                 {features.map((feature, index) => (
                     <FeatureSection
@@ -66,7 +80,7 @@ const Landing = () => {
                     />
                 ))}
 
-                <FinalCTA navigate={navigate} scrollY={scrollY} />
+                <FinalCTA onOpenSignUp={openWelcomePage} scrollY={scrollY} />
 
             </main>
 
@@ -106,7 +120,7 @@ const LandingBackground = ({ scrollY }) => {
 
 }
 
-const Navbar = ({ navigate }) => {
+const Navbar = ({ onOpenLogIn, onOpenSignUp }) => {
 
     const [visible, setVisible] = useState(false)
 
@@ -134,7 +148,7 @@ const Navbar = ({ navigate }) => {
 
                 <div className='flex items-center text-sm'>
                     <Button
-                        onClick={() => navigate('/login')}
+                        onClick={onOpenLogIn}
                         type='secondary'
                         className='rounded-full whitespace-nowrap'
                     >
@@ -145,7 +159,7 @@ const Navbar = ({ navigate }) => {
                         className={`ml-2 overflow-hidden transition-all duration-300 ease-out ${visible ? 'w-22 opacity-100' : 'w-0 opacity-0'}`}
                     >
                         <Button
-                            onClick={() => navigate('/signup')}
+                            onClick={onOpenSignUp}
                             type='primary'
                             className='w-22 rounded-full whitespace-nowrap'
                             disabled={!visible}
@@ -162,7 +176,7 @@ const Navbar = ({ navigate }) => {
 
 }
 
-const HeroSection = ({ navigate, scrollY }) => {
+const HeroSection = ({ onOpenLogIn, onOpenSignUp, scrollY }) => {
 
     const maxTilt = 12
     const tilt = Math.max(0, maxTilt - (scrollY * 0.2))
@@ -184,15 +198,15 @@ const HeroSection = ({ navigate, scrollY }) => {
                 <div className='mt-8 flex flex-wrap items-center justify-center gap-3'>
                     <Button
                         type='primary'
-                        onClick={() => navigate('/signup')}
+                        onClick={onOpenSignUp}
                     >
                         Get started
                     </Button>
                     <Button
                         type='secondary'
-                        onClick={() => navigate('/login')}
+                        onClick={onOpenLogIn}
                     >
-                        Learn More
+                        Learn more
                     </Button>
                 </div>
 
@@ -281,7 +295,7 @@ const FeatureSection = ({ feature, reverse = false, scrollY }) => {
 
 }
 
-const FinalCTA = ({ navigate, scrollY }) => {
+const FinalCTA = ({ onOpenSignUp, scrollY }) => {
 
     const { sectionRef, progress } = useScrollProgress(scrollY)
 
@@ -299,7 +313,7 @@ const FinalCTA = ({ navigate, scrollY }) => {
             <div className='mt-8 flex justify-center'>
                 <Button
                     type='primary'
-                    onClick={() => navigate('/signup')}
+                    onClick={onOpenSignUp}
                 >
                     Get started
                 </Button>
@@ -312,12 +326,15 @@ const FinalCTA = ({ navigate, scrollY }) => {
 const Footer = () => {
 
     return (
-        <footer className='relative w-full mt-16 h-64 bg-neutral0 flex items-center justify-center'>
+        <footer className='relative w-full mt-16 h-96 bg-neutral0 flex items-center justify-center'>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" className='absolute -top-48'>
-                <path fill="#1F2937" fill-opacity="1" d="M0,160L60,149.3C120,139,240,117,360,128C480,139,600,181,720,176C840,171,960,117,1080,96C1200,75,1320,85,1380,90.7L1440,96L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+                <path fill="#1F2937" d="M0,160L60,149.3C120,139,240,117,360,128C480,139,600,181,720,176C840,171,960,117,1080,96C1200,75,1320,85,1380,90.7L1440,96L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
             </svg>
-            <div className='w-full max-w-6xl flex'>
-                Hi
+            <div className='w-full max-w-6xl flex flex-col gap-3 items-center z-1 pb-8'>
+                
+                <img src={logoLargeWhite} className='w-48 h-16 object-contain'/>
+                <p className='text-neutral1 text-sm'>© 2026 www.studium-app.com - All Rights Reserved.</p>
+
             </div>
         </footer>
     )

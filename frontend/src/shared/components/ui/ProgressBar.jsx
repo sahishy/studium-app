@@ -20,16 +20,16 @@ const ProgressBar = ({
     const secondaryWidth = Math.max(0, Math.min(100, (safeSecondaryValue / safeSecondaryMax) * 100))
 
     return (
-        <div className={`relative w-full h-4 rounded-full overflow-hidden bg-background3 ${trackClassName} ${className}`}>
+        <div className={`relative w-full h-4 rounded-full overflow-hidden bg-neutral5 ${trackClassName} ${className}`}>
             {hasSecondary ? (
                 <div
-                    className={`absolute left-0 top-0 h-full rounded-full bg-sky-300/35 ${secondaryClassName}!`}
+                    className={`absolute left-0 top-0 h-full rounded-full bg-sky-300/35 ${secondaryClassName}`}
                     style={{ width: `${secondaryWidth}%` }}
                 />
             ) : null}
 
             <div
-                className={`relative h-full rounded-full transition-all duration-1000 bg-sky-400 ${fillClassName}!`}
+                className={`relative h-full rounded-full transition-all duration-1000 bg-sky-400 ${fillClassName}`}
                 style={{ width: `${width}%`, ...fillStyle }}
             >
                 <div className={`h-[30%] translate-y-[3px] mx-[3px] rounded-full bg-white/30`} />

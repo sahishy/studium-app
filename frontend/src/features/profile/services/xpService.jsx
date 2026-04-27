@@ -1,6 +1,7 @@
 import { doc, updateDoc } from 'firebase/firestore'
 import confetti from 'canvas-confetti';
 import { db } from '../../../lib/firebase';
+import { getXpToNextLevel } from '../utils/xpUtils';
 
 const updateUserXP = async (profile, value) => {
 
@@ -12,7 +13,7 @@ const updateUserXP = async (profile, value) => {
         'progress.xp': currentXP + value
     })
 
-    if(currentXP + value >= Math.pow(2, currentLevel) * 100) {
+    if(currentXP + value >= getXpToNextLevel(currentLevel)) {
         await userLevelUp({ profile })
     }
 
@@ -40,7 +41,7 @@ const updateCircleXP = async (circle, value) => {
         xp: circle.xp + value
     })
 
-    if(circle.xp + value >= Math.pow(2, circle.level) * 100) {
+    if(circle.xp + value >= getXpToNextLevel(currentLevel)) {
         await circleLevelUp({ circle })
     }
 

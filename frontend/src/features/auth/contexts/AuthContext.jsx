@@ -17,10 +17,10 @@ const AuthProvider = ({ children }) => {
             if (firebaseUser) {
                 const profileRef = doc(db, 'users', firebaseUser.uid)
                 const profileSnap = await getDoc(profileRef)
-                if (profileSnap.exists()) {
-                setProfile({ uid: profileSnap.id, ...profileSnap.data() })
+                if(profileSnap.exists()) {
+                    setProfile({ uid: profileSnap.id, ...profileSnap.data() })
                 } else {
-                setProfile(null)
+                    setProfile(null)
                 }
             } else {
                 setProfile(null)
@@ -29,8 +29,8 @@ const AuthProvider = ({ children }) => {
             setLoading(false)
         })
 
-    return () => unsubscribe()
-}, [])
+        return () => unsubscribe()
+    }, [])
 
     return (
         <AuthContext.Provider value={{ user, profile, loading, logout: () => signOut(auth) }}>

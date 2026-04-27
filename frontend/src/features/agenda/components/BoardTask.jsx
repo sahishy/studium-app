@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useCircles } from '../../circles/contexts/CirclesContext'
 import { useCourses } from '../../courses/contexts/CoursesContext'
-import { deleteTask, updateTask } from '../services/taskService'
+import { updateTask } from '../services/taskService'
 import { extractTaskTitleMetadata, flattenTaskTitle, normalizeTaskTitle, parseTaskInput, parseTextToTaskTitle } from '../utils/naturalLanguage'
 import { TaskCircleInput, TaskDueDateInput, TaskStatusInput } from './TaskInputControls'
 
@@ -150,11 +150,7 @@ const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
 
 const TitleInput = ({ titleInput, setTitleInput, setTitle, inputRef, taskId, setNewTaskId, variant, placeholder = 'Title' }) => {
     const handleBlur = () => {
-        if(titleInput === '') {
-            deleteTask(taskId)
-        } else {
-            setTitle(titleInput)
-        }
+        setTitle(titleInput)
         if(setNewTaskId) {
             setNewTaskId(-1)
         }

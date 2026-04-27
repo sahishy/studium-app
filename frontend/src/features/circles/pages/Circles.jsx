@@ -23,10 +23,7 @@ const Circles = () => {
 
                     <div className='flex justify-between items-start'>
 
-                        <div className='flex flex-col gap-1'>
-                            <h1 className='text-2xl font-semibold'>Circles</h1>
-                            <h2 className='text-sm text-neutral1'>Join study circles with friends to share tasks.</h2>
-                        </div>
+                        <h1 className='text-2xl font-semibold'>Circles</h1>
 
                         <div className='flex gap-2'>
                             <CreateCircleButton profile={profile} />

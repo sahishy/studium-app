@@ -1,9 +1,11 @@
 import { PiStarFourFill } from "react-icons/pi"
 import Card from "../../../shared/components/ui/Card"
 import ProgressBar from "../../../shared/components/ui/ProgressBar"
+import { getXpToNextLevel } from "../../profile/utils/xpUtils"
 
 const CircleGreeting = ( { circle } ) => {
-    const xpToNextLevel = Math.pow(2, circle.level) * 100
+
+    const xpToNextLevel = getXpToNextLevel(circle.level)
 
     return (
         <Card className={'flex-1'}>

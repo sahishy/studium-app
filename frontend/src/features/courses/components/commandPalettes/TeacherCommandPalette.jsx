@@ -3,6 +3,7 @@ import Button from '../../../../shared/components/ui/Button'
 import { toTitleCase } from '../../../../shared/utils/formatters'
 import { getSchoolNameById } from '../../../profile/services/schoolService'
 import Card from '../../../../shared/components/ui/Card'
+import { validateTeacherName } from '../../utils/teacherUtils'
 
 const TeacherCommandPalette = ({
     isOpen,
@@ -15,9 +16,21 @@ const TeacherCommandPalette = ({
     onLoadMore,
     onSelectTeacher,
     onCreateTeacher,
+    onCreateTeacherValidationError,
     createLoading = false,
 }) => {
     const normalizedQuery = query.trim()
+
+    const handleCreateTeacher = () => {
+        const teacherName = toTitleCase(normalizedQuery)
+        const validation = validateTeacherName(teacherName)
+        if (!validation.isValid) {
+            onCreateTeacherValidationError?.(validation.error)
+            return
+        }
+
+        onCreateTeacher?.()
+    }
 
     return (
         <BaseCommandPalette
@@ -57,7 +70,7 @@ const TeacherCommandPalette = ({
                 {normalizedQuery ? (
                     <div className='p-2 flex items-center justify-center gap-3'>
                         <p className='text-sm text-neutral1'>Can't find your teacher?</p>
-                        <Button type='secondary' className='disabled:opacity-100!' onClick={onCreateTeacher} disabled={createLoading || teacherLoading}>
+                        <Button type='secondary' className='disabled:opacity-100!' onClick={handleCreateTeacher} disabled={createLoading || teacherLoading}>
                             {createLoading ? 'Adding...' : `Add "${toTitleCase(normalizedQuery)}"`}
                         </Button>
                     </div>

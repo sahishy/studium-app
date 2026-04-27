@@ -159,7 +159,7 @@ const Avatar = () => {
                 </div>
 
                 {avatarLoading ? (
-                    <LoadingState label='Loading avatar...' className='flex-1' />
+                    <LoadingState className='flex-1' />
                 ) : (
                     <div className='flex-1 flex gap-8'>
 

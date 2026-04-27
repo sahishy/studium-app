@@ -16,7 +16,7 @@ const MaintenanceRoute = ({ children }) => {
     }, [])
 
     if(loading) {
-        return <LoadingState fullPage label='Loading...' />
+        return <LoadingState fullPage/>
     }
 
     const isWhitelisted = Boolean(user?.uid) && (config?.whitelist ?? []).includes(user.uid)

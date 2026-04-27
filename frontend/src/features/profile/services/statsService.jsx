@@ -1,7 +1,7 @@
 import { doc, getDoc, onSnapshot, runTransaction, setDoc } from 'firebase/firestore'
 import { db } from '../../../lib/firebase'
 
-const createUserStatsDocument = async ({ userId }) => {
+const createUserStatsDocument = async ({ userId, schoolId = null, schoolAffiliations = [] }) => {
 
     if(!userId) {
         throw new Error('A valid userId is required to create user stats.')
@@ -12,8 +12,8 @@ const createUserStatsDocument = async ({ userId }) => {
     await setDoc(userStatsRef, {
         userId,
         academic: {
-            schoolId: null,
-            schoolAffiliations: [],
+            schoolId,
+            schoolAffiliations: Array.isArray(schoolAffiliations) ? schoolAffiliations : [],
             targetMajors: [],
             scores: {
                 sat: null,

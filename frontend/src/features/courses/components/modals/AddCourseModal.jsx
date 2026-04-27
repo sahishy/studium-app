@@ -3,6 +3,7 @@ import Button from '../../../../shared/components/ui/Button'
 import BooleanSelect from '../../../../shared/components/ui/BooleanSelect'
 import TeacherCommandPalette from '../commandPalettes/TeacherCommandPalette'
 import AddTeacherConfirmationModal from './AddTeacherConfirmationModal'
+import AddTeacherErrorModal from './AddTeacherErrorModal'
 import { createTeacher, searchTeachersBySchoolIds } from '../../services/teacherService'
 import { joinCourse } from '../../services/courseService'
 import { toTitleCase } from '../../../../shared/utils/formatters'
@@ -149,6 +150,15 @@ const AddCourseModal = ({
         }
     }
 
+    const handleCreateTeacherValidationError = (errorMessage) => {
+        openModal(
+            <AddTeacherErrorModal
+                errorMessage={errorMessage}
+                onClose={closeTopModal}
+            />
+        )
+    }
+
     const handleSubmit = async (event) => {
         event.preventDefault()
         if (!profile?.uid || !course?.courseId || !selectedTeacher?.uid) {
@@ -261,6 +271,7 @@ const AddCourseModal = ({
                     setTeacherPaletteOpen(false)
                 }}
                 onCreateTeacher={handleCreateTeacher}
+                onCreateTeacherValidationError={handleCreateTeacherValidationError}
                 createLoading={createLoading}
             />
         </>

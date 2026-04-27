@@ -1,4 +1,4 @@
-import { doc, updateDoc, collection, getAggregateFromServer, getCountFromServer, onSnapshot, query, sum, where, increment, documentId, getDocs } from 'firebase/firestore'
+import { doc, updateDoc, collection, getAggregateFromServer, getCountFromServer, onSnapshot, query, sum, where, increment, documentId, getDocs, getDoc } from 'firebase/firestore'
 import { useEffect, useState } from 'react';
 import { getRandomAvatarColor } from '../../profile/utils/avatarUtils';
 import { generateRandomDisplayName, isDisplayNameFormatValid } from '../utils/userUtils';
@@ -76,6 +76,26 @@ const updateUserInfo = async (uid, userData) => {
     const userRef = doc(db, 'users', uid)
 
     await updateDoc(userRef, userData)
+
+}
+
+const getUserById = async (uid) => {
+
+    if(!uid) {
+        return null
+    }
+
+    const userRef = doc(db, 'users', uid)
+    const userSnap = await getDoc(userRef)
+
+    if(!userSnap.exists()) {
+        return null
+    }
+
+    return {
+        uid: userSnap.id,
+        ...userSnap.data(),
+    }
 
 }
 
@@ -232,6 +252,7 @@ export {
     createNewUserObject,
     isDisplayNameAvailable,
     generateUniqueDisplayName,
+    getUserById,
     updateUserInfo,
     getTotalUsers,
     getTotalTasksCompleted,

@@ -1,15 +1,25 @@
-import { useCallback, useContext } from 'react'
+import { useCallback } from 'react'
 import { ReactEditor, useSlateStatic } from 'slate-react'
 import { Transforms } from 'slate'
 import DatePicker from '../../../shared/components/popovers/DatePicker'
-import Dropdown from '../../../shared/components/popovers/Dropdown'
-import { TaskRowCompletionContext } from './ListTask.jsx'
+import Select from '../../../shared/components/popovers/Select'
+import { formatRelativeTaskDate } from '../../../shared/utils/formatters'
+import { isTitleMostlyLowercase } from '../utils/taskParsingSlateUtils'
 
-const TaskWidgetElement = ({ attributes, children, element, isCompleted = false, circles = [], courses = [] }) => {
+const formatLocalDateKey = (value) => {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return ''
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}
 
+// Prevents the editor from losing its selection when clicking a widget button
+const preventEditorBlur = (event) => event.preventDefault()
+
+const TaskWidgetElement = ({ attributes, children, element, isCompleted = false, circles = [], courses = [], onWidgetCommit, inverted }) => {
     const editor = useSlateStatic()
-    const rowIsCompleted = useContext(TaskRowCompletionContext)
-    const resolvedCompleted = rowIsCompleted || isCompleted
     const widgetType = element.segment?.widgetType || 'token'
     const label = element.segment?.rawText || element.segment?.displayText || widgetType
 
@@ -17,20 +27,17 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
         try {
             const path = ReactEditor.findPath(editor, element)
             Transforms.setNodes(editor, { segment: nextSegment }, { at: path })
+            onWidgetCommit?.()
         } catch {
-            // no-op when stale path
+            // stale path — element was removed before update fired
         }
-    }, [editor, element])
+    }, [editor, element, onWidgetCommit])
 
-    const baseChipClass = `mx-[1px] rounded-md px-1.5 py-[1px] text-sm bg-neutral5 hover:bg-neutral4 text-neutral0 transition ${resolvedCompleted ? 'opacity-60 line-through' : 'opacity-100'}`
+    const baseChipClass = `mx-[1px] rounded-md px-1.5 py-0.5 text-sm text-neutral0 transition inline-flex items-center cursor-pointer ${isCompleted ? 'opacity-60 line-through' : 'opacity-100'}`
+    const chipClass = `${baseChipClass} ${inverted ? 'bg-neutral6 hover:bg-neutral6/60' : 'bg-neutral5 hover:bg-neutral4'}`
+    const chipOpenClass = inverted ? 'bg-neutral6/80!' : 'bg-neutral4!'
 
-    const preserveEditorSelectionOnMouseDown = (event) => {
-        // Keep Slate focus/selection stable while still allowing click handlers
-        // to run (for opening popovers and selecting chip-like controls).
-        event.preventDefault()
-    }
-
-    if(widgetType === 'date') {
+    if (widgetType === 'date') {
         const currentDate = element.segment?.value?.dueDate || ''
         const selectedDate = currentDate
             ? { seconds: Math.floor(new Date(`${currentDate}T00:00:00`).getTime() / 1000) }
@@ -41,26 +48,27 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
                 <DatePicker
                     selectedDate={selectedDate}
                     onSelect={(date) => {
-                        const nextDueDate = date === -1
-                            ? ''
-                            : new Date(date).toISOString().slice(0, 10)
+                        const nextDueDate = date === -1 ? '' : formatLocalDateKey(date)
+                        const nextDateLabel = nextDueDate
+                            ? formatRelativeTaskDate(nextDueDate, { fallbackLabel: nextDueDate })
+                            : ''
+                        const resolvedLabel = isTitleMostlyLowercase(label)
+                            ? nextDateLabel.toLowerCase()
+                            : nextDateLabel
 
                         updateWidgetSegment({
                             ...element.segment,
-                            rawText: nextDueDate || label,
-                            displayText: nextDueDate || label,
-                            value: {
-                                ...(element.segment?.value || {}),
-                                dueDate: nextDueDate,
-                            },
+                            rawText: resolvedLabel || label,
+                            displayText: resolvedLabel || label,
+                            value: { ...(element.segment?.value || {}), dueDate: nextDueDate },
                         })
                     }}
                 >
                     {(isOpen) => (
                         <button
                             type='button'
-                            onMouseDown={preserveEditorSelectionOnMouseDown}
-                            className={`${baseChipClass} inline-flex items-center cursor-pointer ${isOpen && 'bg-neutral4!'}`}
+                            onMouseDown={preventEditorBlur}
+                            className={`${chipClass} ${isOpen && chipOpenClass}`}
                         >
                             <span>{label}</span>
                         </button>
@@ -71,7 +79,7 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
         )
     }
 
-    if(widgetType === 'circle') {
+    if (widgetType === 'circle') {
         const options = [
             { uid: null, label: 'None', icon: null },
             ...circles.map((circle) => ({ uid: circle.uid, label: circle.title, icon: null })),
@@ -79,12 +87,11 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
 
         return (
             <span {...attributes} contentEditable={false} className='inline-flex align-baseline'>
-                <Dropdown
+                <Select
                     options={options}
                     isOptionSelected={(option) => {
                         const currentCircleId = element.segment?.value?.circleId || ''
-                        if(option.uid === null) return !currentCircleId
-                        return String(option.uid) === String(currentCircleId)
+                        return option.uid === null ? !currentCircleId : String(option.uid) === String(currentCircleId)
                     }}
                     onSelect={(option) => {
                         const chosenTitle = option?.uid
@@ -95,51 +102,45 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
                             ...element.segment,
                             rawText: chosenTitle,
                             displayText: chosenTitle,
-                            value: {
-                                ...(element.segment?.value || {}),
-                                circleId: option?.uid || '',
-                                title: chosenTitle,
-                            },
+                            value: { ...(element.segment?.value || {}), circleId: option?.uid || '', title: chosenTitle },
                         })
                     }}
                 >
                     {(isOpen) => (
                         <button
                             type='button'
-                            onMouseDown={preserveEditorSelectionOnMouseDown}
-                            className={`${baseChipClass} inline-flex items-center cursor-pointer ${isOpen && 'bg-neutral4!'}`}
+                            onMouseDown={preventEditorBlur}
+                            className={`${chipClass} ${isOpen && chipOpenClass}`}
                         >
                             <span>{label}</span>
                         </button>
                     )}
-                </Dropdown>
+                </Select>
                 {children}
             </span>
         )
     }
 
-    if(widgetType === 'course') {
-        const options = courses.map((course) => ({
-            uid: String(course.courseId),
-            label: `${course.title}`,
-            icon: null,
-            course,
-        }))
+    if (widgetType === 'course') {
+        const options = courses.length
+            ? courses.map((course) => ({ uid: String(course.courseId), label: course.title, icon: null, course }))
+            : [{ uid: null, label: 'No courses', icon: null }]
 
         return (
             <span {...attributes} contentEditable={false} className='inline-flex align-baseline'>
-                <Dropdown
-                    options={options.length ? options : [{ uid: null, label: 'No courses', icon: null }]}
+                <Select
+                    options={options}
                     isOptionSelected={(option) => String(option.uid || '') === String(element.segment?.value?.courseId || '')}
                     onSelect={(option) => {
-                        if(!option?.uid) return
+                        if (!option?.uid) return
                         const course = option.course || courses.find((x) => String(x.courseId) === String(option.uid))
                         const courseTitle = course?.title || option.label || label
+                        const resolvedTitle = isTitleMostlyLowercase(label) ? courseTitle.toLowerCase() : courseTitle
 
                         updateWidgetSegment({
                             ...element.segment,
-                            rawText: courseTitle,
-                            displayText: courseTitle,
+                            rawText: resolvedTitle,
+                            displayText: resolvedTitle,
                             value: {
                                 ...(element.segment?.value || {}),
                                 courseId: String(option.uid),
@@ -152,18 +153,19 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
                     {(isOpen) => (
                         <button
                             type='button'
-                            onMouseDown={preserveEditorSelectionOnMouseDown}
-                            className={`${baseChipClass} inline-flex items-center cursor-pointer ${isOpen && 'bg-neutral4!'}`}
+                            onMouseDown={preventEditorBlur}
+                            className={`${chipClass} ${isOpen && chipOpenClass}`}
                         >
                             <span>{label}</span>
                         </button>
                     )}
-                </Dropdown>
+                </Select>
                 {children}
             </span>
         )
     }
 
+    // Fallback for unrecognized/token widget types
     return (
         <span {...attributes} contentEditable={false} className='inline-flex align-baseline'>
             <span data-task-widget-chip className={baseChipClass}>

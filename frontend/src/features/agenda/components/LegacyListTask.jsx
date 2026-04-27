@@ -3,7 +3,7 @@ import { FaCalendar, FaCheckCircle, FaClock, FaDotCircle, FaUserFriends } from '
 import Dropdown from '../../../shared/components/popovers/Dropdown'
 import DatePicker from '../../../shared/components/popovers/DatePicker'
 import { useCircles } from '../../circles/contexts/CirclesContext'
-import { deleteTask, updateTask } from '../services/taskService'
+import { updateTask } from '../services/taskService'
 import { formatDateFromSeconds } from '../../../shared/utils/formatters'
 import { flattenTaskTitle } from '../utils/naturalLanguage'
 
@@ -148,11 +148,7 @@ const StatusInput = ({ status, setStatus }) => {
 
 const TitleInput = ({ titleInput, setTitleInput, setTitle, inputRef, taskId, setNewTaskId, placeholder = 'Title' }) => {
     const handleBlur = () => {
-        if(titleInput === '') {
-            deleteTask(taskId)
-        } else {
-            setTitle(titleInput)
-        }
+        setTitle(titleInput)
         if(setNewTaskId) {
             setNewTaskId(-1)
         }

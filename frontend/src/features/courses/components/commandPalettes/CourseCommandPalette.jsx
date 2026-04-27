@@ -45,7 +45,6 @@ const CourseCommandPalette = ({
                                     key={course.courseId}
                                     course={course}
                                     score={scoreMap[String(course.courseId)]}
-                                    scoreLoading={getScoreLoading(String(course.courseId))}
                                     isTaking={getIsTaking(String(course.courseId))}
                                     loading={getIsLoading(String(course.courseId))}
                                     onAdd={() => onSelectCourse?.(course)}

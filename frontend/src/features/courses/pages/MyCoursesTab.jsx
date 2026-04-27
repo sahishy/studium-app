@@ -96,6 +96,9 @@ const MyCoursesTab = () => {
 
     const canLoadMoreSearch = searchResults.length > visibleSearchResults.length
     const canLoadMoreSubject = subjectCourses.length > visibleSubjectCourses.length
+    const isScoreLoading = Object.keys(loadingScoreIds).length > 0
+    const isPageLoading = coursesLoading || teachersLoading || Boolean(loadingCourseId)
+    const isPaletteLoading = isScoreLoading || coursesLoading || Boolean(loadingCourseId)
 
     useEffect(() => {
         let cancelled = false
@@ -289,8 +292,8 @@ const MyCoursesTab = () => {
                         </button>
                     </div>
 
-                    {coursesLoading ? (
-                        <LoadingState label='Loading your courses...' />
+                    {isPageLoading ? (
+                        <LoadingState/>
                     ) : selectedCourses.length === 0 ? (
                         <div className='w-full  flex flex-col items-center justify-center py-16 gap-3'>
                             <FaArrowUp className='text-neutral1' />
@@ -310,12 +313,7 @@ const MyCoursesTab = () => {
                                             course={course}
                                             customization={enrollment?.customization}
                                             teacherName={teachersMap[String(enrollment?.teacherId)]?.name}
-                                            loading={
-                                                loadingCourseId === String(course.courseId)
-                                                || teachersLoading
-                                                || coursesLoading
-                                            }
-                                            teacherLoading={teachersLoading && Boolean(enrollment?.teacherId)}
+                                            loading={loadingCourseId === String(course.courseId)}
                                             onRemove={() => handleLeaveCourse(course.courseId)}
                                         />
                                     )
@@ -341,9 +339,9 @@ const MyCoursesTab = () => {
                 onLoadMoreSearch={() => setSearchVisibleCount((prev) => prev + RESULTS_PAGE_SIZE)}
                 onLoadMoreSubject={() => setSubjectVisibleCount((prev) => prev + RESULTS_PAGE_SIZE)}
                 scoreMap={scoreMap}
-                getScoreLoading={(courseId) => Boolean(loadingScoreIds[String(courseId)])}
+                getScoreLoading={() => false}
                 getIsTaking={(courseId) => selectedCourseIds.has(String(courseId))}
-                getIsLoading={(courseId) => loadingCourseId === String(courseId) || coursesLoading}
+                getIsLoading={() => isPaletteLoading}
                 onSelectCourse={handleOpenAddCourseModal}
             />
         </>

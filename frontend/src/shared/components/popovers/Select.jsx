@@ -49,7 +49,7 @@ const Select = ({
 
                             closePopover()
                         }}
-                        className={`flex items-center justify-between p-2 text-sm rounded-xl cursor-pointer transition-colors ${isSelected ? 'bg-neutral4 text-neutral0' : 'text-neutral0 hover:bg-neutral5'}`}
+                        className={`flex items-center justify-between p-2 text-sm rounded-xl cursor-pointer transition-colors ${isSelected ? 'bg-neutral5 text-neutral0' : 'text-neutral0 hover:bg-neutral5/60'}`}
                     >
                         <span className='flex items-center gap-2 truncate'>
                             {option?.icon ? <span className='text-neutral1'>{option.icon}</span> : null}

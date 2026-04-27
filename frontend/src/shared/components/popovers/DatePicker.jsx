@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import BasePopover from './BasePopover';
-
-import { PiCaretRightFill, PiCaretLeftFill } from 'react-icons/pi';
 import Button from '../ui/Button';
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa6';
 
