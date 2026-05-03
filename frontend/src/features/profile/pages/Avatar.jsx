@@ -163,11 +163,11 @@ const Avatar = () => {
                 ) : (
                     <div className='flex-1 flex gap-8'>
 
-                        <div className='relative flex-1 rounded-xl bg-white flex justify-center overflow-hidden'>
+                        <div className='relative flex-1 rounded-xl bg-neutral6 flex justify-center overflow-hidden'>
                             <img
                                 src={background}
                                 alt='Avatar preview background'
-                                className='absolute inset-0 w-full h-full object-cover opacity-60 z-0'
+                                className='absolute inset-0 w-full h-full object-cover opacity-60 z-0 dark:opacity-8'
                             />
 
                             <div className='pointer-events-none absolute inset-0 z-1'>
@@ -184,25 +184,27 @@ const Avatar = () => {
                             />
 
                             <div className={`
-                                    z-3 absolute bottom-8 w-full max-w-xs flex justify-center gap-3 pt-12 bg-gradient-to-t from-neutral6 to-transparent
+                                    z-3 absolute bottom-0 w-full flex justify-center gap-3 py-12 bg-gradient-to-t from-neutral6 to-transparent
                                     transition-all
                                     ${hasUnsavedChanges ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-3 pointer-events-none'}
                                 `}
                             >
-                                <Button
-                                    className='flex-1 p-3!'
-                                    onClick={handleDiscardChanges}
-                                >
-                                    Discard Changes
-                                </Button>
-                                <Button
-                                    type='primary'
-                                    className='flex-1 p-3!'
-                                    onClick={handleSaveChanges}
-                                    disabled={!hasUnsavedChanges || saving || saveCooldownSecondsLeft > 0}
-                                >
-                                    {saveButtonText}
-                                </Button>
+                                <div className='flex w-full gap-3 max-w-xs'>
+                                    <Button
+                                        className='flex-1 p-3!'
+                                        onClick={handleDiscardChanges}
+                                    >
+                                        Discard Changes
+                                    </Button>
+                                    <Button
+                                        type='primary'
+                                        className='flex-1 p-3!'
+                                        onClick={handleSaveChanges}
+                                        disabled={!hasUnsavedChanges || saving || saveCooldownSecondsLeft > 0}
+                                    >
+                                        {saveButtonText}
+                                    </Button>
+                                </div>
                             </div>
 
                         </div>
@@ -237,7 +239,7 @@ const Avatar = () => {
                                                 key={faceTexture}
                                                 type='button'
                                                 onClick={() => handleFaceSelect(faceIndex)}
-                                                className={`w-20 h-20 rounded-xl border overflow-hidden bg-neutral6 transition-all cursor-pointer ${selectedFace === faceIndex ? 'border-neutral0 border-2 scale-105' : 'border-neutral4'}`}
+                                                className={`w-20 h-20 rounded-xl border overflow-hidden bg-white/4 transition-all cursor-pointer ${selectedFace === faceIndex ? 'border-neutral0 border-2 scale-105' : 'border-neutral4'}`}
                                                 aria-label={`Select face ${faceIndex + 1}`}
                                             >
                                                 <img
@@ -254,7 +256,7 @@ const Avatar = () => {
                             {activeTab === 2 && (
                                 <div className='flex flex-col gap-4'>
                                     <h2 className='text-lg font-semibold'>Hat</h2>
-                                    <p className='text-sm text-text2'>Coming soon.</p>
+                                    <p className='text-sm text-neutral2'>Coming soon.</p>
                                 </div>
                             )}
 

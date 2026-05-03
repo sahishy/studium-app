@@ -72,11 +72,11 @@ const JoinCircle = () => {
             ) : (
                 <div className="p-4 border-2 border-neutral4 rounded-xl flex flex-col gap-4 text-center min-w-xs">
 
-                    <h2 className="text-text1">You've been invited to:</h2>
+                    <h2 className="text-neutral1">You've been invited to:</h2>
 
                     <h1 className="text-2xl">{circle.title}</h1>
 
-                    <div className="flex justify-center gap-8 text-text2">
+                    <div className="flex justify-center gap-8 text-neutral2">
                         <div className="flex items-center gap-2">
                             <PiStarFourFill/>
                             <h2>Lv. {circle.level}</h2>

@@ -1,15 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { FaCheck } from 'react-icons/fa6'
+import { FaCheck, FaGripLinesVertical } from 'react-icons/fa6'
 import TextTooltip from '../../../shared/components/tooltips/TextTooltip'
 import TaskParsingInput from './TaskParsingInput.jsx'
 import { flattenTaskTitle } from '../utils/naturalLanguage'
 
-const ListTask = ({
-    task,
-    depth = 0,
-    hasChildren = false,
-    circles = [],
-    courses = [],
+const ListTask = ({ task, depth = 0, hasChildren = false, circles = [], courses = [],
     onRegisterFocusHandle,
     onUpdate,
     onDelete,
@@ -29,7 +24,6 @@ const ListTask = ({
         inputContainerRef.current?.focusAtEnd?.()
     }, [])
 
-    // Clicking the row focuses the input, unless the click was on an interactive element
     const isInteractiveTarget = useCallback((target) => {
         if (!(target instanceof Element)) return false
         return Boolean(target.closest('[contenteditable="true"]') || target.closest('button'))
@@ -119,6 +113,11 @@ const ListTask = ({
                     onEmpty={(meta) => onDelete?.(task.uid, meta)}
                 />
             </div>
+
+            <div className='absolute -left-6 px-1.5 py-3 group-hover:opacity-100 opacity-0 transition cursor-grab'>
+                <FaGripLinesVertical className='text-neutral2'/>
+            </div>
+
         </div>
     )
 }

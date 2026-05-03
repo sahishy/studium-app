@@ -4,6 +4,7 @@ import { useCourses } from '../../courses/contexts/CoursesContext'
 import { updateTask } from '../services/taskService'
 import { extractTaskTitleMetadata, flattenTaskTitle, normalizeTaskTitle, parseTaskInput, parseTextToTaskTitle } from '../utils/naturalLanguage'
 import { TaskCircleInput, TaskDueDateInput, TaskStatusInput } from './TaskInputControls'
+import Card from '../../../shared/components/ui/Card'
 
 const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
     const circles = useCircles()
@@ -114,7 +115,7 @@ const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
     }
 
     return (
-        <div className="flex flex-col gap-3 p-4 text-sm text-text1 group border-2 border-neutral4 rounded-xl bg-background0">
+        <Card>
             <div className="flex items-center gap-2">
                 <TaskStatusInput status={status} setStatus={setStatus} />
                 <TitleInput
@@ -124,7 +125,6 @@ const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
                     inputRef={titleInputRef}
                     taskId={task.uid}
                     setNewTaskId={setNewTaskId}
-                    variant="board"
                 />
             </div>
 
@@ -144,11 +144,11 @@ const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
                     className='justify-self-start self-start max-w-full'
                 />
             </div>
-        </div>
+        </Card>
     )
 }
 
-const TitleInput = ({ titleInput, setTitleInput, setTitle, inputRef, taskId, setNewTaskId, variant, placeholder = 'Title' }) => {
+const TitleInput = ({ titleInput, setTitleInput, setTitle, inputRef, taskId, setNewTaskId, placeholder = 'Title' }) => {
     const handleBlur = () => {
         setTitle(titleInput)
         if(setNewTaskId) {
@@ -156,9 +156,7 @@ const TitleInput = ({ titleInput, setTitleInput, setTitle, inputRef, taskId, set
         }
     }
 
-    const className = variant === 'board'
-        ? 'text-left w-full p-2 focus:outline-none text-wrap'
-        : 'text-left w-full p-2 focus:outline-none overflow-ellipsis'
+    const className = 'text-neutral0 text-left text-sm w-full p-2 focus:outline-none text-wrap'
 
     return (
         <input

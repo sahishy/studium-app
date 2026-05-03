@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { useOutletContext, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
 import { FaCalendar, FaList, FaTh } from 'react-icons/fa'
@@ -13,6 +14,7 @@ const Agenda = () => {
 
     const location = useLocation()
     const navigate = useNavigate()
+    const scrollRef = useRef(null)
 
     const tabs = [
         { name: 'list', label: 'List', icon: <FaList/> },
@@ -28,7 +30,7 @@ const Agenda = () => {
 
     return (
 
-        <div className="flex flex-col h-full overflow-scroll">
+        <div ref={scrollRef} className="flex flex-col h-full overflow-scroll">
             <Topbar profile={profile}/>
             <div className='w-full flex flex-col items-start gap-4 px-24 pb-8 pt-2 mx-auto'>
 
@@ -44,11 +46,11 @@ const Agenda = () => {
 
                 {!tasksReady
                     ? <LoadingState/>
-                    : <Outlet context={{ profile }} />}
+                    : <Outlet context={{ profile, scrollRef }} />}
 
 
             </div>
-            <BottomFade/>
+            <BottomFade scrollRef={scrollRef} />
         </div>
     ) 
 }

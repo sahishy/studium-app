@@ -474,7 +474,7 @@ const ProfileOverview = () => {
 
                             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
 
-                                <Card className='relative gap-9! p-0! overflow-hidden flex items-center justify-end bg-sat0'>
+                                <Card className='relative gap-9! p-0! overflow-hidden flex items-center justify-end bg-sat0!'>
 
                                     <p className='text-lg font-semibold text-white z-1 mt-6'>SAT®</p>
 
@@ -500,7 +500,7 @@ const ProfileOverview = () => {
                                             {satScore !== null ? (
                                                 <>
                                                     <p className='text-xs font-semibold mb-1'>TOTAL SCORE</p>
-                                                    <p className='text-6xl font-bold text-neutral0'>{satScore}</p>
+                                                    <p className='text-6xl font-bold text-[#1F2937]'>{satScore}</p>
                                                     <p className='text-xs font-semibold text-neutral1 underline underline-offset-3'>400-1600</p>
                                                 </>
                                             ) : (

@@ -46,7 +46,7 @@ const MatchmakingToast = ({
                 <p className='text-sm font-semibold'>
                     {isQueueing ? 'Searching for an opponent...' : `Match found!`}
                 </p>
-                <p className='text-sm text-text2 flex items-center gap-1'>
+                <p className='text-sm text-neutral1 flex items-center gap-1'>
                     {isQueueing ? <IoHourglass /> : <FaCheck/>}
                     {isQueueing ? `Queue time: ${queueTimeLabel}` : `Joining room in ${matchCountdownSeconds}...`}
                 </p>

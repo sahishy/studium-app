@@ -6,7 +6,7 @@ const TextTabSelector = ({ tabs = [], currentIndex = 0, onSelect }) => {
     return (
         <div className='relative p-1 bg-neutral5 rounded-full'>
             <div
-                className='absolute top-1 bottom-1 rounded-full bg-background1 transition-all duration-300 ease-out'
+                className='absolute top-1 bottom-1 rounded-full bg-neutral6 transition-all duration-300 ease-out'
                 style={{
                     left: '0.25rem',
                     width: `calc((100% - 0.5rem) / ${tabs.length})`,

@@ -63,7 +63,7 @@ const Landing = () => {
     }, [])
 
     return (
-        <div className="relative min-h-screen overflow-x-hidden bg-background0 text-neutral0">
+        <div className="relative min-h-screen overflow-x-hidden bg-neutral6 text-neutral0">
             <LandingBackground scrollY={scrollY} />
 
             <Navbar onOpenLogIn={openLogInModal} onOpenSignUp={openWelcomePage} />
@@ -103,8 +103,8 @@ const LandingBackground = ({ scrollY }) => {
                     backgroundSize: '36px 36px'
                 }}
             />
-            <div className='absolute inset-0 bg-gradient-to-r from-background0 via-background0/45 to-background0' />
-            <div className='absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background0' />
+            <div className='absolute inset-0 bg-gradient-to-r from-neutral6 via-neutral6/45 to-neutral6' />
+            <div className='absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-neutral6' />
 
             <div
                 className='absolute left-20 top-80 h-[26rem] w-[26rem] rounded-full bg-sky-200/20 blur-3xl'

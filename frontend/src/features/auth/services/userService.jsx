@@ -1,4 +1,4 @@
-import { doc, updateDoc, collection, getAggregateFromServer, getCountFromServer, onSnapshot, query, sum, where, increment, documentId, getDocs, getDoc } from 'firebase/firestore'
+import { doc, updateDoc, collection, getAggregateFromServer, getCountFromServer, onSnapshot, query, sum, where, increment, documentId, getDocs, getDoc, setDoc } from 'firebase/firestore'
 import { useEffect, useState } from 'react';
 import { getRandomAvatarColor } from '../../profile/utils/avatarUtils';
 import { generateRandomDisplayName, isDisplayNameFormatValid } from '../utils/userUtils';
@@ -76,6 +76,36 @@ const updateUserInfo = async (uid, userData) => {
     const userRef = doc(db, 'users', uid)
 
     await updateDoc(userRef, userData)
+
+}
+
+const updateUserPreference = async (uid, key, value) => {
+
+    if(!uid || !key) {
+        throw new Error('Missing uid or preference key')
+    }
+
+    const userRef = doc(db, 'users', uid)
+    const userSnap = await getDoc(userRef)
+
+    if(!userSnap.exists()) {
+        throw new Error('User document not found')
+    }
+
+    const currentPreferences = userSnap.data()?.preferences
+
+    if(currentPreferences && typeof currentPreferences === 'object') {
+        await updateDoc(userRef, {
+            [`preferences.${key}`]: value,
+        })
+        return
+    }
+
+    await setDoc(userRef, {
+        preferences: {
+            [key]: value,
+        },
+    }, { merge: true })
 
 }
 
@@ -254,6 +284,7 @@ export {
     generateUniqueDisplayName,
     getUserById,
     updateUserInfo,
+    updateUserPreference,
     getTotalUsers,
     getTotalTasksCompleted,
     getActiveUserCount,

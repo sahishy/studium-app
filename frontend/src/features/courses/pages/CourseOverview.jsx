@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useOutletContext, useParams } from 'react-router-dom'
-import { FaBook, FaHandshake, FaThumbsDown, FaThumbsUp } from 'react-icons/fa6'
+import { FaArrowRight, FaBook, FaHandshake, FaThumbsDown, FaThumbsUp } from 'react-icons/fa6'
 import Button from '../../../shared/components/ui/Button'
 import CourseReviewCard from '../components/CourseReviewCard'
 import { useCourseReviews, upsertCourseReview, getUsersByIdsMap } from '../services/reviewService'
 import { getTeachersByIdsMap } from '../services/teacherService'
-import { getCourseById } from '../services/courseService'
+import { getCourseById, leaveCourse } from '../services/courseService'
 import { useUserStats } from '../../profile/contexts/UserStatsContext'
 import { SCORE_OPTIONS, sortReviewsBySchoolPriority } from '../utils/reviewUtils'
 import { useCourses } from '../contexts/CoursesContext'
@@ -89,6 +89,16 @@ const CourseOverview = () => {
         setIsReviewComposerOpen(false)
     }
 
+    const handleLeaveCourse = async () => {
+
+        if (!profile?.uid) {
+            return
+        }
+        
+        await leaveCourse(profile.uid, courseId)
+
+    }
+
     if (!course) {
         return <p className='text-sm text-neutral1'>Course not found.</p>
     }
@@ -96,104 +106,161 @@ const CourseOverview = () => {
     return (
         <div className='w-full flex flex-col gap-6 pb-12'>
 
-            <Card className={'p-0! overflow-hidden gap-0!'}>
-                <div className='p-6 w-full h-48 bg-neutral5 flex items-center justify-center'>
-                    <FaBook className='text-neutral3 text-8xl' />
-                </div>
-                <div className='p-6'>
-                    <div>
-                        <h2 className='text-xl font-semibold text-neutral0'>{course.title}</h2>
-                        <p className='text-sm text-neutral1'>{course.subject}</p>
+            <div className='flex gap-8'>
+                <Card className={'flex-2 p-0! overflow-hidden gap-0!'}>
+                    <div className='p-6 w-full h-48 bg-neutral5 flex items-center justify-center'>
+                        <FaBook className='text-neutral3 text-8xl' />
                     </div>
-                    <p className='text-sm text-neutral1 mt-2'>{course.description || 'No description available.'}</p>
+                    <div className='p-6'>
+                        <div>
+                            <h2 className='text-xl font-semibold text-neutral0'>{course.title}</h2>
+                            <p className='text-sm text-neutral1'>{course.subject}</p>
+                        </div>
+                        <p className='text-sm text-neutral1 mt-2'>{course.description || 'No description available.'}</p>
+                    </div>
+                </Card>
+                <div className='flex-1 flex flex-col gap-6'>
+
+                    <Card className='flex-1'>
+                        <div>
+                            <h1>hi</h1>
+                        </div>
+                    </Card>
+
+                    <div className='flex gap-3'>
+                        {myEnrollment == null ? (
+                            <Button type='primary' className='flex-1 py-4!'>
+                                Join Course
+                            </Button>
+                        ) : (
+                            <>
+                                <Button type='secondary' className='flex-1 py-4!'>
+                                    Edit Course
+                                </Button>
+                                <Button
+                                    type='negative'
+                                    className='py-4! aspect-square'
+                                    onClick={() => handleLeaveCourse()}
+                                >
+                                    <FaArrowRight />
+                                </Button>
+                            </>
+                        )}
+                    </div>
+
                 </div>
-            </Card>
 
-            <section className='flex flex-col gap-3'>
-                <h2 className='text-2xl font-semibold'>Reviews</h2>
+            </div>
 
-                {isReviewComposerOpen ? (
-                    <form onSubmit={handleSubmitReview} className='flex flex-col rounded-3xl overflow-hidden border border-neutral4'>
+            <section className='flex flex-col gap-12'>
 
-                        <textarea
-                            value={reviewText}
-                            onChange={(event) => setReviewText(event.target.value)}
-                            rows={4}
-                            placeholder='Share your experience...'
-                            className='w-full px-4 py-3 text-sm text-neutral0 focus:outline-none'
-                            autoFocus
-                        />
+                <div className='flex flex-col gap-6'>
+                    <h2 className='text-2xl font-semibold'>Reviews</h2>
 
-                        <div className='flex justify-between p-3'>
-                            <div className='flex gap-2'>
-                                {SCORE_OPTIONS.map((option) => {
-                                    const Icon = option.icon
-                                    return (
-                                        <button
-                                            key={option.value}
-                                            type='button'
-                                            onClick={() => setScore(option.value)}
-                                            className={`px-3 py-1 rounded-full border text-xs flex items-center gap-2 cursor-pointer transition
+                    <Card className='p-12! flex flex-row justify-between items-center'>
+                        <div>
+                            <h2 className='text-8xl font-bold'>87%</h2>
+                            <p className='text-lg text-neutral1'>28 reviews</p>
+                        </div>
+                        <div className='min-w-lg flex flex-col gap-6'>
+                            <div className='w-full h-3 rounded-full bg-neutral3' />
+                            <div className='w-full h-3 rounded-full bg-neutral3' />
+                            <div className='w-full h-3 rounded-full bg-neutral3' />
+                            <div className='w-full h-3 rounded-full bg-neutral3' />
+                        </div>
+                    </Card>
+                </div>
+
+                <div className='flex flex-col gap-6'>
+
+                    <h2 className='text-lg text-neutral1'>Showing 28 reviews</h2>
+
+                    {isReviewComposerOpen ? (
+                        <form onSubmit={handleSubmitReview} className='flex flex-col rounded-3xl overflow-hidden border border-neutral4'>
+
+                            <textarea
+                                value={reviewText}
+                                onChange={(event) => setReviewText(event.target.value)}
+                                rows={4}
+                                placeholder='Share your experience...'
+                                className='w-full px-4 py-3 text-sm text-neutral0 focus:outline-none'
+                                autoFocus
+                            />
+
+                            <div className='flex justify-between p-3'>
+                                <div className='flex gap-2'>
+                                    {SCORE_OPTIONS.map((option) => {
+                                        const Icon = option.icon
+                                        return (
+                                            <button
+                                                key={option.value}
+                                                type='button'
+                                                onClick={() => setScore(option.value)}
+                                                className={`px-3 py-1 rounded-full border text-xs flex items-center gap-2 cursor-pointer transition
                                                  ${score === option.value
-                                                    ? 'text-neutral6 bg-neutral0'
-                                                    : 'border-neutral4 text-neutral1 hover:bg-neutral5'
-                                                }`}
-                                        >
-                                            <Icon />
-                                            {option.label}
-                                        </button>
-                                    )
-                                })}
+                                                        ? 'text-neutral6 bg-neutral0'
+                                                        : 'border-neutral4 text-neutral1 hover:bg-neutral5'
+                                                    }`}
+                                            >
+                                                <Icon />
+                                                {option.label}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                                <div className='flex gap-3'>
+                                    <Button type='secondary' onClick={handleCancelReview} disabled={isSubmitting}>
+                                        Cancel
+                                    </Button>
+                                    <Button type='primary' htmlType='submit' disabled={isSubmitting}>
+                                        {isSubmitting ? 'Posting...' : 'Post Review'}
+                                    </Button>
+                                </div>
+
                             </div>
-                            <div className='flex gap-3'>
-                                <Button type='secondary' onClick={handleCancelReview} disabled={isSubmitting}>
-                                    Cancel
-                                </Button>
-                                <Button type='primary' htmlType='submit' disabled={isSubmitting}>
-                                    {isSubmitting ? 'Posting...' : 'Post Review'}
-                                </Button>
-                            </div>
 
-                        </div>
-
-                    </form>
-                ) : (
-                    <button
-                        type='button'
-                        onClick={() => setIsReviewComposerOpen(true)}
-                        className='w-full text-left text-sm text-neutral1 rounded-full border border-neutral4 px-4 py-3 hover:bg-neutral5 transition-colors cursor-pointer'
-                    >
-                        Share your experience...
-                    </button>
-                )}
-
-                <div className='grid grid-cols-2 gap-3'>
-                    {sortedReviews.length === 0 ? (
-                        <div className='col-span-2 flex flex-col items-center py-16'>
-                            <p className='text-neutral0 font-semibold'>
-                                Be the first to review
-                            </p>
-                            <p className='text-sm text-neutral1'>
-                                Nobody has reviewed this course yet. Talk about your experience!
-                            </p>
-                        </div>
+                        </form>
                     ) : (
-                        sortedReviews.map((review) => {
-
-                            const reviewer = usersMap[String(review.userId)]
-
-                            return (
-                                <CourseReviewCard
-                                    key={review.uid}
-                                    review={review}
-                                    reviewer={reviewer}
-                                    teacherName={teachersMap[String(review.teacherId)]?.name}
-                                />
-                            )
-
-                        })
+                        <button
+                            type='button'
+                            onClick={() => setIsReviewComposerOpen(true)}
+                            className='w-full text-left text-sm text-neutral1 rounded-full border border-neutral4 px-4 py-3 hover:bg-neutral5 transition-colors cursor-pointer'
+                        >
+                            Share your experience...
+                        </button>
                     )}
+
+                    <div className='grid grid-cols-3 gap-3'>
+                        {sortedReviews.length === 0 ? (
+                            <div className='col-span-3 flex flex-col items-center py-16'>
+                                <p className='text-neutral0 font-semibold'>
+                                    Be the first to review
+                                </p>
+                                <p className='text-sm text-neutral1'>
+                                    Nobody has reviewed this course yet. Talk about your experience!
+                                </p>
+                            </div>
+                        ) : (
+                            sortedReviews.map((review) => {
+
+                                const reviewer = usersMap[String(review.userId)]
+
+                                return (
+                                    <CourseReviewCard
+                                        key={review.uid}
+                                        review={review}
+                                        reviewer={reviewer}
+                                        teacherName={teachersMap[String(review.teacherId)]?.name}
+                                    />
+                                )
+
+                            })
+                        )}
+                    </div>
+
                 </div>
+
+
             </section>
 
         </div>

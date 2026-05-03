@@ -86,7 +86,7 @@ const LegacyListTask = ({ profile, task, autoFocus, setNewTaskId }) => {
     }, [autoFocus])
 
     return (
-        <div className="relative flex justify-between items-center gap-4 p-1 text-sm font-semibold text-text1 border-t-2 border-neutral4 group">
+        <div className="relative flex justify-between items-center gap-4 p-1 text-sm font-semibold text-neutral1 border-t-2 border-neutral4 group">
             <div className="flex-2 flex items-center gap-4">
                 <StatusInput status={status} setStatus={setStatus} />
                 <TitleInput
@@ -130,10 +130,10 @@ const StatusInput = ({ status, setStatus }) => {
             onSelect={handleSelectOption}
         >
             {(isOpen) => (
-                <button className="flex items-center bg-background3 rounded-xl cursor-pointer">
-                    <div className={`p-2 rounded-xl ${isOpen && 'bg-background5'} hover:bg-background5 transition-colors `}>
+                <button className="flex items-center bg-neutral4 rounded-xl cursor-pointer">
+                    <div className={`p-2 rounded-xl ${isOpen && 'bg-neutral3'} hover:bg-neutral3 transition-colors `}>
                         {status === 'Incomplete' ? (
-                            <FaDotCircle className="text-text1" />
+                            <FaDotCircle className="text-neutral1" />
                         ) : status === 'In Progress' ? (
                             <FaClock className="text-yellow-400" />
                         ) : (
@@ -178,9 +178,9 @@ const DueDateInput = ({ dueAt, setDueAt }) => {
     return (
         <DatePicker onSelect={onSelectDate} selectedDate={dueAt} className="justify-self-start self-start max-w-full">
             {(isOpen) => (
-                <button className="w-full flex items-center bg-background3 rounded-xl cursor-pointer">
-                    <div className={`flex items-center gap-2 p-2 rounded-xl ${isOpen && 'bg-background5'} hover:bg-background5 transition-colors `}>
-                        <FaCalendar className={dueAt !== -1 ? 'text-text1' : 'text-text2'} />
+                <button className="w-full flex items-center bg-neutral4 rounded-xl cursor-pointer">
+                    <div className={`flex items-center gap-2 p-2 rounded-xl ${isOpen && 'bg-neutral3'} hover:bg-neutral3 transition-colors `}>
+                        <FaCalendar className={dueAt !== -1 ? 'text-neutral1' : 'text-neutral2'} />
                         {dueAt !== -1 && (
                             <h1 className={`text-xs ${dueAt.seconds * 1000 < Date.now() && 'text-red-400'}`}>
                                 {formatDateFromSeconds(dueAt.seconds)}
@@ -197,7 +197,7 @@ const CircleInput = ({ userId, ownerType, ownerId, circles, setOwnerType, setOwn
     const truncateOption = (s) => (s.length <= 25 ? s : `${s.substring(0, 25)}...`)
 
     const getOptions = () => [
-        { uid: null, label: <h1 className="text-text2">None</h1>, icon: null },
+        { uid: null, label: <h1 className="text-neutral2">None</h1>, icon: null },
         ...circles.map((circle) => ({ uid: circle.uid, label: truncateOption(circle.title), icon: <FaUserFriends /> })),
     ]
 
@@ -216,9 +216,9 @@ const CircleInput = ({ userId, ownerType, ownerId, circles, setOwnerType, setOwn
     return (
         <Dropdown options={getOptions()} onSelect={handleSelectOption} className="justify-self-start self-start max-w-full">
             {(isOpen) => (
-                <button className="w-full flex min-w-0 items-center bg-background3 rounded-xl cursor-pointer">
-                    <div className={`flex min-w-0 items-center gap-2 p-2 rounded-xl ${isOpen && 'bg-background5'} hover:bg-background5 transition-colors `}>
-                        <FaUserFriends className={ownerType === 'circle' ? 'text-text1' : 'text-text2'} />
+                <button className="w-full flex min-w-0 items-center bg-neutral4 rounded-xl cursor-pointer">
+                    <div className={`flex min-w-0 items-center gap-2 p-2 rounded-xl ${isOpen && 'bg-neutral3'} hover:bg-neutral3 transition-colors `}>
+                        <FaUserFriends className={ownerType === 'circle' ? 'text-neutral1' : 'text-neutral2'} />
                         {ownerType === 'circle' && <h1 className="text-xs max-w-full truncate">{getCircle().title}</h1>}
                     </div>
                 </button>

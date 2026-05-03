@@ -8,12 +8,12 @@ import { useState } from 'react'
 import BottomPadding from '../../../shared/components/ui/BottomPadding'
 
 const BoardTab = () => {
+    
     const { profile } = useOutletContext()
     const { user: userTasks, circle: circleTasks } = useTasks()
     const tasks = [...userTasks, ...circleTasks]
     const [newTaskId, setNewTaskId] = useState(-1)
 
-    // Group tasks by status
     const incompleteTasks = tasks.filter(task => task.status === 'Incomplete')
     const inProgressTasks = tasks.filter(task => task.status === 'In Progress')
     const completedTasks = tasks.filter(task => task.status === 'Completed')
@@ -23,8 +23,8 @@ const BoardTab = () => {
             title: 'Incomplete',
             status: 'Incomplete',
             tasks: incompleteTasks,
-            icon: <FaDotCircle className="text-text1" />,
-            bgColor: 'bg-background3',
+            icon: <FaDotCircle className="text-neutral1" />,
+            bgColor: 'bg-neutral4',
             count: incompleteTasks.length
         },
         {
@@ -67,27 +67,21 @@ const BoardTab = () => {
 
 const KanbanColumn = ({ column, profile, newTaskId, setNewTaskId }) => {
     return (
-        <div className={`flex-shrink-0 flex-1 flex flex-col gap-3 bg-background2 p-3 rounded-xl`}>
-            
-            {/* Column Header */}
+        <div className={`flex-shrink-0 flex-1 flex flex-col gap-3 bg-neutral5/40 p-3 rounded-xl`}>
+
             <div className={`p-3 rounded-xl`}>
                 <div className='flex items-center justify-between'>
 
                     <div className='flex items-center gap-3'>
                         {column.icon}
-                        <h2 className='text-sm font-semibold text-text1'>{column.title}</h2>
+                        <h2 className='text-sm font-semibold text-neutral0'>{column.title}</h2>
+                        <p className='text-sm text-neutral2'>{column.count}</p>
                     </div>
-                    <span className='text-xs font-semibold text-text2 bg-background5 px-2 py-1 rounded-full'>
-                        {column.count}
-                    </span>
-
                 </div>
             </div>
 
-            {/* Tasks Container */}
             <div className='flex flex-col gap-3'>
 
-                {/* Tasks List */}
                 <div className='flex flex-col gap-3'>
 
                     {column.tasks.map((task) => (
@@ -102,7 +96,6 @@ const KanbanColumn = ({ column, profile, newTaskId, setNewTaskId }) => {
 
                 </div>
 
-                {/* Add Task Button */}
                 {column.status !== 'Completed' && (
                     <AddTaskButton
                         profile={profile}
@@ -110,32 +103,33 @@ const KanbanColumn = ({ column, profile, newTaskId, setNewTaskId }) => {
                         setNewTaskId={setNewTaskId}
                     />
                 )}
+
             </div>
         </div>
     )
 }
 
-const AddTaskButton = ( { profile, status, setNewTaskId } ) => {
+const AddTaskButton = ({ profile, status, setNewTaskId }) => {
 
     const handleClick = async () => {
-        const newTask = await createTask({ 
+        const newTask = await createTask({
             ownerType: 'user',
             ownerId: profile.uid,
             dueAt: -1,
-            status: status 
+            status: status
         })
-        
+
         if (newTask && newTask.id) {
             setNewTaskId(newTask.id)
         }
     }
 
     return (
-        <button 
+        <button
             onClick={handleClick}
-            className={`w-full flex justify-center items-center p-4 hover:bg-background5 text-sm font-semibold text-text1 border-2 border-dashed border-neutral4 cursor-pointer rounded-xl transition-colors `}
+            className={`w-full flex justify-center items-center p-4 hover:bg-neutral3 text-sm font-semibold text-neutral1 border-2 border-dashed border-neutral4 cursor-pointer rounded-xl transition-colors `}
         >
-            <FaPlus className='text-text2'/>
+            <FaPlus className='text-neutral2' />
         </button>
     )
 }

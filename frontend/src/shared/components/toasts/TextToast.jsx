@@ -4,7 +4,7 @@ const TextToast = ({ title = 'Notification', message = '', tone = 'default' }) =
         ? 'text-green-500'
         : tone === 'warning'
             ? 'text-amber-500'
-            : 'text-text2'
+            : 'text-neutral2'
 
     return (
         <div className='flex flex-col gap-1'>

@@ -46,14 +46,14 @@ const DeleteCircleModal = ( { circle, closeModal } ) => {
                 Are you sure?
             </h1>
 
-            <p className="text-center text-lg text-text1">
+            <p className="text-center text-lg text-neutral1">
                 Delete '
                 <span className={`font-semibold`}>{circle.title}</span> 
                 '? This action can not be reversed.
             </p>
 
             {isDeleting ? (
-                <p className="text-text2 text-center">Deleting...</p>
+                <p className="text-neutral2 text-center">Deleting...</p>
             ) : (
                 <form onSubmit={handleDelete} className="flex gap-4">
                     <Button onClick={() => closeModal()} type={'secondary'} className={'w-full py-4'}>

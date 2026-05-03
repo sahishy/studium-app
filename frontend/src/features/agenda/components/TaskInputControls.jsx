@@ -10,10 +10,10 @@ const STATUS_OPTIONS = [
 ]
 
 const DefaultStatusTrigger = ({ isOpen, status }) => (
-    <button className='flex items-center bg-background3 rounded-xl cursor-pointer'>
-        <div className={`p-2 rounded-xl ${isOpen ? 'bg-background5' : ''} hover:bg-background5 transition-colors`}>
+    <button className='flex items-center bg-neutral4 rounded-xl cursor-pointer'>
+        <div className={`p-2 rounded-xl ${isOpen ? 'bg-neutral3' : ''} hover:bg-neutral3 transition-colors`}>
             {status === 'Incomplete' ? (
-                <FaDotCircle className='text-text1' />
+                <FaDotCircle className='text-neutral1' />
             ) : status === 'In Progress' ? (
                 <FaClock className='text-yellow-400' />
             ) : (
@@ -43,9 +43,9 @@ export const TaskStatusInput = ({ status, setStatus, className = '', renderTrigg
 }
 
 const DefaultDueDateTrigger = ({ isOpen, dueAt, isOverdue }) => (
-    <button className='w-full flex items-center bg-background3 rounded-xl cursor-pointer'>
-        <div className={`flex items-center gap-2 p-2 rounded-xl ${isOpen ? 'bg-background5' : ''} hover:bg-background5 transition-colors`}>
-            <FaCalendar className={dueAt !== -1 ? 'text-text1' : 'text-text2'} />
+    <button className='w-full flex items-center bg-neutral4 rounded-xl cursor-pointer'>
+        <div className={`flex items-center gap-2 p-2 rounded-xl ${isOpen ? 'bg-neutral3' : ''} hover:bg-neutral3 transition-colors`}>
+            <FaCalendar className={dueAt !== -1 ? 'text-neutral1' : 'text-neutral2'} />
             {dueAt !== -1 && (
                 <h1 className={`text-xs ${isOverdue ? 'text-red-400' : ''}`}>
                     {formatDateFromSeconds(dueAt.seconds)}
@@ -80,9 +80,9 @@ export const TaskDueDateInput = ({ dueAt, setDueAt, className = '', renderTrigge
 }
 
 const DefaultCircleTrigger = ({ isOpen, ownerType, selectedCircle }) => (
-    <button className='w-full flex min-w-0 items-center bg-background3 rounded-xl cursor-pointer'>
-        <div className={`flex min-w-0 items-center gap-2 p-2 rounded-xl ${isOpen ? 'bg-background5' : ''} hover:bg-background5 transition-colors`}>
-            <FaUserFriends className={ownerType === 'circle' ? 'text-text1' : 'text-text2'} />
+    <button className='w-full flex min-w-0 items-center bg-neutral4 rounded-xl cursor-pointer'>
+        <div className={`flex min-w-0 items-center gap-2 p-2 rounded-xl ${isOpen ? 'bg-neutral3' : ''} hover:bg-neutral3 transition-colors`}>
+            <FaUserFriends className={ownerType === 'circle' ? 'text-neutral1' : 'text-neutral2'} />
             {ownerType === 'circle' && <h1 className='text-xs max-w-full truncate'>{selectedCircle.title}</h1>}
         </div>
     </button>
@@ -103,7 +103,7 @@ export const TaskCircleInput = ({
     const selectedCircle = circles.find((x) => x.uid === ownerId) ?? { title: 'Unknown' }
 
     const options = [
-        { uid: null, label: <h1 className='text-text2'>None</h1>, icon: null },
+        { uid: null, label: <h1 className='text-neutral2'>None</h1>, icon: null },
         ...circles.map((circle) => ({ uid: circle.uid, label: truncateOption(circle.title), icon: <FaUserFriends /> })),
     ]
 

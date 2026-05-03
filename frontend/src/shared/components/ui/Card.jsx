@@ -6,7 +6,7 @@ const Card = forwardRef(( { hoverable, className, children, ...props }, ref ) =>
         <div
             ref={ref}
             {...props}
-            className={`relative flex flex-col gap-4 p-4 bg-neutral6 rounded-xl border border-neutral4 shadow-lg shadow-shadow min-w-0 
+            className={`relative flex flex-col gap-4 p-4 bg-neutral6 dark:bg-neutral5 rounded-xl border border-neutral4 shadow-lg shadow-shadow min-w-0 
                 ${hoverable && 'group/card cursor-pointer'}
                 ${className}`}
         >

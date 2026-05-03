@@ -14,23 +14,23 @@ const CircleCard = ({ circle }) => {
         <Card hoverable={true}>
 
             <div className="flex items-center gap-4 min-w-0">
-                <div className="bg-background3 rounded-xl">
+                <div className="bg-neutral4 rounded-xl">
 
                     {circle.icon ? (
                         null
                     ) : (
-                        <div className="w-10 h-10 p-2 flex justify-center items-center text-lg text-text2">
+                        <div className="w-10 h-10 p-2 flex justify-center items-center text-lg text-neutral2">
                             {circle.title[0]}
                         </div>
                     )}
 
                 </div>
-                <h1 className="text-lg font-semibold text-text1 truncate">{circle.title}</h1>
+                <h1 className="text-lg font-semibold text-neutral1 truncate">{circle.title}</h1>
             </div>
 
             <div className="flex items-center gap-4">
 
-                <h1 className="flex items-center justify-center gap-2 text-sm font-semibold text-text2">
+                <h1 className="flex items-center justify-center gap-2 text-sm font-semibold text-neutral2">
                     <PiStarFourFill />
                     Lv. {circle.level}
                 </h1>
@@ -49,7 +49,7 @@ const CircleCard = ({ circle }) => {
                     <AvatarPicture key={index} profile={circleMembers[index]}/>
                 ))}
                 {(circle.memberCount || 0) > 4 && (
-                    <div className="w-10 h-10 rounded-full border-4 border-background1 -ml-3 flex items-center justify-center bg-background3 text-sm text-text2 transition-colors ">
+                    <div className="w-10 h-10 rounded-full border-4 border-neutral6 -ml-3 flex items-center justify-center bg-neutral4 text-sm text-neutral2 transition-colors ">
                         +{(circle.memberCount || 0) - 4}
                     </div>
                 )}

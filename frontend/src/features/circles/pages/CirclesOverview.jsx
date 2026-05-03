@@ -69,7 +69,7 @@ const CirclesOverview = () => {
                     </div>
 
                     <div className='w-full flex flex-col gap-4'>
-                        <h1 className='text-lg text-text1 font-semibold'>Members</h1>
+                        <h1 className='text-lg text-neutral1 font-semibold'>Members</h1>
 
                         <CircleMembers members={allMembers.filter((user) => circleMembers.some((member) => member.userId === user.uid))} ownerId={ownerId}/>
                     </div>
@@ -78,7 +78,7 @@ const CirclesOverview = () => {
 
                     
                     <div className='flex-1 w-full flex flex-col gap-4 pb-16'>
-                        <h1 className='text-lg text-text1 font-semibold'>Circle Work</h1>
+                        <h1 className='text-lg text-neutral1 font-semibold'>Circle Work</h1>
                         <div className='w-full flex flex-col'>
 
                             {/* past tasks, show before all other tasks */}
@@ -86,9 +86,9 @@ const CirclesOverview = () => {
                                 <div key={date} className='w-full flex flex-col'>
                                     <button
                                         onClick={() => handleCollapseToggle(date)}
-                                        className='flex items-center gap-4 p-2 rounded-xl cursor-pointer hover:bg-background5 transition-colors '
+                                        className='flex items-center gap-4 p-2 rounded-xl cursor-pointer hover:bg-neutral3 transition-colors '
                                     >
-                                        <div className='text-sm text-text1'>
+                                        <div className='text-sm text-neutral1'>
                                             {collapsedDates.includes(date) ? <PiCaretRightFill/> : <PiCaretDownFill/>}
                                         </div>
                                         <h1 className={`text-sm text-red-400 font-semibold`}>{formatRelativeTaskDate(groupedPastTasks[date][0].dueAt.seconds)}</h1>
@@ -110,12 +110,12 @@ const CirclesOverview = () => {
                             <div className='w-full flex flex-col'>
                                 <button
                                     onClick={() => handleCollapseToggle('no-due-date')}
-                                    className='flex items-center gap-4 p-2 rounded-xl cursor-pointer hover:bg-background5 transition-colors '
+                                    className='flex items-center gap-4 p-2 rounded-xl cursor-pointer hover:bg-neutral3 transition-colors '
                                 >
-                                    <div className='text-sm text-text1'>
+                                    <div className='text-sm text-neutral1'>
                                         {collapsedDates.includes('no-due-date') ? <PiCaretRightFill/> : <PiCaretDownFill/>}
                                     </div>
-                                    <h1 className='text-sm text-text2 font-semibold'>No due date</h1>
+                                    <h1 className='text-sm text-neutral2 font-semibold'>No due date</h1>
                                 </button>
 
                                 <div className={`w-full flex-col pl-8 ${collapsedDates.includes('no-due-date') ? 'hidden' : 'flex mb-4'}`}>
@@ -135,12 +135,12 @@ const CirclesOverview = () => {
                                 <div key={date} className='w-full flex flex-col'>
                                     <button
                                         onClick={() => handleCollapseToggle(date)}
-                                        className='flex items-center gap-4 p-2 rounded-xl cursor-pointer hover:bg-background5 transition-colors '
+                                        className='flex items-center gap-4 p-2 rounded-xl cursor-pointer hover:bg-neutral3 transition-colors '
                                     >
-                                        <div className='text-sm text-text1'>
+                                        <div className='text-sm text-neutral1'>
                                             {collapsedDates.includes(date) ? <PiCaretRightFill/> : <PiCaretDownFill/>}
                                         </div>
-                                        <h1 className={`text-sm text-text1 font-semibold`}>{formatRelativeTaskDate(groupedFutureTasks[date][0].dueAt.seconds)}</h1>
+                                        <h1 className={`text-sm text-neutral1 font-semibold`}>{formatRelativeTaskDate(groupedFutureTasks[date][0].dueAt.seconds)}</h1>
                                     </button>
 
                                     <div className={`w-full flex-col pl-8 ${collapsedDates.includes(date) ? 'hidden' : 'flex mb-4'}`}>
@@ -161,7 +161,7 @@ const CirclesOverview = () => {
 
                 </div>
             </div>
-            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background0 to-transparent"/>
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-neutral6 to-transparent"/>
         </div>
     )
     
@@ -185,12 +185,12 @@ const AddTaskButton = ( { circle, dueAt, setNewTaskId } ) => {
     return (
         <button 
             onClick={handleClick}
-            className={`w-full flex items-center gap-4 p-1 hover:bg-background5 text-sm font-semibold text-text1 border-t-2 border-neutral4 cursor-pointer rounded-b-lg transition-colors `}
+            className={`w-full flex items-center gap-4 p-1 hover:bg-neutral3 text-sm font-semibold text-neutral1 border-t-2 border-neutral4 cursor-pointer rounded-b-lg transition-colors `}
         >
             <div className='p-2 rounded-xl'>
-                <FaPlus className='text-text2'/>
+                <FaPlus className='text-neutral2'/>
             </div>
-            <h1 className='p-2 text-text2'>
+            <h1 className='p-2 text-neutral2'>
                 Add New
             </h1>
         </button>

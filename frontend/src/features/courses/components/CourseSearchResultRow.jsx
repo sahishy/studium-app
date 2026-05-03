@@ -18,7 +18,7 @@ const CourseSearchResultRow = ({ course, onAdd, loading, isTaking, score = null 
                 className='w-full flex flex-row items-center'
             >
 
-                <div className='w-12 h-12 rounded-lg flex items-center justify-center bg-neutral5 text-neutral2 shrink-0'>
+                <div className='w-12 h-12 rounded-lg flex items-center justify-center bg-neutral2/20 text-neutral2 shrink-0'>
                     <SubjectIcon className='text-xl' />
                 </div>
 

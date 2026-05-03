@@ -4,37 +4,30 @@ import { FaBook } from 'react-icons/fa6'
 import { FaChalkboardTeacher, FaExternalLinkAlt } from 'react-icons/fa'
 import { SUBJECT_ICONS } from '../utils/courseUtils'
 import { useNavigate } from 'react-router-dom'
+import { hexToRgba } from '../../../shared/utils/colorUtils'
 
-const MyCoursesCard = ({
-    course,
-    customization,
-    teacherName,
-    onRemove,
-    loading = false,
-}) => {
+const MyCoursesCard = ({ course, customization, teacherName, loading = false }) => {
 
     const navigate = useNavigate();
 
-    const bgColor = customization?.bgColor ?? '#f3f4f6'
-    const iconColor = customization?.iconColor ?? '#9ca3af'
+    const color = customization?.color ?? '#f3f4f6'
     const SubjectIcon = SUBJECT_ICONS[course.subject];
 
-    const openCourse = (courseId) => {
-        navigate(`/courses/all/${courseId}`)
+    const openCourse = () => {
+        navigate(`/courses/all/${course.courseId}`)
     }
 
     return (
-        <Card>
-
-            <div className='w-full text-left'>
+        <button onClick={openCourse} className='w-full text-left'>
+            <Card hoverable>
                 <div
-                    className='h-28 rounded-xl flex items-center justify-center text-neutral2'
-                    style={{ backgroundColor: bgColor }}
+                    className={`h-28 rounded-xl flex items-center justify-center text-neutral2`}
+                    style={{ backgroundColor: hexToRgba(color, 0.2) }}
                 >
-                    <FaBook className='text-4xl' style={{ color: iconColor }} />
+                    <FaBook className='text-4xl' style={{ color: color }} />
                 </div>
 
-                <div className='mt-4 flex flex-col gap-1'>
+                <div className='flex flex-col gap-1'>
                     <p className='font-semibold text-neutral0 truncate'>{course.title}</p>
                     <p className='text-xs text-neutral1 truncate flex items-center gap-2'>
                         <SubjectIcon />
@@ -46,26 +39,8 @@ const MyCoursesCard = ({
                         </p>
                     )}
                 </div>
-            </div>
-
-            <div className='flex justify-end'>
-                <button
-                    onClick={() => openCourse(course.courseId)}
-                    className='p-2 aspect-square flex justify-center items-center rounded-lg text-neutral1 hover:bg-neutral5 hover:text-neutral0 transition-colors cursor-pointer'
-                >
-                    <FaExternalLinkAlt className='text-sm'/>
-                </button>
-                <button
-                    onClick={onRemove}
-                    disabled={loading}
-                    className='p-2 rounded-lg text-neutral1 hover:bg-neutral5 hover:text-red-500 transition-colors  cursor-pointer disabled:cursor-not-allowed'
-                    aria-label={`Remove ${course.title}`}
-                >
-                    <MdDeleteOutline className='text-xl' />
-                </button>
-            </div>
-
-        </Card>
+            </Card>
+        </button >
     )
 }
 

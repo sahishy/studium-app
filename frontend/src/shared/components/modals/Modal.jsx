@@ -64,7 +64,7 @@ const Modal = ({ isOpen, closeModal, modalContent }) => {
     return createPortal(
         <div className={`fixed inset-0 flex justify-center items-center z-50 transition-all ${isTopmostLayer ? 'bg-backdrop' : 'bg-transparent'} ${animate && isTopmostLayer ? 'backdrop-blur-xs' : 'backdrop-blur-none'}`} style={{ zIndex }}>
             <div 
-                className={`bg-background0 p-8 rounded-xl max-w-lg w-full
+                className={`bg-neutral6 p-8 rounded-xl max-w-lg w-full
                     transition-all transform will-change-transform will-change-opacity
                     ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
             >

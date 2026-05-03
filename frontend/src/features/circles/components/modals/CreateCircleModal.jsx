@@ -42,7 +42,7 @@ const CreateCircleModal = ( { profile, closeModal } ) => {
                 />
 
                 {isCreating ? (
-                    <p className="text-text2 text-center">Creating...</p>
+                    <p className="text-neutral2 text-center">Creating...</p>
                 ) : (
                     <div className='flex gap-4 mt-4'>
                         <Button onClick={() => closeModal()} type={'secondary'} className={'w-full py-4'}>

@@ -16,7 +16,7 @@ const BooleanSelect = ({
     return (
         <div className='relative p-1 bg-neutral5 rounded-xl'>
             <div
-                className='absolute top-1 bottom-1 rounded-lg bg-background1 transition-all duration-300 ease-out'
+                className='absolute top-1 bottom-1 rounded-lg bg-neutral6 transition-all duration-300 ease-out'
                 style={{
                     left: '0.25rem',
                     width: 'calc((100% - 0.5rem) / 2)',

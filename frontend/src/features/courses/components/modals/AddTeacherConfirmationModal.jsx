@@ -25,7 +25,7 @@ const AddTeacherConfirmationModal = ({ teacherName = '', schoolOptions = [], def
         <div className='flex flex-col gap-8'>
             <h1 className='text-2xl font-semibold text-center'>Add Teacher</h1>
 
-            <p className='text-center text-lg text-text1'>
+            <p className='text-center text-lg text-neutral1'>
                 Which school does <span className='font-semibold text-neutral0'>"{teacherName}"</span> teach at?
             </p>
 

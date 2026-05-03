@@ -2,25 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { FaChevronDown } from 'react-icons/fa6'
 import BottomPadding from '../../../shared/components/ui/BottomPadding'
+import { toDateFromRelativeInput } from '../../../shared/utils/formatters'
 import ListTask from '../components/ListTask'
 import TaskParsingInput from '../components/TaskParsingInput'
 import { useTasks } from '../contexts/TasksContext'
 import { useCircles } from '../../circles/contexts/CirclesContext'
 import { useCourses } from '../../courses/contexts/CoursesContext'
-import { deleteTask, updateTask } from '../services/taskService'
-import {
-    buildChildCounts,
-    buildDepthMap,
-    buildGroupedTaskSections,
-    buildInheritedGroupTitleFromSourceTask,
-    buildListReindexUpdates,
-    buildShiftedListIndexUpdates,
-    deriveStatusByTaskId,
-    LIST_GROUP_BY,
-    sortTasksByListIndex,
-} from '../utils/taskListUtils'
-
-// --- Pure helpers (module scope, no re-creation on render) ---
+import { deleteTask, updateTask, updateTaskGroupingPreference } from '../services/taskService'
+import { buildChildCounts, buildDepthMap, buildGroupedTaskSections, buildInheritedGroupTitleFromSourceTask, buildListReindexUpdates, buildShiftedListIndexUpdates, deriveStatusByTaskId,LIST_GROUP_OPTIONS, sortTasksByListIndex } from '../utils/taskListUtils'
+import Select from '../../../shared/components/popovers/Select'
 
 const isDescendantOf = (task, ancestorId, tasksById) => {
     let parentId = task?.parentTaskId ?? null
@@ -46,21 +36,66 @@ const getNextSiblingIndex = (tasks, parentTaskId) => {
         .reduce((max, t) => Math.max(max, t.siblingIndex ?? 0), -1) + 1
 }
 
-// ---
+const isPastDateGroupKey = (groupKey) => {
+    if (!groupKey || groupKey === 'none') return false
+    const date = toDateFromRelativeInput(groupKey)
+    if (!date) return false
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    date.setHours(0, 0, 0, 0)
+    return date.getTime() < today.getTime()
+}
+
+const buildCollapsedSectionsCacheKey = (profileId, groupBy) => (
+    `agenda:list:collapsed-sections:${profileId || 'anonymous'}:${groupBy || 'none'}`
+)
+
+const readCollapsedSectionsFromCache = (cacheKey) => {
+    try {
+        const raw = localStorage.getItem(cacheKey)
+        if (!raw) return {}
+        const parsed = JSON.parse(raw)
+        return parsed && typeof parsed === 'object' ? parsed : {}
+    } catch {
+        return {}
+    }
+}
+
+const writeCollapsedSectionsToCache = (cacheKey, collapsedByKey) => {
+    try {
+        localStorage.setItem(cacheKey, JSON.stringify(collapsedByKey || {}))
+    } catch {
+        //
+    }
+}
 
 const ListTab = () => {
-    const selectedGroupBy = LIST_GROUP_BY.DUE_DATE
 
     const { profile } = useOutletContext()
     const { user: userTasks, circle: circleTasks, applyTaskPatch, commitTaskPatch, createTaskOptimistic } = useTasks()
     const circles = useCircles()
     const { courses } = useCourses()
 
+    const defaultGroupBy = 'dueDate'
+    const profileGroupBy = profile?.preferences?.groupTasksBy
+    const [groupByPreference, setGroupByPreference] = useState(profileGroupBy || defaultGroupBy)
+
     const [pendingFocusTaskId, setPendingFocusTaskId] = useState(null)
     const [tabEligibleSubtask, setTabEligibleSubtask] = useState(null)
     const [forcedGroupKeyByTaskId, setForcedGroupKeyByTaskId] = useState({})
+    const [collapsedSectionByKey, setCollapsedSectionByKey] = useState({})
 
     const addTaskInputRef = useRef(null)
+    const selectedGroupBy = useMemo(() => {
+        const available = new Set(LIST_GROUP_OPTIONS.map((option) => option.id))
+        return available.has(groupByPreference) ? groupByPreference : defaultGroupBy
+    }, [groupByPreference])
+
+    useEffect(() => {
+        setGroupByPreference(profileGroupBy || defaultGroupBy)
+    }, [profileGroupBy])
+
     const pendingOutdentRef = useRef(new Map())
     const taskFocusHandlersRef = useRef(new Map())
 
@@ -72,6 +107,28 @@ const ListTab = () => {
     )
     const childCounts = useMemo(() => buildChildCounts(sortedTasks), [sortedTasks])
     const depthMap = useMemo(() => buildDepthMap(sortedTasks), [sortedTasks])
+    const collapsedSectionsCacheKey = useMemo(
+        () => buildCollapsedSectionsCacheKey(profile?.uid, selectedGroupBy),
+        [profile?.uid, selectedGroupBy]
+    )
+
+    useEffect(() => {
+        const cached = readCollapsedSectionsFromCache(collapsedSectionsCacheKey)
+        setCollapsedSectionByKey(cached)
+    }, [collapsedSectionsCacheKey])
+
+    useEffect(() => {
+        const validKeys = new Set(groupedTaskSections.map((section) => section.key))
+        setCollapsedSectionByKey((prev) => {
+            const next = Object.fromEntries(
+                Object.entries(prev).filter(([key, isCollapsed]) => validKeys.has(key) && Boolean(isCollapsed))
+            )
+
+            const changed = Object.keys(prev).length !== Object.keys(next).length
+            if (changed) writeCollapsedSectionsToCache(collapsedSectionsCacheKey, next)
+            return changed ? next : prev
+        })
+    }, [collapsedSectionsCacheKey, groupedTaskSections])
 
     useEffect(() => {
         addTaskInputRef.current?.focusAtEnd?.()
@@ -146,9 +203,8 @@ const ListTab = () => {
         }
     }, [commitTaskPatch, syncParentStatuses])
 
-    // Backspace on a subtask outdents it instead of deleting.
-    // The patch is applied optimistically and committed on blur.
     const handleOutdentTask = useCallback((taskId) => {
+
         const task = tasksById.get(taskId)
         const grandparentId = tasksById.get(task?.parentTaskId)?.parentTaskId ?? null
         const siblingIndex = getNextSiblingIndex(sortedTasks, grandparentId)
@@ -158,9 +214,11 @@ const ListTab = () => {
         setForcedGroupKeyByTaskId((prev) => ({ ...prev, [taskId]: sectionKey }))
         applyTaskPatch(taskId, patch)
         pendingOutdentRef.current.set(taskId, patch)
+
     }, [applyTaskPatch, groupedTaskSections, sortedTasks, tasksById])
 
     const handleDeleteTask = useCallback(async (taskId, meta = {}) => {
+
         const isBackspace = meta?.reason === 'backspace'
         const task = tasksById.get(taskId)
         const hasParent = Boolean(task?.parentTaskId)
@@ -183,9 +241,11 @@ const ListTab = () => {
         await syncParentStatuses()
 
         if (nextFocusId) setPendingFocusTaskId(nextFocusId)
+
     }, [depthMap, groupedTaskSections, handleOutdentTask, reindexListTasks, sortedTasks, syncParentStatuses, tasksById])
 
     const handleCreateTaskAfter = useCallback(async (sourceTask, draftPayload = null) => {
+
         if (!sourceTask) return
 
         const effectiveSource = {
@@ -198,7 +258,6 @@ const ListTab = () => {
 
         const insertIndex = getMaxSubtreeListIndex(effectiveSource, sortedTasks, tasksById) + 1
 
-        // Shift tasks at or after insertIndex to make room
         buildShiftedListIndexUpdates(sortedTasks, insertIndex).forEach(({ taskId, listIndex }) => {
             commitTaskPatch(taskId, { listIndex }).catch(console.error)
         })
@@ -207,11 +266,7 @@ const ListTab = () => {
         const parentTaskId = isSubtask ? effectiveSource.parentTaskId : null
         const siblingIndex = getNextSiblingIndex(sortedTasks, parentTaskId)
 
-        // IMPORTANT: inherit section/group defaults for the new task from the
-        // original source task's current section, not from the just-typed draft.
-        // This keeps Enter behavior stable when task A changes groups on commit:
-        // - task A can move to its parsed group
-        // - task B remains in the originating group
+        // inherit group defaults for the new task from the source task
         const inheritedTitle = isSubtask
             ? ''
             : buildInheritedGroupTitleFromSourceTask({ sourceTask, groupBy: selectedGroupBy })
@@ -230,10 +285,11 @@ const ListTab = () => {
         setPendingFocusTaskId(newTaskId)
 
         setTabEligibleSubtask({ taskId: newTaskId, parentTaskId: effectiveSource.uid })
+
     }, [commitTaskPatch, createTaskOptimistic, profile.uid, selectedGroupBy, sortedTasks, tasksById])
 
     const handleTaskBlur = useCallback((taskId) => {
-        // Commit any pending outdent that was deferred until blur
+
         const pendingPatch = pendingOutdentRef.current.get(taskId)
         if (pendingPatch) {
             commitTaskPatch(taskId, pendingPatch)
@@ -248,9 +304,11 @@ const ListTab = () => {
         })
 
         if (tabEligibleSubtask?.taskId === taskId) setTabEligibleSubtask(null)
+
     }, [commitTaskPatch, tabEligibleSubtask])
 
     const handleTabInTask = useCallback(async (taskId) => {
+
         if (tabEligibleSubtask?.taskId !== taskId) return
 
         const parentTaskId = tabEligibleSubtask.parentTaskId
@@ -263,40 +321,99 @@ const ListTab = () => {
 
         await commitTaskPatch(taskId, { parentTaskId, siblingIndex })
         setTabEligibleSubtask(null)
+
     }, [commitTaskPatch, sortedTasks, tabEligibleSubtask, tasksById])
+
+    const handleChangeGroupBy = useCallback(async (option) => {
+
+        const nextGroupBy = option?.id
+        if (!nextGroupBy || nextGroupBy === selectedGroupBy) return
+
+        setGroupByPreference(nextGroupBy)
+        try {
+            await updateTaskGroupingPreference(profile.uid, nextGroupBy)
+        } catch {
+            setGroupByPreference(selectedGroupBy)
+        }
+
+    }, [profile.uid, selectedGroupBy])
+
+    const handleToggleSectionCollapsed = useCallback((sectionKey) => {
+
+        setCollapsedSectionByKey((prev) => {
+            const next = { ...prev }
+            if (next[sectionKey]) {
+                delete next[sectionKey]
+            } else {
+                next[sectionKey] = true
+            }
+            writeCollapsedSectionsToCache(collapsedSectionsCacheKey, next)
+            return next
+        })
+        
+    }, [collapsedSectionsCacheKey])
 
     return (
         <>
             <div className='w-full h-full flex flex-col items-center gap-6'>
 
-                <div
-                    className='px-4 py-3 bg-neutral5 rounded-full text-neutral0 cursor-text flex gap-3 items-center w-96 hover:w-104 focus-within:w-104 transition-all'
-                    onClick={() => addTaskInputRef.current?.focusAtEnd?.()}
-                >
-                    <TaskParsingInput
-                        inputRef={addTaskInputRef}
-                        title=''
-                        circles={circles}
-                        courses={courses}
-                        className='w-full'
-                        placeholder='Add a task'
-                        clearOnEnter
-                        keepFocusOnEnter
-                        commitOnBlur={false}
-                        allowEmptyCommit
-                        onCommit={handleAddTask}
-                        invertedWidgets
-                    />
+                <div className='relative flex w-full h-11 justify-end'>
+                    <div
+                        className='absolute left-1/2 top-1/2 -translate-1/2
+                            px-4 py-3 bg-neutral5 rounded-full cursor-text 
+                            flex gap-3 items-center w-96 hover:w-104 focus-within:w-104 transition-all'
+                        onClick={() => addTaskInputRef.current?.focusAtEnd?.()}
+                    >
+                        <TaskParsingInput
+                            inputRef={addTaskInputRef}
+                            title=''
+                            circles={circles}
+                            courses={courses}
+                            className='w-full'
+                            placeholder='Add a task'
+                            clearOnEnter
+                            keepFocusOnEnter
+                            commitOnBlur={false}
+                            allowEmptyCommit
+                            onCommit={handleAddTask}
+                            invertedWidgets
+                        />
+                    </div>
+                    <Select
+                        options={LIST_GROUP_OPTIONS}
+                        isOptionSelected={(option) => option.id === selectedGroupBy}
+                        onSelect={handleChangeGroupBy}
+                    >
+                        {(isOpen) => (
+                            <p className='text-neutral1 text-xs hover:opacity-60 transition-all'>
+                                Grouping by: {' '}
+                                <span className='font-semibold text-neutral0'>
+                                    {LIST_GROUP_OPTIONS.find((x) => x.id === selectedGroupBy)?.label}
+                                </span>
+                            </p>
+                        )}
+                    </Select>
                 </div>
+
 
                 <div className='w-full min-h-[60vh] space-y-5'>
                     {groupedTaskSections.map((section) => (
                         <div key={section.key} className='w-full flex flex-col gap-1'>
-                            <div className='text-sm font-semibold text-neutral flex items-center gap-2'>
-                                <FaChevronDown className='text-xs text-neutral1' />
-                                {section.label}
-                            </div>
-                            <div>
+                            {selectedGroupBy !== 'none' && (
+                                <div
+                                    onClick={() => handleToggleSectionCollapsed(section.key)}
+                                    className={`text-sm font-semibold flex items-center gap-2 select-none
+                                    ${selectedGroupBy === 'dueDate' && isPastDateGroupKey(section.key) ? 'text-red-500' : 'text-neutral'}
+                                    cursor-pointer
+                                `}
+                                >
+                                    <FaChevronDown className={`text-xs text-neutral1 transition
+                                        ${collapsedSectionByKey[section.key] && '-rotate-90'}`}
+                                    />
+                                    {section.label}
+                                </div>
+                            )}
+                            <div className={collapsedSectionByKey[section.key] && 'hidden'}>
                                 {section.tasks.map((task) => (
                                     <ListTask
                                         key={task.uid}

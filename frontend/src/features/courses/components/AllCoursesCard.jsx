@@ -10,7 +10,7 @@ const AllCoursesCard = ({ course, score, onOpen }) => {
     return (
         <button onClick={onOpen} className='w-full text-left'>
             <Card hoverable className='h-full'>
-                <div className='h-24 rounded-xl bg-neutral5 flex items-center justify-center text-neutral2'>
+                <div className='h-24 rounded-xl bg-neutral2/20 flex items-center justify-center text-neutral2'>
                     <SubjectIcon className='text-3xl' />
                 </div>
 

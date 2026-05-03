@@ -36,7 +36,7 @@ const MatchEndOverlay = ({
     return (
         <div className='w-full h-full min-h-[420px] flex flex-col items-center px-6 py-10 overflow-y-auto'>
             <div className='text-center mb-8'>
-                <p className={`text-5xl font-semibold ${isDraw ? 'text-neutral1' : isMyWin ? 'text-sat0' : 'text-red-400'} leading-none mb-2`}>{title}</p>
+                <p className={`text-5xl font-bold ${isDraw ? 'text-neutral1' : isMyWin ? 'text-sat0' : 'text-red-400'} leading-none mb-2`}>{title}</p>
                 {reasonLabel ? <p className='text-sm text-neutral1'>{reasonLabel}</p> : null}
             </div>
 
@@ -52,6 +52,8 @@ const MatchEndOverlay = ({
 
                 <HealthPanel player={rightPlayer} align='end' />
             </div>
+
+            <h2 className='text-2xl font-bold mt-9 mb-6 underline underline-offset-12 decoration-neutral2'>Your Rank</h2>
 
             <div className='w-full max-w-xl mb-8 flex flex-col gap-4'>
                 <div className='grid grid-cols-2 gap-4'>
@@ -89,14 +91,30 @@ const MatchEndOverlay = ({
                     </div>
                 </div>
 
-                <ProgressBar
-                    value={Math.max(0, Number(rankedProgression?.currentTierProgress) || 0)}
-                    max={Math.max(1, Number(rankedProgression?.currentTierSpan) || 1)}
-                    secondaryValue={Math.max(0, Number(rankedProgression?.peakProgress) || 0)}
-                    secondaryMax={Math.max(1, Number(rankedProgression?.currentTierSpan) || 1)}
-                    secondaryClassName='bg-sky-300/40'
-                />
+                <div className='flex flex-col gap-2'>
+                    <div className='flex justify-between'>
+                        <p className='text-sm font-semibold'>
+                            {Math.max(0, Number(rankedProgression?.currentTierProgress) || 0)}{' '}
+                            <span className='text-xs text-neutral1'>SAT</span>{' '}
+                            {!isDraw && <span className={`text-sm ${isMyWin ? 'text-sky-400' : 'text-red-400'}`}>{isMyWin ? '+20' : '-20'}</span>}
+                        </p>
+                    <p className='text-sm font-semibold'>
+                            {Math.max(1, Number(rankedProgression?.currentTierSpan) || 1)} <span className='text-xs text-neutral1'>SAT</span>
+                        </p>
+                    </div>
+
+                    <ProgressBar
+                        value={Math.max(0, Number(rankedProgression?.currentTierProgress) || 0)}
+                        max={Math.max(1, Number(rankedProgression?.currentTierSpan) || 1)}
+                        secondaryValue={Math.max(0, Number(rankedProgression?.peakProgress) || 0)}
+                        secondaryMax={Math.max(1, Number(rankedProgression?.currentTierSpan) || 1)}
+                        secondaryClassName='bg-sky-300/40'
+                    />                    
+                </div>
+
             </div>
+
+            <h2 className='text-2xl font-bold mt-9 mb-6 underline underline-offset-12 decoration-neutral2'>Game Rounds</h2>
 
             <div className='w-full max-w-4xl flex flex-col gap-3'>
                 {rounds.map((roundEntry) => (
@@ -111,8 +129,8 @@ const MatchEndOverlay = ({
                         </div>
 
                         <Card className={'w-full gap-1! items-center'}>
-                            <p className='text-sm font-medium'>Round {roundEntry.roundNumber}</p>
-                            <p className='text-xs text-neutral1'>Correct Answer: {roundEntry.correctAnswer ?? '—'}</p>
+                            <p className='text-sm font-semibold'>Round {roundEntry.roundNumber}</p>
+                            <p className='text-xs text-neutral1'>Correct Answer: {roundEntry.correctAnswer ?? '—'}. Explanations coming soon.</p>
                         </Card>
 
                         <div className='w-12 flex justify-center'>

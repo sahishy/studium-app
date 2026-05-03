@@ -13,6 +13,7 @@ import { getTeachersByIdsMap } from '../services/teacherService'
 import LoadingState from '../../../shared/components/ui/LoadingState'
 import { createCacheKey, resolveCachedRecordsByIds, setCachedRecordsById } from '../../../shared/services/cacheService'
 import { CACHE_NAMESPACES, CACHE_TTLS_MS } from '../../../shared/utils/cacheUtils'
+import study0 from '../../../assets/images/illustrations/study0.png'
 
 const RESULTS_PAGE_SIZE = 10
 const SCORE_CACHE_TTL_MS = CACHE_TTLS_MS.COURSE_SCORE
@@ -259,21 +260,6 @@ const MyCoursesTab = () => {
         )
     }
 
-    const handleLeaveCourse = async (courseId) => {
-
-        if (!profile?.uid) {
-            return
-        }
-
-        setLoadingCourseId(String(courseId))
-        try {
-            await leaveCourse(profile.uid, courseId)
-        } finally {
-            setLoadingCourseId(null)
-        }
-
-    }
-
     return (
         <>
             <div className='w-full h-full flex flex-col gap-4 lg:flex-row lg:gap-16 lg:items-start m-auto'>
@@ -284,7 +270,7 @@ const MyCoursesTab = () => {
                         {/* <Button type='secondary' onClick={openPalette}>Add Course</Button> */}
                         <button
                             onClick={openPalette}
-                            className='px-6 py-3 bg-neutral5 rounded-full text-neutral1 hover:bg-neutral4 cursor-pointer
+                            className='px-6 py-3 text-sm bg-neutral5 rounded-full text-neutral1 hover:bg-neutral4 cursor-pointer
                                 flex gap-3 items-center w-96 hover:w-104 transition-all'
                         >
                             <FaMagnifyingGlass className='text-neutral0' />
@@ -295,9 +281,10 @@ const MyCoursesTab = () => {
                     {isPageLoading ? (
                         <LoadingState/>
                     ) : selectedCourses.length === 0 ? (
-                        <div className='w-full  flex flex-col items-center justify-center py-16 gap-3'>
-                            <FaArrowUp className='text-neutral1' />
-                            <p className='text-sm text-neutral1'>You haven't added any courses yet.</p>
+                        <div className='w-full flex flex-col items-center justify-center py-16 gap-1'>
+                            <img src={study0} alt='Studying' className='object-contain w-96' />
+                            <h1 className='text-3xl font-bold'>No courses</h1>
+                            <p className='text-sm text-neutral1'>You haven't added any courses yet. Add the courses you're taking!</p>
                         </div>
                     ) : (
                         <div className='w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4'>

@@ -12,6 +12,9 @@ import MatchmakingToast from '../components/toasts/MatchmakingToast'
 import podium from '../../../assets/images/podium.png'
 import { HiChevronDoubleUp } from 'react-icons/hi'
 import { buildRankedUiState, getQueueState, MATCH_JOIN_DELAY_SECONDS } from '../utils/multiplayerUtils'
+import Podium from '../../../shared/components/avatar/Podium'
+import ranked0 from '../../../assets/images/illustrations/ranked0.png'
+import { FaPlay } from 'react-icons/fa6'
 
 const SAT_CLASSIC_MODE_ID = 'sat-classic'
 
@@ -47,29 +50,29 @@ const Ranked = () => {
     )
 
     useEffect(() => {
-        if(queueState !== 'idle') {
+        if (queueState !== 'idle') {
             setIsQueueingOptimistic(false)
         }
     }, [queueState])
 
     useEffect(() => {
-        if(queueState === 'idle') {
+        if (queueState === 'idle') {
             return
         }
 
         const existingMatchmakingToasts = toastStack.filter((toastEntry) => toastEntry.component === MatchmakingToast)
 
-        if(existingMatchmakingToasts.length === 0) {
+        if (existingMatchmakingToasts.length === 0) {
             return
         }
 
         const currentToastStillExists = existingMatchmakingToasts.some((toastEntry) => toastEntry.id === matchmakingToastIdRef.current)
-        if(!currentToastStillExists) {
+        if (!currentToastStillExists) {
             matchmakingToastIdRef.current = existingMatchmakingToasts[0].id
         }
 
         existingMatchmakingToasts.forEach((toastEntry) => {
-            if(toastEntry.id !== matchmakingToastIdRef.current) {
+            if (toastEntry.id !== matchmakingToastIdRef.current) {
                 hideToast(toastEntry.id, { force: true })
             }
         })
@@ -78,23 +81,23 @@ const Ranked = () => {
     const handleLeaveQueue = async () => {
         await leaveQueue()
 
-        if(matchmakingToastIdRef.current) {
+        if (matchmakingToastIdRef.current) {
             hideToast(matchmakingToastIdRef.current, { force: true })
             matchmakingToastIdRef.current = null
         }
     }
 
     const showOrUpdateMatchmakingToast = (state) => {
-        if(!matchmakingToastIdRef.current) {
+        if (!matchmakingToastIdRef.current) {
             const existingMatchmakingToasts = toastStack.filter((toastEntry) => toastEntry.component === MatchmakingToast)
-            if(existingMatchmakingToasts.length > 0) {
+            if (existingMatchmakingToasts.length > 0) {
                 matchmakingToastIdRef.current = existingMatchmakingToasts[0].id
             }
         }
 
-        if(matchmakingToastIdRef.current) {
+        if (matchmakingToastIdRef.current) {
             const toastExists = toastStack.some((toastEntry) => toastEntry.id === matchmakingToastIdRef.current)
-            if(!toastExists) {
+            if (!toastExists) {
                 matchmakingToastIdRef.current = null
             }
         }
@@ -106,7 +109,7 @@ const Ranked = () => {
             onLeaveQueue: handleLeaveQueue,
         }
 
-        if(!matchmakingToastIdRef.current) {
+        if (!matchmakingToastIdRef.current) {
             const toastId = showToast({
                 component: MatchmakingToast,
                 props: toastProps,
@@ -125,7 +128,7 @@ const Ranked = () => {
 
     const handlePlayClick = async () => {
 
-        if(!profile?.uid || effectiveQueueState !== 'idle') {
+        if (!profile?.uid || effectiveQueueState !== 'idle') {
             return
         }
 
@@ -142,32 +145,32 @@ const Ranked = () => {
             await findMatch({
                 modeId: SAT_CLASSIC_MODE_ID,
             })
-        } catch(error) {
+        } catch (error) {
             setIsQueueingOptimistic(false)
             throw error
         }
     }
 
     useEffect(() => {
-        if(queueState !== 'matched' || !session?.currentRoomId) {
+        if (queueState !== 'matched' || !session?.currentRoomId) {
             autoJoinRoomIdRef.current = null
             setMatchCountdownSeconds(MATCH_JOIN_DELAY_SECONDS)
             return
         }
 
-        if(autoJoinRoomIdRef.current !== session.currentRoomId) {
+        if (autoJoinRoomIdRef.current !== session.currentRoomId) {
             autoJoinRoomIdRef.current = session.currentRoomId
             setMatchCountdownSeconds(MATCH_JOIN_DELAY_SECONDS)
         }
     }, [queueState, session?.currentRoomId])
 
     useEffect(() => {
-        if(queueState !== 'matched' || !session?.currentRoomId) {
+        if (queueState !== 'matched' || !session?.currentRoomId) {
             return
         }
 
-        if(matchCountdownSeconds <= 0) {
-            if(matchmakingToastIdRef.current) {
+        if (matchCountdownSeconds <= 0) {
+            if (matchmakingToastIdRef.current) {
                 hideToast(matchmakingToastIdRef.current, { force: true })
                 matchmakingToastIdRef.current = null
             }
@@ -183,8 +186,8 @@ const Ranked = () => {
     }, [queueState, session?.currentRoomId, matchCountdownSeconds, navigate, hideToast])
 
     useEffect(() => {
-        if(queueState === 'idle') {
-            if(matchmakingToastIdRef.current) {
+        if (queueState === 'idle') {
+            if (matchmakingToastIdRef.current) {
                 hideToast(matchmakingToastIdRef.current, { force: true })
                 matchmakingToastIdRef.current = null
             }
@@ -201,7 +204,7 @@ const Ranked = () => {
             <div className='w-full flex-1 flex min-h-0 px-24 pb-24 pt-2 gap-8'>
 
                 <div className='relative flex-1 flex items-center justify-center min-h-0'>
-                    <img src={podium} className='absolute -bottom-52' />
+                    <Podium className={'absolute -bottom-52'} />
                     <AvatarModel
                         profile={profile}
                         animation={'Idle'}
@@ -209,7 +212,7 @@ const Ranked = () => {
                     />
                 </div>
 
-                <div className='flex-1 min-h-0 flex flex-col justify-center gap-8'>
+                <div className='flex-1 min-h-0 max-w-sm flex flex-col justify-center gap-8'>
 
                     <Card className='max-w-xl p-8! gap-3'>
                         <div className='flex flex-col items-center gap-3'>
@@ -238,7 +241,7 @@ const Ranked = () => {
                             <p className='text-sm font-semibold'>
                                 {rankedStats.elo} <span className='text-xs text-neutral1'>SAT</span>
                             </p>
-                            <p className='text-sm text-text2 flex items-center gap-1'>
+                            <p className='text-sm text-neutral1 flex items-center gap-1'>
                                 <HiChevronDoubleUp />
                                 {nextTierThreshold ? `${eloToNextTier} to ${nextTierLabel}` : nextTierLabel}
                             </p>
@@ -248,12 +251,14 @@ const Ranked = () => {
 
                     <Button
                         type='primary'
-                        className='p-6! text-2xl!'
+                        className='p-6! text-3xl! flex flex-col gap-1! font-bold!'
                         onClick={handlePlayClick}
                         disabled={effectiveQueueState !== 'idle'}
                     >
-                        {effectiveQueueState === 'queueing' ? 'Queueing...' : effectiveQueueState === 'matched' ? 'Joining...' : 'Play'}
+                        {effectiveQueueState === 'queueing' ? 'QUEUEING...' : effectiveQueueState === 'matched' ? 'JOINING...' : 'PLAY'}
+                        <span className='text-xs font-normal'>Classic SAT 1v1s</span>
                     </Button>
+
                 </div>
             </div>
         </div>

@@ -8,6 +8,7 @@ import { useCircles } from '../contexts/CirclesContext'
 import Button from '../../../shared/components/ui/Button'
 import BottomFade from '../../../shared/components/ui/BottomFade'
 import { FaArrowUp } from 'react-icons/fa6'
+import social0 from '../../../assets/images/illustrations/social0.png'
 
 const Circles = () => {
 
@@ -33,14 +34,15 @@ const Circles = () => {
                     </div>
 
 
-                    <div className='w-full flex flex-col gap-4'>
+                    <div className='relative w-full flex flex-col gap-4'>
 
-                        {/* <h1 className='text-lg text-text1 font-semibold'>Your Circles</h1> */}
+                        {/* <h1 className='text-lg text-neutral1 font-semibold'>Your Circles</h1> */}
 
                         {circles.length === 0 ? (
-                            <div className='w-full flex flex-col items-center justify-center py-48 gap-3'>
-                                <FaArrowUp className='text-neutral1 rotate-45' />
-                                <p className='text-sm text-neutral1'>You haven't joined any study circles yet.</p>
+                            <div className='w-full flex flex-col items-center justify-center py-32 gap-1'>
+                                <img src={social0} alt='Friends studying' className='object-contain w-96 mb-3' />
+                                <h1 className='text-3xl font-bold'>No circles</h1>
+                                <p className='text-sm text-neutral1'>You haven't joined any study circles yet. Join or create one!</p>
                             </div>
                         ) : (
                             <div className='w-full grid grid-cols-2 auto-rows-auto gap-4'>

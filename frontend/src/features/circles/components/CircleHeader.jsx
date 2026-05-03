@@ -49,7 +49,7 @@ const CircleHeader = ({ circle, profile, back = '/circles' }) => {
                 {(isOpen) =>
                     <div
                         className={`flex items-center rounded-xl p-2 cursor-pointer min-w-0
-                        ${isOpen ? 'bg-background5' : null} hover:bg-background5 transition-colors `}
+                        ${isOpen ? 'bg-neutral3' : null} hover:bg-neutral3 transition-colors `}
                     >
                         <h1 className="px-2 text-2xl font-semibold truncate">{circle.title}</h1>
                         <div className="p-2">

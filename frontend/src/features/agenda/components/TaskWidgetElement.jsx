@@ -4,6 +4,7 @@ import { Transforms } from 'slate'
 import DatePicker from '../../../shared/components/popovers/DatePicker'
 import Select from '../../../shared/components/popovers/Select'
 import { formatRelativeTaskDate } from '../../../shared/utils/formatters'
+import { resolveTaskDateWidgetLabel } from '../utils/taskDateDisplayUtils'
 import { isTitleMostlyLowercase } from '../utils/taskParsingSlateUtils'
 
 const formatLocalDateKey = (value) => {
@@ -15,10 +16,11 @@ const formatLocalDateKey = (value) => {
     return `${year}-${month}-${day}`
 }
 
-// Prevents the editor from losing its selection when clicking a widget button
+// prevent editor from losing selection when clicking widget button
 const preventEditorBlur = (event) => event.preventDefault()
 
 const TaskWidgetElement = ({ attributes, children, element, isCompleted = false, circles = [], courses = [], onWidgetCommit, inverted }) => {
+
     const editor = useSlateStatic()
     const widgetType = element.segment?.widgetType || 'token'
     const label = element.segment?.rawText || element.segment?.displayText || widgetType
@@ -29,16 +31,17 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
             Transforms.setNodes(editor, { segment: nextSegment }, { at: path })
             onWidgetCommit?.()
         } catch {
-            // stale path — element was removed before update fired
+            // element removed before update fired
         }
     }, [editor, element, onWidgetCommit])
 
-    const baseChipClass = `mx-[1px] rounded-md px-1.5 py-0.5 text-sm text-neutral0 transition inline-flex items-center cursor-pointer ${isCompleted ? 'opacity-60 line-through' : 'opacity-100'}`
+    const baseChipClass = `mx-[1px] rounded-md px-1.5 py-0.5 text-sm text-neutral0 transition inline-flex items-center cursor-pointer ${isCompleted ? 'opacity-40 line-through' : 'opacity-100'}`
     const chipClass = `${baseChipClass} ${inverted ? 'bg-neutral6 hover:bg-neutral6/60' : 'bg-neutral5 hover:bg-neutral4'}`
     const chipOpenClass = inverted ? 'bg-neutral6/80!' : 'bg-neutral4!'
 
     if (widgetType === 'date') {
         const currentDate = element.segment?.value?.dueDate || ''
+        const dynamicLabel = resolveTaskDateWidgetLabel({ editor, element, rawLabel: label, dueDate: currentDate })
         const selectedDate = currentDate
             ? { seconds: Math.floor(new Date(`${currentDate}T00:00:00`).getTime() / 1000) }
             : -1
@@ -70,7 +73,7 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
                             onMouseDown={preventEditorBlur}
                             className={`${chipClass} ${isOpen && chipOpenClass}`}
                         >
-                            <span>{label}</span>
+                            <span>{dynamicLabel || label}</span>
                         </button>
                     )}
                 </DatePicker>
@@ -165,7 +168,7 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
         )
     }
 
-    // Fallback for unrecognized/token widget types
+    // fallback for unrecognized widget
     return (
         <span {...attributes} contentEditable={false} className='inline-flex align-baseline'>
             <span data-task-widget-chip className={baseChipClass}>

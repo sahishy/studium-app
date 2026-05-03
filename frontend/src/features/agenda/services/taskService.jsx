@@ -1,9 +1,10 @@
 import { doc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, where, query, getDoc, getDocs, writeBatch } from 'firebase/firestore'
 import { updateCircleXP, updateUserXP } from '../../profile/services/xpService';
 import confetti from 'canvas-confetti';
-import { userCompleteTask } from '../../auth/services/userService';
+import { updateUserPreference, userCompleteTask } from '../../auth/services/userService';
 import { useEffect, useMemo, useState } from 'react';
 import { normalizeTaskTitle } from '../utils/naturalLanguage';
+import { LIST_GROUP_OPTIONS } from '../utils/taskListUtils';
 import { db } from '../../../lib/firebase';
 
 const createTask = async ({ title, dueAt, status, listIndex, boardIndex, ownerType, ownerId, taskId, parentTaskId, siblingIndex, type }) => {
@@ -137,6 +138,15 @@ const deleteCircleTasks = async (circleId) => {
 
     await Promise.all(batches)
 
+}
+
+const updateTaskGroupingPreference = async (uid, groupTasksBy) => {
+    const validGroupIds = new Set(LIST_GROUP_OPTIONS.map((option) => option.id))
+    if(!validGroupIds.has(groupTasksBy)) {
+        throw new Error(`Invalid groupTasksBy preference: ${groupTasksBy}`)
+    }
+
+    await updateUserPreference(uid, 'groupTasksBy', groupTasksBy)
 }
 
 const completeTaskAnimation = (isCircle) => {
@@ -276,6 +286,7 @@ export {
     updateTask,
     deleteTask,
     deleteCircleTasks,
+    updateTaskGroupingPreference,
     completeTask,
     useUserTasks,
     useCircleTasks

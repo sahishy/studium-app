@@ -15,7 +15,7 @@ const CircleGreeting = ( { circle } ) => {
                     <PiStarFourFill className="text-2xl text-sky-400"/>
                 </div>
                 <div className="flex flex-col">
-                    <h1 className="text-xl font-semibold text-text1">Level {circle.level}</h1>
+                    <h1 className="text-xl font-semibold text-neutral1">Level {circle.level}</h1>
                 </div>
             </div>
 
@@ -25,7 +25,7 @@ const CircleGreeting = ( { circle } ) => {
                     max={xpToNextLevel}
                 />
 
-                <h1 className="inset-0 flex items-center justify-center text-sm font-semibold text-text2">
+                <h1 className="inset-0 flex items-center justify-center text-sm font-semibold text-neutral2">
                     {circle.xp} / {xpToNextLevel} XP
                 </h1>
             </div>

@@ -127,10 +127,10 @@ const DatePicker = ({ children, selectedDate, onSelect, className = '' }) => {
                                             setCurrentDate(dayData.date)
                                         }}
                                         className={`aspect-square cursor-pointer text-center p-1 rounded-xl flex justify-center items-center border
-                                            ${dayData.currentMonth ? 'text-text0' : 'text-text2'}
+                                            ${dayData.currentMonth ? 'text-neutral0' : 'text-neutral2'}
                                             ${isToday ? 'border-neutral4' : 'border-transparent'}
-                                            ${isSelected ? 'bg-neutral0 border-primary1 text-text4 hover:bg-primary1' : 
-                                                (isPreviousSelected ? 'bg-background3 hover:bg-background5' : 'bg-background0 hover:bg-background5')}`}
+                                            ${isSelected ? 'bg-neutral0 border-primary1 text-neutral6 hover:bg-primary1' : 
+                                                (isPreviousSelected ? 'bg-neutral4 hover:bg-neutral3' : 'bg-transparent hover:bg-neutral3')}`}
                                     >
                                         {dayData.date.getDate()}
                                     </div>

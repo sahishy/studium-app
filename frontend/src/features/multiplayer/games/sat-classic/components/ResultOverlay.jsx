@@ -113,8 +113,8 @@ const ResultOverlay = ({ activeOverlayMode, roundCountdown, roundOverlayRemainin
             <div className='text-center'>
                 {activeOverlayMode === 'round_start' ? (
                     <>
-                        <p className='text-6xl font-semibold leading-none'>{roundCountdown}</p>
-                        <p className='text-sm text-neutral1 mt-2'>Round starting...</p>
+                        <p className='text-6xl font-bold leading-none'>{roundCountdown}</p>
+                        <p className='text-sm text-neutral1 mt-2'>Get ready...</p>
                     </>
                 ) : (
                     <>
