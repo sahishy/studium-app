@@ -612,6 +612,35 @@ function detectDateCandidates(text, now = new Date()) {
 		}
 	}));
 
+	collect(/\bnext\s+week\b/gi, (match) => ({
+		kind: "date",
+		rawText: match[0],
+		start: match.index,
+		end: match.index + match[0].length,
+		confidence: 0.98,
+		data: {
+			date: formatDateToISO(addWeeks(startOfDay(now), 1))
+		}
+	}));
+
+	collect(new RegExp(`\\bnext\\s+(${WEEKDAY_PATTERN})\\b`, "gi"), (match) => {
+		const weekdayName = (match[1] || "").toLowerCase();
+		const weekday = WEEKDAY_ALIASES[weekdayName];
+		if (weekday == null) return null;
+
+		const date = getNextWeekday(weekday, addWeeks(startOfDay(now), 1));
+		return {
+			kind: "date",
+			rawText: match[0],
+			start: match.index,
+			end: match.index + match[0].length,
+			confidence: 0.97,
+			data: {
+				date: formatDateToISO(date)
+			}
+		};
+	});
+
 	collect(/\bin\s+((?:\d{1,2}|a|an)\s+days?)\b/gi, (match) => {
 		const countToken = (match[1] || "").split(/\s+/)[0]?.toLowerCase();
 		const days = countToken === "a" || countToken === "an" ? 1 : Number(countToken);
@@ -628,6 +657,25 @@ function detectDateCandidates(text, now = new Date()) {
 		};
 	});
 
+	collect(/\b(?:due\s+)?(?:in\s+)?((?:\d{1,2}|a|an)\s*d)\b/gi, (match) => {
+		const value = (match[1] || "").trim().toLowerCase();
+		const countToken = value.replace(/d$/, "").trim();
+		const days = countToken === "a" || countToken === "an" ? 1 : Number(countToken);
+		if (!Number.isFinite(days) || days < 0) return null;
+
+		const phrase = extractMatchedSubphrase(match, match[1]);
+		return {
+			kind: "date",
+			rawText: phrase.rawText,
+			start: phrase.start,
+			end: phrase.end,
+			confidence: 0.93,
+			data: {
+				date: formatDateToISO(addDays(startOfDay(now), days))
+			}
+		};
+	});
+
 	collect(/\bin\s+(?:(\d{1,2})|(a|an))\s+weeks?\b/gi, (match) => {
 		const weeks = match[1] ? Number(match[1]) : 1;
 		const phrase = extractMatchedSubphrase(match, `${match[1] || match[2] || "1"} week${weeks === 1 ? "" : "s"}`);
@@ -637,6 +685,25 @@ function detectDateCandidates(text, now = new Date()) {
 			start: phrase.start,
 			end: phrase.end,
 			confidence: 0.95,
+			data: {
+				date: formatDateToISO(addWeeks(startOfDay(now), weeks))
+			}
+		};
+	});
+
+	collect(/\b(?:due\s+)?(?:in\s+)?((?:\d{1,2}|a|an)\s*w)\b/gi, (match) => {
+		const value = (match[1] || "").trim().toLowerCase();
+		const countToken = value.replace(/w$/, "").trim();
+		const weeks = countToken === "a" || countToken === "an" ? 1 : Number(countToken);
+		if (!Number.isFinite(weeks) || weeks < 0) return null;
+
+		const phrase = extractMatchedSubphrase(match, match[1]);
+		return {
+			kind: "date",
+			rawText: phrase.rawText,
+			start: phrase.start,
+			end: phrase.end,
+			confidence: 0.93,
 			data: {
 				date: formatDateToISO(addWeeks(startOfDay(now), weeks))
 			}

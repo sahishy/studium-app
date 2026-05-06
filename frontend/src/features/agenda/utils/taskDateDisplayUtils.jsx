@@ -75,10 +75,50 @@ const applyTitleLowercaseIntent = (label, editor, element) => {
     return isMajorityLowercase(surroundingText) ? label.toLowerCase() : label
 }
 
-const formatDueInDaysLabel = (dayDiff) => {
-    if (dayDiff <= 0) return 'due today'
-    if (dayDiff === 1) return 'due in 1 day'
-    return `due in ${dayDiff} days`
+const RELATIVE_DAY_WEEK_REGEX = /\b(\d{1,2}|a|an)\s*(d|day|days|w|week|weeks)\b/i
+
+const parseRelativeDayWeekToken = (value = '') => {
+    const text = String(value || '')
+    const match = text.match(RELATIVE_DAY_WEEK_REGEX)
+    if (!match) return null
+
+    const [, quantityTokenRaw, unitTokenRaw] = match
+    const quantityToken = String(quantityTokenRaw || '').toLowerCase()
+    const unitToken = String(unitTokenRaw || '')
+    const unitTokenLower = unitToken.toLowerCase()
+
+    return {
+        original: match[0],
+        quantityToken,
+        unitToken,
+        isWeek: unitTokenLower === 'w' || unitTokenLower === 'week' || unitTokenLower === 'weeks',
+        isShorthand: unitTokenLower === 'd' || unitTokenLower === 'w',
+        usesArticle: quantityToken === 'a' || quantityToken === 'an',
+    }
+}
+
+const formatRelativeLikeOriginal = (rawLabel, dayDiff) => {
+    const parsed = parseRelativeDayWeekToken(rawLabel)
+    if (!parsed) return null
+
+    if (dayDiff <= 0) {
+        return String(rawLabel).replace(RELATIVE_DAY_WEEK_REGEX, 'today')
+    }
+
+    const nextCount = parsed.isWeek ? Math.ceil(dayDiff / 7) : dayDiff
+    const countToken = parsed.usesArticle && nextCount === 1 ? 'a' : String(nextCount)
+
+    let unitToken = parsed.unitToken
+    if (parsed.isShorthand) {
+        unitToken = parsed.isWeek ? 'w' : 'd'
+    } else if (parsed.isWeek) {
+        unitToken = nextCount === 1 ? 'week' : 'weeks'
+    } else {
+        unitToken = nextCount === 1 ? 'day' : 'days'
+    }
+
+    const replacement = `${countToken} ${unitToken}`
+    return String(rawLabel).replace(RELATIVE_DAY_WEEK_REGEX, replacement)
 }
 
 const resolveTaskDateWidgetLabel = ({ editor, element, rawLabel, dueDate }) => {
@@ -91,12 +131,20 @@ const resolveTaskDateWidgetLabel = ({ editor, element, rawLabel, dueDate }) => {
     }
 
     const contextPrefix = readDateContextPrefix(editor, element)
-    const isCountdownIntent = /\bdue\s+in\s*$/.test(contextPrefix) || /\bin\s*$/.test(contextPrefix)
+    const isCountdownIntentFromContext = /\bdue\s+in\s*$/.test(contextPrefix)
+        || /\bin\s*$/.test(contextPrefix)
+    const isCountdownIntentFromRawLabel = Boolean(parseRelativeDayWeekToken(rawLabel))
+    const isCountdownIntent = isCountdownIntentFromContext || isCountdownIntentFromRawLabel
 
     if (isCountdownIntent) {
         const dayDiff = getCalendarDayDifference(new Date(), dueDate)
         if (dayDiff != null) {
-            return applyTitleLowercaseIntent(formatDueInDaysLabel(dayDiff), editor, element)
+            const stylePreserved = formatRelativeLikeOriginal(rawLabel, dayDiff)
+            if (stylePreserved) return applyTitleLowercaseIntent(stylePreserved, editor, element)
+
+            if (dayDiff <= 0) return applyTitleLowercaseIntent('today', editor, element)
+            if (dayDiff === 1) return applyTitleLowercaseIntent('1 day', editor, element)
+            return applyTitleLowercaseIntent(`${dayDiff} days`, editor, element)
         }
     }
 
