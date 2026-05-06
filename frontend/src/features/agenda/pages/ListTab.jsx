@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { FaChevronDown } from 'react-icons/fa6'
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import BottomPadding from '../../../shared/components/ui/BottomPadding'
 import { toDateFromRelativeInput } from '../../../shared/utils/formatters'
 import ListTask from '../components/ListTask'
@@ -10,6 +12,7 @@ import { useCircles } from '../../circles/contexts/CirclesContext'
 import { useCourses } from '../../courses/contexts/CoursesContext'
 import { deleteTask, updateTask, updateTaskGroupingPreference } from '../services/taskService'
 import { buildChildCounts, buildDepthMap, buildGroupedTaskSections, buildInheritedGroupTitleFromSourceTask, buildListReindexUpdates, buildShiftedListIndexUpdates, deriveStatusByTaskId,LIST_GROUP_OPTIONS, sortTasksByListIndex } from '../utils/taskListUtils'
+import { buildListIndexPatchUpdates, buildReorderPlanForSection, buildSortableIds } from '../utils/taskDragDropUtils'
 import Select from '../../../shared/components/popovers/Select'
 
 const isDescendantOf = (task, ancestorId, tasksById) => {
@@ -105,6 +108,10 @@ const ListTab = () => {
         () => buildGroupedTaskSections(sortedTasks, selectedGroupBy, { forcedGroupKeyByTaskId }),
         [forcedGroupKeyByTaskId, selectedGroupBy, sortedTasks]
     )
+    const groupedSectionKeySignature = useMemo(
+        () => groupedTaskSections.map((section) => section.key).join('|'),
+        [groupedTaskSections]
+    )
     const childCounts = useMemo(() => buildChildCounts(sortedTasks), [sortedTasks])
     const depthMap = useMemo(() => buildDepthMap(sortedTasks), [sortedTasks])
     const collapsedSectionsCacheKey = useMemo(
@@ -128,7 +135,13 @@ const ListTab = () => {
             if (changed) writeCollapsedSectionsToCache(collapsedSectionsCacheKey, next)
             return changed ? next : prev
         })
-    }, [collapsedSectionsCacheKey, groupedTaskSections])
+    }, [collapsedSectionsCacheKey, groupedSectionKeySignature, groupedTaskSections])
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: { distance: 6 },
+        })
+    )
 
     useEffect(() => {
         addTaskInputRef.current?.focusAtEnd?.()
@@ -353,6 +366,26 @@ const ListTab = () => {
         
     }, [collapsedSectionsCacheKey])
 
+    const handleDragEnd = useCallback(async (event) => {
+        const activeId = event?.active?.id
+        const overId = event?.over?.id
+
+        const reorderPlan = buildReorderPlanForSection({
+            groupedSections: groupedTaskSections,
+            activeId,
+            overId,
+        })
+
+        if (!reorderPlan) return
+
+        const listIndexUpdates = buildListIndexPatchUpdates(reorderPlan.reorderedSectionTasks)
+        if (!listIndexUpdates.length) return
+
+        await Promise.all(
+            listIndexUpdates.map(({ taskId, listIndex }) => commitTaskPatch(taskId, { listIndex }))
+        )
+    }, [commitTaskPatch, groupedTaskSections])
+
     return (
         <>
             <div className='w-full h-full flex flex-col items-center gap-6'>
@@ -396,7 +429,12 @@ const ListTab = () => {
                 </div>
 
 
-                <div className='w-full min-h-[60vh] space-y-5'>
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                    <div className='w-full min-h-[60vh] space-y-5'>
                     {groupedTaskSections.map((section) => (
                         <div key={section.key} className='w-full flex flex-col gap-1'>
                             {selectedGroupBy !== 'none' && (
@@ -414,6 +452,10 @@ const ListTab = () => {
                                 </div>
                             )}
                             <div className={collapsedSectionByKey[section.key] && 'hidden'}>
+                                <SortableContext
+                                    items={buildSortableIds(section.tasks)}
+                                    strategy={verticalListSortingStrategy}
+                                >
                                 {section.tasks.map((task) => (
                                     <ListTask
                                         key={task.uid}
@@ -430,10 +472,12 @@ const ListTab = () => {
                                         onTaskBlur={handleTaskBlur}
                                     />
                                 ))}
+                                </SortableContext>
                             </div>
                         </div>
                     ))}
-                </div>
+                    </div>
+                </DndContext>
 
             </div>
             <BottomPadding />
