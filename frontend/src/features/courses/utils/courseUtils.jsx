@@ -2,7 +2,8 @@ import { BiMath } from "react-icons/bi"
 import { FaGlobeAmericas, FaPaintBrush } from "react-icons/fa"
 import { FaBookBookmark, FaBuilding, FaDumbbell, FaFlask, FaGlobe, FaMasksTheater, FaMusic, FaUser, FaUserGraduate } from "react-icons/fa6"
 
-// tailwind colors 400/100
+const MAX_USER_COURSES = 8
+
 const COURSE_COLORS = [
     '#9ca3af',
     '#f87171',
@@ -49,6 +50,7 @@ const buildEnrollmentId = (courseId, studentId) => {
 }
 
 export {
+    MAX_USER_COURSES,
     COURSE_COLORS,
     SUBJECT_ICONS,
     normalizeSearchText,

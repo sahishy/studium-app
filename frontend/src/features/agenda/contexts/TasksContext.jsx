@@ -38,6 +38,24 @@ const TasksProvider = ({ profile, children }) => {
     // optimistic local preview
     const applyTaskPatch = patchLocal
 
+    const doesServerTaskMatchLocalPatch = useCallback((serverTask, localPatch) => {
+        if(!serverTask || !localPatch) return false
+
+        return Object.entries(localPatch).every(([key, localValue]) => {
+            const serverValue = serverTask[key]
+
+            if(localValue instanceof Date && serverValue instanceof Date) {
+                return localValue.getTime() === serverValue.getTime()
+            }
+
+            if(typeof localValue === 'object' && localValue !== null) {
+                return JSON.stringify(serverValue) === JSON.stringify(localValue)
+            }
+
+            return serverValue === localValue
+        })
+    }, [])
+
     // prevent immediate firebase writes
     const commitTaskPatch = useCallback(async (taskId, patch) => {
 
@@ -52,7 +70,6 @@ const TasksProvider = ({ profile, children }) => {
 
         try {
             await enqueueTaskPatch(taskId, patch)
-            clearLocal(taskId)
         } catch {
             // keep local optimistic patch if write fails
         }
@@ -107,6 +124,21 @@ const TasksProvider = ({ profile, children }) => {
         }
 
     }, [circle, clearLocal, user])
+
+    useEffect(() => {
+
+        const serverById = new Map([...user, ...circle].map((task) => [task.uid, task]))
+
+        Object.entries(localTasks).forEach(([taskId, localPatch]) => {
+            const serverTask = serverById.get(taskId)
+            if(!serverTask) return
+
+            if(doesServerTaskMatchLocalPatch(serverTask, localPatch)) {
+                clearLocal(taskId)
+            }
+        })
+
+    }, [circle, clearLocal, doesServerTaskMatchLocalPatch, localTasks, user])
 
     const mergedTasks = useMemo(() => {
 

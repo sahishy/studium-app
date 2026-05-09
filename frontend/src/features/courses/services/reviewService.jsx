@@ -1,22 +1,6 @@
-import {
-    collection,
-    doc,
-    getDoc,
-    getDocs,
-    onSnapshot,
-    orderBy,
-    query,
-    serverTimestamp,
-    setDoc,
-    where,
-    documentId,
-} from 'firebase/firestore'
+import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, setDoc, where, documentId } from 'firebase/firestore'
 import { useEffect, useState } from 'react'
-import {
-    buildCourseScoreMap,
-    clampReviewScore,
-    computeAverageScoreFromReviews,
-} from '../utils/reviewUtils'
+import { buildCourseScoreMap, clampReviewScore, computeAverageScoreFromReviews } from '../utils/reviewUtils'
 import { createCacheKey, deleteCacheEntry } from '../../../shared/services/cacheService'
 import { CACHE_NAMESPACES } from '../../../shared/utils/cacheUtils'
 import { db } from '../../../lib/firebase'
@@ -152,8 +136,16 @@ const getUsersByIdsMap = async (userIds = []) => {
 
 }
 
+const deleteCourseReview = async (courseId, userId) => {
+    const reviewId = buildReviewId(courseId, userId)
+    const reviewRef = doc(db, 'courseReviews', reviewId)
+    await deleteDoc(reviewRef)
+    deleteCacheEntry(createCacheKey(COURSE_SCORE_CACHE_NAMESPACE, courseId))
+}
+
 export {
     upsertCourseReview,
+    deleteCourseReview,
     getCourseReviews,
     useCourseReviews,
     getCourseReviewsForCourseIds,
