@@ -225,7 +225,7 @@ const AddCourseModal = ({
                         </button>
                     </div>
 
-                    <div className='flex flex-col gap-2'>
+                    <div className='flex flex-col gap-2 mb-3'>
                         <p className='text-sm text-neutral1'>Color</p>
                         <div className='flex justify-between'>
                             {COURSE_COLORS.map((color, index) => {

@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, setDoc, where, documentId } from 'firebase/firestore'
+import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, setDoc, where, documentId, limit, startAfter } from 'firebase/firestore'
 import { useEffect, useState } from 'react'
 import { buildCourseScoreMap, clampReviewScore, computeAverageScoreFromReviews } from '../utils/reviewUtils'
 import { createCacheKey, deleteCacheEntry } from '../../../shared/services/cacheService'
@@ -43,17 +43,31 @@ const upsertCourseReview = async ({ courseId, userId, schoolId = null, teacherId
 
 }
 
-const getCourseReviews = async (courseId) => {
+const getCourseReviews = async (courseId, { limitCount = 9, cursor = null } = {}) => {
 
     const reviewsRef = collection(db, 'courseReviews')
-    const q = query(
+    const constraints = [
         reviewsRef,
         where('courseId', '==', String(courseId)),
-        orderBy('lastUpdated', 'desc')
-    )
+        orderBy('lastUpdated', 'desc'),
+        limit(limitCount),
+    ]
+
+    if(cursor) {
+        constraints.push(startAfter(cursor))
+    }
+
+    const q = query(...constraints)
 
     const snapshot = await getDocs(q)
-    return snapshot.docs.map((reviewDoc) => ({ uid: reviewDoc.id, ...reviewDoc.data() }))
+    const reviews = snapshot.docs.map((reviewDoc) => ({ uid: reviewDoc.id, ...reviewDoc.data() }))
+    const nextCursor = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null
+
+    return {
+        reviews,
+        nextCursor,
+        hasMore: snapshot.docs.length === limitCount,
+    }
 
 }
 
