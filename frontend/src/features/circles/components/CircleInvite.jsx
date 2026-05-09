@@ -32,14 +32,14 @@ const CircleInvite = ( { circle } ) => {
                     <FaUserFriends className="text-2xl text-sky-400"/>
                 </div>
 
-                <h1 className="text-xl font-semibold text-text1 flex">Invite Friends&nbsp;
+                <h1 className="text-xl font-semibold text-neutral1 flex">Invite Friends&nbsp;
 
                     <div
                         onClick={() => {
                             navigator.clipboard.writeText(circle.inviteCode);
                             setCopied(true)
                         }}
-                        className="flex items-center gap-2 group cursor-pointer text-text2"
+                        className="flex items-center gap-2 group cursor-pointer text-neutral2"
                     >
                         <h1 className="font-semibold text-xl">#{circle.inviteCode}</h1>
                         {copied ? (
@@ -53,9 +53,9 @@ const CircleInvite = ( { circle } ) => {
 
             </div>
 
-            <div className="flex items-center gap-2 text-text2 text-sm">
+            <div className="flex items-center gap-2 text-neutral2 text-sm">
 
-                <h1 className="text-text2">Or use a link: </h1>&nbsp;
+                <h1 className="text-neutral2">Or use a link: </h1>&nbsp;
 
                 <Button onClick={() => {
                     navigator.clipboard.writeText(`${window.location.origin}/#/join/${circle.inviteCode}`);

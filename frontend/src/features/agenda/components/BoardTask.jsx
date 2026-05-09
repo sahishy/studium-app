@@ -1,28 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
 import { useCircles } from '../../circles/contexts/CirclesContext'
 import { useCourses } from '../../courses/contexts/CoursesContext'
-import { updateTask } from '../services/taskService'
-import { extractTaskTitleMetadata, flattenTaskTitle, normalizeTaskTitle, parseTaskInput, parseTextToTaskTitle } from '../utils/naturalLanguage'
-import { TaskCircleInput, TaskDueDateInput, TaskStatusInput } from './TaskInputControls'
+import { enqueueTaskPatch } from '../services/taskCacheService'
+import TaskParsingInput from './TaskParsingInput'
+import { extractTaskTitleMetadata, flattenTaskTitle, normalizeTaskTitle, parseTaskInput } from '../utils/naturalLanguage'
+import { TaskCircleInput, TaskCourseInput, TaskDueDateInput, TaskStatusInput } from './TaskInputControls'
+import Card from '../../../shared/components/ui/Card'
 
 const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
+
     const circles = useCircles()
     const { courses } = useCourses()
 
     const [status, setStatus] = useState(task.status)
-    const initialTitle = flattenTaskTitle(task.title)
     const [title, setTitle] = useState(normalizeTaskTitle(task.title))
-    const [dueAt, setDueAt] = useState(task.dueAt ?? -1)
     const [ownerType, setOwnerType] = useState(task.ownerType || 'user')
     const [ownerId, setOwnerId] = useState(task.ownerId || profile.uid)
-    const [titleInput, setTitleInput] = useState(initialTitle)
-    const titleInputRef = useRef(null)
+    const inputRef = useRef(null)
+    const pendingPayloadRef = useRef(null)
 
     const isInitialMount = useRef(true)
     const prevTaskRef = useRef({
         status: task.status,
         title: normalizeTaskTitle(task.title),
-        dueAt: task.dueAt ?? -1,
         ownerType: task.ownerType || 'user',
         ownerId: task.ownerId || profile.uid,
     })
@@ -39,7 +39,6 @@ const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
             && JSON.stringify(title) === JSON.stringify(prev.title)
             && ownerType === prev.ownerType
             && ownerId === prev.ownerId
-            && JSON.stringify(dueAt) === JSON.stringify(prev.dueAt)
         ) {
             return
         }
@@ -49,40 +48,36 @@ const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
         const parsedTaskType = parseTaskInput(plainTitle, { courses, circles })?.parsed?.taskType || 'assignment'
         const resolvedTaskType = parsedMetadata.taskType || parsedTaskType || task.type || 'assignment'
 
-        updateTask(
+        enqueueTaskPatch(
             task.uid,
             {
                 status,
                 title,
-                dueAt,
                 ownerType,
                 ownerId,
                 type: resolvedTaskType,
             }
         )
 
-        prevTaskRef.current = { status, title, dueAt, ownerType, ownerId }
-    }, [circles, courses, ownerId, ownerType, status, task.type, task.uid, title, dueAt])
+        prevTaskRef.current = { status, title, ownerType, ownerId }
+    }, [circles, courses, ownerId, ownerType, status, task.type, task.uid, title])
 
     useEffect(() => {
         if(task.status !== status) setStatus(task.status)
         const taskTitleText = flattenTaskTitle(task.title)
         if(taskTitleText !== flattenTaskTitle(title)) {
             setTitle(normalizeTaskTitle(task.title))
-            setTitleInput(taskTitleText)
         }
-        if(JSON.stringify(task.dueAt ?? -1) !== JSON.stringify(dueAt)) setDueAt(task.dueAt ?? -1)
         if(task.ownerType !== ownerType) setOwnerType(task.ownerType || 'user')
         if(task.ownerId !== ownerId) setOwnerId(task.ownerId || profile.uid)
 
         prevTaskRef.current = {
             status: task.status,
             title: normalizeTaskTitle(task.title),
-            dueAt: task.dueAt ?? -1,
             ownerType: task.ownerType || 'user',
             ownerId: task.ownerId || profile.uid,
         }
-    }, [task.status, task.title, task.dueAt, task.ownerType, task.ownerId, profile.uid, title])
+    }, [task.status, task.title, task.ownerType, task.ownerId, profile.uid, title])
 
     useEffect(() => {
         if(ownerType === 'circle' && !circles.some((x) => x.uid === ownerId)) {
@@ -92,89 +87,87 @@ const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
     }, [circles, ownerType, ownerId, profile.uid])
 
     useEffect(() => {
-        if(autoFocus && titleInputRef.current) {
-            titleInputRef.current.focus()
-            const valueLength = titleInputRef.current.value.length
-            titleInputRef.current.setSelectionRange(valueLength, valueLength)
+        if(autoFocus) {
+            inputRef.current?.focusAtEnd?.()
         }
     }, [autoFocus])
 
-    const handleCommitTitle = (nextTitleInput) => {
-        const nextText = (nextTitleInput || '').trim()
-        const currentText = flattenTaskTitle(title)
-
-        if(nextText === currentText) {
-            setTitleInput(currentText)
+    useEffect(() => {
+        const metadata = extractTaskTitleMetadata(title)
+        if (metadata.circleId) {
+            if (ownerType !== 'circle' || String(ownerId) !== String(metadata.circleId)) {
+                setOwnerType('circle')
+                setOwnerId(metadata.circleId)
+            }
             return
         }
 
-        const parsed = parseTextToTaskTitle(nextText, { courses, circles })
-        setTitle(parsed.title)
-        setTitleInput(flattenTaskTitle(parsed.title))
-    }
+        if (ownerType === 'circle') {
+            setOwnerType('user')
+            setOwnerId(profile.uid)
+        }
+    }, [ownerId, ownerType, profile.uid, title])
 
     return (
-        <div className="flex flex-col gap-3 p-4 text-sm text-text1 group border-2 border-neutral4 rounded-xl bg-background0">
+        <Card>
             <div className="flex items-center gap-2">
                 <TaskStatusInput status={status} setStatus={setStatus} />
-                <TitleInput
-                    titleInput={titleInput}
-                    setTitleInput={setTitleInput}
-                    setTitle={handleCommitTitle}
-                    inputRef={titleInputRef}
-                    taskId={task.uid}
-                    setNewTaskId={setNewTaskId}
-                    variant="board"
-                />
+                <div className='w-full'>
+                    <TaskParsingInput
+                        inputRef={inputRef}
+                        title={title}
+                        circles={circles}
+                        courses={courses}
+                        className='w-full px-2 py-1'
+                        placeholder='Title'
+                        onCommit={(payload) => {
+                            pendingPayloadRef.current = payload
+                        }}
+                        onEnterKey={() => {
+                            const payload = pendingPayloadRef.current
+                            if (!payload) return
+                            setTitle(payload.title)
+                            pendingPayloadRef.current = null
+                        }}
+                        onBlur={() => {
+                            const payload = pendingPayloadRef.current
+                            if (payload) {
+                                setTitle(payload.title)
+                                pendingPayloadRef.current = null
+                            }
+                            setNewTaskId?.(-1)
+                        }}
+                    />
+                </div>
             </div>
 
             <div className="flex gap-3">
                 <TaskDueDateInput
-                    dueAt={dueAt}
-                    setDueAt={setDueAt}
+                    title={title}
+                    setTitle={setTitle}
                     className='justify-self-start self-start max-w-full'
                 />
                 <TaskCircleInput
                     userId={profile.uid}
                     ownerType={ownerType}
                     ownerId={ownerId}
+                    title={title}
+                    setTitle={setTitle}
                     setOwnerType={setOwnerType}
                     setOwnerId={setOwnerId}
                     circles={circles}
                     className='justify-self-start self-start max-w-full'
                 />
+                <TaskCourseInput
+                    title={title}
+                    setTitle={setTitle}
+                    courses={courses}
+                    className='justify-self-start self-start max-w-full'
+                />
             </div>
-        </div>
+        </Card>
     )
+    
 }
-
-const TitleInput = ({ titleInput, setTitleInput, setTitle, inputRef, taskId, setNewTaskId, variant, placeholder = 'Title' }) => {
-    const handleBlur = () => {
-        setTitle(titleInput)
-        if(setNewTaskId) {
-            setNewTaskId(-1)
-        }
-    }
-
-    const className = variant === 'board'
-        ? 'text-left w-full p-2 focus:outline-none text-wrap'
-        : 'text-left w-full p-2 focus:outline-none overflow-ellipsis'
-
-    return (
-        <input
-            ref={inputRef}
-            type="text"
-            value={titleInput}
-            placeholder={placeholder}
-            onChange={(e) => setTitleInput(e.target.value)}
-            onKeyUp={(e) => {
-                if(e.key === 'Enter') e.target.blur()
-            }}
-            className={className}
-            onBlur={handleBlur}
-        />
-    )
-}
-
 
 export default BoardTask

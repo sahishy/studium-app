@@ -87,6 +87,41 @@ const toDateFromRelativeInput = (value) => {
     return null
 }
 
+const toStartOfDay = (value) => {
+    const date = value instanceof Date ? new Date(value) : toDateFromRelativeInput(value)
+    if(!date) return null
+    date.setHours(0, 0, 0, 0)
+    return date
+}
+
+const getCalendarDayDifference = (fromValue, toValue) => {
+    const from = toStartOfDay(fromValue)
+    const to = toStartOfDay(toValue)
+    if(!from || !to) return null
+
+    const msPerDay = DATE_MS.day
+    return Math.round((to.getTime() - from.getTime()) / msPerDay)
+}
+
+const isRelativeDatePast = (value, nowValue = new Date()) => {
+    const dayDiff = getCalendarDayDifference(nowValue, value)
+    if(dayDiff == null) return false
+    return dayDiff < 0
+}
+
+const formatMonthDayOrdinal = (date) => {
+    const day = date.getDate();
+    let suffix = 'th';
+    if(!(day % 100 >= 10 && day % 100 <= 19)) {
+        if(day % 10 === 1) suffix = 'st';
+        else if(day % 10 === 2) suffix = 'nd';
+        else if(day % 10 === 3) suffix = 'rd';
+    }
+
+    const monthDay = date.toLocaleDateString('default', { day: 'numeric', month: 'long' });
+    return `${monthDay}${suffix}`;
+}
+
 const formatRelativeTaskDate = (value, options = {}) => {
     const { fallbackLabel = '' } = options
     const target = toDateFromRelativeInput(value)
@@ -105,7 +140,7 @@ const formatRelativeTaskDate = (value, options = {}) => {
     const diff = dateMs - now;
 
     if(diff < 0) {
-        return target.toLocaleDateString();
+        return formatMonthDayOrdinal(target);
     }
 
     if(diff < DATE_MS.week) {
@@ -118,19 +153,10 @@ const formatRelativeTaskDate = (value, options = {}) => {
     }
 
     if(diff < DATE_MS.year) {
-        const day = target.getDate();
-        let suffix = 'th';
-        if(!(day % 100 >= 10 && day % 100 <= 19)) {
-            if(day % 10 === 1) suffix = 'st';
-            else if(day % 10 === 2) suffix = 'nd';
-            else if(day % 10 === 3) suffix = 'rd';
-        }
-
-        const monthDay = target.toLocaleDateString('default', { day: 'numeric', month: 'long' });
-        return `${monthDay}${suffix}`;
+        return formatMonthDayOrdinal(target);
     }
 
-    return target.toLocaleDateString();
+    return formatMonthDayOrdinal(target);
 }
 
 export {
@@ -141,6 +167,10 @@ export {
     formatDurationMmSs,
     formatTimeFromFirestoreLike,
     toDateFromFirestoreLike,
+    toDateFromRelativeInput,
+    toStartOfDay,
+    getCalendarDayDifference,
+    isRelativeDatePast,
     toMillisFromFirestoreLike,
     toTitleCase,
 }

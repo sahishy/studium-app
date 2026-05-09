@@ -32,7 +32,8 @@
 
 
 html {
-    background-color: var(--color-background0);
+
+    background-color: var(--color-neutral6);
 
     font-family: "BasierSquare", sans-serif;
     font-weight: 400;
@@ -47,17 +48,40 @@ html {
     @apply focus:outline-neutral0;
 }
 
-@media (prefers-color-scheme: light) {
+@custom-variant dark (&:where(.dark, .dark *));
 
-    @theme {
+@theme {
 
-        --color-neutral0: #1F2937;
-        --color-neutral1: #9CA3AF;
-        --color-neutral2: #D1D5DB;
-        --color-neutral3: #E5E7EB;
-        --color-neutral4: #ebedf2;
-        --color-neutral5: #F3F4F6;
-        --color-neutral6: white;
+    --color-neutral0: #1F2937;
+    --color-neutral1: #9CA3AF;
+    --color-neutral2: #D1D5DB;
+    --color-neutral3: #E5E7EB;
+    --color-neutral4: #ebedf2;
+    --color-neutral5: #F3F4F6;
+    --color-neutral6: white;
+
+    --color-sat0: #325fcd;
+    --color-sat1: #4772de;
+
+    --color-primary0: theme(--color-gray-800);
+    --color-primary1: theme(--color-gray-900);
+
+    --color-shadow: oklch(70.7% 0.022 261.325 / 0.1);
+    --color-backdrop: oklch(27.8% 0.033 256.848 / 0.2);
+
+}
+
+@layer base {
+
+    .dark {
+
+        --color-neutral0: white;
+        --color-neutral1: #78797e;
+        --color-neutral2: #393a41;
+        --color-neutral3: #2f3037;
+        --color-neutral4: #26262c;
+        --color-neutral5: #1c1c21;
+        --color-neutral6: #131316;
 
         --color-sat0: #325fcd;
         --color-sat1: #4772de;
@@ -65,21 +89,7 @@ html {
         --color-primary0: theme(--color-gray-800);
         --color-primary1: theme(--color-gray-900);
 
-        --color-background0: theme(--color-white);
-        --color-background1: theme(--color-white);
-        --color-background2: oklch(97.6% 0.0025 256.0);
-        --color-background3: theme(--color-gray-100);
-        --color-background4: #f5f6f7;
-        --color-background5: oklch(70.7% 0.022 261.325 / 0.1);
-
-        --color-text0: theme(--color-gray-800);
-        --color-text1: theme(--color-gray-600);
-        --color-text2: theme(--color-gray-400);
-        --color-text3: theme(--color-gray-300);
-        --color-text4: white;
-
-        --color-border: theme(--color-gray-200);
-        --color-shadow: oklch(70.7% 0.022 261.325 / 0.1);
+        --color-shadow: transparent;
         --color-backdrop: oklch(27.8% 0.033 256.848 / 0.2);
 
     }

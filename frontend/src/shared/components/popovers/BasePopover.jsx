@@ -118,7 +118,7 @@ const BasePopover = ({ children, content, className = '', onOpen }) => {
                         <div
                             ref={popoverRef}
                             className={`
-                                absolute z-[4001] p-2 bg-background0 rounded-xl border border-neutral4 shadow-lg shadow-shadow
+                                absolute z-[4001] p-2 bg-neutral6 dark:bg-neutral5 rounded-xl border border-neutral4 shadow-lg shadow-shadow
                                 w-fit h-fit min-w-50
 
                                 {/* tailwindcss-ignore-next-line */}

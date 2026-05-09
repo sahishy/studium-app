@@ -199,7 +199,7 @@ const AllCoursesTab = () => {
                     <div className='w-full flex justify-center py-8'>
                         <button
                             onClick={openPalette}
-                            className='px-6 py-3 bg-neutral5 rounded-full text-neutral1 hover:bg-neutral4 cursor-pointer
+                            className='px-6 py-3 text-sm bg-neutral5 rounded-full text-neutral1 hover:bg-neutral4 cursor-pointer
                                 flex gap-3 items-center w-96 hover:w-104 transition-all'
                         >
                             <FaMagnifyingGlass className='text-neutral0'/>

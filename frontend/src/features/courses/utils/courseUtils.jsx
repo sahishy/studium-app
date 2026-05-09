@@ -4,14 +4,14 @@ import { FaBookBookmark, FaBuilding, FaDumbbell, FaFlask, FaGlobe, FaMasksTheate
 
 // tailwind colors 400/100
 const COURSE_COLORS = [
-    { icon: '#9ca3af', bg: '#f3f4f6' },
-    { icon: '#f87171', bg: '#fee2e2' },
-    { icon: '#fb923c', bg: '#ffedd5' },
-    { icon: '#fbbf24', bg: '#fef3c7' },
-    { icon: '#4ade80', bg: '#dcfce7' },
-    { icon: '#38bdf8', bg: '#e0f2fe' },
-    { icon: '#c084fc', bg: '#f3e8ff' },
-    { icon: '#f472b6', bg: '#fce7f3' },
+    '#9ca3af',
+    '#f87171',
+    '#fb923c',
+    '#fbbf24',
+    '#4ade80',
+    '#38bdf8',
+    '#c084fc',
+    '#f472b6'
 ]
 
 const SUBJECT_ICONS = {

@@ -20,9 +20,9 @@ import { FaEdit } from 'react-icons/fa'
 import EditStatsModal from '../components/modals/EditStatsModal'
 import EditDisplayNameModal from '../components/modals/EditDisplayNameModal'
 import EditMajorModal from '../components/modals/EditMajorModal'
-import podium from '../../../assets/images/podium.png'
 import { ACT_MAX, ACT_MIN, GPA_MAX, GPA_MIN, SAT_MAX, SAT_MIN, getDraftAcademicFromStats, getParsedNumber, toModeLabel } from '../utils/profileUtils'
 import { useUserStats } from '../contexts/UserStatsContext'
+import Podium from '../../../shared/components/avatar/Podium'
 
 const SAT_CLASSIC_MODE_ID = 'sat-classic'
 
@@ -441,7 +441,7 @@ const ProfileOverview = () => {
                                                 )}
                                             </div>
                                             <p className={`font-bold z-1 ${unweightedGpa ? 'text-neutral0 text-5xl' : 'text-neutral1 text-xl'}`}>{unweightedGpa ?? 'Not provided'}</p>
-                                            <img src={podium} className='absolute top-4 w-32 h-32 object-contain pointer-events-none' />
+                                            <Podium className={'absolute top-4 w-32 h-32 object-contain pointer-events-none'}/>
                                         </div>
 
                                         <div className='relative flex flex-col gap-1 items-center w-32 h-24'>
@@ -465,7 +465,7 @@ const ProfileOverview = () => {
                                                 )}
                                             </div>
                                             <p className={`font-bold z-1 ${weightedGpa ? 'text-neutral0 text-5xl' : 'text-neutral1 text-xl'}`}>{weightedGpa ?? 'Not provided'}</p>
-                                            <img src={podium} className='absolute top-4 w-32 h-32 object-contain pointer-events-none' />
+                                            <Podium className={'absolute top-4 w-32 h-32 object-contain pointer-events-none'}/>
                                         </div>
 
                                     </div>
@@ -474,7 +474,7 @@ const ProfileOverview = () => {
 
                             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
 
-                                <Card className='relative gap-9! p-0! overflow-hidden flex items-center justify-end bg-sat0'>
+                                <Card className='relative gap-9! p-0! overflow-hidden flex items-center justify-end bg-sat0!'>
 
                                     <p className='text-lg font-semibold text-white z-1 mt-6'>SAT®</p>
 
@@ -500,7 +500,7 @@ const ProfileOverview = () => {
                                             {satScore !== null ? (
                                                 <>
                                                     <p className='text-xs font-semibold mb-1'>TOTAL SCORE</p>
-                                                    <p className='text-6xl font-bold text-neutral0'>{satScore}</p>
+                                                    <p className='text-6xl font-bold text-[#1F2937]'>{satScore}</p>
                                                     <p className='text-xs font-semibold text-neutral1 underline underline-offset-3'>400-1600</p>
                                                 </>
                                             ) : (

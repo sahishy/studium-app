@@ -3,22 +3,15 @@ import { ReactEditor, useSlateStatic } from 'slate-react'
 import { Transforms } from 'slate'
 import DatePicker from '../../../shared/components/popovers/DatePicker'
 import Select from '../../../shared/components/popovers/Select'
-import { formatRelativeTaskDate } from '../../../shared/utils/formatters'
+import { resolveTaskDateWidgetLabel } from '../utils/taskDateDisplayUtils'
 import { isTitleMostlyLowercase } from '../utils/taskParsingSlateUtils'
+import { buildCircleOptions, buildCircleWidgetSegment, buildCourseOptions, buildCourseWidgetSegment, buildDateWidgetSegment, getDateControlState } from '../utils/taskWidgetControlUtils'
 
-const formatLocalDateKey = (value) => {
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return ''
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
-}
-
-// Prevents the editor from losing its selection when clicking a widget button
+// prevent editor from losing selection when clicking widget button
 const preventEditorBlur = (event) => event.preventDefault()
 
 const TaskWidgetElement = ({ attributes, children, element, isCompleted = false, circles = [], courses = [], onWidgetCommit, inverted }) => {
+
     const editor = useSlateStatic()
     const widgetType = element.segment?.widgetType || 'token'
     const label = element.segment?.rawText || element.segment?.displayText || widgetType
@@ -29,39 +22,41 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
             Transforms.setNodes(editor, { segment: nextSegment }, { at: path })
             onWidgetCommit?.()
         } catch {
-            // stale path — element was removed before update fired
+            // element removed before update fired
         }
     }, [editor, element, onWidgetCommit])
 
-    const baseChipClass = `mx-[1px] rounded-md px-1.5 py-0.5 text-sm text-neutral0 transition inline-flex items-center cursor-pointer ${isCompleted ? 'opacity-60 line-through' : 'opacity-100'}`
+    const baseChipClass = `mx-[1px] rounded-md px-1.5 py-0.5 text-sm text-neutral0 transition inline-flex items-center cursor-pointer ${isCompleted ? 'opacity-40 line-through' : 'opacity-100'}`
     const chipClass = `${baseChipClass} ${inverted ? 'bg-neutral6 hover:bg-neutral6/60' : 'bg-neutral5 hover:bg-neutral4'}`
     const chipOpenClass = inverted ? 'bg-neutral6/80!' : 'bg-neutral4!'
 
     if (widgetType === 'date') {
         const currentDate = element.segment?.value?.dueDate || ''
-        const selectedDate = currentDate
-            ? { seconds: Math.floor(new Date(`${currentDate}T00:00:00`).getTime() / 1000) }
-            : -1
+        const dynamicLabel = resolveTaskDateWidgetLabel({ editor, element, rawLabel: label, dueDate: currentDate })
+        const { selectedDate } = getDateControlState({ segments: [element.segment] })
 
         return (
             <span {...attributes} contentEditable={false} className='inline-flex align-baseline'>
                 <DatePicker
                     selectedDate={selectedDate}
                     onSelect={(date) => {
-                        const nextDueDate = date === -1 ? '' : formatLocalDateKey(date)
-                        const nextDateLabel = nextDueDate
-                            ? formatRelativeTaskDate(nextDueDate, { fallbackLabel: nextDueDate })
-                            : ''
-                        const resolvedLabel = isTitleMostlyLowercase(label)
-                            ? nextDateLabel.toLowerCase()
-                            : nextDateLabel
+                        if (date === -1) {
+                            updateWidgetSegment({
+                                ...element.segment,
+                                rawText: '',
+                                displayText: '',
+                                value: { ...(element.segment?.value || {}), dueDate: '' },
+                            })
+                            return
+                        }
 
-                        updateWidgetSegment({
-                            ...element.segment,
-                            rawText: resolvedLabel || label,
-                            displayText: resolvedLabel || label,
-                            value: { ...(element.segment?.value || {}), dueDate: nextDueDate },
+                        const nextSegment = buildDateWidgetSegment({
+                            currentSegment: element.segment,
+                            date,
+                            toLabel: (nextLabel) => (isTitleMostlyLowercase(label) ? nextLabel.toLowerCase() : nextLabel),
                         })
+
+                        updateWidgetSegment(nextSegment)
                     }}
                 >
                     {(isOpen) => (
@@ -70,7 +65,7 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
                             onMouseDown={preventEditorBlur}
                             className={`${chipClass} ${isOpen && chipOpenClass}`}
                         >
-                            <span>{label}</span>
+                            <span>{dynamicLabel || label}</span>
                         </button>
                     )}
                 </DatePicker>
@@ -80,10 +75,7 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
     }
 
     if (widgetType === 'circle') {
-        const options = [
-            { uid: null, label: 'None', icon: null },
-            ...circles.map((circle) => ({ uid: circle.uid, label: circle.title, icon: null })),
-        ]
+        const options = buildCircleOptions(circles)
 
         return (
             <span {...attributes} contentEditable={false} className='inline-flex align-baseline'>
@@ -94,16 +86,23 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
                         return option.uid === null ? !currentCircleId : String(option.uid) === String(currentCircleId)
                     }}
                     onSelect={(option) => {
-                        const chosenTitle = option?.uid
-                            ? (circles.find((x) => x.uid === option.uid)?.title || option.label || label)
-                            : 'None'
+                        if (!option?.uid) {
+                            updateWidgetSegment({
+                                ...element.segment,
+                                rawText: '',
+                                displayText: '',
+                                value: { ...(element.segment?.value || {}), circleId: '', title: '' },
+                            })
+                            return
+                        }
 
-                        updateWidgetSegment({
-                            ...element.segment,
-                            rawText: chosenTitle,
-                            displayText: chosenTitle,
-                            value: { ...(element.segment?.value || {}), circleId: option?.uid || '', title: chosenTitle },
-                        })
+                        const chosenTitle = circles.find((x) => x.uid === option.uid)?.title || option.label || label
+                        updateWidgetSegment(buildCircleWidgetSegment({
+                            currentSegment: element.segment,
+                            circleId: option.uid,
+                            circles,
+                            fallbackLabel: chosenTitle,
+                        }))
                     }}
                 >
                     {(isOpen) => (
@@ -122,9 +121,7 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
     }
 
     if (widgetType === 'course') {
-        const options = courses.length
-            ? courses.map((course) => ({ uid: String(course.courseId), label: course.title, icon: null, course }))
-            : [{ uid: null, label: 'No courses', icon: null }]
+        const options = buildCourseOptions(courses)
 
         return (
             <span {...attributes} contentEditable={false} className='inline-flex align-baseline'>
@@ -132,22 +129,25 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
                     options={options}
                     isOptionSelected={(option) => String(option.uid || '') === String(element.segment?.value?.courseId || '')}
                     onSelect={(option) => {
-                        if (!option?.uid) return
+                        if (!option?.uid) {
+                            updateWidgetSegment({
+                                ...element.segment,
+                                rawText: '',
+                                displayText: '',
+                                value: { ...(element.segment?.value || {}), courseId: '', title: '', subject: '' },
+                            })
+                            return
+                        }
+
                         const course = option.course || courses.find((x) => String(x.courseId) === String(option.uid))
                         const courseTitle = course?.title || option.label || label
-                        const resolvedTitle = isTitleMostlyLowercase(label) ? courseTitle.toLowerCase() : courseTitle
-
-                        updateWidgetSegment({
-                            ...element.segment,
-                            rawText: resolvedTitle,
-                            displayText: resolvedTitle,
-                            value: {
-                                ...(element.segment?.value || {}),
-                                courseId: String(option.uid),
-                                title: courseTitle,
-                                subject: course?.subject || '',
-                            },
-                        })
+                        updateWidgetSegment(buildCourseWidgetSegment({
+                            currentSegment: element.segment,
+                            courseId: String(option.uid),
+                            courses,
+                            fallbackLabel: courseTitle,
+                            toLabel: (nextLabel) => (isTitleMostlyLowercase(label) ? nextLabel.toLowerCase() : nextLabel),
+                        }))
                     }}
                 >
                     {(isOpen) => (
@@ -165,7 +165,7 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
         )
     }
 
-    // Fallback for unrecognized/token widget types
+    // fallback for unrecognized widget
     return (
         <span {...attributes} contentEditable={false} className='inline-flex align-baseline'>
             <span data-task-widget-chip className={baseChipClass}>

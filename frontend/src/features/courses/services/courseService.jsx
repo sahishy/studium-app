@@ -137,7 +137,7 @@ const joinCourse = async (studentId, courseId, options = {}) => {
     const {
         day = 'A',
         teacherId = null,
-        customization = { bgColor: '#1f2937', iconColor: '#ffffff' }
+        customization = { color: '#ffffff' }
     } = options
     
     const enrollmentId = buildEnrollmentId(courseId, studentId)
@@ -151,8 +151,7 @@ const joinCourse = async (studentId, courseId, options = {}) => {
             day: day === 'B' ? 'B' : 'A',
             teacherId: teacherId ? String(teacherId) : null,
             customization: {
-                bgColor: customization?.bgColor ?? '#1f2937',
-                iconColor: customization?.iconColor ?? '#ffffff'
+                color: customization?.color ?? '#ffffff'
             },
             lastUpdated: now
         }, { merge: true })
@@ -169,8 +168,7 @@ const joinCourse = async (studentId, courseId, options = {}) => {
             day: day === 'B' ? 'B' : 'A',
             teacherId: teacherId ? String(teacherId) : null,
             customization: {
-                bgColor: customization?.bgColor ?? '#1f2937',
-                iconColor: customization?.iconColor ?? '#ffffff'
+                color: customization?.color ?? '#ffffff'
             },
             sortIndex,
             createdAt: now,

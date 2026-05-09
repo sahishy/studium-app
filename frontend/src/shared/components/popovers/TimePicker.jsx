@@ -22,7 +22,7 @@ const TimePicker = ({ children, onSelect, selectedTime, className = '' }) => {
             <div className='flex flex-col items-center gap-2'>
                     <button
                         onClick={() => setTime(time + 60)}
-                        className="p-2 border-2 border-neutral4 border-b-4 rounded-xl hover:bg-background5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all "
+                        className="p-2 border-2 border-neutral4 border-b-4 rounded-xl hover:bg-neutral3 active:mt-[2px] active:border-b-2 cursor-pointer transition-all "
                     >
                         <PiCaretUpFill/>
                     </button>
@@ -31,14 +31,14 @@ const TimePicker = ({ children, onSelect, selectedTime, className = '' }) => {
                         <h1 className="font-semibold text-lg">
                             {Math.floor(time / 60)}
                         </h1>
-                        <p className="font-semibold text-text2">
+                        <p className="font-semibold text-neutral2">
                             hours
                         </p>                        
                     </div>
 
                     <button
                         onClick={() => time >= 60 && setTime(time - 60) }
-                        className={`p-2 border-2 border-neutral4 border-b-4 rounded-xl transition-all  ${time < 60 ? 'opacity-50' : ' active:mt-[2px] active:border-b-2 hover:bg-background5 cursor-pointer'}`}
+                        className={`p-2 border-2 border-neutral4 border-b-4 rounded-xl transition-all  ${time < 60 ? 'opacity-50' : ' active:mt-[2px] active:border-b-2 hover:bg-neutral3 cursor-pointer'}`}
                     >
                         <PiCaretDownFill/>
                     </button>
@@ -47,7 +47,7 @@ const TimePicker = ({ children, onSelect, selectedTime, className = '' }) => {
                 <div className='flex flex-col items-center gap-2'>
                     <button
                         onClick={() => setTime(time + 5)}
-                        className="p-2 border-2 border-neutral4 border-b-4 rounded-xl hover:bg-background5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all "
+                        className="p-2 border-2 border-neutral4 border-b-4 rounded-xl hover:bg-neutral3 active:mt-[2px] active:border-b-2 cursor-pointer transition-all "
                     >
                         <PiCaretUpFill/>
                     </button>
@@ -56,14 +56,14 @@ const TimePicker = ({ children, onSelect, selectedTime, className = '' }) => {
                         <h1 className="font-semibold text-lg">
                             {time % 60}
                         </h1>
-                        <p className="font-semibold text-text2">
+                        <p className="font-semibold text-neutral2">
                             mins
                         </p>                        
                     </div>
 
                     <button
                         onClick={() => setTime(Math.max(time - 5, 0))}
-                        className={`p-2 border-2 border-neutral4 border-b-4 rounded-xl transition-all  ${time === 0 ? 'opacity-50' : ' active:mt-[2px] active:border-b-2 hover:bg-background5 cursor-pointer'}`}
+                        className={`p-2 border-2 border-neutral4 border-b-4 rounded-xl transition-all  ${time === 0 ? 'opacity-50' : ' active:mt-[2px] active:border-b-2 hover:bg-neutral3 cursor-pointer'}`}
                     >
                         <PiCaretDownFill/>
                     </button>
@@ -77,7 +77,7 @@ const TimePicker = ({ children, onSelect, selectedTime, className = '' }) => {
                         handleSelectTime(0);
                         closePopover();
                     }}
-                    className='w-full p-2 border-2 border-neutral4 border-b-4 rounded-xl hover:bg-background5 active:mt-[2px] active:border-b-2 cursor-pointer transition-all '
+                    className='w-full p-2 border-2 border-neutral4 border-b-4 rounded-xl hover:bg-neutral3 active:mt-[2px] active:border-b-2 cursor-pointer transition-all '
                 >
                     Clear
                 </button>

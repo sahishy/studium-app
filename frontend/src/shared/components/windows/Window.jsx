@@ -211,7 +211,7 @@ const Window = ({ isOpen,  onClose, title = 'Window', children, initialPosition,
                 role='dialog'
                 aria-modal='false'
                 tabIndex={-1}
-                className={`pointer-events-auto absolute bg-background0 rounded-xl border border-neutral4 shadow-2xl shadow-neutral0/10 overflow-hidden ${className}`}
+                className={`pointer-events-auto absolute bg-neutral6 rounded-xl border border-neutral4 shadow-2xl shadow-neutral0/10 overflow-hidden ${className}`}
                 style={{
                     width: initialSize?.width,
                     height: initialSize?.height,

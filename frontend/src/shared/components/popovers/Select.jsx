@@ -49,7 +49,7 @@ const Select = ({
 
                             closePopover()
                         }}
-                        className={`flex items-center justify-between p-2 text-sm rounded-xl cursor-pointer transition-colors ${isSelected ? 'bg-neutral5 text-neutral0' : 'text-neutral0 hover:bg-neutral5/60'}`}
+                        className={`flex items-center justify-between p-2 text-sm rounded-xl cursor-pointer transition-colors ${isSelected ? 'bg-neutral5 dark:bg-neutral4 text-neutral0' : 'text-neutral0 hover:bg-neutral5/60'}`}
                     >
                         <span className='flex items-center gap-2 truncate'>
                             {option?.icon ? <span className='text-neutral1'>{option.icon}</span> : null}
@@ -75,7 +75,7 @@ const Select = ({
                 return (
                     <button
                         type='button'
-                        className='w-full flex items-center justify-between px-4 py-3 rounded-xl border border-neutral4 text-left text-sm text-neutral0 hover:bg-neutral5 transition-colors cursor-pointer'
+                        className='w-full flex items-center justify-between px-4 py-3 rounded-xl border border-neutral4 text-left text-sm text-neutral0 hover:bg-neutral5 dark:hover:bg-neutral4 transition-colors cursor-pointer'
                     >
                         <span className='truncate text-neutral0'>
                             {selectedOption?.label ?? placeholder}

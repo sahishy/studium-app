@@ -4,19 +4,7 @@ import { FaCalculator } from 'react-icons/fa6'
 
 const DASHES = Array.from({ length: 12 }, (_, i) => i)
 
-const QuestionPane = ({
-    gameState,
-    currentQuestion,
-    submittedResponse,
-    isSprQuestion,
-    isCalculatorOpen,
-    onToggleCalculator,
-    isBusy,
-    hasAnswered,
-    onChoiceSelect,
-    onResponseChange,
-    onSubmit,
-}) => {
+const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQuestion, isCalculatorOpen, onToggleCalculator, isBusy, hasAnswered, onChoiceSelect, onResponseChange, onSubmit }) => {
 
     const normalizedResponse = String(submittedResponse ?? '').trim()
     const normalizedResponseUpper = normalizedResponse.toUpperCase()
@@ -59,14 +47,17 @@ const QuestionPane = ({
                     <HtmlContent html={currentQuestion?.prompt || 'Loading question...'} />
 
                     {isSprQuestion ? (
-                        <input
-                            type='text'
-                            value={submittedResponse ?? ''}
-                            onChange={(event) => onResponseChange?.(event.target.value)}
-                            disabled={isBusy}
-                            placeholder='Enter your answer'
-                            className='w-full max-w-md rounded-xl border border-neutral4 bg-neutral6 p-3 text-neutral0 focus:outline-none focus:ring-2 focus:ring-sat0 disabled:opacity-60'
-                        />
+                        <div className='relative max-w-24 flex items-center justify-center'>
+                            <input
+                                type='text'
+                                value={submittedResponse ?? ''}
+                                onChange={(event) => onResponseChange?.(event.target.value)}
+                                disabled={isBusy}
+                                className='text-center w-full rounded-xl border border-neutral0 bg-neutral6 p-3 text-neutral0 focus:outline-none focus:ring-2 focus:ring-sat0 disabled:opacity-60'
+                            />   
+                            <hr className='absolute bottom-2 w-18 border-neutral0'/>                         
+                        </div>
+
                     ) : (
                         <div className='flex flex-col gap-3 w-full'>
                             {(currentQuestion?.choices ?? []).map((choice) => (
@@ -102,9 +93,7 @@ const QuestionPane = ({
             {isSprQuestion ? (
                 <>
                     <div className='relative flex-1 min-h-0 h-full overflow-y-auto pr-3'>
-                        <div className='rounded-xl border border-neutral4 bg-neutral5 p-4 text-sm text-neutral1'>
-                            Information here
-                        </div>
+                        <FreeResponseDirections />
                     </div>
 
                     <hr className='border-2 border-neutral1 h-full rounded-full' />
@@ -138,6 +127,121 @@ const QuestionPane = ({
 
     )
 
+}
+
+const FreeResponseDirections = () => {
+    return (
+        <div className="flex flex-col gap-6 mr-3">
+            <div className="flex flex-col gap-3 text-sm">
+                <h2 className="font-semibold text-lg">
+                    Student-produced response directions
+                </h2>
+
+                <ul className="list-disc pl-5 space-y-1">
+                    <li>If you find <span className='font-semibold'>more than one correct answer</span>, enter only one answer.</li>
+                    <li>
+                        You can enter up to 5 characters for a <span className='font-semibold'>positive</span> answer and up to 6
+                        characters (including the negative sign) for a <span className='font-semibold'>negative</span> answer.
+                    </li>
+                    <li>
+                        If your answer is a <span className='font-semibold'>fraction</span> that doesn't fit in the provided space,
+                        enter the decimal equivalent.
+                    </li>
+                    <li>
+                        If your answer is a <span className='font-semibold'>decimal</span> that doesn't fit in the provided space,
+                        enter it by truncating or rounding at the fourth digit.
+                    </li>
+                    <li>
+                        If your answer is a <span className='font-semibold'>mixed number</span> (such as <span className='font-semibold'>3 1/2</span>), enter it as an
+                        improper fraction (7/2) or its decimal equivalent (3.5).
+                    </li>
+                    <li>
+                        Don't enter <span className='font-semibold'>symbols</span> such as a percent sign, comma, or dollar sign.
+                    </li>
+                </ul>
+            </div>
+
+            <div className="flex flex-col gap-1">
+                <h1 className="text-sm self-center">Examples</h1>
+
+                <table className="w-full border border-black border-collapse text-center">
+                    <thead>
+                        <tr className="border border-black">
+                            <th className="border border-black px-4 py-4 text-sm font-normal">
+                                Answer
+                            </th>
+                            <th className="border border-black px-4 py-4 text-sm font-normal">
+                                Acceptable way to enter answer
+                            </th>
+                            <th className="border border-black px-4 py-4 text-sm font-normal">
+                                Unacceptable: will NOT receive credit
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody className="text-sm">
+
+                        <tr className="border border-black">
+                            <td className="border border-black px-3 py-6 font-semibold">3.5</td>
+                            <td className="border border-black px-3 py-4 leading-relaxed">
+                                <div>3.5</div>
+                                <div>3.50</div>
+                                <div>7/2</div>
+                            </td>
+                            <td className="border border-black px-3 py-4 leading-relaxed">
+                                <div>31/2</div>
+                                <div>3 1/2</div>
+                            </td>
+                        </tr>
+
+                        <tr className="border border-black">
+                            <td className="border border-black px-3 py-6 font-semibold">
+                                <span className="inline-flex flex-col items-center leading-none">
+                                    <span>2</span>
+                                    <span className="border-t border-black px-1">3</span>
+                                </span>
+                            </td>
+                            <td className="border border-black px-3 py-4 leading-relaxed">
+                                <div>2/3</div>
+                                <div>.6666</div>
+                                <div>.6667</div>
+                                <div>0.666</div>
+                                <div>0.667</div>
+                            </td>
+                            <td className="border border-black px-3 py-4 leading-relaxed">
+                                <div>0.66</div>
+                                <div>.66</div>
+                                <div>0.67</div>
+                                <div>.67</div>
+                            </td>
+                        </tr>
+
+                        <tr className="border border-black">
+                            <td className="border border-black px-3 py-6 font-semibold">
+                                <span className="inline-flex items-center gap-1">
+                                    <span>-</span>
+                                    <span className="inline-flex flex-col items-center leading-none">
+                                        <span>1</span>
+                                        <span className="border-t border-black px-1">3</span>
+                                    </span>
+                                </span>
+                            </td>
+                            <td className="border border-black px-3 py-4 leading-relaxed">
+                                <div>-1/3</div>
+                                <div>-.3333</div>
+                                <div>-0.333</div>
+                            </td>
+                            <td className="border border-black px-3 py-4 leading-relaxed">
+                                <div>-.33</div>
+                                <div>-0.33</div>
+                            </td>
+                        </tr>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    )
 }
 
 export default QuestionPane

@@ -1,11 +1,18 @@
 import { Element as SlateElement, Text, Transforms, Editor } from 'slate'
 import { normalizeTaskTitle } from './naturalLanguage'
 
-// Checks if the user typed the text in lowercase (so we can match their casing
-// when replacing it with a formatted label like a date or course name).
 const isTitleMostlyLowercase = (rawText = '') => {
     const text = String(rawText || '')
     return text === text.toLowerCase() && /[a-z]/.test(text)
+}
+
+const isMajorityLowercase = (rawText = '') => {
+    const text = String(rawText || '')
+    const letters = text.match(/[a-z]/gi) || []
+    if (!letters.length) return false
+
+    const lowercaseCount = letters.filter((char) => char === char.toLowerCase()).length
+    return lowercaseCount / letters.length >= 0.5
 }
 
 const makeWidgetElement = (segment) => ({
@@ -21,7 +28,7 @@ const segmentsToSlateChildren = (title) => {
         return [{ text: segment.displayText ?? segment.rawText ?? '' }]
     })
 
-    // Slate requires a trailing text node after a void/inline element
+    // slate requires trailing text node after inline element
     const last = children[children.length - 1]
     if (last && SlateElement.isElement(last) && last.type === 'task-widget') {
         children.push({ text: '' })
@@ -122,6 +129,7 @@ const replaceTextNodeWithWidget = ({ editor, path, text, candidate, caret }) => 
 
 export {
     isTitleMostlyLowercase,
+    isMajorityLowercase,
     segmentsToSlateChildren,
     slateChildrenToSegments,
     replaceTextNodeWithWidget,

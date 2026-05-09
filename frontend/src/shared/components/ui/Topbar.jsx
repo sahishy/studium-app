@@ -11,7 +11,7 @@ const Topbar = ({ profile }) => {
 
     return (
         <div className="sticky top-0 z-40 bg-neutral6/60 backdrop-blur-xs">
-            <div className='text-text0 w-full m-auto px-24 pb-4 pt-6 flex justify-end items-center'>
+            <div className='text-neutral0 w-full m-auto px-24 pb-4 pt-6 flex justify-end items-center'>
 
                 <div className="flex gap-8 text-lg font-semibold shrink-0">
 

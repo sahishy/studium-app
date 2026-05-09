@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { FaCheck } from 'react-icons/fa6'
+import { FaCheck, FaGripLinesVertical } from 'react-icons/fa6'
+import { CSS } from '@dnd-kit/utilities'
+import { useSortable } from '@dnd-kit/sortable'
 import TextTooltip from '../../../shared/components/tooltips/TextTooltip'
 import TaskParsingInput from './TaskParsingInput.jsx'
 import { flattenTaskTitle } from '../utils/naturalLanguage'
 
-const ListTask = ({
-    task,
-    depth = 0,
-    hasChildren = false,
-    circles = [],
-    courses = [],
+const ListTask = ({ task, depth = 0, hasChildren = false, circles = [], courses = [],
     onRegisterFocusHandle,
     onUpdate,
     onDelete,
@@ -17,11 +14,27 @@ const ListTask = ({
     onTabInTask,
     onTaskBlur,
 }) => {
+    
     const [titleText, setTitleText] = useState(flattenTaskTitle(task.title))
     const inputContainerRef = useRef(null)
     const pendingPayloadRef = useRef(null)
 
     const isCompleted = task.status === 'Completed'
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: task.uid })
+
+    const dndStyle = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        marginLeft: `${depth * 32}px`,
+    }
+
     const isEmpty = !titleText.trim()
     const isCheckDisabled = isEmpty || hasChildren
 
@@ -29,7 +42,6 @@ const ListTask = ({
         inputContainerRef.current?.focusAtEnd?.()
     }, [])
 
-    // Clicking the row focuses the input, unless the click was on an interactive element
     const isInteractiveTarget = useCallback((target) => {
         if (!(target instanceof Element)) return false
         return Boolean(target.closest('[contenteditable="true"]') || target.closest('button'))
@@ -47,9 +59,13 @@ const ListTask = ({
 
     return (
         <div
+            ref={setNodeRef}
             data-task-completed={isCompleted ? 'true' : 'false'}
-            className='group relative flex items-center gap-2 text-sm px-3 rounded-xl hover:bg-neutral5/40 focus-within:bg-neutral5/40 cursor-text transition-all ease-out'
-            style={{ marginLeft: `${depth * 32}px` }}
+            className={`group relative flex items-center gap-2 text-sm px-3 rounded-xl
+                hover:bg-neutral5/40 focus-within:bg-neutral5/40 cursor-text transition-all ease-out 
+                ${isDragging && 'opacity-80 z-20 bg-neutral6/80'}
+            `}
+            style={dndStyle}
             onMouseDown={(e) => { if (!isInteractiveTarget(e.target)) { e.preventDefault(); focusInput() } }}
             onClick={(e) => { if (!isInteractiveTarget(e.target)) focusInput() }}
         >
@@ -119,6 +135,23 @@ const ListTask = ({
                     onEmpty={(meta) => onDelete?.(task.uid, meta)}
                 />
             </div>
+
+            <button
+                type='button'
+                aria-label='Drag task'
+                tabIndex={-1}
+                className='absolute -left-6 px-1.5 py-3 group-hover:opacity-100 opacity-0 transition cursor-grab active:cursor-grabbing'
+                onMouseDown={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                }}
+                onClick={(e) => e.stopPropagation()}
+                {...attributes}
+                {...listeners}
+            >
+                <FaGripLinesVertical className='text-neutral2'/>
+            </button>
+
         </div>
     )
 }

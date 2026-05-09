@@ -2,9 +2,9 @@ const Button = ( { children, onClick, type = 'secondary', htmlType = 'button', c
 
     const getClass = () => {
         if(type === 'primary') {
-            return 'text-neutral6 bg-neutral0 border border-slate-900 not-disabled:hover:bg-[#2e3947] border-b-4 not-disabled:active:border-b-1 not-disabled:active:mt-[3.2px]';
+            return 'text-neutral6 bg-neutral0 border border-slate-900 dark:border-[#d4d4d8] not-disabled:hover:bg-[#2e3947] dark:not-disabled:hover:bg-[#d4d4d8] border-b-4 not-disabled:active:border-b-1 not-disabled:active:mt-[3.2px]';
         } else if(type === 'secondary') {
-            return 'text-neutral0 bg-neutral6 border border-neutral4 not-disabled:hover:bg-neutral5 border-b-4 not-disabled:active:border-b-1 not-disabled:active:mt-[3.2px]';
+            return 'text-neutral0 bg-neutral6 border border-neutral4 dark:bg-neutral4 dark:border-zinc-900 not-disabled:hover:bg-neutral5 border-b-4 not-disabled:active:border-b-1 not-disabled:active:mt-[3.2px]';
         } else if(type === 'tertiary') {
             return 'text-neutral0 bg-neutral3/60 backdrop-blur-xs not-disabled:hover:bg-neutral3 rounded-full';
         } else if(type === 'negative') {

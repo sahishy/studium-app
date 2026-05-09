@@ -171,8 +171,7 @@ const AddCourseModal = ({
                 day,
                 teacherId: selectedTeacher.uid,
                 customization: {
-                    bgColor: selectedColor?.bg ?? '#f3f4f6',
-                    iconColor: selectedColor?.icon ?? '#9ca3af',
+                    color: selectedColor ?? '#9ca3af',
                 }
             })
 
@@ -230,15 +229,16 @@ const AddCourseModal = ({
                         <p className='text-sm text-neutral1'>Color</p>
                         <div className='flex justify-between'>
                             {COURSE_COLORS.map((color, index) => {
-                                const isSelected = selectedColor?.icon === color.icon && selectedColor?.bg === color.bg
+
+                                const isSelected = selectedColor === color
 
                                 return (
                                     <button
-                                        key={`${color.icon}-${color.bg}`}
+                                        key={`${color}`}
                                         type='button'
                                         onClick={() => setSelectedColor(color)}
                                         className={`h-9 w-9 rounded-full border border-neutral4 cursor-pointer transition-transform hover:scale-105 ${isSelected ? 'ring-2 ring-neutral1 ring-offset-2' : ''}`}
-                                        style={{ backgroundColor: color.icon }}
+                                        style={{ backgroundColor: color }}
                                         aria-label={`Select color ${index + 1}`}
                                     />
                                 )
