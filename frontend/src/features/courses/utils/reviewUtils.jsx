@@ -2,14 +2,15 @@ import highschools from '../../../data/highschools.json'
 import { FaThumbsUp, FaHandshake, FaThumbsDown, FaHeart } from 'react-icons/fa6'
 
 const SCORE_OPTIONS = [
-    { value: 2, label: 'Love', icon: FaHeart },
-    { value: 1, label: 'Good', icon: FaThumbsUp },
+    { value: 1, label: 'Love', icon: FaHeart },
+    { value: 0.9, label: 'Good', icon: FaThumbsUp },
     { value: 0.5, label: 'Okay', icon: FaHandshake },
     { value: 0, label: 'Bad', icon: FaThumbsDown },
 ]
 
 const clampReviewScore = (score) => {
-    if(score === 0 || score === 0.5 || score === 1 || score === 2) {
+    
+    if(score === 0 || score === 0.5 || score === 0.9 || score === 1) {
         return score
     }
 
@@ -40,7 +41,13 @@ const buildCourseScoreMap = (reviews = []) => {
 
     const scoreMap = {}
     buckets.forEach((value, courseId) => {
-        scoreMap[courseId] = value.count > 0 ? value.total / value.count : null
+        if(value.count <= 0) {
+            scoreMap[courseId] = null
+            return
+        }
+
+        const average = value.total / value.count
+        scoreMap[courseId] = Math.max(0, Math.min(1, average))
     })
 
     return scoreMap
@@ -51,7 +58,7 @@ const formatScoreLabel = (score) => {
         return 'No Reviews'
     }
 
-    const normalizedPercent = Math.max(0, Math.min(100, Math.round((Number(score) / 2) * 100)))
+    const normalizedPercent = Math.max(0, Math.min(100, Math.round(Number(score) * 100)))
     return `${normalizedPercent}%`
 }
 

@@ -13,9 +13,13 @@ import Card from '../../../shared/components/ui/Card'
 import { getEffectiveSchoolIds } from '../../profile/services/schoolService'
 import ProgressBar from '../../../shared/components/ui/ProgressBar'
 import AddCourseModal from '../components/modals/AddCourseModal'
+import EditCourseModal from '../components/modals/EditCourseModal'
 import { useModal } from '../../../shared/contexts/ModalContext'
 import LoadingState from '../../../shared/components/ui/LoadingState'
 import { MAX_USER_COURSES } from '../utils/courseUtils'
+import { hexToRgba } from '../../../shared/utils/colorUtils'
+
+const REVIEW_PAGE_SIZE = 9
 
 const ratingDescriptions = [
     {
@@ -51,7 +55,11 @@ const CourseOverview = () => {
     const course = getCourseById(courseId)
     const [reviews, setReviews] = useState([])
     const [reviewsLoading, setReviewsLoading] = useState(false)
+    const [reviewsCursor, setReviewsCursor] = useState(null)
+    const [hasMoreReviews, setHasMoreReviews] = useState(false)
+    const [isLoadingMoreReviews, setIsLoadingMoreReviews] = useState(false)
     const [studentsTakingCount, setStudentsTakingCount] = useState(0)
+    const [studentsTakingCountLoading, setStudentsTakingCountLoading] = useState(false)
     const [reviewText, setReviewText] = useState('')
     const [score, setScore] = useState(1)
     const [isReviewComposerOpen, setIsReviewComposerOpen] = useState(false)
@@ -66,6 +74,8 @@ const CourseOverview = () => {
     }, [enrollments, courseId])
 
     const isCourseLimitReached = selectedCourses.length >= MAX_USER_COURSES
+    const enrolledCourseColor = myEnrollment?.customization?.color ?? '#9ca3af'
+    const courseHeroBackground = myEnrollment ? hexToRgba(enrolledCourseColor, 0.2) : null
 
     useEffect(() => {
         let isCancelled = false
@@ -78,9 +88,11 @@ const CourseOverview = () => {
 
             setReviewsLoading(true)
             try {
-                const nextReviews = await getCourseReviews(courseId)
+                const result = await getCourseReviews(courseId, { limitCount: REVIEW_PAGE_SIZE, cursor: null })
                 if (!isCancelled) {
-                    setReviews(nextReviews)
+                    setReviews(result.reviews)
+                    setReviewsCursor(result.nextCursor)
+                    setHasMoreReviews(result.hasMore)
                 }
             } finally {
                 if (!isCancelled) {
@@ -105,9 +117,16 @@ const CourseOverview = () => {
                 return
             }
 
-            const nextCount = await getStudentCountForCourse(courseId)
-            if (!isCancelled) {
-                setStudentsTakingCount(nextCount)
+            setStudentsTakingCountLoading(true)
+            try {
+                const nextCount = await getStudentCountForCourse(courseId)
+                if (!isCancelled) {
+                    setStudentsTakingCount(nextCount)
+                }
+            } finally {
+                if(!isCancelled) {
+                    setStudentsTakingCountLoading(false)
+                }
             }
         }
 
@@ -154,6 +173,8 @@ const CourseOverview = () => {
         return [mine, ...base.filter((review) => String(review.userId) !== String(profile.uid))]
     }, [reviews, profile?.uid, userStats?.academic?.schoolId, userStats?.academic?.schoolAffiliations])
 
+    const isOverviewLoading = reviewsLoading || studentsTakingCountLoading
+
     const myReview = useMemo(() => {
         if (!profile?.uid) {
             return null
@@ -174,7 +195,7 @@ const CourseOverview = () => {
             }
         })
 
-        const ratingPercent = avgScore == null ? null : Math.max(0, Math.min(100, Math.round((avgScore / 2) * 100)))
+        const ratingPercent = avgScore == null ? null : Math.max(0, Math.min(100, Math.round(avgScore * 100)))
         const ratingMeta = ratingDescriptions.find((entry) => ratingPercent != null && ratingPercent >= entry.score) ?? ratingDescriptions[ratingDescriptions.length - 1]
         return {
             avgScore,
@@ -260,18 +281,19 @@ const CourseOverview = () => {
         }
 
         setReviewText(myReview.review ?? '')
-        setScore(Number(myReview.score) || 1)
+        const nextScore = Number(myReview.score)
+        setScore(Number.isNaN(nextScore) ? 1 : nextScore)
         setIsReviewComposerOpen(true)
     }
 
     useEffect(() => {
-        if(!isReviewComposerOpen) {
+        if (!isReviewComposerOpen) {
             return
         }
 
         requestAnimationFrame(() => {
             const input = reviewInputRef.current
-            if(!input) {
+            if (!input) {
                 return
             }
 
@@ -295,6 +317,26 @@ const CourseOverview = () => {
             setIsReviewComposerOpen(false)
         } finally {
             setIsDeletingReview(false)
+        }
+    }
+
+    const handleLoadMoreReviews = async () => {
+        if(!courseId || isLoadingMoreReviews || !hasMoreReviews) {
+            return
+        }
+
+        setIsLoadingMoreReviews(true)
+        try {
+            const result = await getCourseReviews(courseId, {
+                limitCount: REVIEW_PAGE_SIZE,
+                cursor: reviewsCursor,
+            })
+
+            setReviews((previous) => [...previous, ...result.reviews])
+            setReviewsCursor(result.nextCursor)
+            setHasMoreReviews(result.hasMore)
+        } finally {
+            setIsLoadingMoreReviews(false)
         }
     }
 
@@ -324,8 +366,27 @@ const CourseOverview = () => {
         )
     }
 
+    const handleOpenEditCourseModal = () => {
+        if (!course || !profile?.uid || !myEnrollment) {
+            return
+        }
+
+        openModal(
+            <EditCourseModal
+                profile={profile}
+                course={course}
+                enrollment={myEnrollment}
+                closeModal={closeModal}
+            />
+        )
+    }
+
     if (!course) {
         return <p className='text-sm text-neutral1'>Course not found.</p>
+    }
+
+    if(isOverviewLoading) {
+        return <LoadingState fullPage />
     }
 
     return (
@@ -333,8 +394,11 @@ const CourseOverview = () => {
 
             <div className='flex gap-8'>
                 <Card className={'flex-2 p-0! overflow-hidden gap-0!'}>
-                    <div className='p-6 w-full h-48 bg-neutral5 flex items-center justify-center'>
-                        <FaBook className='text-neutral3 text-8xl' />
+                    <div
+                        className='p-6 w-full h-48 flex items-center justify-center'
+                        style={{ backgroundColor: courseHeroBackground ?? '#9ca3af33' }}
+                    >
+                        <FaBook className='text-8xl' style={{ color: myEnrollment ? enrolledCourseColor : '#9ca3af' }} />
                     </div>
                     <div className='p-6'>
                         <div>
@@ -386,7 +450,7 @@ const CourseOverview = () => {
                             </Button>
                         ) : (
                             <>
-                                <Button type='secondary' className='flex-1 py-4!'>
+                                <Button type='secondary' className='flex-1 py-4!' onClick={handleOpenEditCourseModal}>
                                     Edit Course
                                 </Button>
                                 <Button
@@ -414,7 +478,7 @@ const CourseOverview = () => {
                             <h2 className={`font-bold ${reviewSummary.totalReviews > 0 ? 'text-8xl' : 'text-4xl'}`}>
                                 {formatScoreLabel(reviewSummary.avgScore)}
                             </h2>
-                            <p className='text-lg text-neutral1'>{reviewSummary.totalReviews} reviews</p>
+                            <p className='text-lg text-neutral1'>{reviewSummary.totalReviews} review{reviewSummary.totalReviews != 1 && 's'}</p>
                         </div>
                         <div className='min-w-lg flex flex-col gap-4'>
                             {reviewSummary.scoreBuckets.map((bucket) => {
@@ -471,7 +535,7 @@ const CourseOverview = () => {
                                                     ${score === option.value ? 'text-neutral6 bg-neutral0' : 'border-neutral4 text-neutral1 hover:bg-neutral5'}
                                                 `}
                                             >
-                                                <Icon/>
+                                                <Icon />
                                                 {option.label}
                                             </button>
                                         )
@@ -490,53 +554,62 @@ const CourseOverview = () => {
 
                         </form>
                     ) : (
-                        myReview ? null : (
-                            <button
-                                type='button'
-                                onClick={handleOpenNewReviewComposer}
-                                className='w-full text-left text-sm text-neutral1 rounded-full border border-neutral4 px-4 py-3 hover:bg-neutral5 transition-colors cursor-pointer'
-                            >
-                                Share your experience...
-                            </button>
-                        )
+                        <button
+                            type='button'
+                            onClick={myReview ? undefined : handleOpenNewReviewComposer}
+                            className={`w-full text-left text-sm text-neutral1 rounded-full border border-neutral4 px-4 py-3 
+                                ${myReview ? 'opacity-60 cursor-not-allowed' : 'hover:bg-neutral5 cursor-pointer'}
+                                transition-colors
+                            `}
+                        >
+                            Share your experience...
+                        </button>
                     )}
 
                     <div className='grid grid-cols-3 gap-3'>
 
-                        {reviewsLoading ? (
-                            <LoadingState className='col-span-3'/>
+                        {sortedReviews.length === 0 ? (
+                            <div className='col-span-3 flex flex-col items-center py-16'>
+                                <p className='text-neutral0 font-semibold'>
+                                    Be the first to review
+                                </p>
+                                <p className='text-sm text-neutral1'>
+                                    Nobody has reviewed this course yet. Talk about your experience!
+                                </p>
+                            </div>
                         ) : (
-                            sortedReviews.length === 0 ? (
-                                <div className='col-span-3 flex flex-col items-center py-16'>
-                                    <p className='text-neutral0 font-semibold'>
-                                        Be the first to review
-                                    </p>
-                                    <p className='text-sm text-neutral1'>
-                                        Nobody has reviewed this course yet. Talk about your experience!
-                                    </p>
-                                </div>
-                            ) : (
-                                sortedReviews.map((review) => {
+                            sortedReviews.map((review) => {
 
-                                    const reviewer = usersMap[String(review.userId)]
+                                const reviewer = usersMap[String(review.userId)]
 
-                                    return (
-                                        <CourseReviewCard
-                                            key={review.uid}
-                                            review={review}
-                                            reviewer={reviewer}
-                                            teacherName={teachersMap[String(review.teacherId)]?.name}
-                                            canManage={String(review.userId) === String(profile?.uid)}
-                                            onEdit={String(review.userId) === String(profile?.uid) ? handleEditMyReview : undefined}
-                                            onDelete={String(review.userId) === String(profile?.uid) ? handleDeleteMyReview : undefined}
-                                            deleting={String(review.userId) === String(profile?.uid) ? isDeletingReview : false}
-                                        />
-                                    )
+                                return (
+                                    <CourseReviewCard
+                                        key={review.uid}
+                                        review={review}
+                                        reviewer={reviewer}
+                                        teacherName={teachersMap[String(review.teacherId)]?.name}
+                                        canManage={String(review.userId) === String(profile?.uid)}
+                                        onEdit={String(review.userId) === String(profile?.uid) ? handleEditMyReview : undefined}
+                                        onDelete={String(review.userId) === String(profile?.uid) ? handleDeleteMyReview : undefined}
+                                        deleting={String(review.userId) === String(profile?.uid) ? isDeletingReview : false}
+                                    />
+                                )
 
-                                })
-                            )
+                            })
                         )}
                     </div>
+
+                    {hasMoreReviews ? (
+                        <div className='w-full flex justify-center pt-4'>
+                            <Button
+                                type='secondary'
+                                onClick={handleLoadMoreReviews}
+                                disabled={isLoadingMoreReviews}
+                            >
+                                {isLoadingMoreReviews ? 'Loading...' : 'Load More'}
+                            </Button>
+                        </div>
+                    ) : null}
 
                 </div>
 

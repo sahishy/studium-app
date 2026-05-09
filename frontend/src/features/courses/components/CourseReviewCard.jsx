@@ -2,7 +2,7 @@ import { getSchoolNameById, SCORE_OPTIONS } from '../utils/reviewUtils'
 import AvatarPicture from '../../../shared/components/avatar/AvatarPicture';
 import { FaSchool } from 'react-icons/fa6';
 import { FaChalkboardTeacher, FaEdit } from 'react-icons/fa';
-import { MdDeleteOutline } from 'react-icons/md';
+import { MdDelete } from 'react-icons/md';
 
 const CourseReviewCard = ({ review, reviewer, teacherName, canManage = false, onEdit, onDelete, deleting = false }) => {
 
@@ -18,11 +18,11 @@ const CourseReviewCard = ({ review, reviewer, teacherName, canManage = false, on
 
             {canManage ? (
                 <div className='absolute right-6 top-6 hidden group-hover:flex gap-3 text-neutral1 z-1'>
-                    <button className='cursor-pointer' type='button' onClick={onEdit}>
+                    <button className='cursor-pointer hover:text-neutral0 transition' type='button' onClick={onEdit}>
                         <FaEdit className='text-sm' />
                     </button>
-                    <button className='cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed' type='button' onClick={onDelete} disabled={deleting}>
-                        <MdDeleteOutline className='text-lg' />
+                    <button className='cursor-pointer hover:text-neutral0 transition disabled:opacity-50 disabled:cursor-not-allowed' type='button' onClick={onDelete} disabled={deleting}>
+                        <MdDelete className='text-lg' />
                     </button>
                 </div>
             ) : null}
