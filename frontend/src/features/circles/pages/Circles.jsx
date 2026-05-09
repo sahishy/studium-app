@@ -9,6 +9,7 @@ import Button from '../../../shared/components/ui/Button'
 import BottomFade from '../../../shared/components/ui/BottomFade'
 import { FaArrowUp } from 'react-icons/fa6'
 import social0 from '../../../assets/images/illustrations/social0.png'
+import logo from '../../../assets/images/logo_sm.png'
 
 const Circles = () => {
 
@@ -19,56 +20,74 @@ const Circles = () => {
         <div className='flex flex-col h-full overflow-scroll'>
             <Topbar profile={profile} />
 
-            <div className='w-full h-full flex flex-col gap-4 lg:flex-row lg:gap-16 lg:items-start px-24 pb-8 pt-2 m-auto'>
-                <div className='flex-2 flex flex-col gap-4 pb-16'>
+            <div className='w-full flex-1 flex flex-col gap-4 px-24 pb-24 pt-2'>
+                <h1 className='text-2xl font-semibold'>Circles</h1>
 
-                    <div className='flex justify-between items-start'>
-
-                        <h1 className='text-2xl font-semibold'>Circles</h1>
-
-                        <div className='flex gap-2'>
-                            <CreateCircleButton profile={profile} />
-                            <JoinCircleButton profile={profile} />
-                        </div>
-
-                    </div>
-
-
-                    <div className='relative w-full flex flex-col gap-4'>
-
-                        {/* <h1 className='text-lg text-neutral1 font-semibold'>Your Circles</h1> */}
-
-                        {circles.length === 0 ? (
-                            <div className='w-full flex flex-col items-center justify-center py-32 gap-1'>
-                                <img src={social0} alt='Friends studying' className='object-contain w-96 mb-3' />
-                                <h1 className='text-3xl font-bold'>No circles</h1>
-                                <p className='text-sm text-neutral1'>You haven't joined any study circles yet. Join or create one!</p>
-                            </div>
-                        ) : (
-                            <div className='w-full grid grid-cols-2 auto-rows-auto gap-4'>
-                                {circles.sort((a, b) => a.title.localeCompare(b.title)).map((circle) => (
-
-                                    <Link
-                                        key={circle.uid}
-                                        to={circle.uid}
-                                    >
-                                        <CircleCard circle={circle} />
-                                    </Link>
-
-                                ))}
-                            </div>
-                        )}
-
-                    </div>
-
-
-
-
+                <div className='flex-1 flex flex-col gap-1 items-center justify-center'>
+                    <img src={logo} className='object-contain w-12 mb-3'/>
+                    <h1 className='text-3xl font-bold'>In development</h1>
+                    <p className='text-sm text-neutral1'>A place to join study circles and connect with friends. This will be renamed to Socials.</p>
                 </div>
+
             </div>
-            <BottomFade />
         </div>
     )
+
+    // return (
+    //     <div className='flex flex-col h-full overflow-scroll'>
+    //         <Topbar profile={profile} />
+
+    //         <div className='w-full h-full flex flex-col gap-4 lg:flex-row lg:gap-16 lg:items-start px-24 pb-8 pt-2 m-auto'>
+    //             <div className='flex-2 flex flex-col gap-4 pb-16'>
+
+    //                 <div className='flex justify-between items-start'>
+
+    //                     <h1 className='text-2xl font-semibold'>Circles</h1>
+
+    //                     <div className='flex gap-2'>
+    //                         <CreateCircleButton profile={profile} />
+    //                         <JoinCircleButton profile={profile} />
+    //                     </div>
+
+    //                 </div>
+
+
+    //                 <div className='relative w-full flex flex-col gap-4'>
+
+    //                     {/* <h1 className='text-lg text-neutral1 font-semibold'>Your Circles</h1> */}
+
+    //                     {circles.length === 0 ? (
+    //                         <div className='w-full flex flex-col items-center justify-center py-32 gap-1'>
+    //                             <img src={social0} alt='Friends studying' className='object-contain w-96 mb-3' />
+    //                             <h1 className='text-3xl font-bold'>No circles</h1>
+    //                             <p className='text-sm text-neutral1'>You haven't joined any study circles yet. Join or create one!</p>
+    //                         </div>
+    //                     ) : (
+    //                         <div className='w-full grid grid-cols-2 auto-rows-auto gap-4'>
+    //                             {circles.sort((a, b) => a.title.localeCompare(b.title)).map((circle) => (
+
+    //                                 <Link
+    //                                     key={circle.uid}
+    //                                     to={circle.uid}
+    //                                 >
+    //                                     <CircleCard circle={circle} />
+    //                                 </Link>
+
+    //                             ))}
+    //                         </div>
+    //                     )}
+
+    //                 </div>
+
+
+
+
+    //             </div>
+    //         </div>
+    //         <BottomFade />
+    //     </div>
+    // )
+
 }
 
 const CreateCircleButton = ({ profile }) => {
