@@ -12,10 +12,11 @@ import { useCircles } from '../../circles/contexts/CirclesContext'
 import { useCourses } from '../../courses/contexts/CoursesContext'
 import { deleteTask, updateTaskGroupingPreference } from '../services/taskService'
 import { enqueueTaskPatch } from '../services/taskCacheService'
-import { buildChildCounts, buildDepthMap, buildGroupedTaskSections, buildInheritedGroupTitleFromSourceTask, buildListReindexUpdates, buildShiftedListIndexUpdates, deriveStatusByTaskId,LIST_GROUP_OPTIONS, sortTasksByListIndex } from '../utils/taskListUtils'
+import { buildChildCounts, buildDepthMap, buildGroupedTaskSections, buildInheritedGroupTitleFromSourceTask, buildListReindexUpdates, buildShiftedListIndexUpdates, deriveStatusByTaskId, LIST_GROUP_OPTIONS, sortTasksByListIndex } from '../utils/taskListUtils'
 import { buildListIndexPatchUpdates, buildReorderPlanForSection, buildSortableIds } from '../utils/taskDragDropUtils'
 import Select from '../../../shared/components/popovers/Select'
 import { MAX_USER_TASKS } from '../utils/taskUtils'
+import TextTooltip from '../../../shared/components/tooltips/TextTooltip'
 
 const isDescendantOf = (task, ancestorId, tasksById) => {
     let parentId = task?.parentTaskId ?? null
@@ -147,7 +148,7 @@ const ListTab = () => {
         })
     )
     useEffect(() => {
-        if(!isTaskLimitReached) addTaskInputRef.current?.focusAtEnd?.()
+        if (!isTaskLimitReached) addTaskInputRef.current?.focusAtEnd?.()
     }, [])
     useEffect(() => {
         if (!isTaskLimitReached) return
@@ -372,7 +373,7 @@ const ListTab = () => {
             writeCollapsedSectionsToCache(collapsedSectionsCacheKey, next)
             return next
         })
-        
+
     }, [collapsedSectionsCacheKey])
 
     const handleDragEnd = useCallback(async (event) => {
@@ -402,13 +403,12 @@ const ListTab = () => {
                 <div className='relative flex w-full h-11 justify-end'>
                     <div
                         className={`absolute left-1/2 top-1/2 -translate-1/2
-                            px-4 py-3 bg-neutral5 rounded-full
-                            flex gap-3 items-center w-96 hover:w-104 focus-within:w-104 transition-all
-                            ${isTaskLimitReached ? 'opacity-60 cursor-not-allowed' : 'cursor-text'}
-                        `}
+                                bg-neutral5 rounded-full flex gap-3 items-center w-96 transition-all
+                                ${isTaskLimitReached ? 'opacity-60 cursor-not-allowed' : 'cursor-text hover:w-104 focus-within:w-104'}
+                            `}
                         tabIndex={isTaskLimitReached ? -1 : undefined}
                         onClick={() => {
-                            if(!isTaskLimitReached) addTaskInputRef.current?.focusAtEnd?.();
+                            if (!isTaskLimitReached) addTaskInputRef.current?.focusAtEnd?.();
                         }}
                     >
                         <TaskParsingInput
@@ -416,7 +416,7 @@ const ListTab = () => {
                             title=''
                             circles={circles}
                             courses={courses}
-                            className={`w-full ${isTaskLimitReached && 'pointer-events-none'}`}
+                            className={`w-full h-full px-4 py-3 ${isTaskLimitReached && 'pointer-events-none'}`}
                             placeholder={isTaskLimitReached ? 'Task limit reached' : 'Add a task'}
                             clearOnEnter
                             keepFocusOnEnter
@@ -426,6 +426,7 @@ const ListTab = () => {
                             invertedWidgets
                         />
                     </div>
+
                     <Select
                         options={LIST_GROUP_OPTIONS}
                         isOptionSelected={(option) => option.id === selectedGroupBy}
@@ -449,47 +450,47 @@ const ListTab = () => {
                     onDragEnd={handleDragEnd}
                 >
                     <div className='w-full min-h-[60vh] space-y-5'>
-                    {groupedTaskSections.map((section) => (
-                        <div key={section.key} className='w-full flex flex-col gap-1'>
-                            {selectedGroupBy !== 'none' && (
-                                <div
-                                    onClick={() => handleToggleSectionCollapsed(section.key)}
-                                    className={`text-sm font-semibold flex items-center gap-2 select-none
+                        {groupedTaskSections.map((section) => (
+                            <div key={section.key} className='w-full flex flex-col gap-1'>
+                                {selectedGroupBy !== 'none' && (
+                                    <div
+                                        onClick={() => handleToggleSectionCollapsed(section.key)}
+                                        className={`text-sm font-semibold flex items-center gap-2 select-none
                                     ${selectedGroupBy === 'dueDate' && isPastDateGroupKey(section.key) ? 'text-red-500' : 'text-neutral'}
                                     cursor-pointer
                                 `}
-                                >
-                                    <FaChevronDown className={`text-xs text-neutral1 transition
+                                    >
+                                        <FaChevronDown className={`text-xs text-neutral1 transition
                                         ${collapsedSectionByKey[section.key] && '-rotate-90'}`}
-                                    />
-                                    {section.label}
+                                        />
+                                        {section.label}
+                                    </div>
+                                )}
+                                <div className={collapsedSectionByKey[section.key] && 'hidden'}>
+                                    <SortableContext
+                                        items={buildSortableIds(section.tasks)}
+                                        strategy={verticalListSortingStrategy}
+                                    >
+                                        {section.tasks.map((task) => (
+                                            <ListTask
+                                                key={task.uid}
+                                                task={task}
+                                                circles={circles}
+                                                courses={courses}
+                                                onRegisterFocusHandle={handleRegisterFocusHandle}
+                                                depth={depthMap.get(task.uid) || 0}
+                                                hasChildren={(childCounts.get(task.uid) || 0) > 0}
+                                                onUpdate={handleUpdateTask}
+                                                onDelete={handleDeleteTask}
+                                                onCreateTaskAfter={handleCreateTaskAfter}
+                                                onTabInTask={handleTabInTask}
+                                                onTaskBlur={handleTaskBlur}
+                                            />
+                                        ))}
+                                    </SortableContext>
                                 </div>
-                            )}
-                            <div className={collapsedSectionByKey[section.key] && 'hidden'}>
-                                <SortableContext
-                                    items={buildSortableIds(section.tasks)}
-                                    strategy={verticalListSortingStrategy}
-                                >
-                                {section.tasks.map((task) => (
-                                    <ListTask
-                                        key={task.uid}
-                                        task={task}
-                                        circles={circles}
-                                        courses={courses}
-                                        onRegisterFocusHandle={handleRegisterFocusHandle}
-                                        depth={depthMap.get(task.uid) || 0}
-                                        hasChildren={(childCounts.get(task.uid) || 0) > 0}
-                                        onUpdate={handleUpdateTask}
-                                        onDelete={handleDeleteTask}
-                                        onCreateTaskAfter={handleCreateTaskAfter}
-                                        onTabInTask={handleTabInTask}
-                                        onTaskBlur={handleTaskBlur}
-                                    />
-                                ))}
-                                </SortableContext>
                             </div>
-                        </div>
-                    ))}
+                        ))}
                     </div>
                 </DndContext>
 

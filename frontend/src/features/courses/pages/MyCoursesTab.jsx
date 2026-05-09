@@ -14,6 +14,7 @@ import LoadingState from '../../../shared/components/ui/LoadingState'
 import { createCacheKey, resolveCachedRecordsByIds, setCachedRecordsById } from '../../../shared/services/cacheService'
 import { CACHE_NAMESPACES, CACHE_TTLS_MS } from '../../../shared/utils/cacheUtils'
 import study0 from '../../../assets/images/illustrations/study0.png'
+import { MAX_USER_COURSES } from '../utils/courseUtils'
 
 const RESULTS_PAGE_SIZE = 10
 const SCORE_CACHE_TTL_MS = CACHE_TTLS_MS.COURSE_SCORE
@@ -43,6 +44,7 @@ const MyCoursesTab = () => {
     const [activeSubject, setActiveSubject] = useState(subjects[0] ?? null)
 
     const normalizedQuery = query.trim()
+    const isCourseLimitReached = selectedCourses.length >= MAX_USER_COURSES
 
     const selectedCourseIds = useMemo(() => {
         return new Set(courseIds.map((courseId) => String(courseId)))
@@ -77,6 +79,10 @@ const MyCoursesTab = () => {
     }, [normalizedQuery])
 
     const openPalette = () => {
+        if (isCourseLimitReached) {
+            return
+        }
+
         setQuery('')
         setSearchVisibleCount(RESULTS_PAGE_SIZE)
         setSubjectVisibleCount(RESULTS_PAGE_SIZE)
@@ -248,6 +254,10 @@ const MyCoursesTab = () => {
     }, [activeSubject])
 
     const handleOpenAddCourseModal = (course) => {
+        if (isCourseLimitReached) {
+            return
+        }
+
         closePalette()
         openModal(
             <AddCourseModal
@@ -270,11 +280,13 @@ const MyCoursesTab = () => {
                         {/* <Button type='secondary' onClick={openPalette}>Add Course</Button> */}
                         <button
                             onClick={openPalette}
-                            className='px-6 py-3 text-sm bg-neutral5 rounded-full text-neutral1 hover:bg-neutral4 cursor-pointer
-                                flex gap-3 items-center w-96 hover:w-104 transition-all'
+                            disabled={isCourseLimitReached}
+                            className={`px-6 py-3 text-sm bg-neutral5 rounded-full text-neutral1
+                                flex gap-3 items-center w-96 transition-all
+                                ${isCourseLimitReached ? 'opacity-60 cursor-not-allowed' : 'hover:bg-neutral4 cursor-pointer hover:w-104'}`}
                         >
-                            <FaMagnifyingGlass className='text-neutral0' />
-                            Add a course...
+                            {!isCourseLimitReached ? <FaMagnifyingGlass className='text-neutral0' /> : null}
+                            {isCourseLimitReached ? 'Course limit reached' : 'Add a course...'}
                         </button>
                     </div>
 

@@ -1,39 +1,40 @@
-import Card from '../../../shared/components/ui/Card'
 import { getSchoolNameById, SCORE_OPTIONS } from '../utils/reviewUtils'
 import AvatarPicture from '../../../shared/components/avatar/AvatarPicture';
 import { FaSchool } from 'react-icons/fa6';
 import { FaChalkboardTeacher, FaEdit } from 'react-icons/fa';
 import { MdDeleteOutline } from 'react-icons/md';
 
-const CourseReviewCard = ({ review, reviewer, teacherName }) => {
+const CourseReviewCard = ({ review, reviewer, teacherName, canManage = false, onEdit, onDelete, deleting = false }) => {
 
     const score = review?.score;
     const schoolName = getSchoolNameById(review?.schoolId)
 
-    const scoreOption = SCORE_OPTIONS.find(x => x.value === score);
-    const scoreName = scoreOption.label;
-    const ScoreIcon = scoreOption.icon;
+    const scoreOption = SCORE_OPTIONS.find(x => Number(x.value) === Number(score)) ?? SCORE_OPTIONS.find((x) => Number(x.value) === 0.5);
+    const scoreName = scoreOption?.label ?? 'Okay';
+    const ScoreIcon = scoreOption?.icon;
 
     return (
         <div className='group relative flex flex-col gap-6'>
 
-            <div className='absolute right-6 top-6 hidden group-hover:flex gap-3 text-neutral1 z-1'>
-                <button className='cursor-pointer'>
-                    <FaEdit className='text-sm' />
-                </button>
-                <button className='cursor-pointer'>
-                    <MdDeleteOutline className='text-lg' />
-                </button>
-            </div>
+            {canManage ? (
+                <div className='absolute right-6 top-6 hidden group-hover:flex gap-3 text-neutral1 z-1'>
+                    <button className='cursor-pointer' type='button' onClick={onEdit}>
+                        <FaEdit className='text-sm' />
+                    </button>
+                    <button className='cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed' type='button' onClick={onDelete} disabled={deleting}>
+                        <MdDeleteOutline className='text-lg' />
+                    </button>
+                </div>
+            ) : null}
 
             <div className='relative bg-neutral5 rounded-4xl p-6 flex flex-col gap-3'>
                 <div className='text-sm font-semibold text-neutral1 flex items-center gap-2'>
-                    <ScoreIcon /> Rated {scoreName}
+                    {ScoreIcon ? <ScoreIcon /> : null} Rated {scoreName}
                 </div>
                 <p className='text-sm'>{review.review || 'Loading...'}</p>
 
-                <ChatBubbleSwoosh className={'absolute w-8 -bottom-33 left-16 dark:hidden'} color='#F3F4F6'/>
-                <ChatBubbleSwoosh className={'absolute w-8 -bottom-33 left-16 hidden dark:flex'} color='#1c1c21'/>
+                <ChatBubbleSwoosh className={'absolute w-8 -bottom-33 left-16 dark:hidden'} color='#F3F4F6' />
+                <ChatBubbleSwoosh className={'absolute w-8 -bottom-33 left-16 hidden dark:flex'} color='#1c1c21' />
             </div>
 
             <div className='flex gap-3 items-center'>
@@ -62,7 +63,7 @@ const CourseReviewCard = ({ review, reviewer, teacherName }) => {
     )
 }
 
-const ChatBubbleSwoosh = ( { className, color } ) => {
+const ChatBubbleSwoosh = ({ className, color }) => {
 
     return (
         <svg className={className} width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">

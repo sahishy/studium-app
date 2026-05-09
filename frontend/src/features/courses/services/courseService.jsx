@@ -220,6 +220,17 @@ const getAvailableCoursesForStudent = async (studentId) => {
 
 }
 
+const getStudentCountForCourse = async (courseId) => {
+    if(!courseId) {
+        return 0
+    }
+
+    const coursesRef = collection(db, 'courses')
+    const q = query(coursesRef, where('courseId', '==', String(courseId)))
+    const snapshot = await getDocs(q)
+    return snapshot.size
+}
+
 const toggleCourseEnrollment = async (studentId, courseId) => {
 
     const enrolled = await isStudentInCourse(studentId, courseId)
@@ -311,6 +322,7 @@ export {
     leaveCourse,
     toggleCourseEnrollment,
     isStudentInCourse,
+    getStudentCountForCourse,
     getStudentCourseIds,
     getAvailableCoursesForStudent,
     useStudentCourses,
