@@ -10,7 +10,7 @@ import TaskParsingInput from '../components/TaskParsingInput'
 import { useTasks } from '../contexts/TasksContext'
 import { useCircles } from '../../circles/contexts/CirclesContext'
 import { useCourses } from '../../courses/contexts/CoursesContext'
-import { deleteTask, updateTaskGroupingPreference } from '../services/taskService'
+import { updateTaskGroupingPreference } from '../services/taskService'
 import { enqueueTaskPatch } from '../services/taskCacheService'
 import { buildChildCounts, buildDepthMap, buildGroupedTaskSections, buildInheritedGroupTitleFromSourceTask, buildListReindexUpdates, buildShiftedListIndexUpdates, deriveStatusByTaskId, LIST_GROUP_OPTIONS, sortTasksByListIndex } from '../utils/taskListUtils'
 import { buildListIndexPatchUpdates, buildReorderPlanForSection, buildSortableIds } from '../utils/taskDragDropUtils'
@@ -79,7 +79,7 @@ const writeCollapsedSectionsToCache = (cacheKey, collapsedByKey) => {
 const ListTab = () => {
 
     const { profile } = useOutletContext()
-    const { user: userTasks, circle: circleTasks, applyTaskPatch, commitTaskPatch, createTaskOptimistic } = useTasks()
+    const { user: userTasks, circle: circleTasks, applyTaskPatch, commitTaskPatch, createTaskOptimistic, deleteTaskOptimistic } = useTasks()
     const circles = useCircles()
     const { courses } = useCourses()
 
@@ -259,13 +259,13 @@ const ListTab = () => {
             if (idx > 0) nextFocusId = section.tasks[idx - 1].uid
         }
 
-        await deleteTask(taskId)
+        if (nextFocusId) setPendingFocusTaskId(nextFocusId)
+
+        await deleteTaskOptimistic(taskId)
         await reindexListTasks(sortedTasks.filter((t) => t.uid !== taskId))
         await syncParentStatuses()
 
-        if (nextFocusId) setPendingFocusTaskId(nextFocusId)
-
-    }, [depthMap, groupedTaskSections, handleOutdentTask, reindexListTasks, sortedTasks, syncParentStatuses, tasksById])
+    }, [deleteTaskOptimistic, depthMap, groupedTaskSections, handleOutdentTask, reindexListTasks, sortedTasks, syncParentStatuses, tasksById])
 
     const handleCreateTaskAfter = useCallback(async (sourceTask, draftPayload = null) => {
 
