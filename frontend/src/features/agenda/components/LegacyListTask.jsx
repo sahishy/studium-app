@@ -3,7 +3,7 @@ import { FaCalendar, FaCheckCircle, FaClock, FaDotCircle, FaUserFriends } from '
 import Dropdown from '../../../shared/components/popovers/Dropdown'
 import DatePicker from '../../../shared/components/popovers/DatePicker'
 import { useCircles } from '../../circles/contexts/CirclesContext'
-import { updateTask } from '../services/taskService'
+import { enqueueTaskPatch } from '../services/taskCacheService'
 import { formatDateFromSeconds } from '../../../shared/utils/formatters'
 import { flattenTaskTitle } from '../utils/naturalLanguage'
 
@@ -46,7 +46,7 @@ const LegacyListTask = ({ profile, task, autoFocus, setNewTaskId }) => {
             return
         }
 
-        updateTask(task.uid, { status, title, dueAt, ownerType, ownerId })
+        enqueueTaskPatch(task.uid, { status, title, dueAt, ownerType, ownerId })
         prevTaskRef.current = { status, title, dueAt, ownerType, ownerId }
     }, [status, title, dueAt, ownerType, ownerId, task.uid])
 

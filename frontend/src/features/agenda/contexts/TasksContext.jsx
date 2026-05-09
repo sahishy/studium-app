@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { createTask, updateTask, useUserTasks, useCircleTasks } from '../services/taskService'
+import { createTask, triggerTaskCompletionEffects, useUserTasks, useCircleTasks } from '../services/taskService'
+import { enqueueTaskPatch } from '../services/taskCacheService'
 import { useCircles } from '../../circles/contexts/CirclesContext'
+import { MAX_USER_TASKS } from '../utils/taskUtils'
 
 const TasksContext = createContext({ user: [], circle: [] })
 
@@ -11,8 +13,8 @@ const TasksProvider = ({ profile, children }) => {
     const { tasks: user, isReady: userReady } = useUserTasks(profile.uid)
     const { tasks: circle, isReady: circleReady } = useCircleTasks(circleIds)
 
-    // Unified local state for both optimistic creates and in-flight patches.
-    // Creates are stored as full objects; patches are partials merged over server data.
+    // creates are stored as full objects
+    // patches are partial objects merged over server data
     const [localTasks, setLocalTasks] = useState({})
     const pendingCreateIdsRef = useRef(new Set())
 
@@ -33,22 +35,37 @@ const TasksProvider = ({ profile, children }) => {
         })
     }, [])
 
-    // applyTaskPatch: optimistic local preview without firing a server request.
-    // Used for deferred operations like outdenting where the commit happens later.
+    // optimistic local preview
     const applyTaskPatch = patchLocal
 
-    // commitTaskPatch: applies locally and syncs to server, then clears local state.
+    // prevent immediate firebase writes
     const commitTaskPatch = useCallback(async (taskId, patch) => {
+
         if (!taskId || !patch || !Object.keys(patch).length) return
         patchLocal(taskId, patch)
-        try {
-            await updateTask(taskId, patch)
-        } finally {
-            clearLocal(taskId)
+
+        if (patch.status === 'Completed') {
+            triggerTaskCompletionEffects(taskId).catch(() => {
+                //
+            })
         }
+
+        try {
+            await enqueueTaskPatch(taskId, patch)
+            clearLocal(taskId)
+        } catch {
+            // keep local optimistic patch if write fails
+        }
+
     }, [patchLocal, clearLocal])
 
     const createTaskOptimistic = useCallback((draftTask = {}) => {
+
+        const ownerType = draftTask.ownerType || 'user'
+        if (ownerType === 'user' && user.length >= MAX_USER_TASKS) {
+            return { taskId: null, blockedReason: 'max_user_tasks' }
+        }
+
         const taskId = `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
         const now = new Date()
 
@@ -62,7 +79,6 @@ const TasksProvider = ({ profile, children }) => {
             parentTaskId: null,
             siblingIndex: 0,
             boardIndex: -1,
-            dueAt: -1,
             createdAt: now,
             updatedAt: now,
             ...draftTask,
@@ -75,9 +91,11 @@ const TasksProvider = ({ profile, children }) => {
             })
 
         return { taskId }
-    }, [patchLocal, clearLocal])
+
+    }, [patchLocal, clearLocal, user.length])
 
     useEffect(() => {
+
         if (!pendingCreateIdsRef.current.size) return
 
         const serverIds = new Set([...user, ...circle].map((task) => task.uid))
@@ -87,17 +105,20 @@ const TasksProvider = ({ profile, children }) => {
             pendingCreateIdsRef.current.delete(taskId)
             clearLocal(taskId)
         }
+
     }, [circle, clearLocal, user])
 
     const mergedTasks = useMemo(() => {
+
         const byId = new Map([...user, ...circle].map((t) => [t.uid, t]))
 
-        // Overlay local patches/creates on top of server data
+        // overlay local patches on top of server data
         Object.entries(localTasks).forEach(([taskId, local]) => {
             byId.set(taskId, { ...(byId.get(taskId) || {}), ...local })
         })
 
         return [...byId.values()]
+
     }, [user, circle, localTasks])
 
     return (
@@ -112,6 +133,7 @@ const TasksProvider = ({ profile, children }) => {
             {children}
         </TasksContext.Provider>
     )
+
 }
 
 const useTasks = () => useContext(TasksContext)

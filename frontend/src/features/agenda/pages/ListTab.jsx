@@ -10,10 +10,12 @@ import TaskParsingInput from '../components/TaskParsingInput'
 import { useTasks } from '../contexts/TasksContext'
 import { useCircles } from '../../circles/contexts/CirclesContext'
 import { useCourses } from '../../courses/contexts/CoursesContext'
-import { deleteTask, updateTask, updateTaskGroupingPreference } from '../services/taskService'
+import { deleteTask, updateTaskGroupingPreference } from '../services/taskService'
+import { enqueueTaskPatch } from '../services/taskCacheService'
 import { buildChildCounts, buildDepthMap, buildGroupedTaskSections, buildInheritedGroupTitleFromSourceTask, buildListReindexUpdates, buildShiftedListIndexUpdates, deriveStatusByTaskId,LIST_GROUP_OPTIONS, sortTasksByListIndex } from '../utils/taskListUtils'
 import { buildListIndexPatchUpdates, buildReorderPlanForSection, buildSortableIds } from '../utils/taskDragDropUtils'
 import Select from '../../../shared/components/popovers/Select'
+import { MAX_USER_TASKS } from '../utils/taskUtils'
 
 const isDescendantOf = (task, ancestorId, tasksById) => {
     let parentId = task?.parentTaskId ?? null
@@ -80,6 +82,8 @@ const ListTab = () => {
     const circles = useCircles()
     const { courses } = useCourses()
 
+    const isTaskLimitReached = userTasks.length >= MAX_USER_TASKS
+
     const defaultGroupBy = 'dueDate'
     const profileGroupBy = profile?.preferences?.groupTasksBy
     const [groupByPreference, setGroupByPreference] = useState(profileGroupBy || defaultGroupBy)
@@ -142,10 +146,15 @@ const ListTab = () => {
             activationConstraint: { distance: 6 },
         })
     )
-
     useEffect(() => {
-        addTaskInputRef.current?.focusAtEnd?.()
+        if(!isTaskLimitReached) addTaskInputRef.current?.focusAtEnd?.()
     }, [])
+    useEffect(() => {
+        if (!isTaskLimitReached) return
+        const container = addTaskInputRef.current
+        if (!container?.contains?.(document.activeElement)) return
+        document.activeElement?.blur?.()
+    }, [isTaskLimitReached])
 
     useEffect(() => {
         if (!pendingFocusTaskId) return
@@ -181,13 +190,13 @@ const ListTab = () => {
         await Promise.all(
             sortedTasks
                 .filter((t) => statusById.has(t.uid) && t.status !== statusById.get(t.uid))
-                .map((t) => updateTask(t.uid, { status: statusById.get(t.uid) }))
+                .map((t) => enqueueTaskPatch(t.uid, { status: statusById.get(t.uid) }))
         )
     }, [sortedTasks])
 
     const reindexListTasks = useCallback(async (tasks) => {
         await Promise.all(
-            buildListReindexUpdates(tasks).map(({ taskId, listIndex }) => updateTask(taskId, { listIndex }))
+            buildListReindexUpdates(tasks).map(({ taskId, listIndex }) => enqueueTaskPatch(taskId, { listIndex }))
         )
     }, [])
 
@@ -392,18 +401,23 @@ const ListTab = () => {
 
                 <div className='relative flex w-full h-11 justify-end'>
                     <div
-                        className='absolute left-1/2 top-1/2 -translate-1/2
-                            px-4 py-3 bg-neutral5 rounded-full cursor-text 
-                            flex gap-3 items-center w-96 hover:w-104 focus-within:w-104 transition-all'
-                        onClick={() => addTaskInputRef.current?.focusAtEnd?.()}
+                        className={`absolute left-1/2 top-1/2 -translate-1/2
+                            px-4 py-3 bg-neutral5 rounded-full
+                            flex gap-3 items-center w-96 hover:w-104 focus-within:w-104 transition-all
+                            ${isTaskLimitReached ? 'opacity-60 cursor-not-allowed' : 'cursor-text'}
+                        `}
+                        tabIndex={isTaskLimitReached ? -1 : undefined}
+                        onClick={() => {
+                            if(!isTaskLimitReached) addTaskInputRef.current?.focusAtEnd?.();
+                        }}
                     >
                         <TaskParsingInput
                             inputRef={addTaskInputRef}
                             title=''
                             circles={circles}
                             courses={courses}
-                            className='w-full'
-                            placeholder='Add a task'
+                            className={`w-full ${isTaskLimitReached && 'pointer-events-none'}`}
+                            placeholder={isTaskLimitReached ? 'Task limit reached' : 'Add a task'}
                             clearOnEnter
                             keepFocusOnEnter
                             commitOnBlur={false}

@@ -6,9 +6,10 @@ import { FaDotCircle, FaClock, FaCheckCircle } from 'react-icons/fa'
 import { useOutletContext } from 'react-router-dom'
 import { useState } from 'react'
 import BottomPadding from '../../../shared/components/ui/BottomPadding'
+import logo from '../../../assets/images/logo_sm.png'
 
 const BoardTab = () => {
-    
+
     const { profile } = useOutletContext()
     const { user: userTasks, circle: circleTasks } = useTasks()
     const tasks = [...userTasks, ...circleTasks]
@@ -45,24 +46,37 @@ const BoardTab = () => {
         }
     ]
 
+    // return (
+    //     <div className='w-full flex flex-col gap-8'>
+    //         <div className='w-full flex gap-4'>
+
+    //             {columns.map((column) => (
+    //                 <KanbanColumn
+    //                     key={column.status}
+    //                     column={column}
+    //                     profile={profile}
+    //                     newTaskId={newTaskId}
+    //                     setNewTaskId={setNewTaskId}
+    //                 />
+    //             ))}
+
+    //         </div>
+    //         <BottomPadding />
+    //     </div>
+    // )
+
     return (
-        <div className='w-full flex flex-col gap-8'>
-            <div className='w-full flex gap-4'>
+        <div className='relative w-full h-full min-h-[72vh] flex items-center justify-center'>
 
-                {columns.map((column) => (
-                    <KanbanColumn
-                        key={column.status}
-                        column={column}
-                        profile={profile}
-                        newTaskId={newTaskId}
-                        setNewTaskId={setNewTaskId}
-                    />
-                ))}
-
+            <div className='flex flex-col gap-1 items-center justify-center text-center'>
+                <img src={logo} className='object-contain w-12 mb-3' />
+                <h1 className='text-3xl font-bold'>Coming soon</h1>
+                <p className='text-sm text-neutral1'>This alternate view for tasks is currenty in development.</p>
             </div>
-            <BottomPadding />
+
         </div>
     )
+
 }
 
 const KanbanColumn = ({ column, profile, newTaskId, setNewTaskId }) => {
@@ -115,7 +129,6 @@ const AddTaskButton = ({ profile, status, setNewTaskId }) => {
         const newTask = await createTask({
             ownerType: 'user',
             ownerId: profile.uid,
-            dueAt: -1,
             status: status
         })
 
