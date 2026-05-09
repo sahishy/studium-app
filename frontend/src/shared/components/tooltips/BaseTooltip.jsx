@@ -132,7 +132,6 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
                 onFocus={showTooltip}
                 onBlur={hideTooltip}
                 // onClick={hideTooltip}
-                className={disabled && ''}
             >
                 {children}
             </div>

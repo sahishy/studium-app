@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useOutletContext, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
 import { FaCalendar, FaList, FaTh } from 'react-icons/fa'
@@ -8,6 +8,7 @@ import IconTabSelector from '../../../shared/components/ui/IconTabSelector'
 import LoadingState from '../../../shared/components/ui/LoadingState'
 import { FaCircleExclamation } from 'react-icons/fa6'
 import { MAX_USER_TASKS } from '../utils/taskUtils'
+import { flushTaskOpsOnPageLifecycle, initializeTaskPendingOpsFlush } from '../services/taskCacheService'
 
 const Agenda = () => {
 
@@ -25,6 +26,30 @@ const Agenda = () => {
     ]
     const currentTab = tabs.findIndex(tab => location.pathname.includes(tab.name))
     const isTaskLimitReached = userTasks.length >= MAX_USER_TASKS
+
+    useEffect(() => {
+        initializeTaskPendingOpsFlush()
+    }, [])
+
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if(document.visibilityState === 'hidden') {
+                flushTaskOpsOnPageLifecycle()
+            }
+        }
+
+        const handlePageHide = () => {
+            flushTaskOpsOnPageLifecycle()
+        }
+
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+        window.addEventListener('pagehide', handlePageHide)
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+            window.removeEventListener('pagehide', handlePageHide)
+        }
+    }, [])
 
     const handleClick = (tab) => {
         navigate(`/agenda/${tab}`)

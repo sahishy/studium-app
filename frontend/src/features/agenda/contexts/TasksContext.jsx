@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { createTask, triggerTaskCompletionEffects, useUserTasks, useCircleTasks } from '../services/taskService'
-import { enqueueTaskPatch } from '../services/taskCacheService'
+import { triggerTaskCompletionEffects, useUserTasks, useCircleTasks } from '../services/taskService'
+import { enqueueTaskCreate, enqueueTaskDelete, enqueueTaskPatch } from '../services/taskCacheService'
 import { useCircles } from '../../circles/contexts/CirclesContext'
 import { MAX_USER_TASKS } from '../utils/taskUtils'
 
@@ -17,6 +17,7 @@ const TasksProvider = ({ profile, children }) => {
     // patches are partial objects merged over server data
     const [localTasks, setLocalTasks] = useState({})
     const pendingCreateIdsRef = useRef(new Set())
+    const [locallyDeletedTaskIds, setLocallyDeletedTaskIds] = useState(() => new Set())
 
     const patchLocal = useCallback((taskId, patch) => {
         if (!taskId || !patch) return
@@ -101,7 +102,7 @@ const TasksProvider = ({ profile, children }) => {
             ...draftTask,
         })
 
-        createTask({ ...draftTask, taskId })
+        enqueueTaskCreate(taskId, draftTask)
             .catch(() => {
                 pendingCreateIdsRef.current.delete(taskId)
                 clearLocal(taskId)
@@ -110,6 +111,27 @@ const TasksProvider = ({ profile, children }) => {
         return { taskId }
 
     }, [patchLocal, clearLocal, user.length])
+
+    const deleteTaskOptimistic = useCallback(async (taskId) => {
+        if(!taskId) return
+
+        setLocallyDeletedTaskIds((prev) => {
+            const next = new Set(prev)
+            next.add(taskId)
+            return next
+        })
+
+        try {
+            await enqueueTaskDelete(taskId)
+        } catch(error) {
+            setLocallyDeletedTaskIds((prev) => {
+                const next = new Set(prev)
+                next.delete(taskId)
+                return next
+            })
+            throw error
+        }
+    }, [])
 
     useEffect(() => {
 
@@ -124,6 +146,25 @@ const TasksProvider = ({ profile, children }) => {
         }
 
     }, [circle, clearLocal, user])
+
+    useEffect(() => {
+        if(!locallyDeletedTaskIds.size) return
+
+        const serverIds = new Set([...user, ...circle].map((task) => task.uid))
+
+        setLocallyDeletedTaskIds((prev) => {
+            const next = new Set(prev)
+
+            for(const taskId of prev) {
+                if(!serverIds.has(taskId)) {
+                    next.delete(taskId)
+                    clearLocal(taskId)
+                }
+            }
+
+            return next.size === prev.size ? prev : next
+        })
+    }, [circle, clearLocal, locallyDeletedTaskIds.size, user])
 
     useEffect(() => {
 
@@ -149,9 +190,9 @@ const TasksProvider = ({ profile, children }) => {
             byId.set(taskId, { ...(byId.get(taskId) || {}), ...local })
         })
 
-        return [...byId.values()]
+        return [...byId.values()].filter((task) => !locallyDeletedTaskIds.has(task.uid))
 
-    }, [user, circle, localTasks])
+    }, [user, circle, localTasks, locallyDeletedTaskIds])
 
     return (
         <TasksContext.Provider value={{
@@ -161,6 +202,7 @@ const TasksProvider = ({ profile, children }) => {
             applyTaskPatch,
             commitTaskPatch,
             createTaskOptimistic,
+            deleteTaskOptimistic,
         }}>
             {children}
         </TasksContext.Provider>
