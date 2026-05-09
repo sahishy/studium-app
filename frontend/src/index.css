@@ -69,6 +69,13 @@ html {
     --color-shadow: oklch(70.7% 0.022 261.325 / 0.1);
     --color-backdrop: oklch(27.8% 0.033 256.848 / 0.2);
 
+
+    --animate-shine: shine 3s linear infinite;
+    @keyframes shine {
+        from { background-position: 200% 50%; }
+        to { background-position: 0% 50%; }
+    }
+
 }
 
 @layer base {

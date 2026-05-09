@@ -20,6 +20,7 @@ import { MAX_USER_COURSES } from '../utils/courseUtils'
 import { hexToRgba } from '../../../shared/utils/colorUtils'
 
 const REVIEW_PAGE_SIZE = 9
+const DEFAULT_SCORE = 0.9
 
 const ratingDescriptions = [
     {
@@ -61,7 +62,7 @@ const CourseOverview = () => {
     const [studentsTakingCount, setStudentsTakingCount] = useState(0)
     const [studentsTakingCountLoading, setStudentsTakingCountLoading] = useState(false)
     const [reviewText, setReviewText] = useState('')
-    const [score, setScore] = useState(1)
+    const [score, setScore] = useState(DEFAULT_SCORE)
     const [isReviewComposerOpen, setIsReviewComposerOpen] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isDeletingReview, setIsDeletingReview] = useState(false)
@@ -256,7 +257,7 @@ const CourseOverview = () => {
             })
 
             setReviewText('')
-            setScore(1)
+            setScore(DEFAULT_SCORE)
             setIsReviewComposerOpen(false)
         } finally {
             setIsSubmitting(false)
@@ -265,13 +266,13 @@ const CourseOverview = () => {
 
     const handleCancelReview = () => {
         setReviewText('')
-        setScore(1)
+        setScore(DEFAULT_SCORE)
         setIsReviewComposerOpen(false)
     }
 
     const handleOpenNewReviewComposer = () => {
         setReviewText('')
-        setScore(1)
+        setScore(DEFAULT_SCORE)
         setIsReviewComposerOpen(true)
     }
 
@@ -282,7 +283,7 @@ const CourseOverview = () => {
 
         setReviewText(myReview.review ?? '')
         const nextScore = Number(myReview.score)
-        setScore(Number.isNaN(nextScore) ? 1 : nextScore)
+        setScore(Number.isNaN(nextScore) ? DEFAULT_SCORE : nextScore)
         setIsReviewComposerOpen(true)
     }
 
@@ -313,7 +314,7 @@ const CourseOverview = () => {
             await deleteCourseReview(courseId, profile.uid)
             setReviews((previous) => previous.filter((review) => String(review.userId) !== String(profile.uid)))
             setReviewText('')
-            setScore(1)
+            setScore(DEFAULT_SCORE)
             setIsReviewComposerOpen(false)
         } finally {
             setIsDeletingReview(false)
@@ -381,12 +382,12 @@ const CourseOverview = () => {
         )
     }
 
-    if (!course) {
+    if(!course) {
         return <p className='text-sm text-neutral1'>Course not found.</p>
     }
 
     if(isOverviewLoading) {
-        return <LoadingState fullPage />
+        return <LoadingState/>
     }
 
     return (
@@ -475,7 +476,13 @@ const CourseOverview = () => {
 
                     <Card className='p-12! flex flex-row justify-between items-center'>
                         <div>
-                            <h2 className={`font-bold ${reviewSummary.totalReviews > 0 ? 'text-8xl' : 'text-4xl'}`}>
+                            <h2 className={`font-bold
+                                animate-shine bg-[length:200%_auto] 
+                                bg-gradient-to-r from-neutral0 via-[#4f5d72] to-neutral0 
+                                from-30% to-70%
+                                bg-clip-text text-transparent
+                                ${reviewSummary.totalReviews > 0 ? 'text-7xl' : 'text-4xl'}`}
+                            >
                                 {formatScoreLabel(reviewSummary.avgScore)}
                             </h2>
                             <p className='text-lg text-neutral1'>{reviewSummary.totalReviews} review{reviewSummary.totalReviews != 1 && 's'}</p>
