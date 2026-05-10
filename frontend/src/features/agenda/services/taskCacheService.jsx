@@ -1,12 +1,15 @@
 import { createCacheKey, deleteCacheEntry, getCacheValue, setCacheEntry } from '../../../shared/services/cacheService'
+import { CACHE_DEBOUNCE_MS, CACHE_NAMESPACES, CACHE_STORAGE_KEYS } from '../../../shared/utils/cacheUtils'
 import { createTask, deleteTask, updateTask } from './taskService'
-import { TASK_PENDING_PATCH_NAMESPACE, TASK_PATCH_FLUSH_DEBOUNCE_MS, TASK_PENDING_OPS_STORAGE_KEY } from '../utils/taskUtils'
 
 let flushTimeoutId = null
 let isFlushing = false
 const pendingTaskIds = new Set()
 const pendingTaskFlushPromises = new Map()
 let hasHydratedPendingTaskOps = false
+const TASK_PENDING_PATCH_NAMESPACE = CACHE_NAMESPACES.TASK_PENDING_PATCH
+const TASK_PATCH_FLUSH_DEBOUNCE_MS = CACHE_DEBOUNCE_MS.TASK_PATCH_FLUSH
+const TASK_PENDING_OPS_STORAGE_KEY = CACHE_STORAGE_KEYS.TASK_PENDING_OPS
 
 const readPersistedPendingOps = () => {
     if(typeof window === 'undefined') return {}

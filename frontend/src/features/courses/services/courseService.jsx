@@ -2,7 +2,24 @@ import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, query, serverT
 import { useEffect, useMemo, useState } from 'react'
 import coursesCatalog from '../../../data/courses.json'
 import { buildEnrollmentId, normalizeSearchText, tokenizeText } from '../utils/courseUtils'
+import { CACHE_STATUS, createCacheKey, deleteCacheEntry, getCacheStatus, getCacheValue, setCacheEntry } from '../../../shared/services/cacheService'
+import { CACHE_NAMESPACES, CACHE_TTLS_MS } from '../../../shared/utils/cacheUtils'
 import { db } from '../../../lib/firebase'
+
+const COURSE_ENROLLMENTS_CACHE_NAMESPACE = CACHE_NAMESPACES.COURSE_ENROLLMENTS
+const COURSE_ENROLLMENTS_CACHE_TTL_MS = CACHE_TTLS_MS.COURSE_ENROLLMENTS
+
+const getCourseEnrollmentsCacheKey = (studentId) => {
+    return createCacheKey(COURSE_ENROLLMENTS_CACHE_NAMESPACE, studentId)
+}
+
+const clearCourseEnrollmentsCache = (studentId) => {
+    if(!studentId) {
+        return
+    }
+
+    deleteCacheEntry(getCourseEnrollmentsCacheKey(studentId))
+}
 
 const getAllCourses = () => {
     return coursesCatalog
@@ -176,6 +193,8 @@ const joinCourse = async (studentId, courseId, options = {}) => {
         })
     }
 
+    clearCourseEnrollmentsCache(studentId)
+
     return enrollmentId
 
 }
@@ -186,6 +205,8 @@ const leaveCourse = async (studentId, courseId) => {
     const enrollmentRef = doc(db, 'courses', enrollmentId)
 
     await deleteDoc(enrollmentRef)
+
+    clearCourseEnrollmentsCache(studentId)
 
 }
 
@@ -257,6 +278,13 @@ const useStudentCourses = (studentId) => {
             return
         }
 
+        const cacheKey = getCourseEnrollmentsCacheKey(studentId)
+        const cacheStatus = getCacheStatus(cacheKey)
+        const cachedEnrollments = getCacheValue(cacheKey)
+        if((cacheStatus === CACHE_STATUS.FRESH || cacheStatus === CACHE_STATUS.STALE) && Array.isArray(cachedEnrollments)) {
+            setEnrollments(cachedEnrollments)
+        }
+
         setLoading(true)
 
         const coursesRef = collection(db, 'courses')
@@ -269,6 +297,7 @@ const useStudentCourses = (studentId) => {
             }))
 
             setEnrollments(data)
+            setCacheEntry(cacheKey, data, { ttlMs: COURSE_ENROLLMENTS_CACHE_TTL_MS })
             setLoading(false)
         }, () => {
             setLoading(false)

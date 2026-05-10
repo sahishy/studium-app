@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app'
 import { browserLocalPersistence, connectAuthEmulator, getAuth, setPersistence } from 'firebase/auth'
-import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore'
+import { connectFirestoreEmulator, initializeFirestore, persistentLocalCache } from 'firebase/firestore'
 import { connectStorageEmulator, getStorage } from 'firebase/storage'
 import { getAI, GoogleAIBackend } from "firebase/ai"
 
@@ -17,7 +17,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 
 export const auth = getAuth(app)
-export const db = getFirestore(app)
+export const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({}),
+})
 export const storage = getStorage(app)
 export const ai = getAI(app, { backend: new GoogleAIBackend() })
 
