@@ -11,7 +11,7 @@ import { useUserStats } from '../../profile/contexts/UserStatsContext'
 import { getAverageScoreByCourseIds } from '../services/reviewService'
 import { getTeachersByIdsMap } from '../services/teacherService'
 import LoadingState from '../../../shared/components/ui/LoadingState'
-import { createCacheKey, resolveCachedRecordsByIds, setCachedRecordsById } from '../../../shared/services/cacheService'
+import { CACHE_STATUS, createCacheKey, getCacheStatus, getCacheValue, resolveCachedRecordsByIds, setCacheEntry, setCachedRecordsById } from '../../../shared/services/cacheService'
 import { CACHE_NAMESPACES, CACHE_TTLS_MS } from '../../../shared/utils/cacheUtils'
 import study0 from '../../../assets/images/illustrations/study0.png'
 import { MAX_USER_COURSES } from '../utils/courseUtils'
@@ -19,9 +19,16 @@ import { MAX_USER_COURSES } from '../utils/courseUtils'
 const RESULTS_PAGE_SIZE = 10
 const SCORE_CACHE_TTL_MS = CACHE_TTLS_MS.COURSE_SCORE
 const SCORE_CACHE_NAMESPACE = CACHE_NAMESPACES.COURSE_SCORE
+const TEACHERS_MAP_CACHE_TTL_MS = CACHE_TTLS_MS.COURSE_TEACHERS_MAP
+const TEACHERS_MAP_CACHE_NAMESPACE = CACHE_NAMESPACES.COURSE_TEACHERS_MAP
 
 const getScoreCacheKey = (courseId) => {
     return createCacheKey(SCORE_CACHE_NAMESPACE, courseId)
+}
+
+const getTeachersMapCacheKey = (teacherIds = []) => {
+    const normalized = Array.from(new Set((teacherIds ?? []).map((teacherId) => String(teacherId)).filter(Boolean))).sort()
+    return createCacheKey(TEACHERS_MAP_CACHE_NAMESPACE, normalized.join(','))
 }
 
 const MyCoursesTab = () => {
@@ -224,12 +231,20 @@ const MyCoursesTab = () => {
             return
         }
 
+        const cacheKey = getTeachersMapCacheKey(teacherIds)
+        const cacheStatus = getCacheStatus(cacheKey)
+        const cachedTeachersMap = getCacheValue(cacheKey)
+        if ((cacheStatus === CACHE_STATUS.FRESH || cacheStatus === CACHE_STATUS.STALE) && cachedTeachersMap && typeof cachedTeachersMap === 'object') {
+            setTeachersMap(cachedTeachersMap)
+        }
+
         const loadTeachers = async () => {
             setTeachersLoading(true)
             try {
                 const nextMap = await getTeachersByIdsMap(teacherIds)
                 if (!cancelled) {
                     setTeachersMap(nextMap)
+                    setCacheEntry(cacheKey, nextMap, { ttlMs: TEACHERS_MAP_CACHE_TTL_MS })
                 }
             } finally {
                 if (!cancelled) {
