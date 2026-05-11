@@ -2,6 +2,8 @@ import { useOutletContext } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
 import Button from '../../../shared/components/ui/Button'
 import logo from '../../../assets/images/logo_sm.png'
+import { FaBoxArchive } from 'react-icons/fa6'
+import PageHeader from '../../../shared/components/ui/PageHeader'
 
 const Resources = () => {
 
@@ -12,7 +14,8 @@ const Resources = () => {
             <Topbar profile={profile} />
 
             <div className='w-full flex-1 flex flex-col gap-4 px-24 pb-24 pt-2'>
-                <h1 className='text-2xl font-semibold'>Resources</h1>
+                
+                <PageHeader text={'Resources'} icon={FaBoxArchive}/>
 
                 <div className='flex-1 flex flex-col gap-1 items-center justify-center'>
                     <img src={logo} className='object-contain w-12 mb-3'/>

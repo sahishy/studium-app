@@ -11,6 +11,8 @@ import { updateUserInfo } from '../../auth/services/userService'
 import { uploadProfilePicture } from '../../../shared/services/storageService'
 import Button from '../../../shared/components/ui/Button'
 import LoadingState from '../../../shared/components/ui/LoadingState'
+import { FaChild } from 'react-icons/fa6'
+import PageHeader from '../../../shared/components/ui/PageHeader'
 
 const tabs = [
     { name: 'color', label: 'Color' },
@@ -150,12 +152,15 @@ const Avatar = () => {
 
             <div className='w-full flex-1 flex flex-col gap-4 px-24 pb-24 pt-2'>
                 <div className='flex justify-between items-start'>
-                    <h1 className='text-2xl font-semibold'>Avatar</h1>
+
+                    <PageHeader text={'Avatar'} icon={FaChild} />
+
                     <TextTabSelector
                         tabs={tabs}
                         currentIndex={activeTab}
                         onSelect={(_, index) => setActiveTab(index)}
                     />
+
                 </div>
 
                 {avatarLoading ? (

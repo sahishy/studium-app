@@ -4,7 +4,8 @@ import TextTabSelector from '../../../shared/components/ui/TextTabSelector'
 import { useRef } from 'react'
 import BottomFade from '../../../shared/components/ui/BottomFade'
 import Button from '../../../shared/components/ui/Button'
-import { FaArrowLeft } from 'react-icons/fa6'
+import { FaArrowLeft, FaGraduationCap } from 'react-icons/fa6'
+import PageHeader from '../../../shared/components/ui/PageHeader'
 
 const tabs = [
     { name: 'me', label: 'My Courses' },
@@ -46,7 +47,7 @@ const Courses = () => {
                             Back
                         </Button>
                     ) : (
-                        <h1 className='text-2xl font-semibold'>{getTabTitle()}</h1>
+                        <PageHeader text={getTabTitle()} icon={FaGraduationCap}/>
                     )}
 
                     <TextTabSelector

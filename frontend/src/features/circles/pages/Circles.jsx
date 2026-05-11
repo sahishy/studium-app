@@ -7,9 +7,10 @@ import JoinCircleModal from '../components/modals/JoinCircleModal'
 import { useCircles } from '../contexts/CirclesContext'
 import Button from '../../../shared/components/ui/Button'
 import BottomFade from '../../../shared/components/ui/BottomFade'
-import { FaArrowUp } from 'react-icons/fa6'
+import { FaArrowUp, FaUser, FaUserGroup } from 'react-icons/fa6'
 import social0 from '../../../assets/images/illustrations/social0.png'
 import logo from '../../../assets/images/logo_sm.png'
+import PageHeader from '../../../shared/components/ui/PageHeader.jsx'
 
 const Circles = () => {
 
@@ -21,10 +22,11 @@ const Circles = () => {
             <Topbar profile={profile} />
 
             <div className='w-full flex-1 flex flex-col gap-4 px-24 pb-24 pt-2'>
-                <h1 className='text-2xl font-semibold'>Circles</h1>
+
+                <PageHeader text={'Circles'} icon={FaUserGroup}/>
 
                 <div className='flex-1 flex flex-col gap-1 items-center justify-center'>
-                    <img src={logo} className='object-contain w-12 mb-3'/>
+                    <img src={logo} className='object-contain w-12 mb-3' />
                     <h1 className='text-3xl font-bold'>In development</h1>
                     <p className='text-sm text-neutral1'>A place to join study circles and connect with friends. This will be renamed to Socials.</p>
                 </div>

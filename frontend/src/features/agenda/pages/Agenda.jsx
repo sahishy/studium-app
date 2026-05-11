@@ -6,9 +6,10 @@ import { useTasks } from '../contexts/TasksContext'
 import BottomFade from '../../../shared/components/ui/BottomFade'
 import IconTabSelector from '../../../shared/components/ui/IconTabSelector'
 import LoadingState from '../../../shared/components/ui/LoadingState'
-import { FaCircleExclamation } from 'react-icons/fa6'
+import { FaBookOpen, FaCircleExclamation } from 'react-icons/fa6'
 import { MAX_USER_TASKS } from '../utils/taskUtils'
 import { flushTaskOpsOnPageLifecycle, initializeTaskPendingOpsFlush } from '../services/taskCacheService'
+import PageHeader from '../../../shared/components/ui/PageHeader'
 
 const Agenda = () => {
 
@@ -33,7 +34,7 @@ const Agenda = () => {
 
     useEffect(() => {
         const handleVisibilityChange = () => {
-            if(document.visibilityState === 'hidden') {
+            if (document.visibilityState === 'hidden') {
                 flushTaskOpsOnPageLifecycle()
             }
         }
@@ -62,19 +63,21 @@ const Agenda = () => {
             <Topbar profile={profile} />
             <div className='w-full flex flex-col items-start gap-4 px-24 pb-8 pt-2 mx-auto'>
 
-                <div className='flex justify-between w-full'>
-                    <h1 className="text-2xl font-semibold">Agenda</h1>
+                <div className='flex justify-between items-start w-full'>
+
+                    <PageHeader text={'Agenda'} icon={FaBookOpen} />
 
                     <IconTabSelector
                         tabs={tabs}
                         currentIndex={currentTab}
                         onSelect={(tab) => handleClick(tab.name)}
                     />
+
                 </div>
 
-                {isTaskLimitReached && 
+                {isTaskLimitReached &&
                     <div className='w-full p-3 rounded-xl border border-red-200 bg-red-50 mb-4'>
-                        <p className='text-sm text-red-400 flex items-center gap-2'><FaCircleExclamation/>Max task limit of {MAX_USER_TASKS} tasks reached. This limit will be removed soon!</p>
+                        <p className='text-sm text-red-400 flex items-center gap-2'><FaCircleExclamation />Max task limit of {MAX_USER_TASKS} tasks reached. This limit will be removed soon!</p>
                     </div>
                 }
 
