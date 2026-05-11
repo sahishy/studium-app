@@ -291,6 +291,7 @@ const SatClassicGame = ({ roomId, userId }) => {
     const matchDurationSeconds = (matchStartedAt && matchEndedAt)
         ? Math.max(0, Math.floor((matchEndedAt.getTime() - matchStartedAt.getTime()) / 1000))
         : 0
+    const matchEloDelta = Number(latestGameEndedEvent?.data?.eloDeltaByUserId?.[userId]) || 0
     const roundHistory = useMemo(() => {
         return events
             .filter((eventEntry) => eventEntry?.type === 'ROUND_RESOLVED')
@@ -338,8 +339,9 @@ const SatClassicGame = ({ roomId, userId }) => {
             eloToNextTier,
             rankedElo: rankedStats.elo,
             peakProgress: Math.max(0, rankedStats.peakElo - currentTierMinElo),
+            eloDelta: matchEloDelta,
         }
-    }, [userStats])
+    }, [userStats, matchEloDelta])
 
     const activeOverlayMode = isResultOverlayActive
         ? resultOverlay?.type

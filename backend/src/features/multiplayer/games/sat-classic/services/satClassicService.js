@@ -6,16 +6,15 @@ import { MULTIPLAYER_MODE_IDS } from '../../../utils/multiplayerUtils.js'
 import {
     ANSWERED_FIRST_MULTIPLIER,
     SAT_CLASSIC_INITIAL_HEALTH,
-    SAT_CLASSIC_LOSS_ELO_DELTA,
     SAT_CLASSIC_MAX_QUESTIONS,
     SAT_CLASSIC_POST_SUBMIT_GRACE_MS,
     SAT_CLASSIC_ROUND_DURATION_MS,
-    SAT_CLASSIC_WIN_ELO_DELTA,
     buildPlayerStateMap,
     buildUserStatsByUserId,
     calculateDamage,
     deriveWinnerFromHealth,
     evaluateQuestionAnswer,
+    getRandomRankedEloDelta,
     getBaseDamageByDifficulty,
     getRoundDamageMultiplier,
     resolveRoundAnswers,
@@ -99,25 +98,37 @@ const endSatClassicGameInTransaction = async ({
 
     const resolvedPlayerIds = Array.isArray(playerIds) ? playerIds.filter(Boolean) : []
     const resolvedWinnerUserId = resolvedPlayerIds.includes(winnerUserId) ? winnerUserId : null
+    let eloDeltaByUserId = {}
 
     if(resolvedWinnerUserId) {
+        const winnerEloDelta = getRandomRankedEloDelta({ isWin: true })
         await applyRankedMatchResult({
             transaction,
             userId: resolvedWinnerUserId,
             modeId: MODE_ID,
-            eloDelta: SAT_CLASSIC_WIN_ELO_DELTA,
+            eloDelta: winnerEloDelta,
             userStatsData: userStatsByUserId[resolvedWinnerUserId] ?? null,
         })
 
         const loserUserId = resolvedPlayerIds.find((playerId) => playerId && playerId !== resolvedWinnerUserId) ?? null
         if(loserUserId) {
+            const loserEloDelta = getRandomRankedEloDelta({ isLoss: true })
             await applyRankedMatchResult({
                 transaction,
                 userId: loserUserId,
                 modeId: MODE_ID,
-                eloDelta: SAT_CLASSIC_LOSS_ELO_DELTA,
+                eloDelta: loserEloDelta,
                 userStatsData: userStatsByUserId[loserUserId] ?? null,
             })
+
+            eloDeltaByUserId = {
+                [resolvedWinnerUserId]: winnerEloDelta,
+                [loserUserId]: loserEloDelta,
+            }
+        } else {
+            eloDeltaByUserId = {
+                [resolvedWinnerUserId]: winnerEloDelta,
+            }
         }
     }
 
@@ -147,6 +158,7 @@ const endSatClassicGameInTransaction = async ({
             winnerUserId: resolvedWinnerUserId,
             health: Array.isArray(health) ? health : [],
             endReason,
+            eloDeltaByUserId,
         },
         transaction,
     })
