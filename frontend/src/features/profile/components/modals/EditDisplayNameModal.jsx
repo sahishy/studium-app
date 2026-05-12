@@ -8,8 +8,11 @@ const EditDisplayNameModal = ({
     value = '',
     closeModal,
     onSave,
+    onCheckAvailability,
 }) => {
     const [draftValue, setDraftValue] = useState(value)
+    const [submitError, setSubmitError] = useState('')
+    const [isSaving, setIsSaving] = useState(false)
 
     const validation = useMemo(() => {
 
@@ -26,13 +29,32 @@ const EditDisplayNameModal = ({
 
     }, [draftValue])
 
-    const handleSave = () => {
-        if(!validation.isValid) {
+    const handleSave = async () => {
+        if(!validation.isValid || isSaving) {
             return
         }
 
-        onSave?.(String(draftValue).trim())
-        closeModal?.()
+        const nextValue = String(draftValue).trim()
+
+        setSubmitError('')
+        setIsSaving(true)
+
+        try {
+            if(typeof onCheckAvailability === 'function') {
+                const isAvailable = await onCheckAvailability(nextValue)
+                if(!isAvailable) {
+                    setSubmitError('Display name is already taken.')
+                    return
+                }
+            }
+
+            await onSave?.(nextValue)
+            closeModal?.()
+        } catch (error) {
+            setSubmitError(error?.message || 'Unable to update display name.')
+        } finally {
+            setIsSaving(false)
+        }
     }
 
     return (
@@ -49,7 +71,12 @@ const EditDisplayNameModal = ({
                 <input
                     type='text'
                     value={draftValue}
-                    onChange={(event) => setDraftValue(event.target.value)}
+                    onChange={(event) => {
+                        setDraftValue(event.target.value)
+                        if(submitError) {
+                            setSubmitError('')
+                        }
+                    }}
                     className='w-full p-4 border-2 border-neutral4 rounded-xl focus:outline-gray-400 bg-neutral6 text-neutral0'
                     placeholder='Only letters and numbers'
                     required={true}
@@ -57,11 +84,14 @@ const EditDisplayNameModal = ({
                 {!validation.isValid ? (
                     <p className='text-sm text-red-400 flex items-center gap-2'><FaCircleExclamation/> {validation.error}</p>
                 ) : null}
+                {submitError ? (
+                    <p className='text-sm text-red-400 flex items-center gap-2'><FaCircleExclamation/> {submitError}</p>
+                ) : null}
 
                 <div className='flex gap-4 mt-4'>
-                    <Button onClick={closeModal} className='w-full py-4'>Cancel</Button>
-                    <Button htmlType='submit' type='primary' className='w-full py-4' disabled={!validation.isValid}>
-                        Save
+                    <Button onClick={closeModal} className='w-full py-4' disabled={isSaving}>Cancel</Button>
+                    <Button htmlType='submit' type='primary' className='w-full py-4' disabled={!validation.isValid || isSaving}>
+                        {isSaving ? 'Saving...' : 'Save'}
                     </Button>
                 </div>
             </form>

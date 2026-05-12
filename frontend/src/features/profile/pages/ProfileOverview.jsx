@@ -13,7 +13,7 @@ import { useModal } from '../../../shared/contexts/ModalContext'
 import { getSchoolNameById } from '../services/schoolService'
 import { getMajorNameById } from '../services/majorService'
 import { getUserStatsByUserId, updateUserStatsByUserId } from '../services/statsService'
-import { getUserById, updateUserInfo } from '../../auth/services/userService'
+import { getUserById, isDisplayNameAvailable, updateUserInfo } from '../../auth/services/userService'
 import { buildRankedUiState } from '../../multiplayer/utils/multiplayerUtils'
 import { FaGear, FaSchool, FaFlask } from 'react-icons/fa6'
 import { FaEdit } from 'react-icons/fa'
@@ -180,6 +180,9 @@ const ProfileOverview = () => {
             <EditDisplayNameModal
                 value={draftAcademic.displayName}
                 closeModal={closeModal}
+                onCheckAvailability={async (nextValue) => {
+                    return isDisplayNameAvailable(nextValue, userId)
+                }}
                 onSave={async (nextValue) => {
                     try {
                         await updateUserInfo(userId, {

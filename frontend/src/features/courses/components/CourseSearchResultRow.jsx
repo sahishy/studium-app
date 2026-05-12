@@ -11,7 +11,7 @@ const CourseSearchResultRow = ({ course, onAdd, loading, isTaking, score = null 
         <button
             onClick={onAdd}
             disabled={loading || isTaking}
-            className='disabled:opacity-40 disabled:cursor-not-allowed'
+            className='disabled:cursor-not-allowed'
         >
             <Card
                 hoverable={!isTaking}
@@ -33,7 +33,7 @@ const CourseSearchResultRow = ({ course, onAdd, loading, isTaking, score = null 
                             </span>
                         </p>
                     </div>
-                    <p className='text-xs text-neutral1 truncate'>
+                    <p className='text-xs text-neutral1 truncate text-left'>
                         {course.description || 'No description'}
                     </p>
                 </div>

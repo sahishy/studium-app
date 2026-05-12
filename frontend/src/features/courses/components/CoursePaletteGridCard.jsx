@@ -11,7 +11,7 @@ const CoursePaletteGridCard = ({ course, onAdd, loading, isTaking, score = null 
         <button
             onClick={onAdd}
             disabled={loading || isTaking}
-            className='cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
+            className='cursor-pointer disabled:cursor-not-allowed'
         >
             <Card hoverable className={'text-start p-2! gap-1! h-full'}>
                 <div className='h-24 bg-neutral2/20 flex items-center justify-center text-neutral2 rounded-lg'>
