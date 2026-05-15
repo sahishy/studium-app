@@ -60,7 +60,7 @@ const triggerTaskCompletionEffects = async (taskId) => {
         const userSnap = await getDoc(userRef)
         const userProfile = { uid: resolvedOwnerId, ...userSnap.data() }
 
-        await updateUserXP(userProfile, 10)
+        await updateUserXP(userProfile, 100)
         await userCompleteTask(userProfile)
     } else if(resolvedOwnerType === 'circle' && resolvedOwnerId) {
         const circleRef = doc(db, 'circles', resolvedOwnerId)

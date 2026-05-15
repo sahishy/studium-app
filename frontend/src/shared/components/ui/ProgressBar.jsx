@@ -23,7 +23,7 @@ const ProgressBar = ({
         <div className={`relative w-full h-4 rounded-full overflow-hidden bg-neutral5 dark:bg-neutral4 ${trackClassName} ${className}`}>
             {hasSecondary ? (
                 <div
-                    className={`absolute left-0 top-0 h-full rounded-full bg-sky-300/35 ${secondaryClassName}`}
+                    className={`absolute left-0 top-0 h-full rounded-full transition-all duration-1000 bg-sky-300/35 ${secondaryClassName}`}
                     style={{ width: `${secondaryWidth}%` }}
                 />
             ) : null}

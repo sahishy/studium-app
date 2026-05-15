@@ -1,20 +1,19 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-const BaseTooltip = ({ children, content, className = '', delay = 0, placement = 'auto', disabled = false }) => {
+const BaseTooltip = ({ children, content, className = '', delay = 0, placement = 'auto', disabled = false, open = undefined }) => {
 
     const gap = 4;
     const animationDuration = 150;
 
-    const [isMounted, setIsMounted] = useState(false);
-    const [isOpen, setIsOpen] = useState(false);
-    const [tooltipSize, setTooltipSize] = useState({ width: 0, height: 0 });
+    const [phase, setPhase] = useState('hidden');
     const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
 
     const tooltipRef = useRef(null);
     const triggerRef = useRef(null);
     const showTimeoutRef = useRef(null);
-    const unmountTimeoutRef = useRef(null);
+    const hideTimeoutRef = useRef(null);
+    const isControlled = typeof open === 'boolean';
 
     const calculatePosition = (triggerRect, tooltipRect) => {
         let top, left;
@@ -31,7 +30,7 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
         } else if (placement === 'right') {
             top = triggerRect.top + (triggerRect.height / 2) - (tooltipRect.height / 2);
             left = triggerRect.right + gap;
-        } else { // auto
+        } else {
             const spaceBelow = window.innerHeight - triggerRect.bottom;
             top = spaceBelow > tooltipRect.height + (gap * 2)
                 ? triggerRect.bottom + gap
@@ -39,124 +38,91 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
             left = triggerRect.left + (triggerRect.width / 2) - (tooltipRect.width / 2);
         }
 
-        // Keep within viewport bounds
         left = Math.max(gap, Math.min(left, window.innerWidth - tooltipRect.width - gap));
         top = Math.max(gap, Math.min(top, window.innerHeight - tooltipRect.height - gap));
 
         return { top, left };
     };
 
+    useLayoutEffect(() => {
+        if (phase !== 'measuring' || !tooltipRef.current || !triggerRef.current) return;
+
+        const tooltipRect = tooltipRef.current.getBoundingClientRect();
+        const triggerRect = triggerRef.current.getBoundingClientRect();
+
+        setTooltipPosition(calculatePosition(triggerRect, tooltipRect));
+        setPhase('visible');
+    }, [phase]);
+
     const showTooltip = () => {
         if (disabled) return;
-
-        if (showTimeoutRef.current) {
-            clearTimeout(showTimeoutRef.current);
-        }
-
-        if (unmountTimeoutRef.current) {
-            clearTimeout(unmountTimeoutRef.current);
-        }
+        clearTimeout(showTimeoutRef.current);
+        clearTimeout(hideTimeoutRef.current);
 
         showTimeoutRef.current = setTimeout(() => {
-            setIsMounted(true);
-            setIsOpen(false);
-
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    setIsOpen(true);
-                });
-            });
-
-            if (triggerRef.current) {
-                const rect = triggerRef.current.getBoundingClientRect();
-                const estimatedRect = { width: tooltipSize.width || 150, height: tooltipSize.height || 40 };
-                const position = calculatePosition(rect, estimatedRect);
-                setTooltipPosition(position);
-            }
+            setPhase('measuring');
         }, delay);
     };
 
     const hideTooltip = () => {
-        if (showTimeoutRef.current) {
-            clearTimeout(showTimeoutRef.current);
-        }
-
-        if (unmountTimeoutRef.current) {
-            clearTimeout(unmountTimeoutRef.current);
-        }
-
-        setIsOpen(false);
-        unmountTimeoutRef.current = setTimeout(() => {
-            setIsMounted(false);
-        }, animationDuration);
+        clearTimeout(showTimeoutRef.current);
+        clearTimeout(hideTimeoutRef.current);
+        setPhase('hidden');
     };
-
-    useLayoutEffect(() => {
-        if (isMounted && tooltipRef.current) {
-            const rect = tooltipRef.current.getBoundingClientRect();
-            setTooltipSize({ width: rect.width, height: rect.height });
-
-            // calculate position immediately
-            if (triggerRef.current) {
-                const triggerRect = triggerRef.current.getBoundingClientRect();
-                const position = calculatePosition(triggerRect, rect);
-                setTooltipPosition(position);
-            }
-        }
-    }, [isMounted]);
 
     useEffect(() => {
         return () => {
-            if (showTimeoutRef.current) {
-                clearTimeout(showTimeoutRef.current);
-            }
-
-            if (unmountTimeoutRef.current) {
-                clearTimeout(unmountTimeoutRef.current);
-            }
+            clearTimeout(showTimeoutRef.current);
+            clearTimeout(hideTimeoutRef.current);
         };
     }, []);
 
     useEffect(() => {
-        if (disabled) {
-            hideTooltip();
-        }
+        if (disabled) hideTooltip();
     }, [disabled]);
+
+    useEffect(() => {
+        if (!isControlled || disabled) return;
+        clearTimeout(showTimeoutRef.current);
+        clearTimeout(hideTimeoutRef.current);
+        setPhase(open ? 'measuring' : 'hidden');
+    }, [open, isControlled, disabled]);
+
+    const isMounted = phase !== 'hidden';
 
     return (
         <div className={`relative ${className}`}>
             <div
                 ref={triggerRef}
-                onMouseEnter={showTooltip}
-                onMouseLeave={hideTooltip}
-                onFocus={showTooltip}
-                onBlur={hideTooltip}
-                // onClick={hideTooltip}
+                onMouseEnter={isControlled ? undefined : showTooltip}
+                onMouseLeave={isControlled ? undefined : hideTooltip}
+                onFocus={isControlled ? undefined : showTooltip}
+                onBlur={isControlled ? undefined : hideTooltip}
             >
                 {children}
             </div>
 
-            {!disabled && isMounted &&
-                createPortal(
-                    <div
-                        ref={tooltipRef}
-                        className={`
-                            absolute z-[9999] pointer-events-none select-none
-                            transition-all duration-150 ease-out transform
-                            ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
-                        `}
-                        style={{
-                            top: `${tooltipPosition.top}px`,
-                            left: `${tooltipPosition.left}px`,
-                            position: 'fixed'
-                        }}
-                    >
-                        {content}
-                    </div>,
-                    document.body
-                )}
+            {!disabled && isMounted && createPortal(
+                <div
+                    ref={tooltipRef}
+                    className={`
+                        absolute z-[9999] pointer-events-none select-none
+                        transition duration-150 ease-out
+                        ${phase === 'visible' ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
+                    `}
+                    style={{
+                        position: 'fixed',
+                        top: `${tooltipPosition.top}px`,
+                        left: `${tooltipPosition.left}px`,
+                        visibility: phase === 'measuring' ? 'hidden' : 'visible',
+                    }}
+                >
+                    {content}
+                </div>,
+                document.body
+            )}
         </div>
-    )
-}
+    );
+};
 
-export default BaseTooltip
+export default BaseTooltip;
