@@ -14,7 +14,7 @@ import {
     calculateDamage,
     deriveWinnerFromHealth,
     evaluateQuestionAnswer,
-    getRandomRankedEloDelta,
+    getRankedEloDelta,
     getBaseDamageByDifficulty,
     getRoundDamageMultiplier,
     resolveRoundAnswers,
@@ -98,10 +98,11 @@ const endSatClassicGameInTransaction = async ({
 
     const resolvedPlayerIds = Array.isArray(playerIds) ? playerIds.filter(Boolean) : []
     const resolvedWinnerUserId = resolvedPlayerIds.includes(winnerUserId) ? winnerUserId : null
+    const roundsPlayed = Math.max(1, (Number(state?.questionIndex) || 0) + 1)
     let eloDeltaByUserId = {}
 
     if(resolvedWinnerUserId) {
-        const winnerEloDelta = getRandomRankedEloDelta({ isWin: true })
+        const winnerEloDelta = getRankedEloDelta({ isWin: true, roundsPlayed })
         await applyRankedMatchResult({
             transaction,
             userId: resolvedWinnerUserId,
@@ -112,7 +113,7 @@ const endSatClassicGameInTransaction = async ({
 
         const loserUserId = resolvedPlayerIds.find((playerId) => playerId && playerId !== resolvedWinnerUserId) ?? null
         if(loserUserId) {
-            const loserEloDelta = getRandomRankedEloDelta({ isLoss: true })
+            const loserEloDelta = getRankedEloDelta({ isLoss: true, roundsPlayed })
             await applyRankedMatchResult({
                 transaction,
                 userId: loserUserId,
