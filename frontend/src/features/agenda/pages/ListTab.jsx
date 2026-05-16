@@ -17,6 +17,7 @@ import { buildListIndexPatchUpdates, buildReorderPlanForSection, buildSortableId
 import Select from '../../../shared/components/popovers/Select'
 import { MAX_USER_TASKS } from '../utils/taskUtils'
 import TextTooltip from '../../../shared/components/tooltips/TextTooltip'
+import { flattenTaskTitle } from '../utils/naturalLanguage'
 
 const isDescendantOf = (task, ancestorId, tasksById) => {
     let parentId = task?.parentTaskId ?? null
@@ -202,13 +203,19 @@ const ListTab = () => {
     }, [])
 
     const handleAddTask = useCallback(async (payload) => {
+
+        const trimmedTitle = flattenTaskTitle(payload.title).trim()
+        if (!trimmedTitle) {
+            return
+        }
+
         const nextIndex = sortedTasks.reduce((max, t) => (
             typeof t.listIndex === 'number' ? Math.max(max, t.listIndex) : max
         ), -1) + 1
 
         const fallback = sortedTasks[0] || null
         createTaskOptimistic({
-            title: payload.title,
+            title: trimmedTitle,
             ownerType: fallback?.ownerType || 'user',
             ownerId: fallback?.ownerId || profile.uid,
             status: 'Incomplete',
