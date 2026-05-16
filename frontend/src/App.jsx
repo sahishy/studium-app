@@ -6,8 +6,8 @@ import AgendaIndexRedirect from './routes/AgendaIndexRedirect'
 import ListTab from './features/agenda/pages/ListTab'
 import CalendarTab from './features/agenda/pages/CalendarTab'
 import BoardTab from './features/agenda/pages/BoardTab'
-import Circles from './features/circles/pages/Circles'
-import CirclesOverview from './features/circles/pages/CirclesOverview'
+import Socials from './features/socials/pages/Socials'
+import CircleOverview from './features/socials/pages/CircleOverview'
 import Courses from './features/courses/pages/Courses'
 import MyCoursesTab from './features/courses/pages/MyCoursesTab'
 import AllCoursesTab from './features/courses/pages/AllCoursesTab'
@@ -21,7 +21,7 @@ import Landing from './features/main/pages/Landing'
 import Welcome from './features/auth/pages/Welcome'
 import { ModalProvider } from './shared/contexts/ModalContext'
 import { ToastProvider } from './shared/contexts/ToastContext'
-import JoinCircle from './features/circles/pages/JoinCircle'
+import JoinCircle from './features/socials/pages/JoinCircle'
 import ErrorState from './shared/components/ui/ErrorState'
 import Resources from './features/resources/pages/Resources'
 import Ranked from './features/multiplayer/pages/Ranked'
@@ -54,9 +54,9 @@ export default function App() {
 							<Route path="calendar" element={<CalendarTab/>} />
 							<Route path="board" element={<BoardTab/>} />
 						</Route>
-						<Route path="/circles">
-							<Route index element={<Circles/>}/>
-							<Route path=":circleId" element={<CirclesOverview/>}/>
+						<Route path="/socials">
+							<Route index element={<Socials/>}/>
+							<Route path="circle/:circleId" element={<CircleOverview/>}/>
 						</Route>
 						<Route path="/courses" element={<Courses/>}>
 							<Route index element={<CoursesIndexRedirect/>}/>

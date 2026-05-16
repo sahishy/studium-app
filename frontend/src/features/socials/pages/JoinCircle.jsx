@@ -56,7 +56,7 @@ const JoinCircle = () => {
     const handleJoin = async () => {
 
         await joinCircle(profile.uid, circle.uid);
-        navigate(`/circles/${circle.uid}`)
+        navigate(`/socials/circle/${circle.uid}`)
 
     }
 

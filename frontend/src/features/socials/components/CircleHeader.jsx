@@ -9,7 +9,7 @@ import EditCircleModal from "./modals/EditCircleModal";
 import DeleteCircleModal from "./modals/DeleteCircleModal";
 import Button from "../../../shared/components/ui/Button";
 
-const CircleHeader = ({ circle, profile, back = '/circles' }) => {
+const CircleHeader = ({ circle, profile, back = '/socials' }) => {
     const navigate = useNavigate();
     const { openModal, closeModal } = useModal();
     const ownerUserId = circle.createdByUserId || circle.createdBy;
@@ -27,7 +27,7 @@ const CircleHeader = ({ circle, profile, back = '/circles' }) => {
     const handleSelectOption = (option) => {
         if (option.label === 'Leave') {
             leaveCircle(profile.uid, circle.uid);
-            navigate('/circles');
+            navigate('/socials');
         } else if (option.label === 'Edit') {
             openModal(<EditCircleModal circle={circle} closeModal={closeModal} />);
         } else if (option.label === 'Delete') {

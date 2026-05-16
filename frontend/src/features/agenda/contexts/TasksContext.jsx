@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { triggerTaskCompletionEffects, useUserTasks, useCircleTasks } from '../services/taskService'
 import { enqueueTaskCreate, enqueueTaskDelete, enqueueTaskPatch } from '../services/taskCacheService'
-import { useCircles } from '../../circles/contexts/CirclesContext'
+import { useCircles } from '../../socials/contexts/CirclesContext'
 import { MAX_USER_TASKS } from '../utils/taskUtils'
 
 const TasksContext = createContext({ user: [], circle: [] })

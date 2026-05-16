@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useCircles } from '../../circles/contexts/CirclesContext'
+import { useCircles } from '../../socials/contexts/CirclesContext'
 import { useCourses } from '../../courses/contexts/CoursesContext'
 import { enqueueTaskPatch } from '../services/taskCacheService'
 import TaskParsingInput from './TaskParsingInput'

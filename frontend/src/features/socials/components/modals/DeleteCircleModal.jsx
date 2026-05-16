@@ -36,7 +36,7 @@ const DeleteCircleModal = ( { circle, closeModal } ) => {
         await batch.commit();
     
         closeModal();
-        navigate('/circles')
+        navigate('/socials')
     }
 
     return (

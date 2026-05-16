@@ -11,7 +11,7 @@ import Button from './Button.jsx';
 const navItems = [
     { title: 'Agenda', path: '/agenda', icon: <FaBookOpen /> },
     { title: 'Courses', path: '/courses', icon: <FaGraduationCap /> },
-    { title: 'Circles', path: '/circles', icon: <FaUserGroup /> },
+    { title: 'Socials', path: '/socials', icon: <FaUserGroup /> },
     { title: 'Resources', path: '/resources', icon: <FaBoxArchive /> },
     { title: 'Avatar', path: '/avatar', icon: <FaChild /> },
 ]

@@ -1,21 +1,21 @@
 import { useOutletContext, useParams } from 'react-router-dom';
 import Topbar from '../../../shared/components/ui/Topbar.jsx'
 import { useCircle } from '../services/circleService.jsx';
-import CircleMembers from '../components/CircleMembers';
+import CircleMembers from '../components/CircleMembers.jsx';
 import { useState } from 'react';
-import { createTask, useCircleTasks } from '../../agenda/services/taskService';
+import { createTask, useCircleTasks } from '../../agenda/services/taskService.jsx';
 import { formatRelativeTaskDate, toDateKeyFromSeconds } from '../../../shared/utils/formatters.jsx';
 import { FaPlus } from 'react-icons/fa';
 import { PiCaretDownFill, PiCaretRightFill } from 'react-icons/pi';
 import LegacyListTask from '../../agenda/components/LegacyListTask.jsx';
-import { useMembers } from '../contexts/MembersContext';
-import CircleInvite from '../components/CircleInvite';
+import { useMembers } from '../contexts/MembersContext.jsx';
+import CircleInvite from '../components/CircleInvite.jsx';
 import { useCircleMembers } from '../services/circleService.jsx';
-import CircleHeader from '../components/CircleHeader';
-import LoadingState from '../../../shared/components/ui/LoadingState';
-import ErrorState from '../../../shared/components/ui/ErrorState';
+import CircleHeader from '../components/CircleHeader.jsx';
+import LoadingState from '../../../shared/components/ui/LoadingState.jsx';
+import ErrorState from '../../../shared/components/ui/ErrorState.jsx';
 
-const CirclesOverview = () => {
+const CircleOverview = () => {
 
     const { profile } = useOutletContext()
     const { circleId } = useParams();
@@ -62,7 +62,7 @@ const CirclesOverview = () => {
             <div className="flex-1 overflow-y-auto relative">
 
                 <div className='h-full w-full flex flex-col items-start gap-8 px-24 pb-8 pt-2 m-auto'>
-                    <CircleHeader circle={circle} profile={profile} back='/circles' />
+                    <CircleHeader circle={circle} profile={profile} back='/socials' />
 
                     <div className='w-full flex gap-4'>
                         <CircleInvite circle={circle}/>
@@ -198,4 +198,4 @@ const AddTaskButton = ( { circle, dueAt, setNewTaskId } ) => {
 }
 
 
-export default CirclesOverview
+export default CircleOverview
