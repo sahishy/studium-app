@@ -58,7 +58,7 @@ const CircleInvite = ( { circle } ) => {
                 <h1 className="text-neutral2">Or use a link: </h1>&nbsp;
 
                 <Button onClick={() => {
-                    navigator.clipboard.writeText(`${window.location.origin}/#/join/${circle.inviteCode}`);
+                    navigator.clipboard.writeText(`${window.location.origin}/join/${circle.inviteCode}`);
                     setCopiedAlt(true)
                 }} type={'secondary'}>
                     {copiedAlt ? 'Copied' : 'Copy Link'}

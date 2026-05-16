@@ -13,7 +13,7 @@ import { useModal } from '../../../shared/contexts/ModalContext'
 import { getSchoolNameById } from '../services/schoolService'
 import { getMajorNameById } from '../services/majorService'
 import { getUserStatsByUserId, updateUserStatsByUserId } from '../services/statsService'
-import { getUserById, isDisplayNameAvailable, updateUserInfo } from '../../auth/services/userService'
+import { getUserByDisplayName, isDisplayNameAvailable, updateUserInfo } from '../../auth/services/userService'
 import { buildRankedUiState } from '../../multiplayer/utils/multiplayerUtils'
 import { FaGear, FaSchool, FaFlask } from 'react-icons/fa6'
 import { FaEdit } from 'react-icons/fa'
@@ -23,6 +23,7 @@ import EditMajorModal from '../components/modals/EditMajorModal'
 import { ACT_MAX, ACT_MIN, GPA_MAX, GPA_MIN, SAT_MAX, SAT_MIN, getDraftAcademicFromStats, getParsedNumber, toModeLabel } from '../utils/profileUtils'
 import { useUserStats } from '../contexts/UserStatsContext'
 import Podium from '../../../shared/components/avatar/Podium'
+import { removeFriend, sendFriendRequestByUserId, useHasOutgoingFriendRequest, useIsFriend } from '../../socials/services/friendService'
 
 const SAT_CLASSIC_MODE_ID = 'sat-classic'
 
@@ -33,7 +34,8 @@ const ProfileOverview = () => {
     const { profile: currentUserProfile } = useOutletContext()
     const { userStats: currentUserStats, loading: currentUserStatsLoading } = useUserStats()
     const { openModal, closeModal } = useModal()
-    const { userId } = useParams()
+    const { username: encodedUsername } = useParams()
+    const username = decodeURIComponent(encodedUsername ?? '')
 
     const [profile, setProfile] = useState(null)
     const [profileLoading, setProfileLoading] = useState(true)
@@ -43,18 +45,23 @@ const ProfileOverview = () => {
     const [draftAcademic, setDraftAcademic] = useState(getDraftAcademicFromStats({ userStats: null, displayName: '' }))
     const [saveError, setSaveError] = useState('')
 
-    const isCurrentUser = currentUserProfile?.uid === userId
+    const isCurrentUser = (currentUserProfile?.profile?.displayName ?? '') === username
+    const displayedProfile = isCurrentUser ? currentUserProfile : profile
+    const displayedUserStats = isCurrentUser ? currentUserStats : userStats
+    const targetUserId = displayedProfile?.uid
+    const isFriend = useIsFriend(currentUserProfile?.uid, targetUserId)
+    const hasOutgoingFriendRequest = useHasOutgoingFriendRequest(currentUserProfile?.uid, targetUserId)
 
     useEffect(() => {
 
-        if (!userId) {
+        if (!username) {
             setProfile(null)
             setProfileLoading(false)
             return
         }
 
         if (isCurrentUser) {
-            setProfile(currentUserProfile ?? null)
+            setProfile(null)
             setProfileLoading(false)
             return
         }
@@ -65,7 +72,7 @@ const ProfileOverview = () => {
             setProfileLoading(true)
 
             try {
-                const nextProfile = await getUserById(userId)
+                const nextProfile = await getUserByDisplayName(username)
                 if (!isCancelled) {
                     setProfile(nextProfile)
                 }
@@ -82,11 +89,11 @@ const ProfileOverview = () => {
             isCancelled = true
         }
 
-    }, [userId, isCurrentUser, currentUserProfile])
+    }, [username, isCurrentUser])
 
     useEffect(() => {
 
-        if (!userId) {
+        if (!targetUserId) {
             setUserStats(null)
             setStatsLoading(false)
             return
@@ -103,7 +110,7 @@ const ProfileOverview = () => {
             setStatsLoading(true)
 
             try {
-                const nextUserStats = await getUserStatsByUserId(userId)
+                const nextUserStats = await getUserStatsByUserId(targetUserId)
                 if (!isCancelled) {
                     setUserStats(nextUserStats)
                 }
@@ -120,10 +127,7 @@ const ProfileOverview = () => {
             isCancelled = true
         }
 
-    }, [userId, isCurrentUser])
-
-    const displayedProfile = isCurrentUser ? currentUserProfile : profile
-    const displayedUserStats = isCurrentUser ? currentUserStats : userStats
+    }, [targetUserId, isCurrentUser])
 
     useEffect(() => {
         if (!isEditMode) {
@@ -181,11 +185,11 @@ const ProfileOverview = () => {
                 value={draftAcademic.displayName}
                 closeModal={closeModal}
                 onCheckAvailability={async (nextValue) => {
-                    return isDisplayNameAvailable(nextValue, userId)
+                    return isDisplayNameAvailable(nextValue, targetUserId)
                 }}
                 onSave={async (nextValue) => {
                     try {
-                        await updateUserInfo(userId, {
+                        await updateUserInfo(targetUserId, {
                             'profile.displayName': nextValue,
                         })
                         setSaveError('')
@@ -220,7 +224,7 @@ const ProfileOverview = () => {
                     }
 
                     try {
-                        await updateUserStatsByUserId(userId, {
+                        await updateUserStatsByUserId(targetUserId, {
                             academic: {
                                 ...academic,
                                 targetMajors: nextDraft.targetMajors,
@@ -260,7 +264,7 @@ const ProfileOverview = () => {
                     const resolvedMajors = Array.isArray(nextMajors) ? nextMajors : draftAcademic.targetMajors
 
                     try {
-                        await updateUserStatsByUserId(userId, {
+                        await updateUserStatsByUserId(targetUserId, {
                             academic: {
                                 ...academic,
                                 targetMajors: resolvedMajors,
@@ -289,6 +293,14 @@ const ProfileOverview = () => {
                 }}
             />
         )
+    }
+
+    const handleSendFriendRequest = async () => {
+        await sendFriendRequestByUserId(currentUserProfile?.uid, targetUserId)
+    }
+
+    const handleUnfriend = async () => {
+        await removeFriend(currentUserProfile?.uid, targetUserId)
     }
 
     return (
@@ -344,11 +356,27 @@ const ProfileOverview = () => {
                                     </Button>
                                 </>
                             ) : (
-                                <Button
-                                    disabled={true}
-                                >
-                                    Report
-                                </Button>
+                                <>
+                                    {!isFriend ? (
+                                        <Button
+                                            disabled={hasOutgoingFriendRequest}
+                                            onClick={handleSendFriendRequest}
+                                        >
+                                            {!hasOutgoingFriendRequest ? 'Add Friend' : 'Request Sent'}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={handleUnfriend}
+                                        >
+                                            Remove Friend
+                                        </Button>
+                                    )}
+                                    <Button
+                                        disabled={true}
+                                    >
+                                        Report
+                                    </Button>
+                                </>
                             )}
                         </div>
 
@@ -444,7 +472,7 @@ const ProfileOverview = () => {
                                                 )}
                                             </div>
                                             <p className={`font-bold z-1 ${unweightedGpa ? 'text-neutral0 text-5xl' : 'text-neutral1 text-xl'}`}>{unweightedGpa ?? 'Not provided'}</p>
-                                            <Podium className={'absolute top-4 w-32 h-32 object-contain pointer-events-none'}/>
+                                            <Podium className={'absolute top-4 w-32 h-32 object-contain pointer-events-none'} />
                                         </div>
 
                                         <div className='relative flex flex-col gap-1 items-center w-32 h-24'>
@@ -468,7 +496,7 @@ const ProfileOverview = () => {
                                                 )}
                                             </div>
                                             <p className={`font-bold z-1 ${weightedGpa ? 'text-neutral0 text-5xl' : 'text-neutral1 text-xl'}`}>{weightedGpa ?? 'Not provided'}</p>
-                                            <Podium className={'absolute top-4 w-32 h-32 object-contain pointer-events-none'}/>
+                                            <Podium className={'absolute top-4 w-32 h-32 object-contain pointer-events-none'} />
                                         </div>
 
                                     </div>

@@ -34,7 +34,7 @@ const Sidebar = ({ profile }) => {
                 <img src={logoWhite} alt="Logo" className="w-36 h-12 p-2 object-contain hidden dark:flex" />
 
                 <div className='py-6 flex flex-col gap-3 items-center'>
-                    <button onClick={() => navigate(`/profile/${profile.uid}`)}>
+                    <button onClick={() => navigate(`/profile/${encodeURIComponent(profile?.profile?.displayName ?? '')}`)}>
                         <AvatarPicture profile={profile} className='relative w-16 h-16 group/avatar cursor-pointer'>
                             <div className={`absolute -bottom-1 -right-1 bg-neutral3/60 backdrop-blur-xs rounded-full p-2
                                 opacity-0 group-hover/avatar:opacity-100 transition
@@ -68,7 +68,7 @@ const Sidebar = ({ profile }) => {
             <div className='flex flex-col gap-4'>
                 <div className={`flex justify-center gap-6 mb-6 text-xs ${inRoom && 'opacity-40'}`}>
                     <Link
-                        to={`/profile/${profile?.uid}`}
+                        to={`/profile/${encodeURIComponent(profile?.profile?.displayName ?? '')}`}
                         onClick={inRoom ? (event) => event.preventDefault() : undefined}
                         className={`transition text-neutral1 ${inRoom ? 'cursor-not-allowed' : 'hover:text-neutral0'}`}
                     >

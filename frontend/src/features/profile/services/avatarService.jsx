@@ -5,7 +5,7 @@ import { SkeletonUtils } from 'three-stdlib'
 import characterModelUrl from '../../../assets/models/character.glb'
 import { AVATAR_COLORS, AVATAR_FACES } from '../utils/avatarUtils'
 
-const AVATAR_THUMBNAIL_SIZE = 128
+const AVATAR_THUMBNAIL_SIZE = 192
 const AVATAR_THUMBNAIL_BACKGROUND = '#E5E7EB'
 const AVATAR_DEFAULT_COLOR = AVATAR_COLORS[2];
 const AVATAR_THUMBNAIL_ANIMATION_NAME = 'Idle'

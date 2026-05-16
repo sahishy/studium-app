@@ -7,6 +7,7 @@ import { db } from '../../../lib/firebase'
 import ActivityHandler from '../components/ActivityHandler'
 import { CirclesProvider } from '../../socials/contexts/CirclesContext'
 import { MembersProvider } from '../../socials/contexts/MembersContext'
+import { FriendsProvider } from '../../socials/contexts/FriendsContext'
 import { TasksProvider } from '../../agenda/contexts/TasksContext'
 import { CoursesProvider } from '../../courses/contexts/CoursesContext'
 import { UserStatsProvider } from '../../profile/contexts/UserStatsContext'
@@ -66,14 +67,16 @@ const MainScreen = () => {
         <UserStatsProvider userId={profile?.uid}>
             <MultiplayerProvider userId={profile?.uid}>
                 <CirclesProvider profile={profile}>
-                    <CoursesProvider profile={profile}>
-                        <MembersProvider>
-                            <TasksProvider profile={profile}>
-                                <MainScreenLayout profile={profile}/>
+                    <FriendsProvider profile={profile}>
+                        <CoursesProvider profile={profile}>
+                            <MembersProvider>
+                                <TasksProvider profile={profile}>
+                                    <MainScreenLayout profile={profile}/>
 
-                            </TasksProvider>
-                        </MembersProvider>
-                    </CoursesProvider>
+                                </TasksProvider>
+                            </MembersProvider>
+                        </CoursesProvider>
+                    </FriendsProvider>
                 </CirclesProvider>
             </MultiplayerProvider>
         </UserStatsProvider>

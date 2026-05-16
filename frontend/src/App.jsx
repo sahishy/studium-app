@@ -8,6 +8,9 @@ import CalendarTab from './features/agenda/pages/CalendarTab'
 import BoardTab from './features/agenda/pages/BoardTab'
 import Socials from './features/socials/pages/Socials'
 import CircleOverview from './features/socials/pages/CircleOverview'
+import Friends from './features/socials/pages/Friends'
+import AllFriendsTab from './features/socials/pages/AllFriendsTab'
+import IncomingFriendsTab from './features/socials/pages/IncomingFriendsTab'
 import Courses from './features/courses/pages/Courses'
 import MyCoursesTab from './features/courses/pages/MyCoursesTab'
 import AllCoursesTab from './features/courses/pages/AllCoursesTab'
@@ -27,6 +30,7 @@ import Resources from './features/resources/pages/Resources'
 import Ranked from './features/multiplayer/pages/Ranked'
 import MatchRoom from './features/multiplayer/pages/MatchRoom'
 import MaintenanceRoute from './routes/MaintenanceRoute'
+import FriendsIndexRedirect from './routes/FriendsIndexRedirect'
 
 export default function App() {
 	return (
@@ -34,58 +38,63 @@ export default function App() {
 			<MaintenanceRoute>
 				<Routes>
 
-				<Route path="/" element={<Landing/>}/>
-				<Route path="/welcome" element={<Welcome/>}/>
+					<Route path="/" element={<Landing />} />
+					<Route path="/welcome" element={<Welcome />} />
 
-				<Route
-					element={
-						<PrivateRoute>
-							<ToastProvider>
-								<MainScreen/>
-							</ToastProvider>
-						</PrivateRoute>
-					}
-				>
+					<Route
+						element={
+							<PrivateRoute>
+								<ToastProvider>
+									<MainScreen />
+								</ToastProvider>
+							</PrivateRoute>
+						}
+					>
 
-					<Route element={<MultiplayerSessionRedirect/>}>
-						<Route path="/agenda" element={<Agenda/>}>
-							<Route index element={<AgendaIndexRedirect/>}/>
-							<Route path="list" element={<ListTab/>} />
-							<Route path="calendar" element={<CalendarTab/>} />
-							<Route path="board" element={<BoardTab/>} />
+						<Route element={<MultiplayerSessionRedirect />}>
+							<Route path="/agenda" element={<Agenda />}>
+								<Route index element={<AgendaIndexRedirect />} />
+								<Route path="list" element={<ListTab />} />
+								<Route path="calendar" element={<CalendarTab />} />
+								<Route path="board" element={<BoardTab />} />
+							</Route>
+							<Route path="/socials">
+								<Route index element={<Socials />} />
+								<Route path="circle/:circleId" element={<CircleOverview />} />
+								<Route path="friends" element={<Friends />}>
+									<Route index element={<FriendsIndexRedirect />} />
+									<Route path="all" element={<AllFriendsTab />} />
+									<Route path="incoming" element={<IncomingFriendsTab />} />
+								</Route>
+							</Route>
+							<Route path="/courses" element={<Courses />}>
+								<Route index element={<CoursesIndexRedirect />} />
+								<Route path="me" element={<MyCoursesTab />} />
+								<Route path="all" element={<AllCoursesTab />} />
+								<Route path="all/:courseId" element={<CourseOverview />} />
+							</Route>
+							<Route path="/resources" element={<Resources />} />
+							<Route path="/ranked" element={<Ranked />} />
+							<Route path="/ranked/room/:roomId" element={<MatchRoom />} />
+							<Route path="/join/:inviteCode" element={<JoinCircle />} />
+							<Route path="/avatar" element={<Avatar />} />
+							<Route path="/settings" element={<Settings />} />
+							<Route path="/profile/:username" element={<ProfileOverview />} />
 						</Route>
-						<Route path="/socials">
-							<Route index element={<Socials/>}/>
-							<Route path="circle/:circleId" element={<CircleOverview/>}/>
-						</Route>
-						<Route path="/courses" element={<Courses/>}>
-							<Route index element={<CoursesIndexRedirect/>}/>
-							<Route path="me" element={<MyCoursesTab/>}/>
-							<Route path="all" element={<AllCoursesTab/>}/>
-							<Route path="all/:courseId" element={<CourseOverview/>}/>
-						</Route>
-						<Route path="/resources" element={<Resources/>}/>
-						<Route path="/ranked" element={<Ranked/>}/>
-						<Route path="/ranked/room/:roomId" element={<MatchRoom/>}/>
-						<Route path="/join/:inviteCode" element={<JoinCircle/>}/>
-						<Route path="/avatar" element={<Avatar/>}/>
-						<Route path="/settings" element={<Settings/>}/>
-						<Route path="/profile/:userId" element={<ProfileOverview/>}/>
+
+
 					</Route>
 
-
-				</Route>
-
-				<Route
-					path="*"
-					element={
-						<ErrorState
-							fullPage
-							title="Page not found"
-							description="The page you're looking for doesn't exist or may have been moved."
-						/>
-					}
-				/>
+					<Route
+						path="*"
+						element={
+							<ErrorState
+								fullPage
+								title="Page not found"
+								description="The page you're looking for doesn't exist or may have been moved."
+							/>
+						}
+					/>
 
 				</Routes>
 			</MaintenanceRoute>

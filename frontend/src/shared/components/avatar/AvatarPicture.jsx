@@ -1,6 +1,7 @@
 import defaultProfilePicture from '../../../assets/images/default-profile.jpg'
 
 const AvatarPicture = ({ profile, className = '', children }) => {
+    
     const rawUrl = profile?.profile?.profilePicture?.url
     const lastUpdated = profile?.profile?.profilePicture?.lastUpdated
     const profilePictureUrl = rawUrl
