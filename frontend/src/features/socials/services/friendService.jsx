@@ -154,11 +154,11 @@ const useFriendIds = (userId) => {
 
 const useIncomingFriendRequests = (userId) => {
 
-    const [requests, setRequests] = useState([])
+    const [requests, setRequests] = useState(null)
 
     useEffect(() => {
         if(!userId) {
-            setRequests([])
+            setRequests(null)
             return
         }
 
