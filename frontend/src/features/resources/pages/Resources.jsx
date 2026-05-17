@@ -1,9 +1,9 @@
 import { useOutletContext } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
 import Button from '../../../shared/components/ui/Button'
-import logo from '../../../assets/images/logo_sm.png'
 import { FaBoxArchive } from 'react-icons/fa6'
 import PageHeader from '../../../shared/components/ui/PageHeader'
+import Logo from '../../../shared/components/misc/Logo'
 
 const Resources = () => {
 
@@ -14,11 +14,11 @@ const Resources = () => {
             <Topbar profile={profile} />
 
             <div className='w-full flex-1 flex flex-col gap-4 px-24 pb-24 pt-2'>
-                
-                <PageHeader text={'Resources'} icon={FaBoxArchive}/>
+
+                <PageHeader text={'Resources'} icon={FaBoxArchive} />
 
                 <div className='flex-1 flex flex-col gap-1 items-center justify-center'>
-                    <img src={logo} className='object-contain w-12 mb-3'/>
+                    <Logo className={'mb-3 w-12 h-12'} />
                     <h1 className='text-3xl font-bold'>Coming soon</h1>
                     <p className='text-sm text-neutral1'>A place for students to post and recommend their favorite resources for studying.</p>
                 </div>

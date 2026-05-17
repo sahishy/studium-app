@@ -1,6 +1,4 @@
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import logo from '../../../assets/images/logo_lg.png'
-import logoWhite from '../../../assets/images/logo_lg_white.png'
 import { FaArrowRight, FaChild, FaGraduationCap, FaUserGroup, FaBookOpen, FaBoxArchive, FaCircle, FaArrowLeft } from 'react-icons/fa6';
 import { RiSwordFill } from 'react-icons/ri';
 import AvatarPicture from '../avatar/AvatarPicture.jsx';
@@ -8,6 +6,7 @@ import { useMultiplayer } from '../../../features/multiplayer/contexts/Multiplay
 import { leaveRoom } from '../../../features/multiplayer/services/roomService.jsx'
 import { useFriends } from '../../../features/socials/contexts/FriendsContext.jsx'
 import Button from './Button.jsx';
+import Logo from '../misc/Logo.jsx';
 
 const navItems = [
     { title: 'Agenda', path: '/agenda', icon: <FaBookOpen /> },
@@ -33,8 +32,7 @@ const Sidebar = ({ profile }) => {
 
             <div className='flex flex-col gap-6'>
 
-                <img src={logo} alt="Logo" className="w-36 h-12 p-2 object-contain dark:hidden" />
-                <img src={logoWhite} alt="Logo" className="w-36 h-12 p-2 object-contain hidden dark:flex" />
+                <Logo className={'p-2'} large/>
 
                 <div className='py-6 flex flex-col gap-3 items-center'>
                     <button onClick={() => navigate(`/profile/${encodeURIComponent(profile?.profile?.displayName ?? '')}`)}>

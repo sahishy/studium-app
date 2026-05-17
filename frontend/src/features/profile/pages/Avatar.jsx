@@ -11,8 +11,10 @@ import { updateUserInfo } from '../../auth/services/userService'
 import { uploadProfilePicture } from '../../../shared/services/storageService'
 import Button from '../../../shared/components/ui/Button'
 import LoadingState from '../../../shared/components/ui/LoadingState'
-import { FaChild } from 'react-icons/fa6'
+import { FaCheck, FaChild } from 'react-icons/fa6'
 import PageHeader from '../../../shared/components/ui/PageHeader'
+import { FaCheckCircle } from 'react-icons/fa'
+import Logo from '../../../shared/components/misc/Logo'
 
 const tabs = [
     { name: 'color', label: 'Color' },
@@ -225,10 +227,23 @@ const Avatar = () => {
                                                 key={color}
                                                 type='button'
                                                 onClick={() => handleColorSelect(color)}
-                                                className={`w-14 h-14 rounded-full border-2 transition-all cursor-pointer ${selectedColor === color ? 'border-neutral0 scale-105' : 'border-transparent'}`}
-                                                style={{ backgroundColor: color }}
+                                                className='relative w-20 h-20 cursor-pointer'
                                                 aria-label={`Select color ${color}`}
-                                            />
+                                            >
+                                                <div className={`relative w-full h-full rounded-xl overflow-hidden border-2 transition
+                                                    ${selectedColor === color ? 'border-neutral0 scale-105' : 'border-transparent hover:scale-105'}
+                                                `}>
+                                                    <div className='w-full h-full brightness-90' style={{ backgroundColor: color }} />
+                                                    <div className='absolute w-16 h-16 bottom-2 left-2 rounded-lg' style={{ backgroundColor: color }} />
+                                                    <div className='absolute right-2 top-2 w-8 h-6 rounded-xl bg-white/20' />
+                                                </div>
+
+                                                <div className={`absolute -top-2 -right-2 p-1 bg-neutral0 rounded-full scale-80 opacity-0
+                                                    ${selectedColor === color && 'scale-100 opacity-100'} transition`}
+                                                >
+                                                    <FaCheck className='text-neutral6 text-xs' />
+                                                </div>
+                                            </button>
                                         ))}
                                     </div>
                                 </div>
@@ -244,14 +259,22 @@ const Avatar = () => {
                                                 key={faceTexture}
                                                 type='button'
                                                 onClick={() => handleFaceSelect(faceIndex)}
-                                                className={`w-20 h-20 rounded-xl border overflow-hidden bg-white/4 transition-all cursor-pointer ${selectedFace === faceIndex ? 'border-neutral0 border-2 scale-105' : 'border-neutral4'}`}
+                                                className={`w-20 h-20 rounded-xl border bg-white/4 transition-all cursor-pointer 
+                                                    ${selectedFace === faceIndex ? 'border-neutral0 border-2 scale-105' : 'border-neutral4 hover:scale-105'}`}
                                                 aria-label={`Select face ${faceIndex + 1}`}
                                             >
-                                                <img
-                                                    src={faceTexture}
-                                                    alt={`Face option ${faceIndex + 1}`}
-                                                    className='w-full h-full object-cover'
-                                                />
+                                                <div className='overflow-hidden'>
+                                                    <img
+                                                        src={faceTexture}
+                                                        alt={`Face option ${faceIndex + 1}`}
+                                                        className='w-full h-full object-cover'
+                                                    />
+                                                </div>
+                                                <div className={`absolute -top-2 -right-2 p-1 bg-neutral0 rounded-full scale-80 opacity-0
+                                                    ${selectedFace === faceIndex && 'scale-100 opacity-100'} transition`}
+                                                >
+                                                    <FaCheck className='text-neutral6 text-xs' />
+                                                </div>
                                             </button>
                                         ))}
                                     </div>
@@ -259,9 +282,14 @@ const Avatar = () => {
                             )}
 
                             {activeTab === 2 && (
-                                <div className='flex flex-col gap-4'>
+                                <div className='flex flex-col gap-4 h-full'>
                                     <h2 className='text-lg font-semibold'>Hat</h2>
-                                    <p className='text-sm text-neutral2'>Coming soon.</p>
+                                    <div className='flex-1 mb-12 flex flex-col justify-center items-center '>
+                                        <Logo className={'mb-3'} />
+                                        <h1 className='text-3xl font-bold'>Coming soon</h1>
+                                        <p className='text-sm text-neutral1'>Hats will be obtained in a future system.</p>
+                                    </div>
+
                                 </div>
                             )}
 
