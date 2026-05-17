@@ -14,12 +14,13 @@ import PageHeader from '../../../shared/components/ui/PageHeader.jsx'
 import FriendsListItem from '../components/FriendsListItem.jsx'
 import { FRIENDS_PAGE_SIZE } from '../utils/friendUtils.jsx'
 import { useMemo, useState } from 'react'
+import LoadingState from '../../../shared/components/ui/LoadingState.jsx'
 
 const Socials = () => {
 
     const { profile } = useOutletContext()
     const circles = useCircles()
-    const { friends, incomingRequests } = useFriends()
+    const { friends, incomingRequests, friendsLoading, incomingRequestsLoading } = useFriends()
     const [visibleFriendCount, setVisibleFriendCount] = useState(FRIENDS_PAGE_SIZE)
 
     const sortedFriends = useMemo(() => {
@@ -28,9 +29,14 @@ const Socials = () => {
 
     const visibleFriends = useMemo(() => sortedFriends.slice(0, visibleFriendCount), [sortedFriends, visibleFriendCount])
     const canLoadMoreFriends = sortedFriends.length > visibleFriends.length
+    const isLoading = friendsLoading || incomingRequestsLoading
+
+    if(isLoading) {
+        return <LoadingState fullPage />
+    }
 
     return (
-        <div className='flex flex-col h-full overflow-scroll'>
+        <div className='flex flex-col h-full overflow-y-auto overflow-x-hidden'>
             <Topbar profile={profile} />
 
             <div className='w-full h-full flex flex-col gap-8 px-24 pb-8 pt-2 m-auto'>
@@ -48,18 +54,22 @@ const Socials = () => {
                         <div className='relative'>
                             <FaArrowRightLong />
                             {incomingRequests.length > 0 && (
-                                <div className={`absolute -top-0.5 -right-2 w-2.5 h-2.5 rounded-full bg-sky-500 border-2 border-neutral6 transition`}/>
+                                <div className={`absolute -top-0.5 -right-2 w-2.5 h-2.5 rounded-full bg-sky-500 border-2 border-neutral6 transition`} />
                             )}
                         </div>
                     </Link>
 
                     {friends.length > 0 ? (
-                        <div className='w-full overflow-x-auto'>
-                            <div className='flex items-start gap-4 min-w-max pb-2'>
-                                {visibleFriends.map((friend) => (
-                                    <FriendsListItem key={friend.uid} friend={friend} />
-                                ))}
+                        <div className='relative w-full'>
+                            <div className='w-full overflow-x-auto no-scrollbar'>
+                                <div className='flex items-start gap-4 min-w-max pb-2'>
+                                    {visibleFriends.map((friend) => (
+                                        <FriendsListItem key={friend.uid} friend={friend} />
+                                    ))}
+                                </div>
                             </div>
+                            <div className='absolute top-0 right-0 w-8 h-full bg-linear-to-l from-neutral6 to-transparent' />
+                            {/* <div className='absolute top-0 left-0 w-8 h-full bg-linear-to-r from-neutral6 to-transparent' /> */}
                         </div>
                     ) : (
                         <div className='flex items-center'>

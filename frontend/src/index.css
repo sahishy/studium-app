@@ -48,6 +48,10 @@ html {
     @apply focus:outline-neutral0;
 }
 
+@utility no-scrollbar {
+    @apply [scrollbar-width:none] [&::-webkit-scrollbar]:hidden;
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {

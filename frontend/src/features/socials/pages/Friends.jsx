@@ -8,6 +8,7 @@ import { FaArrowLeft, FaUser, FaUserPlus } from 'react-icons/fa6'
 import { useModal } from '../../../shared/contexts/ModalContext'
 import AddFriendModal from '../components/modals/AddFriendModal'
 import { useFriends } from '../contexts/FriendsContext'
+import LoadingState from '../../../shared/components/ui/LoadingState'
 
 const tabs = [
     { name: 'all', label: 'Friends' },
@@ -20,7 +21,11 @@ const Friends = () => {
     const { profile } = useOutletContext()
     const location = useLocation()
     const { openModal, closeModal } = useModal()
-    const { incomingRequests } = useFriends()
+    const { incomingRequests, friendsLoading, incomingRequestsLoading } = useFriends()
+
+    if(friendsLoading || incomingRequestsLoading) {
+        return <LoadingState fullPage />
+    }
 
     const activeTabName = location.pathname.split('/')[3]
     const matchedTabIndex = tabs.findIndex((tab) => tab.name === activeTabName)

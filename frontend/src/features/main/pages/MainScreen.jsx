@@ -23,7 +23,7 @@ const MainScreenLayout = ({ profile }) => {
             <div className="flex min-h-screen">
 
                 <Sidebar profile={profile}/>
-                <main className="flex-1 h-screen max-w-[2560px] mx-auto">
+                <main className="flex-1 h-screen max-w-[2560px] mx-auto overflow-x-hidden">
                     <Outlet context={{ profile }}/>
                 </main>
 

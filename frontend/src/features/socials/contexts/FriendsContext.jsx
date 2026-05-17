@@ -7,6 +7,8 @@ import { acceptFriendRequest, ignoreFriendRequest, useFriendIds, useIncomingFrie
 const FriendsContext = createContext({
     friends: [],
     incomingRequests: [],
+    friendsLoading: true,
+    incomingRequestsLoading: true,
 })
 
 const EMPTY_REQUESTS = []
@@ -17,6 +19,8 @@ const FriendsProvider = ({ profile, children }) => {
     const friendIds = useFriendIds(profile?.uid)
     const friends = useMembersList(friendIds)
     const incomingRequests = useIncomingFriendRequests(profile?.uid)
+    const friendsLoading = profile?.uid != null && friendIds.length > 0 && friends.length !== friendIds.length
+    const incomingRequestsLoading = profile?.uid != null && incomingRequests == null
     const hasIncomingLoaded = incomingRequests != null
     const safeIncomingRequests = incomingRequests ?? EMPTY_REQUESTS
     const incomingRequesterIds = useMemo(() => safeIncomingRequests.map((request) => request.fromUserId), [safeIncomingRequests])
@@ -126,6 +130,8 @@ const FriendsProvider = ({ profile, children }) => {
             value={{
                 friends,
                 incomingRequests: incomingRequestsWithUsers,
+                friendsLoading,
+                incomingRequestsLoading,
             }}
         >
             {children}
