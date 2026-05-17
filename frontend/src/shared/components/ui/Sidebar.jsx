@@ -6,6 +6,7 @@ import { RiSwordFill } from 'react-icons/ri';
 import AvatarPicture from '../avatar/AvatarPicture.jsx';
 import { useMultiplayer } from '../../../features/multiplayer/contexts/MultiplayerContext.jsx'
 import { leaveRoom } from '../../../features/multiplayer/services/roomService.jsx'
+import { useFriends } from '../../../features/socials/contexts/FriendsContext.jsx'
 import Button from './Button.jsx';
 
 const navItems = [
@@ -20,6 +21,8 @@ const Sidebar = ({ profile }) => {
 
     const navigate = useNavigate();
     const location = useLocation()
+
+    const { incomingRequests } = useFriends()
     const { session } = useMultiplayer()
     const inRoom = session?.status === 'in_room' && Boolean(session?.currentRoomId)
 
@@ -58,6 +61,7 @@ const Sidebar = ({ profile }) => {
                             item={item}
                             isActive={location.pathname.startsWith(item.path)}
                             disabled={inRoom}
+                            showNotification={item.path === '/socials' && incomingRequests.length > 0}
                         />
                     ))}
                 </div>
@@ -132,7 +136,7 @@ const MultiplayerButton = ({ profile, inRoom }) => {
     )
 }
 
-const SidebarNavLink = ({ item, isActive, disabled = false }) => {
+const SidebarNavLink = ({ item, isActive, disabled = false, showNotification = false }) => {
 
     if (disabled) {
         return (
@@ -140,7 +144,9 @@ const SidebarNavLink = ({ item, isActive, disabled = false }) => {
                 className='flex items-center px-3 py-2 gap-2 rounded-xl text-neutral1 cursor-not-allowed opacity-40'
             >
                 <div className='text-sm'>{item.icon}</div>
-                <div className='text-sm text-nowrap'>{item.title}</div>
+                <div className='text-sm text-nowrap flex items-center gap-2'>
+                    {item.title}
+                </div>
             </div>
         )
     }
@@ -151,11 +157,20 @@ const SidebarNavLink = ({ item, isActive, disabled = false }) => {
             to={item.path}
             end
             className={
-                `flex items-center px-3 py-2 gap-2 rounded-xl transition-all  ${(isActive) ? 'text-neutral0 bg-neutral3' : 'text-neutral1 hover:bg-neutral4'}`
+                `flex items-center px-3 py-2 gap-2 rounded-xl transition-all group
+                ${(isActive) ? 'text-neutral0 bg-neutral3' : 'text-neutral1 hover:bg-neutral4'}`
             }
         >
-            <div className='text-sm'>{item.icon}</div>
-            <div className='text-sm text-nowrap'>{item.title}</div>
+            <div className='relative text-sm'>
+                {item.icon}
+                {showNotification && (
+                    <div className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full border-2 transition
+                        ${isActive ? 'bg-sky-500 border-neutral3' : 'bg-sky-300 border-neutral5 group-hover:border-neutral4'}`} />
+                )}
+            </div>
+            <div className='text-sm text-nowrap'>
+                {item.title}
+            </div>
         </NavLink>
     )
 }

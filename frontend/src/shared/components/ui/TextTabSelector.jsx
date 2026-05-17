@@ -1,4 +1,5 @@
-const TextTabSelector = ({ tabs = [], currentIndex = 0, onSelect }) => {
+const TextTabSelector = ({ tabs = [], currentIndex = 0, onSelect, notificationTabs = [] }) => {
+
     if (!tabs.length) return null
 
     const safeIndex = currentIndex >= 0 ? currentIndex : 0
@@ -19,17 +20,21 @@ const TextTabSelector = ({ tabs = [], currentIndex = 0, onSelect }) => {
                 style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
             >
                 {tabs.map((tab, index) => {
+
                     const isCurrent = safeIndex === index
+                    const hasNotification = notificationTabs?.some(x => x === tab.name);
 
                     return (
                         <button
                             key={tab.name ?? index}
                             onClick={() => onSelect?.(tab, index)}
-                            className={`w-full px-4 py-2 rounded-full text-sm transition-colors cursor-pointer ${
-                                isCurrent ? 'text-neutral0' : 'text-neutral1 hover:text-neutral0'
+                            className={`w-full px-4 py-2 flex items-center justify-center gap-2 rounded-full text-sm 
+                                transition-colors cursor-pointer 
+                                ${isCurrent ? 'text-neutral0' : 'text-neutral1 hover:text-neutral0'
                             }`}
                         >
                             {tab.label ?? tab.name}
+                            {hasNotification && <div className={`w-1.5 h-1.5 rounded-full ${isCurrent ? 'bg-sky-500' : 'bg-sky-300'} transition`} />}
                         </button>
                     )
                 })}

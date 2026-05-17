@@ -19,7 +19,7 @@ const Socials = () => {
 
     const { profile } = useOutletContext()
     const circles = useCircles()
-    const { friends } = useFriends()
+    const { friends, incomingRequests } = useFriends()
     const [visibleFriendCount, setVisibleFriendCount] = useState(FRIENDS_PAGE_SIZE)
 
     const sortedFriends = useMemo(() => {
@@ -42,8 +42,15 @@ const Socials = () => {
                         to='/socials/friends/all'
                         className='self-start flex items-center gap-2 font-semibold text-neutral0 hover:opacity-60 transition cursor-pointer'
                     >
-                        <div>Friends <span className='text-neutral1'>{friends.length}</span></div>
-                        <FaArrowRightLong />
+                        <div>
+                            Friends <span className='text-neutral1'>{friends.length}</span>
+                        </div>
+                        <div className='relative'>
+                            <FaArrowRightLong />
+                            {incomingRequests.length > 0 && (
+                                <div className={`absolute -top-0.5 -right-2 w-2.5 h-2.5 rounded-full bg-sky-500 border-2 border-neutral6 transition`}/>
+                            )}
+                        </div>
                     </Link>
 
                     {friends.length > 0 ? (

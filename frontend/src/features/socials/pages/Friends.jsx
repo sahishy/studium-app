@@ -7,6 +7,7 @@ import BottomFade from '../../../shared/components/ui/BottomFade'
 import { FaArrowLeft, FaUser, FaUserPlus } from 'react-icons/fa6'
 import { useModal } from '../../../shared/contexts/ModalContext'
 import AddFriendModal from '../components/modals/AddFriendModal'
+import { useFriends } from '../contexts/FriendsContext'
 
 const tabs = [
     { name: 'all', label: 'Friends' },
@@ -19,9 +20,11 @@ const Friends = () => {
     const { profile } = useOutletContext()
     const location = useLocation()
     const { openModal, closeModal } = useModal()
+    const { incomingRequests } = useFriends()
 
     const activeTabName = location.pathname.split('/')[3]
-    const currentTab = tabs.findIndex((tab) => tab.name === activeTabName)
+    const matchedTabIndex = tabs.findIndex((tab) => tab.name === activeTabName)
+    const currentTab = matchedTabIndex >= 0 ? matchedTabIndex : 0
 
     const handleTabClick = (tabName) => {
         navigate(`/socials/friends/${tabName}`)
@@ -53,6 +56,7 @@ const Friends = () => {
                             tabs={tabs}
                             currentIndex={currentTab}
                             onSelect={(tab) => handleTabClick(tab.name)}
+                            notificationTabs={incomingRequests.length > 0 ? ['incoming'] : null}
                         />
                     </div>
 
