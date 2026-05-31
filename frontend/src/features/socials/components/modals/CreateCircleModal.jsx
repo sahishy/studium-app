@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
-import { createCircle } from '../../services/circleService';
+import { createCircle, useUserCircles } from '../../services/circleService';
 import Button from '../../../../shared/components/ui/Button';
 import { hasFlaggedWords } from '../../../../shared/services/censorService';
 import { FaArrowRight, FaCircleExclamation } from 'react-icons/fa6';
 import BooleanSelect from '../../../../shared/components/ui/BooleanSelect';
 import { useModal } from '../../../../shared/contexts/ModalContext';
 import EditCircleBannerModal from './EditCircleBannerModal';
-import { DEFAULT_CIRCLE_BANNER } from '../../utils/circleUtils';
+import { DEFAULT_CIRCLE_BANNER, getCompetitiveCircle } from '../../utils/circleUtils';
 import CircleBanner from '../CircleBanner';
 import { CIRCLE_TITLE_MAX, CIRCLE_TITLE_MIN } from '../../utils/circleUtils';
 
@@ -17,6 +17,7 @@ const CreateCircleModal = ( { profile, closeModal } ) => {
     const [banner, setBanner] = useState(DEFAULT_CIRCLE_BANNER);
     const [isCreating, setIsCreating] = useState(false);
     const { openModal, closeModal: closeTopModal } = useModal();
+    const { circles: userCircles = [] } = useUserCircles(profile?.uid);
 
     const validation = useMemo(() => {
         const trimmedTitle = String(title ?? '').trim();
@@ -42,8 +43,16 @@ const CreateCircleModal = ( { profile, closeModal } ) => {
             };
         }
 
+        const competitiveCircle = getCompetitiveCircle(userCircles);
+        if (circleType === 'competitive' && competitiveCircle) {
+            return {
+                isValid: false,
+                error: 'You can only be in one competitive circle at a time.',
+            };
+        }
+
         return { isValid: true, error: '' };
-    }, [title]);
+    }, [title, circleType, userCircles]);
 
     const handleCreate = async (e) => {
 
@@ -143,19 +152,15 @@ const CreateCircleModal = ( { profile, closeModal } ) => {
                     <p className='text-sm text-red-400 flex items-center gap-2'><FaCircleExclamation /> {validation.error}</p>
                 )}
 
-                {isCreating ? (
-                    <p className="text-neutral2 text-center">Creating...</p>
-                ) : (
-                    <div className='flex gap-4 mt-4'>
-                        <Button onClick={() => closeModal()} type={'secondary'} className={'w-full py-4'}>
-                            Cancel
-                        </Button>
+                <div className='flex gap-4 mt-4'>
+                    <Button onClick={() => closeModal()} type={'secondary'} className={'w-full py-4'} disabled={isCreating}>
+                        Cancel
+                    </Button>
 
-                        <Button htmlType={'submit'} type={'primary'} className={'w-full py-4'} disabled={!validation.isValid || isCreating}>
-                            Create
-                        </Button>
-                    </div>
-                )}
+                    <Button htmlType={'submit'} type={'primary'} className={'w-full py-4'} disabled={!validation.isValid || isCreating} loading={isCreating}>
+                        Create
+                    </Button>
+                </div>
 
             </form>
 

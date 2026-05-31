@@ -1,4 +1,6 @@
-const Button = ( { children, onClick, type = 'secondary', htmlType = 'button', className = '', disabled = false, ...props } ) => {
+import { FaCircleNotch } from "react-icons/fa6";
+
+const Button = ( { children, onClick, type = 'secondary', htmlType = 'button', className = '', disabled = false, loading = false, ...props } ) => {
 
     const getClass = () => {
         if(type === 'primary') {
@@ -27,6 +29,7 @@ const Button = ( { children, onClick, type = 'secondary', htmlType = 'button', c
                 disabled:opacity-60 disabled:cursor-not-allowed transition-all`}
         >
             {children}
+            {loading && <FaCircleNotch className="text-xs animate-spin"/>}
         </button>
     )
 

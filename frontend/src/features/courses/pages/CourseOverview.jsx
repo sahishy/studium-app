@@ -478,7 +478,7 @@ const CourseOverview = () => {
                         <div>
                             <h2 className={`font-bold
                                 animate-shine bg-[length:200%_auto] 
-                                bg-gradient-to-r from-neutral0 via-[#4f5d72] to-neutral0 
+                                bg-gradient-to-r from-neutral0 via-[#4f5d72] dark:via-[#aeafb5] to-neutral0 
                                 from-30% to-70%
                                 bg-clip-text text-transparent
                                 ${reviewSummary.totalReviews > 0 ? 'text-7xl' : 'text-4xl'}`}
