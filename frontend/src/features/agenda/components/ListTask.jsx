@@ -114,7 +114,7 @@ const ListTask = ({ task, depth = 0, hasChildren = false, circles = [], courses 
                     title={task.title}
                     circles={circles}
                     courses={courses}
-                    onBeforeCommit={onBeforeCommit}
+                    onBeforeCommit={(payload, meta) => onBeforeCommit?.(payload, { ...meta, taskId: task.uid })}
                     hideCircleWidgets={hideCircleWidgets}
                     isCompleted={isCompleted}
                     className={`w-full ${isCompleted ? 'line-through text-neutral1' : 'text-neutral0'}`}
@@ -123,7 +123,21 @@ const ListTask = ({ task, depth = 0, hasChildren = false, circles = [], courses 
                         setTitleText(payload.plainTitle)
                         pendingPayloadRef.current = payload
                     }}
-                    onEnterKey={() => onCreateTaskAfter?.(task, pendingPayloadRef.current)}
+                    onEnterKey={(committed) => {
+                        // committed is the post-onBeforeCommit payload returned
+                        // by commitFromEditor — it already has the group widget
+                        // injected. Flush onUpdate immediately (same as blur)
+                        // then hand off to create the next task.
+                        const payload = committed || pendingPayloadRef.current
+                        if (payload) {
+                            onUpdate?.(task.uid, {
+                                title: payload.title,
+                                type: payload.metadata.taskType || 'assignment',
+                            })
+                            pendingPayloadRef.current = null
+                        }
+                        onCreateTaskAfter?.(task, payload)
+                    }}
                     onTabKey={() => onTabInTask?.(task.uid)}
                     onBlur={() => {
                         const payload = pendingPayloadRef.current

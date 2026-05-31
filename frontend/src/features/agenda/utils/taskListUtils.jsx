@@ -280,6 +280,78 @@ const buildInheritedGroupTitleFromSourceTask = ({ sourceTask, groupBy = 'dueDate
     
 }
 
+const hasConflictingGroupWidget = (normalizedTitle, groupBy) => {
+
+    // returns true if there is a new widget that is the same type as the group widget
+    // but has different data than the group context, which would cause a conflict
+
+    if (!groupBy || groupBy === 'none') return false
+    const segments = Array.isArray(normalizedTitle?.segments) ? normalizedTitle.segments : []
+
+    if (groupBy === 'dueDate') {
+        return segments.some((seg) => seg?.type === 'widget' && seg?.widgetType === 'date')
+    }
+    if (groupBy === 'course') {
+        return segments.some((seg) => seg?.type === 'widget' && seg?.widgetType === 'course')
+    }
+    return false
+}
+
+const buildGroupWidgetSegments = (groupKey, groupBy, groupTasks = []) => {
+
+    // builds the title segments that represent the group widget for a given
+    // group key + groupBy, ready to be appended to a title at commit time.
+    // returns an array of segments (may be empty when nothing should be injected).
+        
+    if (!groupKey || groupKey === 'none' || !groupBy || groupBy === 'none') return []
+
+    if (groupBy === 'dueDate') {
+        const formattedLabel = formatRelativeTaskDate(groupKey, { fallbackLabel: groupKey })
+        return [
+            {
+                type: 'widget',
+                widgetType: 'date',
+                rawText: formattedLabel,
+                displayText: formattedLabel,
+                value: { dueDate: groupKey },
+            },
+        ]
+    }
+
+    if (groupBy === 'course') {
+        const representativeTask = groupTasks[0]
+        if (!representativeTask) return []
+        const normalizedTitle = normalizeTaskTitle(representativeTask.title)
+        const courseWidget = normalizedTitle.segments.find(
+            (seg) => seg?.type === 'widget' && seg?.widgetType === 'course'
+        )
+        if (!courseWidget) return []
+        return [{ ...courseWidget }]
+    }
+
+    return []
+}
+ 
+const injectGroupWidgetIfNeeded = (normalizedTitle, groupKey, groupBy, groupTasks = []) => {
+
+    // given a normalized title and a group context, returns a new normalized title
+    // with the group widget appended (preceded by a space), unless the title
+    // already contains a conflicting widget of the same kind.
+    
+    if (hasConflictingGroupWidget(normalizedTitle, groupBy)) return normalizedTitle
+
+    const widgetSegments = buildGroupWidgetSegments(groupKey, groupBy, groupTasks)
+    if (!widgetSegments.length) return normalizedTitle
+
+    const existingSegments = Array.isArray(normalizedTitle?.segments) ? [...normalizedTitle.segments] : []
+
+    // space separator before the widget
+    const spacer = { type: 'text', rawText: ' ', displayText: ' ' }
+    const nextSegments = [...existingSegments, spacer, ...widgetSegments]
+
+    return { ...normalizedTitle, segments: nextSegments }
+}
+
 export {
     LIST_GROUP_OPTIONS,
     sortTasksByListIndex,
@@ -292,4 +364,7 @@ export {
     buildListReindexUpdates,
     buildShiftedListIndexUpdates,
     buildInheritedGroupTitleFromSourceTask,
+    hasConflictingGroupWidget,
+    buildGroupWidgetSegments,
+    injectGroupWidgetIfNeeded,
 }
