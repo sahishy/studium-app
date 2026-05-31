@@ -7,6 +7,8 @@ import TaskParsingInput from './TaskParsingInput.jsx'
 import { flattenTaskTitle } from '../utils/naturalLanguage'
 
 const ListTask = ({ task, depth = 0, hasChildren = false, circles = [], courses = [],
+    hideCircleWidgets = false,
+    onBeforeCommit,
     onRegisterFocusHandle,
     onUpdate,
     onDelete,
@@ -112,6 +114,8 @@ const ListTask = ({ task, depth = 0, hasChildren = false, circles = [], courses 
                     title={task.title}
                     circles={circles}
                     courses={courses}
+                    onBeforeCommit={onBeforeCommit}
+                    hideCircleWidgets={hideCircleWidgets}
                     isCompleted={isCompleted}
                     className={`w-full ${isCompleted ? 'line-through text-neutral1' : 'text-neutral0'}`}
                     placeholder='No title'

@@ -127,8 +127,7 @@ const AddTaskButton = ({ profile, status, setNewTaskId }) => {
 
     const handleClick = async () => {
         const newTask = await createTask({
-            ownerType: 'user',
-            ownerId: profile.uid,
+            userId: profile.uid,
             status: status
         })
 

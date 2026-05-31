@@ -8,6 +8,12 @@ import CalendarTab from './features/agenda/pages/CalendarTab'
 import BoardTab from './features/agenda/pages/BoardTab'
 import Socials from './features/socials/pages/Socials'
 import CircleOverview from './features/socials/pages/CircleOverview'
+import CircleAgenda from './features/socials/pages/CircleAgenda'
+import CircleAgendaListTab from './features/socials/pages/CircleAgendaListTab'
+import CircleAgendaBoardTab from './features/socials/pages/CircleAgendaBoardTab'
+import CircleAgendaCalendarTab from './features/socials/pages/CircleAgendaCalendarTab'
+import CircleMembersTab from './features/socials/pages/CircleMembersTab'
+import CircleSettingsTab from './features/socials/pages/CircleSettingsTab'
 import Friends from './features/socials/pages/Friends'
 import AllFriendsTab from './features/socials/pages/AllFriendsTab'
 import IncomingFriendsTab from './features/socials/pages/IncomingFriendsTab'
@@ -31,6 +37,8 @@ import Ranked from './features/multiplayer/pages/Ranked'
 import MatchRoom from './features/multiplayer/pages/MatchRoom'
 import MaintenanceRoute from './routes/MaintenanceRoute'
 import FriendsIndexRedirect from './routes/FriendsIndexRedirect'
+import CircleOverviewIndexRedirect from './routes/CircleOverviewIndexRedirect'
+import CircleAgendaIndexRedirect from './routes/CircleAgendaIndexRedirect'
 
 export default function App() {
 	return (
@@ -60,7 +68,17 @@ export default function App() {
 							</Route>
 							<Route path="/socials">
 								<Route index element={<Socials />} />
-								<Route path="circle/:circleId" element={<CircleOverview />} />
+								<Route path="circle/:circleId" element={<CircleOverview />}>
+									<Route index element={<CircleOverviewIndexRedirect />} />
+									<Route path="agenda" element={<CircleAgenda />}>
+										<Route index element={<CircleAgendaIndexRedirect />} />
+										<Route path="list" element={<CircleAgendaListTab />} />
+										<Route path="board" element={<CircleAgendaBoardTab />} />
+										<Route path="calendar" element={<CircleAgendaCalendarTab />} />
+									</Route>
+									<Route path="members" element={<CircleMembersTab />} />
+									<Route path="settings" element={<CircleSettingsTab />} />
+								</Route>
 								<Route path="friends" element={<Friends />}>
 									<Route index element={<FriendsIndexRedirect />} />
 									<Route path="all" element={<AllFriendsTab />} />

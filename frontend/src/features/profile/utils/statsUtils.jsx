@@ -80,8 +80,23 @@ const getRankedModeStats = (userStats, modeId) => {
     
 }
 
+const getTotalElo = (userStats) => {
+    
+    const rankedStats = userStats?.ranked
+
+    if(!rankedStats) {
+        return 0
+    }
+
+    return Object.keys(rankedStats).reduce((total, modeId) => {
+        return total + getRankedModeStats(userStats, modeId).elo
+    }, 0)
+
+}
+
 export {
     RANK_TIERS,
     getRankInfoFromElo,
     getRankedModeStats,
+    getTotalElo
 }

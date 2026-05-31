@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { FaChevronDown } from 'react-icons/fa6'
+import { FaArrowsUpDown, FaChevronDown } from 'react-icons/fa6'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import BottomPadding from '../../../shared/components/ui/BottomPadding'
@@ -17,7 +17,7 @@ import { buildListIndexPatchUpdates, buildReorderPlanForSection, buildSortableId
 import Select from '../../../shared/components/popovers/Select'
 import { MAX_USER_TASKS } from '../utils/taskUtils'
 import TextTooltip from '../../../shared/components/tooltips/TextTooltip'
-import { flattenTaskTitle } from '../utils/naturalLanguage'
+import { extractTaskTitleMetadata, flattenTaskTitle } from '../utils/naturalLanguage'
 
 const isDescendantOf = (task, ancestorId, tasksById) => {
     let parentId = task?.parentTaskId ?? null
@@ -79,7 +79,13 @@ const writeCollapsedSectionsToCache = (cacheKey, collapsedByKey) => {
 
 const ListTab = () => {
 
-    const { profile } = useOutletContext()
+    const {
+        profile,
+        circleId,
+        isCircleView = false,
+        hideCircleWidgetControl = false,
+        forceCircleWidget,
+    } = useOutletContext()
     const { user: userTasks, circle: circleTasks, applyTaskPatch, commitTaskPatch, createTaskOptimistic, deleteTaskOptimistic } = useTasks()
     const circles = useCircles()
     const { courses } = useCourses()
@@ -108,7 +114,12 @@ const ListTab = () => {
     const pendingOutdentRef = useRef(new Map())
     const taskFocusHandlersRef = useRef(new Map())
 
-    const sortedTasks = useMemo(() => sortTasksByListIndex([...userTasks, ...circleTasks]), [userTasks, circleTasks])
+    const visibleTasks = useMemo(() => {
+        if (!isCircleView) return [...userTasks, ...circleTasks]
+        return circleTasks.filter((task) => String(extractTaskTitleMetadata(task.title).circleId || '') === String(circleId || ''))
+    }, [circleId, circleTasks, isCircleView, userTasks])
+
+    const sortedTasks = useMemo(() => sortTasksByListIndex([...visibleTasks]), [visibleTasks])
     const tasksById = useMemo(() => new Map(sortedTasks.map((t) => [t.uid, t])), [sortedTasks])
     const groupedTaskSections = useMemo(
         () => buildGroupedTaskSections(sortedTasks, selectedGroupBy, { forcedGroupKeyByTaskId }),
@@ -204,7 +215,8 @@ const ListTab = () => {
 
     const handleAddTask = useCallback(async (payload) => {
 
-        const trimmedTitle = flattenTaskTitle(payload.title).trim()
+        const normalizedTitle = isCircleView ? forceCircleWidget?.(payload.title) || payload.title : payload.title
+        const trimmedTitle = flattenTaskTitle(normalizedTitle).trim()
         if (!trimmedTitle) {
             return
         }
@@ -215,16 +227,15 @@ const ListTab = () => {
 
         const fallback = sortedTasks[0] || null
         createTaskOptimistic({
-            title: trimmedTitle,
-            ownerType: fallback?.ownerType || 'user',
-            ownerId: fallback?.ownerId || profile.uid,
+            title: normalizedTitle,
+            userId: fallback?.userId || profile.uid,
             status: 'Incomplete',
             listIndex: nextIndex,
             parentTaskId: null,
             siblingIndex: 0,
             type: payload.metadata.taskType || payload.parsedTaskType || 'assignment',
         })
-    }, [createTaskOptimistic, profile.uid, sortedTasks])
+    }, [createTaskOptimistic, forceCircleWidget, isCircleView, profile.uid, sortedTasks])
 
     const handleUpdateTask = useCallback(async (taskId, updates) => {
         await commitTaskPatch(taskId, updates)
@@ -232,6 +243,17 @@ const ListTab = () => {
             await syncParentStatuses(new Map([[taskId, updates.status]]))
         }
     }, [commitTaskPatch, syncParentStatuses])
+
+    const handleBeforeTaskCommit = useCallback((payload) => {
+        if (!isCircleView) return payload
+        const nextTitle = forceCircleWidget?.(payload.title) || payload.title
+        return {
+            ...payload,
+            title: nextTitle,
+            plainTitle: flattenTaskTitle(nextTitle),
+            metadata: extractTaskTitleMetadata(nextTitle),
+        }
+    }, [forceCircleWidget, isCircleView])
 
     const handleOutdentTask = useCallback((taskId) => {
 
@@ -303,8 +325,7 @@ const ListTab = () => {
 
         const { taskId: newTaskId } = createTaskOptimistic({
             title: inheritedTitle,
-            ownerType: effectiveSource.ownerType || 'user',
-            ownerId: effectiveSource.ownerId || profile.uid,
+            userId: effectiveSource.userId || profile.uid,
             status: 'Incomplete',
             listIndex: insertIndex,
             parentTaskId,
@@ -407,7 +428,7 @@ const ListTab = () => {
         <>
             <div className='w-full h-full flex flex-col items-center gap-6'>
 
-                <div className='relative flex w-full h-11 justify-end'>
+                <div className='relative flex w-full h-11 items-center justify-end'>
                     <div
                         className={`absolute left-1/2 top-1/2 -translate-1/2
                                 bg-neutral5 rounded-full flex gap-3 items-center w-96 transition-all
@@ -431,6 +452,7 @@ const ListTab = () => {
                             allowEmptyCommit
                             onCommit={handleAddTask}
                             invertedWidgets
+                            hideCircleWidgets={hideCircleWidgetControl}
                         />
                     </div>
 
@@ -440,12 +462,12 @@ const ListTab = () => {
                         onSelect={handleChangeGroupBy}
                     >
                         {(isOpen) => (
-                            <p className='text-neutral1 text-xs hover:opacity-60 transition-all'>
-                                Grouping by: {' '}
-                                <span className='font-semibold text-neutral0'>
-                                    {LIST_GROUP_OPTIONS.find((x) => x.id === selectedGroupBy)?.label}
-                                </span>
-                            </p>
+                            <div className='px-4 py-2.5 rounded-full border border-neutral4 text-neutral0 font-semibold text-sm 
+                                hover:bg-neutral5 transition-all flex items-center gap-1'
+                            >
+                                <FaArrowsUpDown className='text-xs'/>
+                                {LIST_GROUP_OPTIONS.find((x) => x.id === selectedGroupBy)?.label}
+                            </div>
                         )}
                     </Select>
                 </div>
@@ -484,6 +506,8 @@ const ListTab = () => {
                                                 task={task}
                                                 circles={circles}
                                                 courses={courses}
+                                                onBeforeCommit={handleBeforeTaskCommit}
+                                                hideCircleWidgets={hideCircleWidgetControl}
                                                 onRegisterFocusHandle={handleRegisterFocusHandle}
                                                 depth={depthMap.get(task.uid) || 0}
                                                 hasChildren={(childCounts.get(task.uid) || 0) > 0}

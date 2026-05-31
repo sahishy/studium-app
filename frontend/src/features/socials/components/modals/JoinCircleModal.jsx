@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
-import { joinCircle, canJoinCircle } from '../../services/circleService';
 import Button from '../../../../shared/components/ui/Button';
+import { useNavigate } from 'react-router-dom';
 
 const JoinCircleModal = ( { profile, closeModal } ) => {
 
     const [codeArray, setCodeArray] = useState(new Array(6).fill(''));
     const inputsRef = useRef([]);
+    const navigate = useNavigate();
   
     const handleChange = (e, index) => {
 
@@ -57,15 +58,13 @@ const JoinCircleModal = ( { profile, closeModal } ) => {
 
         e.preventDefault();
     
-        const inviteCode = codeArray.map(x => x.toUpperCase()).join('');
-        const { circleId, canJoin } = await canJoinCircle(profile.uid, inviteCode);
-    
-        if(canJoin) {
-            joinCircle(profile.uid, circleId);
-            closeModal();
-        } else {
-            console.log('invalid code or user already in circle');
+        const inviteCode = codeArray.map(x => x.toUpperCase()).join('').trim();
+        if(inviteCode.length !== 6) {
+            return
         }
+
+        closeModal();
+        navigate(`/socials/join/${inviteCode}`)
 
     }
 

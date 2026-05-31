@@ -51,7 +51,7 @@ const CircleHeader = ({ circle, profile, back = '/socials' }) => {
                         className={`flex items-center rounded-xl p-2 cursor-pointer min-w-0
                         ${isOpen ? 'bg-neutral3' : null} hover:bg-neutral3 transition-colors `}
                     >
-                        <h1 className="px-2 text-2xl font-semibold truncate">{circle.title}</h1>
+                        <h1 className="px-2 text-2xl font-semibold truncate">{circle.profile.title}</h1>
                         <div className="p-2">
                             <PiCaretDownFill className="text-sm" />
                         </div>

@@ -7,6 +7,10 @@ import { PiStarFourFill } from "react-icons/pi";
 import { FaUserFriends } from "react-icons/fa";
 import LoadingState from "../../../shared/components/ui/LoadingState.jsx";
 import ErrorState from "../../../shared/components/ui/ErrorState.jsx";
+import { useCircles } from "../contexts/CirclesContext.jsx";
+import { CIRCLE_MAX_COUNT, getCompetitiveCircle } from "../utils/circleUtils.jsx";
+import Card from "../../../shared/components/ui/Card.jsx";
+import CircleBanner from "../components/CircleBanner.jsx";
 
 const JoinCircle = () => {
 
@@ -14,9 +18,19 @@ const JoinCircle = () => {
     const { inviteCode } = useParams();
     const [loading, setLoading] = useState(true)
     const [circle, setCircle] = useState(null);
+    const [joinError, setJoinError] = useState('')
     const navigate = useNavigate();
+    const circles = useCircles();
+    const hasReachedCircleLimit = circles.length >= CIRCLE_MAX_COUNT;
 
     useEffect(() => {
+        if(hasReachedCircleLimit) {
+            setCircle(null)
+            setJoinError(`You can only join up to ${CIRCLE_MAX_COUNT} circles.`)
+            setLoading(false)
+            return
+        }
+
         if (!profile || !inviteCode) return;
         let isMounted = true;
         setLoading(true);
@@ -30,13 +44,34 @@ const JoinCircle = () => {
                     return
                 }
 
-                if(canJoin) {
-                    const circleData = await getCircle(circleId);
-                    if(!isMounted) {
+                if(!canJoin || !circleId) {
+                    setCircle(null)
+                    setJoinError("Circle doesn't exist or can't be joined")
+                    return
+                }
+
+                const circleData = await getCircle(circleId);
+                if(!isMounted) {
+                    return
+                }
+
+                if(!circleData) {
+                    setCircle(null)
+                    setJoinError("Circle doesn't exist or can't be joined")
+                    return
+                }
+
+                if(circleData.type === 'competitive') {
+                    const currentCompetitiveCircle = getCompetitiveCircle(circles)
+                    if(currentCompetitiveCircle && currentCompetitiveCircle.uid !== circleData.uid) {
+                        setCircle(null)
+                        setJoinError('You can only be in one competitive circle at a time.')
                         return
                     }
-                    setCircle(circleData);
                 }
+
+                setJoinError('')
+                setCircle(circleData);
 
             } catch(error) {
                 console.error("Invite error:", error);
@@ -51,7 +86,7 @@ const JoinCircle = () => {
             isMounted = false;
         }
 
-    }, [profile, inviteCode]);
+    }, [profile, inviteCode, hasReachedCircleLimit, circles]);
 
     const handleJoin = async () => {
 
@@ -67,25 +102,29 @@ const JoinCircle = () => {
                 loading ? (
                     <LoadingState/>
                 ) : (
-                    <ErrorState title="Circle doesn't exist or can't be joined" />
+                    <ErrorState title={joinError || "Circle doesn't exist or can't be joined"} />
                 )
             ) : (
-                <div className="p-4 border-2 border-neutral4 rounded-xl flex flex-col gap-4 text-center min-w-xs">
+                <Card className='p-6! gap-6 items-center min-w-sm'>
 
                     <h2 className="text-neutral1">You've been invited to:</h2>
 
-                    <h1 className="text-2xl">{circle.title}</h1>
+                    <CircleBanner banner={circle.profile.banner} className={'w-16 h-16 text-2xl p-2 rounded-xl'}/>
 
-                    <div className="flex justify-center gap-8 text-neutral2">
-                        <div className="flex items-center gap-2">
-                            <PiStarFourFill/>
-                            <h2>Lv. {circle.level}</h2>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <FaUserFriends/>
-                            <h2>{circle.memberCount ?? 0} members</h2>
+                    <div className="flex flex-col items-center gap-1">
+                        <h1 className="text-lg">{circle.profile.title}</h1>
+                        <div className="flex justify-center gap-8 text-neutral1">
+                            <div className="flex items-center gap-2">
+                                <PiStarFourFill/>
+                                <h2>Lv. {circle.level}</h2>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <FaUserFriends/>
+                                <h2>{circle.memberCount ?? 0} members</h2>
+                            </div>
                         </div>
                     </div>
+
 
                     <button 
                         onClick={handleJoin}
@@ -94,7 +133,7 @@ const JoinCircle = () => {
                         Join
                     </button>
 
-                </div>
+                </Card>
             )}
 
 

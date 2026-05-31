@@ -10,7 +10,17 @@ import { buildCircleOptions, buildCircleWidgetSegment, buildCourseOptions, build
 // prevent editor from losing selection when clicking widget button
 const preventEditorBlur = (event) => event.preventDefault()
 
-const TaskWidgetElement = ({ attributes, children, element, isCompleted = false, circles = [], courses = [], onWidgetCommit, inverted }) => {
+const TaskWidgetElement = ({
+    attributes,
+    children,
+    element,
+    isCompleted = false,
+    circles = [],
+    courses = [],
+    onWidgetCommit,
+    inverted,
+    hideCircleWidgets = false,
+}) => {
 
     const editor = useSlateStatic()
     const widgetType = element.segment?.widgetType || 'token'
@@ -75,6 +85,10 @@ const TaskWidgetElement = ({ attributes, children, element, isCompleted = false,
     }
 
     if (widgetType === 'circle') {
+        if (hideCircleWidgets) {
+            return <span {...attributes} contentEditable={false} className='hidden'>{children}</span>
+        }
+
         const options = buildCircleOptions(circles)
 
         return (

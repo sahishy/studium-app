@@ -83,13 +83,16 @@ const Sidebar = ({ profile }) => {
                     >
                         Settings
                     </Link>
-                    <Link
-                        to='/settings'
-                        onClick={inRoom ? (event) => event.preventDefault() : undefined}
-                        className={`transition text-neutral1 ${inRoom ? 'cursor-not-allowed' : 'hover:text-neutral0'}`}
-                    >
-                        FAQ
-                    </Link>
+                    <div className='opacity-40 pointer-events-none'>
+                        <Link
+                            to='/faq'
+                            onClick={inRoom ? (event) => event.preventDefault() : undefined}
+                            className={`transition text-neutral1 ${inRoom ? 'cursor-not-allowed' : 'hover:text-neutral0'}`}
+                        >
+                            FAQ
+                        </Link>                        
+                    </div>
+
                 </div>
             </div>
 

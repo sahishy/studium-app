@@ -3,6 +3,7 @@ import Button from '../../../../shared/components/ui/Button'
 import { getMajorNameById } from '../../services/majorService'
 import MajorCommandPalette from '../commandPalettes/MajorCommandPalette'
 import { FaPlus } from 'react-icons/fa6'
+import Card from '../../../../shared/components/ui/Card'
 
 const EditMajorModal = ({ value = [], closeModal, onSave }) => {
 
@@ -42,23 +43,20 @@ const EditMajorModal = ({ value = [], closeModal, onSave }) => {
                         key={majorId}
                         type='button'
                         onClick={() => handleRemoveMajor(majorId)}
-                        className='text-xs px-3 py-2 rounded-full bg-neutral5 hover:bg-neutral4 text-neutral0 cursor-pointer transition'
                     >
-                        {getMajorNameById(majorId) ?? majorId}
+                        <Card className={`gap-1! items-start outline-neutral3 hover:bg-neutral5 cursor-pointer transition`}>
+                            <p className='text-sm font-semibold text-neutral0'>{getMajorNameById(majorId) ?? majorId}</p>
+                        </Card>
                     </button>
                 ))}
                 {selectedMajors.length < 3 && (
                     <button
                         type='button'
                         onClick={() => setPaletteOpen(true)}
-                        className='text-xs px-3 py-2 rounded-full border border-neutral4 text-neutral1 hover:bg-neutral5 cursor-pointer transition'
+                        className='text-xs p-5 rounded-xl border border-neutral4 text-neutral1 hover:bg-neutral5 cursor-pointer transition'
                     >
-                        <FaPlus />
-                    </button>                    
-                )}
-
-                {selectedMajors.length === 0 && (
-                    <p className='text-sm text-neutral1'>No target majors selected.</p>
+                        <FaPlus/>
+                    </button>
                 )}
             </div>
 

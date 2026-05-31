@@ -58,7 +58,8 @@ const createNewUserObject = async ({ firstName, lastName, email }) => {
             profilePicture: {
                 url: '',
                 lastUpdated: new Date(),
-            }
+            },
+            flair: null
         },
         createdAt: new Date(),
         progress: {

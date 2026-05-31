@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { writeBatch, doc, collection, getDocs } from 'firebase/firestore';
-import { useCircleTasks }    from '../../../agenda/services/taskService';
+import { useTasks } from '../../../agenda/contexts/TasksContext';
 import { useNavigate } from "react-router-dom";
 import Button from "../../../../shared/components/ui/Button";
 import { db } from "../../../../lib/firebase";
+import { extractTaskTitleMetadata } from '../../../agenda/utils/naturalLanguage';
 
 const DeleteCircleModal = ( { circle, closeModal } ) => {
 
-    const { tasks } = useCircleTasks([circle.uid]);
+    const { circle: circleTasks } = useTasks()
+    const tasks = circleTasks.filter((task) => extractTaskTitleMetadata(task.title).circleId === circle.uid)
     const navigate = useNavigate()
     const [isDeleting, setIsDeleting] = useState(false);
 

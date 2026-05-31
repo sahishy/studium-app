@@ -3,12 +3,8 @@ import BaseCommandPalette from '../../../../shared/components/commandPalettes/Ba
 import Card from '../../../../shared/components/ui/Card'
 import { searchMajors } from '../../services/majorService'
 
-const MajorCommandPalette = ({
-    isOpen,
-    onClose,
-    selectedMajorIds = [],
-    onSelectMajor,
-}) => {
+const MajorCommandPalette = ({ isOpen, onClose, selectedMajorIds = [], onSelectMajor }) => {
+    
     const [query, setQuery] = useState('')
 
     useEffect(() => {
@@ -45,7 +41,7 @@ const MajorCommandPalette = ({
                         >
                             <Card hoverable={!isSelected} className='items-start gap-1!'>
                                 <p className='text-sm text-neutral0 font-semibold'>{major.name}</p>
-                                <p className='text-xs text-neutral1'>{major.metaMajor} · {major.majorId}</p>
+                                <p className='text-xs text-neutral1'>{major.metaMajor}</p>
                                 {isSelected ? (
                                     <p className='text-xs text-neutral1'>Added</p>
                                 ) : null}

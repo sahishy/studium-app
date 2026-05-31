@@ -1,11 +1,11 @@
-const TextTabSelector = ({ tabs = [], currentIndex = 0, onSelect, notificationTabs = [] }) => {
+const TextTabSelector = ({ tabs = [], currentIndex = 0, onSelect, notificationTabs = [], className }) => {
 
     if (!tabs.length) return null
 
     const safeIndex = currentIndex >= 0 ? currentIndex : 0
 
     return (
-        <div className='relative p-1 bg-neutral5 rounded-full'>
+        <div className={`relative p-1 bg-neutral5 rounded-full ${className}`}>
             <div
                 className='absolute top-1 bottom-1 rounded-full bg-neutral6 transition-all duration-300 ease-out'
                 style={{

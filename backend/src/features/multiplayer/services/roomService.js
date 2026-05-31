@@ -98,26 +98,6 @@ const leaveRoom = async ({ roomId, userId }) => {
         const currentPlayerIds = Array.isArray(room?.playerIds) ? room.playerIds : []
         const remainingPlayerIds = currentPlayerIds.filter((playerId) => playerId && playerId !== userId)
 
-        if(room) {
-            await sendRoomSystemMessage({
-                roomId,
-                text: `${leaverDisplayName} has left the game.`,
-                transaction,
-                createdAt: now,
-            })
-        }
-
-        deleteQueueEntry({ userId, transaction })
-        deleteRoomPlayer({ roomId, userId, transaction })
-        setSessionState({
-            userId,
-            status: 'idle',
-            modeId: null,
-            currentRoomId: null,
-            updatedAt: now,
-            transaction,
-        })
-
         if(!room) {
             return false
         }
@@ -130,6 +110,24 @@ const leaveRoom = async ({ roomId, userId }) => {
             transaction,
             now,
             userStatsByUserId,
+        })
+
+        await sendRoomSystemMessage({
+            roomId,
+            text: `${leaverDisplayName} has left the game.`,
+            transaction,
+            createdAt: now,
+        })
+
+        deleteQueueEntry({ userId, transaction })
+        deleteRoomPlayer({ roomId, userId, transaction })
+        setSessionState({
+            userId,
+            status: 'idle',
+            modeId: null,
+            currentRoomId: null,
+            updatedAt: now,
+            transaction,
         })
 
         if(remainingPlayerIds.length === 0) {

@@ -3,6 +3,7 @@ import { asDate } from '../../../../../utils/formatters.js'
 import { getRandomQuestions } from '../../../services/questionsService.js'
 import { addRoomEvent } from '../../../services/roomEventsService.js'
 import { MULTIPLAYER_MODE_IDS } from '../../../utils/multiplayerUtils.js'
+import { updateCircleElo } from '../../../../socials/services/circleService.js'
 import {
     ANSWERED_FIRST_MULTIPLIER,
     SAT_CLASSIC_INITIAL_HEALTH,
@@ -23,7 +24,7 @@ import {
 
 const MODE_ID = MULTIPLAYER_MODE_IDS.SAT_CLASSIC
 
-const applyRankedMatchResult = async ({ transaction, userId, modeId, eloDelta = 0, userStatsData = null }) => {
+const applyRankedMatchResult = async ({ transaction, userId, modeId, eloDelta = 0, userStatsData = null, competitiveCircleDoc = null }) => {
 
     if(!transaction || !userId || !modeId) {
         return
@@ -59,6 +60,13 @@ const applyRankedMatchResult = async ({ transaction, userId, modeId, eloDelta = 
             peakElo: nextPeakElo,
         },
     }
+
+    await updateCircleElo({
+        transaction,
+        userId,
+        eloDelta: resolvedEloDelta,
+        competitiveCircleDoc,
+    })
 
     transaction.set(userStatsRef, {
         userId,
@@ -101,6 +109,23 @@ const endSatClassicGameInTransaction = async ({
     const roundsPlayed = Math.max(1, (Number(state?.questionIndex) || 0) + 1)
     let eloDeltaByUserId = {}
 
+    const competitiveCircleByUserId = {}
+    if(resolvedPlayerIds.length) {
+        const competitiveCirclesQuery = db.collection('circles').where('type', '==', 'competitive')
+        const competitiveCirclesSnap = await transaction.get(competitiveCirclesQuery)
+        const competitiveCircles = competitiveCirclesSnap.docs
+
+        for(const userId of resolvedPlayerIds) {
+            const membershipChecks = await Promise.all(competitiveCircles.map(async (circleDoc) => {
+                const memberRef = circleDoc.ref.collection('members').doc(userId)
+                const memberSnap = await transaction.get(memberRef)
+                return memberSnap.exists ? circleDoc : null
+            }))
+
+            competitiveCircleByUserId[userId] = membershipChecks.find(Boolean) ?? null
+        }
+    }
+
     if(resolvedWinnerUserId) {
         const winnerEloDelta = getRankedEloDelta({ isWin: true, roundsPlayed })
         await applyRankedMatchResult({
@@ -109,6 +134,7 @@ const endSatClassicGameInTransaction = async ({
             modeId: MODE_ID,
             eloDelta: winnerEloDelta,
             userStatsData: userStatsByUserId[resolvedWinnerUserId] ?? null,
+            competitiveCircleDoc: competitiveCircleByUserId[resolvedWinnerUserId] ?? null,
         })
 
         const loserUserId = resolvedPlayerIds.find((playerId) => playerId && playerId !== resolvedWinnerUserId) ?? null
@@ -120,6 +146,7 @@ const endSatClassicGameInTransaction = async ({
                 modeId: MODE_ID,
                 eloDelta: loserEloDelta,
                 userStatsData: userStatsByUserId[loserUserId] ?? null,
+                competitiveCircleDoc: competitiveCircleByUserId[loserUserId] ?? null,
             })
 
             eloDeltaByUserId = {

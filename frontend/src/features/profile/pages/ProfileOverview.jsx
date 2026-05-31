@@ -19,11 +19,14 @@ import { FaGear, FaSchool, FaFlask } from 'react-icons/fa6'
 import { FaEdit } from 'react-icons/fa'
 import EditStatsModal from '../components/modals/EditStatsModal'
 import EditDisplayNameModal from '../components/modals/EditDisplayNameModal'
+import EditDisplayNameOrFlairModal from '../components/modals/EditDisplayNameOrFlairModal'
+import EditFlairModal from '../components/modals/EditFlairModal'
 import EditMajorModal from '../components/modals/EditMajorModal'
 import { ACT_MAX, ACT_MIN, GPA_MAX, GPA_MIN, SAT_MAX, SAT_MIN, getDraftAcademicFromStats, getParsedNumber, toModeLabel } from '../utils/profileUtils'
 import { useUserStats } from '../contexts/UserStatsContext'
 import Podium from '../../../shared/components/avatar/Podium'
 import { removeFriend, sendFriendRequestByUserId, useHasOutgoingFriendRequest, useIsFriend } from '../../socials/services/friendService'
+import DisplayName from '../components/DisplayName'
 
 const SAT_CLASSIC_MODE_ID = 'sat-classic'
 
@@ -203,6 +206,38 @@ const ProfileOverview = () => {
                         displayName: nextValue,
                     }))
                 }}
+                displayName={draftAcademic.displayName}
+            />
+        )
+    }
+
+    const openEditFlairModal = () => {
+
+        openModal(
+            <EditFlairModal
+                currentFlair={displayedProfile?.profile?.flair ?? ''}
+                closeModal={closeModal}
+                onSave={async (nextFlair) => {
+                    try {
+                        await updateUserInfo(targetUserId, {
+                            'profile.flair': nextFlair,
+                        })
+                        setSaveError('')
+                    } catch (error) {
+                        setSaveError(error?.message || 'Unable to update flair.')
+                        throw error
+                    }
+                }}
+            />
+        )
+    }
+
+    const openEditDisplayNameOrFlairModal = () => {
+        openModal(
+            <EditDisplayNameOrFlairModal
+                closeModal={closeModal}
+                onOpenDisplayName={openEditDisplayNameModal}
+                onOpenFlair={openEditFlairModal}
             />
         )
     }
@@ -382,18 +417,16 @@ const ProfileOverview = () => {
 
                         <div className='flex flex-col'>
                             <div className='flex items-center gap-3'>
-                                <h1 className='text-2xl font-semibold'>
-                                    {displayedProfile?.profile?.displayName ?? displayedProfile?.displayName ?? 'Unknown'}
-                                </h1>
-                                {isCurrentUser && isEditMode ? (
+                                <DisplayName className={'text-2xl font-semibold'} targetProfile={displayedProfile} />
+                                {isCurrentUser && isEditMode && (
                                     <button
                                         type='button'
-                                        onClick={openEditDisplayNameModal}
-                                        className='text-neutral1 hover:text-neutral0 transition cursor-pointer'
+                                        onClick={openEditDisplayNameOrFlairModal}
+                                        className='p-2 rounded-lg text-neutral1 hover:text-neutral0 hover:bg-neutral5 transition cursor-pointer'
                                     >
                                         <FaEdit className='text-sm' />
                                     </button>
-                                ) : null}
+                                )}
                             </div>
                             <p className='text-xs text-neutral1 flex items-center gap-2 mt-1'>
                                 <FaSchool />
@@ -425,7 +458,7 @@ const ProfileOverview = () => {
                                         <button
                                             type='button'
                                             onClick={openEditMajorModal}
-                                            className='absolute top-3 right-3 text-neutral1 hover:text-neutral0 transition cursor-pointer'
+                                            className='absolute right-4 top-4 p-2 rounded-lg text-neutral1 hover:text-neutral0 hover:bg-neutral5 transition cursor-pointer'
                                         >
                                             <FaEdit className='text-sm' />
                                         </button>
@@ -465,7 +498,7 @@ const ProfileOverview = () => {
                                                             max: GPA_MAX,
                                                             step: 0.01,
                                                         })}
-                                                        className='text-neutral1 hover:text-neutral0 transition cursor-pointer'
+                                                        className='absolute -right-4 self-center p-2 rounded-lg text-neutral1 hover:text-neutral0 hover:bg-neutral5 transition cursor-pointer'
                                                     >
                                                         <FaEdit className='text-sm' />
                                                     </button>
@@ -489,7 +522,7 @@ const ProfileOverview = () => {
                                                             max: GPA_MAX,
                                                             step: 0.01,
                                                         })}
-                                                        className='text-neutral1 hover:text-neutral0 transition cursor-pointer'
+                                                        className='absolute -right-4 self-center p-2 rounded-lg text-neutral1 hover:text-neutral0 hover:bg-neutral5 transition cursor-pointer'
                                                     >
                                                         <FaEdit className='text-sm' />
                                                     </button>
@@ -509,7 +542,7 @@ const ProfileOverview = () => {
 
                                     <p className='text-lg font-semibold text-white z-1 mt-6'>SAT®</p>
 
-                                    {isCurrentUser && isEditMode ? (
+                                    {(isCurrentUser && isEditMode) && (
                                         <button
                                             type='button'
                                             onClick={() => openEditStatsModal({
@@ -520,11 +553,11 @@ const ProfileOverview = () => {
                                                 max: SAT_MAX,
                                                 step: 1,
                                             })}
-                                            className='absolute top-3 right-3 text-white hover:text-white/80 transition cursor-pointer z-10'
+                                            className='absolute top-4 right-4 p-2 rounded-lg text-white hover:bg-white/20 transition cursor-pointer'
                                         >
                                             <FaEdit className='text-sm' />
                                         </button>
-                                    ) : null}
+                                    )}
 
                                     <div className='bg-white rounded-t-2xl rounded-b-none p-5 min-h-48 w-full max-w-xs flex flex-col'>
                                         <div className='flex-1 flex flex-col gap-1 items-center justify-center'>
@@ -541,11 +574,11 @@ const ProfileOverview = () => {
                                     </div>
                                 </Card>
 
-                                <Card className='relative gap-9! p-0! overflow-hidden flex items-center justify-end bg-sky-50'>
+                                <Card className='relative gap-9! p-0! overflow-hidden flex items-center justify-end bg-sky-50!'>
 
                                     <p className='text-lg font-semibold text-neutral1 z-1 mt-6'>ACT®</p>
 
-                                    {isCurrentUser && isEditMode ? (
+                                    {(isCurrentUser && isEditMode) && (
                                         <button
                                             type='button'
                                             onClick={() => openEditStatsModal({
@@ -556,11 +589,11 @@ const ProfileOverview = () => {
                                                 max: ACT_MAX,
                                                 step: 1,
                                             })}
-                                            className='absolute top-3 right-3 text-neutral1 hover:text-neutral0 transition cursor-pointer z-10'
+                                            className='absolute top-4 right-4 p-2 rounded-lg text-neutral1 hover:text-neutral0 hover:bg-black/4 transition cursor-pointer'
                                         >
                                             <FaEdit className='text-sm' />
                                         </button>
-                                    ) : null}
+                                    )}
 
                                     <div className='bg-white rounded-t-2xl rounded-b-none p-5 min-h-48 w-full max-w-xs flex flex-col'>
                                         <div className='flex-1 flex flex-col gap-3 items-center justify-center'>

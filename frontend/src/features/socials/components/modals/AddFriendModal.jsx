@@ -34,7 +34,7 @@ const AddFriendModal = ({ profile, closeModal }) => {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder='Enter username'
-                    className='w-full border-2 border-neutral4 rounded-xl p-3 text-sm'
+                    className='w-full border-2 border-neutral4 rounded-xl p-4'
                     required
                 />
 

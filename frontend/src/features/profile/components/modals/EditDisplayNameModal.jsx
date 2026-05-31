@@ -3,13 +3,12 @@ import Button from '../../../../shared/components/ui/Button'
 import { hasFlaggedWords } from '../../../../shared/services/censorService'
 import { validateDisplayNameFormat } from '../../utils/profileUtils'
 import { FaCircleExclamation, FaExclamation } from 'react-icons/fa6'
+import { useNavigate } from 'react-router-dom'
 
-const EditDisplayNameModal = ({
-    value = '',
-    closeModal,
-    onSave,
-    onCheckAvailability,
-}) => {
+const EditDisplayNameModal = ({ value = '', closeModal, onSave, onCheckAvailability, displayName }) => {
+    
+    const navigate = useNavigate();
+
     const [draftValue, setDraftValue] = useState(value)
     const [submitError, setSubmitError] = useState('')
     const [isSaving, setIsSaving] = useState(false)
@@ -50,6 +49,9 @@ const EditDisplayNameModal = ({
 
             await onSave?.(nextValue)
             closeModal?.()
+
+            navigate(`/profile/${nextValue}`)
+            
         } catch (error) {
             setSubmitError(error?.message || 'Unable to update display name.')
         } finally {
@@ -78,7 +80,7 @@ const EditDisplayNameModal = ({
                         }
                     }}
                     className='w-full p-4 border-2 border-neutral4 rounded-xl focus:outline-gray-400 bg-neutral6 text-neutral0'
-                    placeholder='Only letters and numbers'
+                    placeholder={displayName}
                     required={true}
                 />
                 {!validation.isValid ? (
@@ -89,7 +91,7 @@ const EditDisplayNameModal = ({
                 ) : null}
 
                 <div className='flex gap-4 mt-4'>
-                    <Button onClick={closeModal} className='w-full py-4' disabled={isSaving}>Cancel</Button>
+                    <Button onClick={closeModal} className='w-full py-4' disabled={isSaving}>Back</Button>
                     <Button htmlType='submit' type='primary' className='w-full py-4' disabled={!validation.isValid || isSaving}>
                         {isSaving ? 'Saving...' : 'Save'}
                     </Button>
