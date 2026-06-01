@@ -39,6 +39,7 @@ import MaintenanceRoute from './routes/MaintenanceRoute'
 import FriendsIndexRedirect from './routes/FriendsIndexRedirect'
 import CircleOverviewIndexRedirect from './routes/CircleOverviewIndexRedirect'
 import CircleAgendaIndexRedirect from './routes/CircleAgendaIndexRedirect'
+import Updates from './features/main/pages/Updates'
 
 export default function App() {
 	return (
@@ -97,6 +98,7 @@ export default function App() {
 							<Route path="/join/:inviteCode" element={<JoinCircle />} />
 							<Route path="/avatar" element={<Avatar />} />
 							<Route path="/settings" element={<Settings />} />
+							<Route path="/updates" element={<Updates />} />
 							<Route path="/profile/:username" element={<ProfileOverview />} />
 						</Route>
 

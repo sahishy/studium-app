@@ -32,7 +32,7 @@ const Sidebar = ({ profile }) => {
 
             <div className='flex flex-col gap-6'>
 
-                <Logo className={'p-2'} large/>
+                <Logo className={'p-2'} large />
 
                 <div className='py-6 flex flex-col gap-3 items-center'>
                     <button onClick={() => navigate(`/profile/${encodeURIComponent(profile?.profile?.displayName ?? '')}`)}>
@@ -83,15 +83,13 @@ const Sidebar = ({ profile }) => {
                     >
                         Settings
                     </Link>
-                    <div className='opacity-40 pointer-events-none'>
-                        <Link
-                            to='/faq'
-                            onClick={inRoom ? (event) => event.preventDefault() : undefined}
-                            className={`transition text-neutral1 ${inRoom ? 'cursor-not-allowed' : 'hover:text-neutral0'}`}
-                        >
-                            FAQ
-                        </Link>                        
-                    </div>
+                    <Link
+                        to='/updates'
+                        onClick={inRoom ? (event) => event.preventDefault() : undefined}
+                        className={`transition text-neutral1 ${inRoom ? 'cursor-not-allowed' : 'hover:text-neutral0'}`}
+                    >
+                        Updates
+                    </Link>
 
                 </div>
             </div>
