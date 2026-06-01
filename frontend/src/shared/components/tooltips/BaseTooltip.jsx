@@ -94,6 +94,7 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
         <div className={`relative ${className}`}>
             <div
                 ref={triggerRef}
+                className='w-full h-full'
                 onMouseEnter={isControlled ? undefined : showTooltip}
                 onMouseLeave={isControlled ? undefined : hideTooltip}
                 onFocus={isControlled ? undefined : showTooltip}

@@ -12,7 +12,7 @@ import QuestionPane from './components/QuestionPane'
 import GameHeader from './components/GameHeader'
 import MatchEndOverlay from './components/MatchEndOverlay'
 import CalculatorWindow from '../../components/windows/CalculatorWindow'
-import { buildRankedUiState } from '../../utils/multiplayerUtils'
+import { buildMultiplayerUiState } from '../../utils/multiplayerUtils'
 import { getRankInfoFromElo } from '../../../profile/utils/statsUtils'
 
 const SatClassicGame = ({ roomId, userId }) => {
@@ -321,7 +321,7 @@ const SatClassicGame = ({ roomId, userId }) => {
             rankLabel,
             nextTierLabel,
             nextTierThreshold,
-        } = buildRankedUiState({ userStats, modeId: MODE_ID })
+        } = buildMultiplayerUiState({ userStats, modeId: MODE_ID })
 
         const nextRankInfo = nextTierThreshold
             ? getRankInfoFromElo(nextTierThreshold.minElo)

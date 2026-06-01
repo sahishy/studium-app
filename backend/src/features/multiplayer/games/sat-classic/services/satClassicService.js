@@ -43,8 +43,8 @@ const applyRankedMatchResult = async ({ transaction, userId, modeId, eloDelta = 
         resolvedUserStatsData = userStatsSnap.exists ? (userStatsSnap.data() ?? {}) : {}
     }
 
-    const currentRanked = resolvedUserStatsData?.ranked ?? {}
-    const modeStats = currentRanked?.[modeId] ?? {}
+    const currentPlay = resolvedUserStatsData?.play ?? {}
+    const modeStats = currentPlay?.[modeId] ?? {}
 
     const currentElo = Number(modeStats?.elo) || 0
     const currentPeakElo = Number(modeStats?.peakElo) || currentElo
@@ -52,12 +52,13 @@ const applyRankedMatchResult = async ({ transaction, userId, modeId, eloDelta = 
     const nextElo = Math.max(0, currentElo + resolvedEloDelta)
     const nextPeakElo = Math.max(currentPeakElo, nextElo)
 
-    const nextRanked = {
-        ...currentRanked,
+    const nextPlay = {
+        ...currentPlay,
         [modeId]: {
             ...modeStats,
             elo: nextElo,
             peakElo: nextPeakElo,
+            gamesPlayed: (Number(modeStats?.gamesPlayed) || 0) + 1,
         },
     }
 
@@ -70,7 +71,7 @@ const applyRankedMatchResult = async ({ transaction, userId, modeId, eloDelta = 
 
     transaction.set(userStatsRef, {
         userId,
-        ranked: nextRanked,
+        play: nextPlay,
         lastUpdated: new Date(),
     }, { merge: true })
 

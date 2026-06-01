@@ -108,7 +108,7 @@ const MultiplayerButton = ({ profile, inRoom }) => {
 
     const handleClick = async () => {
         if (!inRoom) {
-            navigate('/ranked')
+            navigate('/play')
             return
         }
 
@@ -122,7 +122,7 @@ const MultiplayerButton = ({ profile, inRoom }) => {
         const leaverName = profile?.profile?.displayName || `${profile?.firstName ?? ''} ${profile?.lastName ?? ''}`.trim() || 'Player'
 
         await leaveRoom({ roomId, userId, leaverName })
-        navigate('/ranked')
+        navigate('/play')
     }
 
     return (
@@ -132,7 +132,7 @@ const MultiplayerButton = ({ profile, inRoom }) => {
             className='mb-3'
         >
             {inRoom ? <FaArrowLeft /> : <RiSwordFill />}
-            {inRoom ? 'Leave Game' : 'SAT Ranked'}
+            {inRoom ? 'Leave Game' : 'SAT Games'}
         </Button>
     )
 }

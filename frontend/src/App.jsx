@@ -33,7 +33,7 @@ import { ToastProvider } from './shared/contexts/ToastContext'
 import JoinCircle from './features/socials/pages/JoinCircle'
 import ErrorState from './shared/components/ui/ErrorState'
 import Resources from './features/resources/pages/Resources'
-import Ranked from './features/multiplayer/pages/Ranked'
+import Play from './features/multiplayer/pages/Play'
 import MatchRoom from './features/multiplayer/pages/MatchRoom'
 import MaintenanceRoute from './routes/MaintenanceRoute'
 import FriendsIndexRedirect from './routes/FriendsIndexRedirect'
@@ -92,8 +92,8 @@ export default function App() {
 								<Route path="all/:courseId" element={<CourseOverview />} />
 							</Route>
 							<Route path="/resources" element={<Resources />} />
-							<Route path="/ranked" element={<Ranked />} />
-							<Route path="/ranked/room/:roomId" element={<MatchRoom />} />
+							<Route path="/play" element={<Play />} />
+							<Route path="/play/room/:roomId" element={<MatchRoom />} />
 							<Route path="/join/:inviteCode" element={<JoinCircle />} />
 							<Route path="/avatar" element={<Avatar />} />
 							<Route path="/settings" element={<Settings />} />

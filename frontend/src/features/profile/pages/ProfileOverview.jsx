@@ -14,7 +14,7 @@ import { getSchoolNameById } from '../services/schoolService'
 import { getMajorNameById } from '../services/majorService'
 import { getUserStatsByUserId, updateUserStatsByUserId } from '../services/statsService'
 import { getUserByDisplayName, isDisplayNameAvailable, updateUserInfo } from '../../auth/services/userService'
-import { buildRankedUiState } from '../../multiplayer/utils/multiplayerUtils'
+import { buildMultiplayerUiState } from '../../multiplayer/utils/multiplayerUtils'
 import { FaGear, FaSchool, FaFlask } from 'react-icons/fa6'
 import { FaEdit } from 'react-icons/fa'
 import EditStatsModal from '../components/modals/EditStatsModal'
@@ -160,7 +160,7 @@ const ProfileOverview = () => {
     const weightedGpa = academic?.gpa?.weighted
 
     const satClassicRankedUi = useMemo(() => {
-        return buildRankedUiState({ userStats: displayedUserStats, modeId: SAT_CLASSIC_MODE_ID })
+        return buildMultiplayerUiState({ userStats: displayedUserStats, modeId: SAT_CLASSIC_MODE_ID })
     }, [displayedUserStats])
 
     const {

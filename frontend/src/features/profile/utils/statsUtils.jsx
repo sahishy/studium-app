@@ -65,31 +65,34 @@ const getRankInfoFromElo = (elo = 0) => {
 
 }
 
-const getRankedModeStats = (userStats, modeId) => {
+const getModeStats = (userStats, mode) => {
+    const modeStats = userStats?.play?.[mode?.id] ?? {}
 
-    const modeStats = userStats?.ranked?.[modeId]
-    const legacyElo = userStats?.[`ranked.${modeId}.elo`]
-    const legacyPeakElo = userStats?.[`ranked.${modeId}.peakElo`]
-    const legacyGamesPlayed = userStats?.[`ranked.${modeId}.gamesPlayed`]
+    if(mode?.type === 'singleplayer') {
+        return {
+            peakScore: modeStats?.peakScore ?? 0,
+            gamesPlayed: modeStats?.gamesPlayed ?? 0,
+        }
+    }
 
     return {
-        elo: modeStats?.elo ?? legacyElo ?? 0,
-        peakElo: modeStats?.peakElo ?? legacyPeakElo ?? 0,
-        gamesPlayed: modeStats?.gamesPlayed ?? legacyGamesPlayed ?? 0,
+        elo: modeStats?.elo ?? 0,
+        peakElo: modeStats?.peakElo ?? 0,
+        gamesPlayed: modeStats?.gamesPlayed ?? 0,
     }
-    
 }
 
 const getTotalElo = (userStats) => {
     
-    const rankedStats = userStats?.ranked
+    const rankedStats = userStats?.play
 
     if(!rankedStats) {
         return 0
     }
 
     return Object.keys(rankedStats).reduce((total, modeId) => {
-        return total + getRankedModeStats(userStats, modeId).elo
+        const modeStats = rankedStats?.[modeId] ?? {}
+        return total + (Number(modeStats?.elo) || 0)
     }, 0)
 
 }
@@ -97,6 +100,6 @@ const getTotalElo = (userStats) => {
 export {
     RANK_TIERS,
     getRankInfoFromElo,
-    getRankedModeStats,
+    getModeStats,
     getTotalElo
 }

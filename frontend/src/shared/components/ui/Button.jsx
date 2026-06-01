@@ -29,7 +29,7 @@ const Button = ( { children, onClick, type = 'secondary', htmlType = 'button', c
                 disabled:opacity-60 disabled:cursor-not-allowed transition-all`}
         >
             {children}
-            {loading && <FaCircleNotch className="text-xs animate-spin"/>}
+            {loading && <FaCircleNotch className="animate-spin"/>}
         </button>
     )
 
