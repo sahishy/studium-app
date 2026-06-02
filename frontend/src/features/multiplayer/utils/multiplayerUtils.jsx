@@ -21,7 +21,7 @@ const GAME_MODES = [
         name: 'Blitz',
         type: 'singleplayer',
         icon: FaBoltLightning,
-        description: 'Answer as many questions as possible in 5 minutes and mimic the pressure of the SAT with a ticking clock.',
+        description: 'Answer 10 questions as fast possible, requiring quick thinking and accuracy under pressure.',
     },
 ]
 

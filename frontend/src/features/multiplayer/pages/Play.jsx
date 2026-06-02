@@ -259,59 +259,56 @@ const Play = () => {
 
                 <div className='flex-1 min-h-0 max-w-sm flex flex-col justify-center gap-8'>
 
-                    {isSelectedModeMultiplayer ? (
-                        <Card className='max-w-xl p-8! gap-3'>
-                            <div className='flex flex-col items-center gap-3'>
+                    <Card className='max-w-8xl p-8! gap-3 items-center'>
+                        <Card className='absolute! -top-7 font-semibold flex-row items-center gap-3!'>
+                            <ModeIcon className='text-lg' />
+                            {selectedMode.name}
+                        </Card>
+                        {isSelectedModeMultiplayer ? (
+                            <>
+                                <div className='flex flex-col items-center gap-3'>
 
-                                <div className="w-32 h-32 overflow-hidden flex items-center justify-center">
-                                    <img
-                                        src={rankInfo.imageSrc}
-                                        alt={`${rankLabel} icon`}
-                                        className='w-32 h-32 object-cover'
-                                    />
+                                    <div className="w-32 h-32 overflow-hidden flex items-center justify-center">
+                                        <img
+                                            src={rankInfo.imageSrc}
+                                            alt={`${rankLabel} icon`}
+                                            className='w-32 h-32 object-cover'
+                                        />
+                                    </div>
+
+                                    <div className='flex items-center gap-3'>
+                                        <h2 className='text-2xl font-semibold'>{rankLabel}</h2>
+                                    </div>
+
                                 </div>
 
-                                <div className='flex items-center gap-3'>
-                                    <ModeIcon className='text-lg mb-1' />
-                                    <h2 className='text-2xl font-semibold'>{rankLabel}</h2>
+                                <ProgressBar
+                                    value={currentTierProgress}
+                                    max={currentTierSpan}
+                                    secondaryValue={Math.max(0, rankedStats.peakElo - currentTierMinElo)}
+                                    secondaryMax={currentTierSpan}
+                                    secondaryClassName='bg-sky-300/40'
+                                />
+
+                                <div className='flex justify-between w-full'>
+                                    <p className='text-sm font-semibold'>
+                                        {rankedStats.elo} <span className='text-xs text-neutral1'>SAT</span>
+                                    </p>
+                                    <p className='text-sm text-neutral1 flex items-center gap-1'>
+                                        <HiChevronDoubleUp />
+                                        {nextTierThreshold ? `${eloToNextTier} to ${nextTierLabel}` : nextTierLabel}
+                                    </p>
                                 </div>
-
-                            </div>
-
-                            <ProgressBar
-                                value={currentTierProgress}
-                                max={currentTierSpan}
-                                secondaryValue={Math.max(0, rankedStats.peakElo - currentTierMinElo)}
-                                secondaryMax={currentTierSpan}
-                                secondaryClassName='bg-sky-300/40'
-                            />
-
-                            <div className='flex justify-between'>
-                                <p className='text-sm font-semibold'>
-                                    {rankedStats.elo} <span className='text-xs text-neutral1'>SAT</span>
-                                </p>
-                                <p className='text-sm text-neutral1 flex items-center gap-1'>
-                                    <HiChevronDoubleUp />
-                                    {nextTierThreshold ? `${eloToNextTier} to ${nextTierLabel}` : nextTierLabel}
-                                </p>
-                            </div>
-
-                        </Card>
-                    ) : (
-                        <Card className='max-w-xl p-8! gap-3 items-center'>
-
-                            <div className='flex items-center gap-3'>
-                                <ModeIcon className='text-lg mb-1' />
-                                <h2 className='text-2xl font-semibold'>{selectedMode.name}</h2>
-                            </div>
-
-                            <div className='flex flex-col items-center gap-3'>
-                                <p className='text-sm font-semibold text-neutral1'>High Score</p>
-                                <p className='text-6xl font-bold'>{singleplayerStats.peakScore}</p>
-                            </div>
-
-                        </Card>
-                    )}
+                            </>
+                        ) : (
+                            <>
+                                <div className='flex flex-col items-center gap-3 mt-6'>
+                                    <p className='text-sm font-semibold text-neutral1'>High Score</p>
+                                    <p className='text-6xl font-bold'>{singleplayerStats.peakScore}</p>
+                                </div>
+                            </>
+                        )}
+                    </Card>
 
                     <div className='flex gap-3'>
                         <Button
