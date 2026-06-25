@@ -11,6 +11,10 @@ import { updateUserInfo } from '../../auth/services/userService'
 import { uploadProfilePicture } from '../../../shared/services/storageService'
 import Button from '../../../shared/components/ui/Button'
 import LoadingState from '../../../shared/components/ui/LoadingState'
+import { FaCheck, FaChild, FaDroplet, FaFaceSmile, FaLock, FaUnlock } from 'react-icons/fa6'
+import PageHeader from '../../../shared/components/ui/PageHeader'
+import { FaCheckCircle, FaSmile } from 'react-icons/fa'
+import Logo from '../../../shared/components/misc/Logo'
 
 const tabs = [
     { name: 'color', label: 'Color' },
@@ -150,12 +154,15 @@ const Avatar = () => {
 
             <div className='w-full flex-1 flex flex-col gap-4 px-24 pb-24 pt-2'>
                 <div className='flex justify-between items-start'>
-                    <h1 className='text-2xl font-semibold'>Avatar</h1>
+
+                    <PageHeader text={'Avatar'} icon={FaChild} />
+
                     <TextTabSelector
                         tabs={tabs}
                         currentIndex={activeTab}
                         onSelect={(_, index) => setActiveTab(index)}
                     />
+
                 </div>
 
                 {avatarLoading ? (
@@ -212,51 +219,120 @@ const Avatar = () => {
                         <Card className='flex-1 flex flex-col p-8! gap-6'>
                             {activeTab === 0 && (
                                 <div className='flex flex-col gap-4'>
-                                    <h2 className='text-lg font-semibold'>Color</h2>
+
+                                    <h2 className='flex items-center gap-2 text-lg font-semibold text-neutral0'>
+                                        Unlocked Colors
+                                        <FaUnlock className='text-sm mb-0.5' />
+                                    </h2>
 
                                     <div className='flex flex-wrap gap-4'>
                                         {AVATAR_COLORS.map((color) => (
                                             <button
                                                 key={color}
-                                                type='button'
                                                 onClick={() => handleColorSelect(color)}
-                                                className={`w-14 h-14 rounded-full border-2 transition-all cursor-pointer ${selectedColor === color ? 'border-neutral0 scale-105' : 'border-transparent'}`}
-                                                style={{ backgroundColor: color }}
-                                                aria-label={`Select color ${color}`}
-                                            />
+                                                className='relative w-20 h-20 cursor-pointer'
+                                            >
+                                                <div className={`relative w-full h-full rounded-xl overflow-hidden border-2 transition
+                                                    ${selectedColor === color ? 'border-neutral0 scale-105' : 'border-transparent hover:scale-105'}
+                                                `}>
+                                                    <div className='w-full h-full brightness-95' style={{ backgroundColor: color }} />
+                                                    <div className='absolute w-16 h-16 bottom-2 left-2 rounded-lg' style={{ backgroundColor: color }} />
+                                                    <div className='absolute right-2 top-2 w-8 h-6 rounded-xl bg-white/20' />
+                                                </div>
+
+                                                <div className={`absolute -top-2 -right-2 p-1 bg-neutral0 rounded-full scale-80 opacity-0
+                                                    ${selectedColor === color && 'scale-100 opacity-100'} transition`}
+                                                >
+                                                    <FaCheck className='text-neutral6 text-xs' />
+                                                </div>
+                                            </button>
                                         ))}
                                     </div>
+
+                                    <h2 className='flex items-center gap-2 text-lg font-semibold text-neutral1 mt-6'>
+                                        Locked Colors
+                                        <FaLock className='text-sm mb-0.5' />
+                                    </h2>
+
+                                    <div className='flex flex-wrap gap-4'>
+                                        {Array.from({ length: 12 }, (_, i) => i).map((i) => (
+                                            <button
+                                                key={i}
+                                                className={`w-20 h-20 flex items-center justify-center rounded-xl bg-neutral5 cursor-not-allowed`}
+                                            >
+                                                <FaLock className='text-neutral2 text-lg' />
+                                            </button>
+                                        ))}
+                                    </div>
+
                                 </div>
                             )}
 
                             {activeTab === 1 && (
                                 <div className='flex flex-col gap-4'>
-                                    <h2 className='text-lg font-semibold'>Face</h2>
+
+                                    <h2 className='flex items-center gap-2 text-lg font-semibold text-neutral0'>
+                                        Unlocked Faces
+                                        <FaUnlock className='text-sm mb-0.5' />
+                                    </h2>
 
                                     <div className='flex flex-wrap gap-4'>
                                         {AVATAR_FACES.map((faceTexture, faceIndex) => (
                                             <button
                                                 key={faceTexture}
-                                                type='button'
                                                 onClick={() => handleFaceSelect(faceIndex)}
-                                                className={`w-20 h-20 rounded-xl border overflow-hidden bg-white/4 transition-all cursor-pointer ${selectedFace === faceIndex ? 'border-neutral0 border-2 scale-105' : 'border-neutral4'}`}
-                                                aria-label={`Select face ${faceIndex + 1}`}
+                                                className={`w-20 h-20 rounded-xl border bg-white/4 transition-all cursor-pointer 
+                                                    ${selectedFace === faceIndex ? 'border-neutral0 border-2 scale-105' : 'border-neutral4 hover:scale-105'}`}
                                             >
-                                                <img
-                                                    src={faceTexture}
-                                                    alt={`Face option ${faceIndex + 1}`}
-                                                    className='w-full h-full object-cover'
-                                                />
+                                                <div className='overflow-hidden'>
+                                                    <img
+                                                        src={faceTexture}
+                                                        alt={`Face option ${faceIndex + 1}`}
+                                                        className='w-full h-full object-cover'
+                                                    />
+                                                </div>
+                                                <div className={`absolute -top-2 -right-2 p-1 bg-neutral0 rounded-full scale-80 opacity-0
+                                                    ${selectedFace === faceIndex && 'scale-100 opacity-100'} transition`}
+                                                >
+                                                    <FaCheck className='text-neutral6 text-xs' />
+                                                </div>
                                             </button>
                                         ))}
                                     </div>
+
+                                    <h2 className='flex items-center gap-2 text-lg font-semibold text-neutral1 mt-6'>
+                                        Locked Faces
+                                        <FaLock className='text-sm mb-0.5' />
+                                    </h2>
+
+                                    <div className='flex flex-wrap gap-4'>
+                                        {Array.from({ length: 9 }, (_, i) => i).map((i) => (
+                                            <button
+                                                key={i}
+                                                className={`w-20 h-20 flex items-center justify-center rounded-xl bg-neutral5 cursor-not-allowed`}
+                                            >
+                                                <FaLock className='text-neutral2 text-lg' />
+                                            </button>
+                                        ))}
+                                    </div>
+
                                 </div>
                             )}
 
                             {activeTab === 2 && (
-                                <div className='flex flex-col gap-4'>
-                                    <h2 className='text-lg font-semibold'>Hat</h2>
-                                    <p className='text-sm text-neutral2'>Coming soon.</p>
+                                <div className='flex flex-col gap-4 h-full'>
+
+                                    <h2 className='flex items-center gap-2 text-lg font-semibold text-neutral1'>
+                                        Hats
+                                        <FaLock className='text-sm mb-0.5' />
+                                    </h2>
+
+                                    <div className='flex-1 mb-12 flex flex-col justify-center items-center '>
+                                        <Logo className={'mb-3'} />
+                                        <h1 className='text-3xl font-bold'>Coming soon</h1>
+                                        <p className='text-sm text-neutral1'>Hats will be obtained in a future system.</p>
+                                    </div>
+
                                 </div>
                             )}
 

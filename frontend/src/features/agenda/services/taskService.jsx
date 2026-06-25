@@ -1,19 +1,19 @@
-import { doc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, where, query, getDoc, getDocs, writeBatch } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, query, getDoc, getDocs, writeBatch } from 'firebase/firestore'
 import { updateCircleXP, updateUserXP } from '../../profile/services/xpService';
 import confetti from 'canvas-confetti';
 import { updateUserPreference, userCompleteTask } from '../../auth/services/userService';
-import { useEffect, useMemo, useState } from 'react';
-import { normalizeTaskTitle } from '../utils/naturalLanguage';
+import { useEffect, useState } from 'react';
+import { extractTaskTitleMetadata, normalizeTaskTitle } from '../utils/naturalLanguage';
 import { LIST_GROUP_OPTIONS } from '../utils/taskListUtils';
+import { calculateTaskCompletionXp } from '../utils/taskUtils';
 import { db } from '../../../lib/firebase';
 
-const createTask = async ({ title, status, listIndex, boardIndex, ownerType, ownerId, taskId, parentTaskId, siblingIndex, type }) => {
+const createTask = async ({ title, status, listIndex, boardIndex, userId, taskId, parentTaskId, siblingIndex, type }) => {
 
     const collectionRef = collection(db, 'tasks')
     const now = new Date()
 
     const normalizedTitle = normalizeTaskTitle(title)
-
     const task = {
         title: normalizedTitle,
         type: (type || 'assignment'),
@@ -22,8 +22,7 @@ const createTask = async ({ title, status, listIndex, boardIndex, ownerType, own
         parentTaskId: (parentTaskId ?? null),
         siblingIndex: (siblingIndex ?? 0),
         boardIndex: (boardIndex ?? -1),
-        ownerType: (ownerType ? ownerType : 'user'),
-        ownerId: (ownerId ? ownerId : null),
+        userId: (userId || null),
         alreadyCompleted: false,
         createdAt: now,
         updatedAt: now
@@ -36,38 +35,51 @@ const createTask = async ({ title, status, listIndex, boardIndex, ownerType, own
 
 }
 
+const applyTaskCompletionRewards = async (taskData) => {
+
+    const metadata = extractTaskTitleMetadata(taskData.title)
+    const resolvedOwnerType = metadata.circleId ? 'circle' : 'user'
+    const resolvedOwnerId = metadata.circleId || taskData.userId || null
+    const xpReward = calculateTaskCompletionXp(taskData.createdAt, new Date())
+
+    if (xpReward > 0) {
+        completeTaskAnimation(resolvedOwnerType === 'circle')
+    }
+
+    if (resolvedOwnerType === 'user' && resolvedOwnerId) {
+        const userRef = doc(db, 'users', resolvedOwnerId)
+        const userSnap = await getDoc(userRef)
+        const userProfile = { uid: resolvedOwnerId, ...userSnap.data() }
+
+        await updateUserXP(userProfile, xpReward)
+        await userCompleteTask(userProfile)
+        return
+    }
+
+    if (resolvedOwnerType === 'circle' && resolvedOwnerId) {
+        const circleRef = doc(db, 'circles', resolvedOwnerId)
+        const circleSnap = await getDoc(circleRef)
+
+        await updateCircleXP(circleSnap.data(), xpReward)
+    }
+
+}
+
 const triggerTaskCompletionEffects = async (taskId) => {
 
     const taskRef = doc(db, 'tasks', taskId)
     const taskSnap = await getDoc(taskRef)
-    if(!taskSnap.exists()) {
+    if (!taskSnap.exists()) {
         return
     }
 
     const taskData = taskSnap.data()
     const alreadyCompleted = Boolean(taskData.alreadyCompleted)
-    if(alreadyCompleted) {
+    if (alreadyCompleted) {
         return
     }
 
-    const resolvedOwnerType = taskData.ownerType || (taskData.circleId ? 'circle' : 'user')
-    const resolvedOwnerId = taskData.ownerId || taskData.circleId || taskData.userId || null
-
-    completeTaskAnimation(resolvedOwnerType === 'circle')
-
-    if(resolvedOwnerType === 'user' && resolvedOwnerId) {
-        const userRef = doc(db, 'users', resolvedOwnerId)
-        const userSnap = await getDoc(userRef)
-        const userProfile = { uid: resolvedOwnerId, ...userSnap.data() }
-
-        await updateUserXP(userProfile, 10)
-        await userCompleteTask(userProfile)
-    } else if(resolvedOwnerType === 'circle' && resolvedOwnerId) {
-        const circleRef = doc(db, 'circles', resolvedOwnerId)
-        const circleSnap = await getDoc(circleRef)
-
-        await updateCircleXP(circleSnap.data(), 10)
-    }
+    await applyTaskCompletionRewards(taskData)
 
     await updateDoc(taskRef, { alreadyCompleted: true, updatedAt: new Date() })
 
@@ -77,7 +89,7 @@ const updateTask = async (taskId, taskData) => {
 
     const taskRef = doc(db, 'tasks', taskId)
     const taskSnap = await getDoc(taskRef)
-    if(!taskSnap.exists()) {
+    if (!taskSnap.exists()) {
         return
     }
 
@@ -102,24 +114,7 @@ const completeTask = async (taskId) => {
     const taskSnap = await getDoc(taskRef);
     const taskData = taskSnap.data();
 
-    const resolvedOwnerType = taskData.ownerType || (taskData.circleId ? 'circle' : 'user')
-    const resolvedOwnerId = taskData.ownerId || taskData.circleId || taskData.userId || null
-
-    completeTaskAnimation(resolvedOwnerType === 'circle');
-
-    if(resolvedOwnerType === 'user' && resolvedOwnerId) {
-        const userRef = doc(db, 'users', resolvedOwnerId)
-        const userSnap = await getDoc(userRef);
-        const userProfile = { uid: resolvedOwnerId, ...userSnap.data() }
-
-        await updateUserXP(userProfile, 10);
-        await userCompleteTask(userProfile);
-    } else if(resolvedOwnerType === 'circle' && resolvedOwnerId) {
-        const circleRef = doc(db, 'circles', resolvedOwnerId)
-        const circleSnap = await getDoc(circleRef);
-
-        await updateCircleXP(circleSnap.data(), 10);
-    }
+    await applyTaskCompletionRewards(taskData)
 
     await deleteDoc(taskRef);
 
@@ -128,10 +123,11 @@ const completeTask = async (taskId) => {
 const deleteCircleTasks = async (circleId) => {
 
     const tasksRef = collection(db, 'tasks')
-    const q = query(tasksRef, where('ownerType', '==', 'circle'), where('ownerId', '==', circleId))
+    const q = query(tasksRef)
 
     const snapshot = await getDocs(q)
-    if(snapshot.empty) {
+    const circleTaskDocs = snapshot.docs.filter((docSnap) => extractTaskTitleMetadata(docSnap.data().title).circleId === circleId)
+    if (!circleTaskDocs.length) {
         console.log('No tasks to delete for circle', circleId)
         return
     }
@@ -140,18 +136,18 @@ const deleteCircleTasks = async (circleId) => {
     let batch = writeBatch(db)
     let opCount = 0
 
-    snapshot.docs.forEach(docSnap => {
+    circleTaskDocs.forEach(docSnap => {
         batch.delete(docSnap.ref)
         opCount++
 
-        if(opCount === 500) {
+        if (opCount === 500) {
             batches.push(batch.commit())
             batch = writeBatch(db)
             opCount = 0
         }
     })
 
-    if(opCount > 0) {
+    if (opCount > 0) {
         batches.push(batch.commit())
     }
 
@@ -161,7 +157,7 @@ const deleteCircleTasks = async (circleId) => {
 
 const updateTaskGroupingPreference = async (uid, groupTasksBy) => {
     const validGroupIds = new Set(LIST_GROUP_OPTIONS.map((option) => option.id))
-    if(!validGroupIds.has(groupTasksBy)) {
+    if (!validGroupIds.has(groupTasksBy)) {
         throw new Error(`Invalid groupTasksBy preference: ${groupTasksBy}`)
     }
 
@@ -178,7 +174,7 @@ const completeTaskAnimation = (isCircle) => {
     });
 }
 
-const useUserTasks = (userId) => {
+const useUserTasks = () => {
 
     const [userTasks, setUserTasks] = useState([]);
     const [isReady, setIsReady] = useState(false);
@@ -186,14 +182,8 @@ const useUserTasks = (userId) => {
     useEffect(() => {
         setIsReady(false);
 
-        if(!userId) {
-            setUserTasks([]);
-            setIsReady(true);
-            return;
-        }
-
         const tasksRef = collection(db, 'tasks');
-        const q = query(tasksRef, where('ownerType', '==', 'user'), where('ownerId', '==', userId));
+        const q = query(tasksRef);
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => ({
@@ -202,8 +192,7 @@ const useUserTasks = (userId) => {
                 title: normalizeTaskTitle(doc.data().title),
                 parentTaskId: doc.data().parentTaskId ?? null,
                 siblingIndex: doc.data().siblingIndex ?? 0,
-                ownerType: doc.data().ownerType ?? (doc.data().circleId ? 'circle' : 'user'),
-                ownerId: doc.data().ownerId ?? doc.data().userId ?? doc.data().circleId ?? null,
+                userId: doc.data().userId ?? null,
                 alreadyCompleted: doc.data().alreadyCompleted ?? false,
             }));
             setUserTasks(data);
@@ -211,92 +200,9 @@ const useUserTasks = (userId) => {
         });
 
         return () => unsubscribe();
-    }, [userId]);
+    }, []);
 
     return { tasks: userTasks, isReady };
-
-}
-
-const useCircleTasks = (circleIds = []) => {
-
-    const [circleTasks, setCircleTasks] = useState([]);
-    const [isReady, setIsReady] = useState(false);
-    const CIRCLE_BATCH_SIZE = 10;
-
-    const validIds = useMemo(
-        () => circleIds.filter(id => typeof id === 'string'),
-        [circleIds.join(',')]
-    );
-
-    useEffect(() => {
-        setIsReady(false);
-
-        if(!validIds.length) {
-            setCircleTasks([]);
-            setIsReady(true);
-            return;
-        }
-
-        const tasksRef = collection(db, 'tasks');
-
-        if(validIds.length <= CIRCLE_BATCH_SIZE) {
-            const q = query(tasksRef, where('ownerType', '==', 'circle'), where('ownerId', 'in', validIds));
-            const unsub = onSnapshot(q, snapshot => {
-                const data = snapshot.docs.map(doc => ({
-                    uid: doc.id,
-                    ...doc.data(),
-                    title: normalizeTaskTitle(doc.data().title),
-                    parentTaskId: doc.data().parentTaskId ?? null,
-                    siblingIndex: doc.data().siblingIndex ?? 0,
-                    ownerType: doc.data().ownerType ?? (doc.data().circleId ? 'circle' : 'user'),
-                    ownerId: doc.data().ownerId ?? doc.data().userId ?? doc.data().circleId ?? null,
-                    alreadyCompleted: doc.data().alreadyCompleted ?? false,
-                }));
-                setCircleTasks(data);
-                setIsReady(true);
-            });
-
-            return () => unsub();
-        }
-
-        const unsubscribes = [];
-        const batches = [];
-
-        for(let i = 0; i < validIds.length; i += CIRCLE_BATCH_SIZE) {
-            const chunk = validIds.slice(i, i + CIRCLE_BATCH_SIZE);
-            const q = query(tasksRef, where('ownerType', '==', 'circle'), where('ownerId', 'in', chunk));
-
-            const unsub = onSnapshot(q, snapshot => {
-                batches[i / CIRCLE_BATCH_SIZE] = snapshot.docs.map(doc => ({
-                    uid: doc.id,
-                    ...doc.data(),
-                    title: normalizeTaskTitle(doc.data().title),
-                    parentTaskId: doc.data().parentTaskId ?? null,
-                    siblingIndex: doc.data().siblingIndex ?? 0,
-                    ownerType: doc.data().ownerType ?? (doc.data().circleId ? 'circle' : 'user'),
-                    ownerId: doc.data().ownerId ?? doc.data().userId ?? doc.data().circleId ?? null,
-                    alreadyCompleted: doc.data().alreadyCompleted ?? false,
-                }));
-
-                const merged = batches.flat();
-
-                setCircleTasks(prev => {
-                    if(prev.length === merged.length && prev.every((task, index) => task.uid === merged[index].uid)) {
-                        return prev;
-                    }
-
-                    return merged;
-                })
-
-                setIsReady(true);
-            })
-            unsubscribes.push(unsub);
-        }
-
-        return () => unsubscribes.forEach(unsubscribe => unsubscribe())
-    }, [validIds])
-
-    return { tasks: circleTasks, isReady }
 
 }
 
@@ -308,6 +214,5 @@ export {
     deleteCircleTasks,
     updateTaskGroupingPreference,
     completeTask,
-    useUserTasks,
-    useCircleTasks
+    useUserTasks
 }

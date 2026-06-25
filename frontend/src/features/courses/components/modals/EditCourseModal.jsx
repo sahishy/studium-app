@@ -3,13 +3,7 @@ import Button from '../../../../shared/components/ui/Button'
 import { joinCourse } from '../../services/courseService'
 import { COURSE_COLORS } from '../../utils/courseUtils'
 
-const EditCourseModal = ({
-    profile,
-    course,
-    enrollment,
-    closeModal,
-    onSaved = () => { }
-}) => {
+const EditCourseModal = ({ profile, course, enrollment, closeModal, onSaved = () => {} }) => {
 
     const [selectedColor, setSelectedColor] = useState(enrollment?.customization?.color ?? COURSE_COLORS[0])
     const [isSaving, setIsSaving] = useState(false)
@@ -56,7 +50,7 @@ const EditCourseModal = ({
                                     key={color}
                                     type='button'
                                     onClick={() => setSelectedColor(color)}
-                                    className={`h-9 w-9 rounded-full border border-neutral4 cursor-pointer transition-transform hover:scale-105 ${isSelected ? 'ring-2 ring-neutral1 ring-offset-2' : ''}`}
+                                    className={`h-9 w-9 rounded-full border border-neutral4 cursor-pointer transition hover:scale-105 ${isSelected ? 'ring-2 ring-neutral0 ring-offset-2' : ''}`}
                                     style={{ backgroundColor: color }}
                                     aria-label={`Select color ${index + 1}`}
                                 />

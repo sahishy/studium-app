@@ -1,10 +1,33 @@
-import { RANK_TIERS, getRankInfoFromElo, getRankedModeStats } from '../../profile/utils/statsUtils'
+import { FaBoltLightning } from 'react-icons/fa6'
+import { RANK_TIERS, getRankInfoFromElo, getModeStats } from '../../profile/utils/statsUtils'
+import { RiSwordFill } from 'react-icons/ri'
 
 const ROOMS_COLLECTION = 'multiplayerRooms'
 const MATCHMAKING_COLLECTION = 'multiplayerMatchmaking'
 const SESSIONS_COLLECTION = 'multiplayerSessions'
 const DEFAULT_MODE_ID = 'sat-classic'
 const MATCH_JOIN_DELAY_SECONDS = 3
+
+const GAME_MODES = [
+    {
+        id: 'sat-classic',
+        name: 'SAT Classic',
+        type: 'multiplayer',
+        icon: RiSwordFill,
+        description: 'Compete head-to-head in SAT battles and outscore your opponent across timed rounds.',
+    },
+    {
+        id: 'blitz',
+        name: 'Blitz',
+        type: 'singleplayer',
+        icon: FaBoltLightning,
+        description: 'Answer 10 questions as fast possible, requiring quick thinking and accuracy under pressure.',
+    },
+]
+
+const getModeById = (modeId = DEFAULT_MODE_ID) => {
+    return GAME_MODES.find((mode) => mode.id === modeId) ?? GAME_MODES[0]
+}
 
 const getQueueState = (session) => (
     session?.status === 'in_room'
@@ -30,9 +53,9 @@ const formatQueueTimeLabel = (queueTimeSeconds = 0) => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
 }
 
-const buildRankedUiState = ({ userStats, modeId = DEFAULT_MODE_ID }) => {
-
-    const rankedStats = getRankedModeStats(userStats, modeId)
+const buildMultiplayerUiState = ({ userStats, modeId = DEFAULT_MODE_ID }) => {
+    const mode = getModeById(modeId)
+    const rankedStats = getModeStats(userStats, mode)
     const rankInfo = getRankInfoFromElo(rankedStats.elo)
 
     const currentTierThreshold = RANK_TIERS.find((entry) => (
@@ -56,6 +79,7 @@ const buildRankedUiState = ({ userStats, modeId = DEFAULT_MODE_ID }) => {
         : 'Global Ranking: #?'
 
     return {
+        mode,
         rankedStats,
         rankInfo,
         currentTierMinElo,
@@ -69,14 +93,27 @@ const buildRankedUiState = ({ userStats, modeId = DEFAULT_MODE_ID }) => {
 
 }
 
+const buildSingleplayerUiState = ({ userStats, modeId = DEFAULT_MODE_ID }) => {
+    const mode = getModeById(modeId)
+    const singleplayerStats = getModeStats(userStats, mode)
+
+    return {
+        mode,
+        singleplayerStats,
+    }
+}
+
 export {
     ROOMS_COLLECTION,
     MATCHMAKING_COLLECTION,
     SESSIONS_COLLECTION,
     DEFAULT_MODE_ID,
     MATCH_JOIN_DELAY_SECONDS,
+    GAME_MODES,
+    getModeById,
     getQueueState,
     getQueueTimeSeconds,
     formatQueueTimeLabel,
-    buildRankedUiState,
+    buildMultiplayerUiState,
+    buildSingleplayerUiState,
 }

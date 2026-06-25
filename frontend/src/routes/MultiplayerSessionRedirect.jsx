@@ -11,7 +11,7 @@ const MultiplayerSessionRedirect = () => {
     const inRoomState = session?.status === 'in_room' && Boolean(currentRoomId)
 
     if(inRoomState) {
-        const roomPath = `/ranked/room/${currentRoomId}`
+        const roomPath = `/play/room/${currentRoomId}`
 
         if(location.pathname !== roomPath) {
             return <Navigate to={roomPath} replace/>

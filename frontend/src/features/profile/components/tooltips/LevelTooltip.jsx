@@ -23,7 +23,10 @@ const LevelTooltip = ({ children, level, xp, placement = 'auto', className = '',
                 <ProgressBar
                     value={xp}
                     max={xpToNextLevel}
+                    secondaryValue={xp}
+                    secondaryMax={xpToNextLevel}
                     className="w-32"
+                    secondaryClassName="bg-yellow-300/45"
                     fillClassName="bg-yellow-400!"
                 />
             </div>

@@ -10,6 +10,32 @@ const makeLineValue = (title = '') => ([{
     children: segmentsToSlateChildren(title),
 }])
 
+const hideTrailingCircleWidgetSpacer = (title = '') => {
+    const normalized = normalizeTaskTitle(title)
+    const segments = Array.isArray(normalized?.segments) ? [...normalized.segments] : []
+    if (segments.length < 2) return normalized
+
+    const last = segments[segments.length - 1]
+    const prev = segments[segments.length - 2]
+    const isTrailingCircleWidget = last?.type === 'widget' && last?.widgetType === 'circle'
+    if (!isTrailingCircleWidget || prev?.type !== 'text') return normalized
+
+    const prevRaw = typeof prev.rawText === 'string' ? prev.rawText : ''
+    if (!prevRaw.endsWith(' ')) return normalized
+
+    const trimmedRaw = prevRaw.replace(/\s+$/, '')
+    const prevDisplay = typeof prev.displayText === 'string' ? prev.displayText : prevRaw
+    const trimmedDisplay = prevDisplay.replace(/\s+$/, '')
+
+    segments[segments.length - 2] = {
+        ...prev,
+        rawText: trimmedRaw,
+        displayText: trimmedDisplay,
+    }
+
+    return { ...normalized, segments }
+}
+
 const withSingleLineTaskInput = (editor) => {
     const { isInline, isVoid, normalizeNode } = editor
 
@@ -56,6 +82,7 @@ const withSingleLineTaskInput = (editor) => {
 const TaskParsingInput = ({
     title = '',
     onCommit,
+    onBeforeCommit,
     onEmpty,
     courses = [],
     circles = [],
@@ -72,6 +99,7 @@ const TaskParsingInput = ({
     onBlur,
     inputRef,
     invertedWidgets,
+    hideCircleWidgets = false,
 }) => {
     const editor = useMemo(() => withSingleLineTaskInput(withReact(createEditor())), [])
     const lastSignatureRef = useRef(null)
@@ -89,7 +117,8 @@ const TaskParsingInput = ({
     }, [editor, inputRef])
 
     const normalizeEditorFromTitle = useCallback((nextTitle) => {
-        const nextValue = makeLineValue(nextTitle)
+        const displayTitle = hideCircleWidgets ? hideTrailingCircleWidgetSpacer(nextTitle) : nextTitle
+        const nextValue = makeLineValue(displayTitle)
         const nextSignature = JSON.stringify(nextValue)
         if (lastSignatureRef.current === nextSignature) return
 
@@ -99,7 +128,7 @@ const TaskParsingInput = ({
         })
         lastSignatureRef.current = nextSignature
         editor.onChange()
-    }, [editor])
+    }, [editor, hideCircleWidgets])
 
     useEffect(() => {
         normalizeEditorFromTitle(title)
@@ -176,18 +205,19 @@ const TaskParsingInput = ({
 
     const commitFromEditor = useCallback((reason) => {
         const payload = buildPayloadFromEditor()
+        const nextPayload = onBeforeCommit?.(payload, { reason }) || payload
 
-        if (!payload.plainTitle) {
+        if (!nextPayload.plainTitle) {
             if (allowEmptyCommit) {
-                onCommit?.(payload, { reason })
-                return payload
+                onCommit?.(nextPayload, { reason })
+                return nextPayload
             }
             return null
         }
 
-        onCommit?.(payload, { reason })
-        return payload
-    }, [allowEmptyCommit, buildPayloadFromEditor, onCommit])
+        onCommit?.(nextPayload, { reason })
+        return nextPayload
+    }, [allowEmptyCommit, buildPayloadFromEditor, onBeforeCommit, onCommit])
 
     const renderElement = useCallback((props) => {
         if (props.element.type === 'task-widget') {
@@ -199,11 +229,12 @@ const TaskParsingInput = ({
                     isCompleted={isCompleted}
                     onWidgetCommit={commitOnWidgetChange ? () => commitFromEditor('widget') : undefined}
                     inverted={invertedWidgets}
+                    hideCircleWidgets={hideCircleWidgets}
                 />
             )
         }
         return <span {...props.attributes} style={{ display: 'block', lineHeight: '1.25rem' }}>{props.children}</span>
-    }, [circles, commitFromEditor, commitOnWidgetChange, courses, isCompleted, invertedWidgets])
+    }, [circles, commitFromEditor, commitOnWidgetChange, courses, hideCircleWidgets, isCompleted, invertedWidgets])
 
     return (
         <div ref={setContainerRef} className={className}>
@@ -234,8 +265,11 @@ const TaskParsingInput = ({
                             if (!committed) return
                             onEnterKey?.(committed)
                             if (clearOnEnter) resetToEmpty()
-                            // Refocus after reset — rAF ensures the editor has finished
-                            // re-rendering from the reset before we try to focus it
+
+                            // refocus after reset
+                            // rAF ensures the editor finished
+                            // rerendering from the reset before we try to focus it
+
                             if (keepFocusOnEnter) requestAnimationFrame(() => {
                                 ReactEditor.focus(editor)
                                 const end = Editor.end(editor, [0])

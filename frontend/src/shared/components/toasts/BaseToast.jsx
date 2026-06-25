@@ -44,15 +44,15 @@ const BaseToast = ({ children, isVisible, canHide = false, duration = null, onRe
                 ${animate ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 -translate-y-2 scale-95'}
             `}
         >
-            <Card className='relative overflow-hidden w-fit min-w-80 max-w-[42rem] shadow-2xl! shadow-neutral0/10! dark:shadow-none! group'>
+            <Card className='relative overflow-hidden w-fit min-w-xs max-w-[42rem] shadow-2xl! shadow-neutral0/10! dark:shadow-none! group'>
                 <div className='flex items-start gap-3'>
                     <div className='flex-1 min-w-0'>
                         {children}
                     </div>
 
-                    {canHide ? (
-                        <CloseButton className='shrink-0 p-1! text-lg! self-start opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto' onClick={onRequestClose} />
-                    ) : null}
+                    {canHide && (
+                        <CloseButton className='absolute right-4 p-1! text-lg! self-start opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto' onClick={onRequestClose} />
+                    )}
                 </div>
 
                 {duration != null ? (

@@ -1,4 +1,4 @@
-import { doc, updateDoc, collection, getAggregateFromServer, getCountFromServer, onSnapshot, query, sum, where, increment, documentId, getDocs, getDoc, setDoc } from 'firebase/firestore'
+import { doc, updateDoc, collection, getAggregateFromServer, getCountFromServer, onSnapshot, query, sum, where, increment, documentId, getDocs, getDoc, setDoc, limit } from 'firebase/firestore'
 import { useEffect, useState } from 'react';
 import { getRandomAvatarColor } from '../../profile/utils/avatarUtils';
 import { generateRandomDisplayName, isDisplayNameFormatValid } from '../utils/userUtils';
@@ -58,7 +58,8 @@ const createNewUserObject = async ({ firstName, lastName, email }) => {
             profilePicture: {
                 url: '',
                 lastUpdated: new Date(),
-            }
+            },
+            flair: null
         },
         createdAt: new Date(),
         progress: {
@@ -125,6 +126,33 @@ const getUserById = async (uid) => {
     return {
         uid: userSnap.id,
         ...userSnap.data(),
+    }
+
+}
+
+const getUserByDisplayName = async (displayName) => {
+
+    const normalizedDisplayName = String(displayName ?? '').trim()
+    if(!normalizedDisplayName) {
+        return null
+    }
+
+    const usersRef = collection(db, 'users')
+    const userByDisplayNameQuery = query(
+        usersRef,
+        where('profile.displayName', '==', normalizedDisplayName),
+        limit(1)
+    )
+    const userSnapshot = await getDocs(userByDisplayNameQuery)
+
+    if(userSnapshot.empty) {
+        return null
+    }
+
+    const userDoc = userSnapshot.docs[0]
+    return {
+        uid: userDoc.id,
+        ...userDoc.data(),
     }
 
 }
@@ -283,6 +311,7 @@ export {
     isDisplayNameAvailable,
     generateUniqueDisplayName,
     getUserById,
+    getUserByDisplayName,
     updateUserInfo,
     updateUserPreference,
     getTotalUsers,

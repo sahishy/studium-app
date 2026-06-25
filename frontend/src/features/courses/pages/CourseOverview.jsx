@@ -394,14 +394,14 @@ const CourseOverview = () => {
         <div className='w-full flex flex-col gap-6 pb-12'>
 
             <div className='flex gap-8'>
-                <Card className={'flex-2 p-0! overflow-hidden gap-0!'}>
+                <Card className={'flex-2 p-2! overflow-hidden gap-0!'}>
                     <div
-                        className='p-6 w-full h-48 flex items-center justify-center'
+                        className='p-6 w-full h-48 flex items-center justify-center rounded-xl'
                         style={{ backgroundColor: courseHeroBackground ?? '#9ca3af33' }}
                     >
                         <FaBook className='text-8xl' style={{ color: myEnrollment ? enrolledCourseColor : '#9ca3af' }} />
                     </div>
-                    <div className='p-6'>
+                    <div className='p-4'>
                         <div>
                             <h2 className='text-xl font-semibold text-neutral0'>{course.title}</h2>
                             <p className='text-sm text-neutral1'>{course.subject}</p>
@@ -478,7 +478,7 @@ const CourseOverview = () => {
                         <div>
                             <h2 className={`font-bold
                                 animate-shine bg-[length:200%_auto] 
-                                bg-gradient-to-r from-neutral0 via-[#4f5d72] to-neutral0 
+                                bg-gradient-to-r from-neutral0 via-[#4f5d72] dark:via-[#aeafb5] to-neutral0 
                                 from-30% to-70%
                                 bg-clip-text text-transparent
                                 ${reviewSummary.totalReviews > 0 ? 'text-7xl' : 'text-4xl'}`}

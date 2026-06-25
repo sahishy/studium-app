@@ -1,37 +1,14 @@
-import {
-    collection,
-    getDocs,
-    limit,
-    orderBy,
-    query,
-    serverTimestamp,
-    setDoc,
-    where,
-    doc,
-    documentId,
-    startAfter,
-} from 'firebase/firestore'
+import { collection, getDocs, limit, orderBy, query, serverTimestamp, setDoc, where, doc, documentId, startAfter } from 'firebase/firestore'
 import { db } from '../../../lib/firebase'
+import { normalizeTeacherName, scoreTeacherMatch } from '../utils/teacherUtils'
 
-const normalizeTeacherName = (value = '') => {
-    return String(value ?? '').trim().replace(/\s+/g, ' ')
-}
-
-const buildTeacherQueryBase = ({ schoolId, normalizedQuery = '' }) => {
+const buildTeacherQueryBase = ({ schoolId }) => {
     
     const qBase = [
         where('schoolId', '==', String(schoolId)),
         orderBy('nameLowercase', 'asc'),
         orderBy(documentId(), 'asc'),
     ]
-
-    if(normalizedQuery) {
-        const upperBound = `${normalizedQuery}\uf8ff`
-        qBase.splice(1, 0,
-            where('nameLowercase', '>=', normalizedQuery),
-            where('nameLowercase', '<=', upperBound)
-        )
-    }
 
     return qBase
 
@@ -50,36 +27,73 @@ const searchTeachersByName = async ({ queryText = '', schoolId = null, limitCoun
     const normalizedQuery = normalizeTeacherName(queryText).toLowerCase()
 
     const teachersRef = collection(db, 'schoolTeachers')
-    const qBase = buildTeacherQueryBase({ schoolId, normalizedQuery })
+    const qBase = buildTeacherQueryBase({ schoolId })
 
-    const queryParts = [...qBase]
-    if(cursor?.nameLowercase && cursor?.id) {
-        queryParts.push(startAfter(cursor.nameLowercase, cursor.id))
+    const pageSize = Math.max(limitCount + 1, normalizedQuery ? limitCount * 4 : limitCount + 1)
+    const matchedTeachers = []
+
+    let currentCursor = cursor
+    let hasMore = false
+
+    for(let i = 0; i < 6; i += 1) {
+        const queryParts = [...qBase]
+        if(currentCursor?.nameLowercase && currentCursor?.id) {
+            queryParts.push(startAfter(currentCursor.nameLowercase, currentCursor.id))
+        }
+
+        queryParts.push(limit(pageSize))
+
+        const scopedQuery = query(teachersRef, ...queryParts)
+        const globalSnapshot = await getDocs(scopedQuery)
+        const docs = globalSnapshot.docs
+
+        if(docs.length === 0) {
+            hasMore = false
+            currentCursor = null
+            break
+        }
+
+        const nextBatch = docs
+            .map((teacherDoc) => ({ uid: teacherDoc.id, ...teacherDoc.data() }))
+            .map((teacher) => ({ teacher, rank: scoreTeacherMatch(teacher, normalizedQuery) }))
+            .filter(({ rank }) => rank >= 0)
+
+        matchedTeachers.push(...nextBatch)
+
+        const batchLastDoc = docs[docs.length - 1]
+        currentCursor = {
+            id: batchLastDoc.id,
+            nameLowercase: String(batchLastDoc.data()?.nameLowercase ?? ''),
+        }
+
+        hasMore = docs.length === pageSize
+        if(matchedTeachers.length >= (limitCount + 1) || !hasMore) {
+            break
+        }
     }
 
-    queryParts.push(limit(limitCount + 1))
-
-    const scopedQuery = query(teachersRef, ...queryParts)
-    const globalSnapshot = await getDocs(scopedQuery)
-
-    const docs = globalSnapshot.docs
-    const hasMore = docs.length > limitCount
-    const selectedDocs = hasMore ? docs.slice(0, limitCount) : docs
-
-    const teachers = selectedDocs.map((teacherDoc) => ({ uid: teacherDoc.id, ...teacherDoc.data() }))
-
-    const lastDoc = selectedDocs[selectedDocs.length - 1]
-    const nextCursor = hasMore && lastDoc
-        ? {
-            id: lastDoc.id,
-            nameLowercase: String(lastDoc.data()?.nameLowercase ?? ''),
+    matchedTeachers.sort((a, b) => {
+        if(b.rank !== a.rank) {
+            return b.rank - a.rank
         }
+
+        const aName = String(a.teacher?.nameLowercase ?? a.teacher?.name ?? '').toLowerCase()
+        const bName = String(b.teacher?.nameLowercase ?? b.teacher?.name ?? '').toLowerCase()
+        if(aName < bName) return -1
+        if(aName > bName) return 1
+        return String(a.teacher?.uid ?? '').localeCompare(String(b.teacher?.uid ?? ''))
+    })
+
+    const hasOverflow = matchedTeachers.length > limitCount
+    const teachers = matchedTeachers.slice(0, limitCount).map(({ teacher }) => teacher)
+    const nextCursor = hasMore && currentCursor && (hasOverflow || teachers.length > 0)
+        ? currentCursor
         : null
 
     return {
         teachers,
         nextCursor,
-        hasMore,
+        hasMore: Boolean(nextCursor),
     }
 
 }
@@ -101,7 +115,7 @@ const searchTeachersBySchoolIds = async ({ queryText = '', schoolIds = [], limit
     const cursorBySchoolId = cursor?.bySchoolId ?? {}
 
     const snapshots = await Promise.all(normalizedSchoolIds.map(async (currentSchoolId) => {
-        const qBase = buildTeacherQueryBase({ schoolId: currentSchoolId, normalizedQuery })
+        const qBase = buildTeacherQueryBase({ schoolId: currentSchoolId })
         const queryParts = [...qBase]
         const currentCursor = cursorBySchoolId[currentSchoolId]
 
@@ -109,7 +123,7 @@ const searchTeachersBySchoolIds = async ({ queryText = '', schoolIds = [], limit
             queryParts.push(startAfter(currentCursor.nameLowercase, currentCursor.id))
         }
 
-        queryParts.push(limit(limitCount + 1))
+        queryParts.push(limit(Math.max(limitCount + 1, normalizedQuery ? limitCount * 3 : limitCount + 1)))
 
         const scopedQuery = query(teachersRef, ...queryParts)
         const snapshot = await getDocs(scopedQuery)
@@ -124,11 +138,15 @@ const searchTeachersBySchoolIds = async ({ queryText = '', schoolIds = [], limit
     let hasMore = false
 
     snapshots.forEach(({ schoolId: currentSchoolId, docs }) => {
-        const schoolHasMore = docs.length > limitCount
-        const selectedDocs = schoolHasMore ? docs.slice(0, limitCount) : docs
+        const schoolHasMore = docs.length > Math.max(limitCount + 1, normalizedQuery ? limitCount * 3 : limitCount + 1) - 1
+        const selectedDocs = docs
 
         selectedDocs.forEach((teacherDoc) => {
-            mergedTeachers.push({ uid: teacherDoc.id, ...teacherDoc.data() })
+            const teacher = { uid: teacherDoc.id, ...teacherDoc.data() }
+            const rank = scoreTeacherMatch(teacher, normalizedQuery)
+            if(rank >= 0) {
+                mergedTeachers.push({ ...teacher, _rank: rank })
+            }
         })
 
         const lastDoc = selectedDocs[selectedDocs.length - 1]
@@ -145,6 +163,10 @@ const searchTeachersBySchoolIds = async ({ queryText = '', schoolIds = [], limit
     })
 
     mergedTeachers.sort((a, b) => {
+        if((b?._rank ?? 0) !== (a?._rank ?? 0)) {
+            return (b?._rank ?? 0) - (a?._rank ?? 0)
+        }
+
         const aName = String(a?.nameLowercase ?? '').toLowerCase()
         const bName = String(b?.nameLowercase ?? '').toLowerCase()
         if(aName < bName) return -1
@@ -158,7 +180,7 @@ const searchTeachersBySchoolIds = async ({ queryText = '', schoolIds = [], limit
     })
 
     const dedupedTeachers = Array.from(new Map(mergedTeachers.map((teacher) => [teacher.uid, teacher])).values())
-    const teachers = dedupedTeachers.slice(0, limitCount)
+    const teachers = dedupedTeachers.slice(0, limitCount).map(({ _rank, ...teacher }) => teacher)
 
     return {
         teachers,
@@ -213,7 +235,6 @@ const getTeachersByIdsMap = async (teacherIds = []) => {
 }
 
 export {
-    normalizeTeacherName,
     searchTeachersByName,
     searchTeachersBySchoolIds,
     createTeacher,

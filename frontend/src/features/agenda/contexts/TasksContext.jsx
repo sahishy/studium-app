@@ -1,8 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { triggerTaskCompletionEffects, useUserTasks, useCircleTasks } from '../services/taskService'
+import { triggerTaskCompletionEffects, useUserTasks } from '../services/taskService'
 import { enqueueTaskCreate, enqueueTaskDelete, enqueueTaskPatch } from '../services/taskCacheService'
-import { useCircles } from '../../circles/contexts/CirclesContext'
+import { useCircles } from '../../socials/contexts/CirclesContext'
 import { MAX_USER_TASKS } from '../utils/taskUtils'
+import { extractTaskTitleMetadata } from '../utils/naturalLanguage'
 
 const TasksContext = createContext({ user: [], circle: [] })
 
@@ -10,8 +11,16 @@ const TasksProvider = ({ profile, children }) => {
     const circles = useCircles()
     const circleIds = useMemo(() => circles.map((c) => c.uid), [circles])
 
-    const { tasks: user, isReady: userReady } = useUserTasks(profile.uid)
-    const { tasks: circle, isReady: circleReady } = useCircleTasks(circleIds)
+    const { tasks: allTasks, isReady: tasksReady } = useUserTasks(profile.uid)
+
+    const user = useMemo(
+        () => allTasks.filter((task) => !extractTaskTitleMetadata(task.title).circleId),
+        [allTasks]
+    )
+    const circle = useMemo(
+        () => allTasks.filter((task) => circleIds.includes(extractTaskTitleMetadata(task.title).circleId)),
+        [allTasks, circleIds]
+    )
 
     // creates are stored as full objects
     // patches are partial objects merged over server data
@@ -79,8 +88,7 @@ const TasksProvider = ({ profile, children }) => {
 
     const createTaskOptimistic = useCallback((draftTask = {}) => {
 
-        const ownerType = draftTask.ownerType || 'user'
-        if (ownerType === 'user' && user.length >= MAX_USER_TASKS) {
+        if (user.length >= MAX_USER_TASKS) {
             return { taskId: null, blockedReason: 'max_user_tasks' }
         }
 
@@ -91,7 +99,7 @@ const TasksProvider = ({ profile, children }) => {
 
         patchLocal(taskId, {
             uid: taskId,
-            ownerType: 'user',
+            userId: profile.uid,
             status: 'Incomplete',
             listIndex: -1,
             parentTaskId: null,
@@ -110,7 +118,7 @@ const TasksProvider = ({ profile, children }) => {
 
         return { taskId }
 
-    }, [patchLocal, clearLocal, user.length])
+    }, [patchLocal, clearLocal, profile.uid, user.length])
 
     const deleteTaskOptimistic = useCallback(async (taskId) => {
         if(!taskId) return
@@ -196,9 +204,9 @@ const TasksProvider = ({ profile, children }) => {
 
     return (
         <TasksContext.Provider value={{
-            user: mergedTasks.filter((t) => (t.ownerType || 'user') === 'user'),
-            circle: mergedTasks.filter((t) => t.ownerType === 'circle'),
-            isReady: userReady && circleReady,
+            user: mergedTasks.filter((t) => !extractTaskTitleMetadata(t.title).circleId),
+            circle: mergedTasks.filter((t) => circleIds.includes(extractTaskTitleMetadata(t.title).circleId)),
+            isReady: tasksReady,
             applyTaskPatch,
             commitTaskPatch,
             createTaskOptimistic,

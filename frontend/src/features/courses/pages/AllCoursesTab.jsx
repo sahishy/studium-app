@@ -19,6 +19,7 @@ const getScoreCacheKey = (courseId) => {
 }
 
 const AllCoursesTab = () => {
+    
     const navigate = useNavigate()
     const [visibleCount, setVisibleCount] = useState(CARD_PAGE_SIZE)
     const [isPaletteOpen, setIsPaletteOpen] = useState(false)

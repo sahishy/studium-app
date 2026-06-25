@@ -13,16 +13,20 @@ import { useModal } from '../../../shared/contexts/ModalContext'
 import { getSchoolNameById } from '../services/schoolService'
 import { getMajorNameById } from '../services/majorService'
 import { getUserStatsByUserId, updateUserStatsByUserId } from '../services/statsService'
-import { getUserById, updateUserInfo } from '../../auth/services/userService'
-import { buildRankedUiState } from '../../multiplayer/utils/multiplayerUtils'
+import { getUserByDisplayName, isDisplayNameAvailable, updateUserInfo } from '../../auth/services/userService'
+import { buildMultiplayerUiState } from '../../multiplayer/utils/multiplayerUtils'
 import { FaGear, FaSchool, FaFlask } from 'react-icons/fa6'
 import { FaEdit } from 'react-icons/fa'
 import EditStatsModal from '../components/modals/EditStatsModal'
 import EditDisplayNameModal from '../components/modals/EditDisplayNameModal'
+import EditDisplayNameOrFlairModal from '../components/modals/EditDisplayNameOrFlairModal'
+import EditFlairModal from '../components/modals/EditFlairModal'
 import EditMajorModal from '../components/modals/EditMajorModal'
 import { ACT_MAX, ACT_MIN, GPA_MAX, GPA_MIN, SAT_MAX, SAT_MIN, getDraftAcademicFromStats, getParsedNumber, toModeLabel } from '../utils/profileUtils'
 import { useUserStats } from '../contexts/UserStatsContext'
 import Podium from '../../../shared/components/avatar/Podium'
+import { removeFriend, sendFriendRequestByUserId, useHasOutgoingFriendRequest, useIsFriend } from '../../socials/services/friendService'
+import DisplayName from '../components/DisplayName'
 
 const SAT_CLASSIC_MODE_ID = 'sat-classic'
 
@@ -33,7 +37,8 @@ const ProfileOverview = () => {
     const { profile: currentUserProfile } = useOutletContext()
     const { userStats: currentUserStats, loading: currentUserStatsLoading } = useUserStats()
     const { openModal, closeModal } = useModal()
-    const { userId } = useParams()
+    const { username: encodedUsername } = useParams()
+    const username = decodeURIComponent(encodedUsername ?? '')
 
     const [profile, setProfile] = useState(null)
     const [profileLoading, setProfileLoading] = useState(true)
@@ -43,18 +48,23 @@ const ProfileOverview = () => {
     const [draftAcademic, setDraftAcademic] = useState(getDraftAcademicFromStats({ userStats: null, displayName: '' }))
     const [saveError, setSaveError] = useState('')
 
-    const isCurrentUser = currentUserProfile?.uid === userId
+    const isCurrentUser = (currentUserProfile?.profile?.displayName ?? '') === username
+    const displayedProfile = isCurrentUser ? currentUserProfile : profile
+    const displayedUserStats = isCurrentUser ? currentUserStats : userStats
+    const targetUserId = displayedProfile?.uid
+    const isFriend = useIsFriend(currentUserProfile?.uid, targetUserId)
+    const hasOutgoingFriendRequest = useHasOutgoingFriendRequest(currentUserProfile?.uid, targetUserId)
 
     useEffect(() => {
 
-        if (!userId) {
+        if (!username) {
             setProfile(null)
             setProfileLoading(false)
             return
         }
 
         if (isCurrentUser) {
-            setProfile(currentUserProfile ?? null)
+            setProfile(null)
             setProfileLoading(false)
             return
         }
@@ -65,7 +75,7 @@ const ProfileOverview = () => {
             setProfileLoading(true)
 
             try {
-                const nextProfile = await getUserById(userId)
+                const nextProfile = await getUserByDisplayName(username)
                 if (!isCancelled) {
                     setProfile(nextProfile)
                 }
@@ -82,11 +92,11 @@ const ProfileOverview = () => {
             isCancelled = true
         }
 
-    }, [userId, isCurrentUser, currentUserProfile])
+    }, [username, isCurrentUser])
 
     useEffect(() => {
 
-        if (!userId) {
+        if (!targetUserId) {
             setUserStats(null)
             setStatsLoading(false)
             return
@@ -103,7 +113,7 @@ const ProfileOverview = () => {
             setStatsLoading(true)
 
             try {
-                const nextUserStats = await getUserStatsByUserId(userId)
+                const nextUserStats = await getUserStatsByUserId(targetUserId)
                 if (!isCancelled) {
                     setUserStats(nextUserStats)
                 }
@@ -120,10 +130,7 @@ const ProfileOverview = () => {
             isCancelled = true
         }
 
-    }, [userId, isCurrentUser])
-
-    const displayedProfile = isCurrentUser ? currentUserProfile : profile
-    const displayedUserStats = isCurrentUser ? currentUserStats : userStats
+    }, [targetUserId, isCurrentUser])
 
     useEffect(() => {
         if (!isEditMode) {
@@ -153,7 +160,7 @@ const ProfileOverview = () => {
     const weightedGpa = academic?.gpa?.weighted
 
     const satClassicRankedUi = useMemo(() => {
-        return buildRankedUiState({ userStats: displayedUserStats, modeId: SAT_CLASSIC_MODE_ID })
+        return buildMultiplayerUiState({ userStats: displayedUserStats, modeId: SAT_CLASSIC_MODE_ID })
     }, [displayedUserStats])
 
     const {
@@ -180,9 +187,12 @@ const ProfileOverview = () => {
             <EditDisplayNameModal
                 value={draftAcademic.displayName}
                 closeModal={closeModal}
+                onCheckAvailability={async (nextValue) => {
+                    return isDisplayNameAvailable(nextValue, targetUserId)
+                }}
                 onSave={async (nextValue) => {
                     try {
-                        await updateUserInfo(userId, {
+                        await updateUserInfo(targetUserId, {
                             'profile.displayName': nextValue,
                         })
                         setSaveError('')
@@ -196,6 +206,38 @@ const ProfileOverview = () => {
                         displayName: nextValue,
                     }))
                 }}
+                displayName={draftAcademic.displayName}
+            />
+        )
+    }
+
+    const openEditFlairModal = () => {
+
+        openModal(
+            <EditFlairModal
+                currentFlair={displayedProfile?.profile?.flair ?? ''}
+                closeModal={closeModal}
+                onSave={async (nextFlair) => {
+                    try {
+                        await updateUserInfo(targetUserId, {
+                            'profile.flair': nextFlair,
+                        })
+                        setSaveError('')
+                    } catch (error) {
+                        setSaveError(error?.message || 'Unable to update flair.')
+                        throw error
+                    }
+                }}
+            />
+        )
+    }
+
+    const openEditDisplayNameOrFlairModal = () => {
+        openModal(
+            <EditDisplayNameOrFlairModal
+                closeModal={closeModal}
+                onOpenDisplayName={openEditDisplayNameModal}
+                onOpenFlair={openEditFlairModal}
             />
         )
     }
@@ -217,7 +259,7 @@ const ProfileOverview = () => {
                     }
 
                     try {
-                        await updateUserStatsByUserId(userId, {
+                        await updateUserStatsByUserId(targetUserId, {
                             academic: {
                                 ...academic,
                                 targetMajors: nextDraft.targetMajors,
@@ -257,7 +299,7 @@ const ProfileOverview = () => {
                     const resolvedMajors = Array.isArray(nextMajors) ? nextMajors : draftAcademic.targetMajors
 
                     try {
-                        await updateUserStatsByUserId(userId, {
+                        await updateUserStatsByUserId(targetUserId, {
                             academic: {
                                 ...academic,
                                 targetMajors: resolvedMajors,
@@ -286,6 +328,14 @@ const ProfileOverview = () => {
                 }}
             />
         )
+    }
+
+    const handleSendFriendRequest = async () => {
+        await sendFriendRequestByUserId(currentUserProfile?.uid, targetUserId)
+    }
+
+    const handleUnfriend = async () => {
+        await removeFriend(currentUserProfile?.uid, targetUserId)
     }
 
     return (
@@ -341,28 +391,42 @@ const ProfileOverview = () => {
                                     </Button>
                                 </>
                             ) : (
-                                <Button
-                                    disabled={true}
-                                >
-                                    Report
-                                </Button>
+                                <>
+                                    {!isFriend ? (
+                                        <Button
+                                            disabled={hasOutgoingFriendRequest}
+                                            onClick={handleSendFriendRequest}
+                                        >
+                                            {!hasOutgoingFriendRequest ? 'Add Friend' : 'Request Sent'}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            onClick={handleUnfriend}
+                                        >
+                                            Remove Friend
+                                        </Button>
+                                    )}
+                                    <Button
+                                        disabled={true}
+                                    >
+                                        Report
+                                    </Button>
+                                </>
                             )}
                         </div>
 
                         <div className='flex flex-col'>
                             <div className='flex items-center gap-3'>
-                                <h1 className='text-2xl font-semibold'>
-                                    {displayedProfile?.profile?.displayName ?? displayedProfile?.displayName ?? 'Unknown'}
-                                </h1>
-                                {isCurrentUser && isEditMode ? (
+                                <DisplayName className={'text-2xl font-semibold'} targetProfile={displayedProfile} />
+                                {isCurrentUser && isEditMode && (
                                     <button
                                         type='button'
-                                        onClick={openEditDisplayNameModal}
-                                        className='text-neutral1 hover:text-neutral0 transition cursor-pointer'
+                                        onClick={openEditDisplayNameOrFlairModal}
+                                        className='p-2 rounded-lg text-neutral1 hover:text-neutral0 hover:bg-neutral5 transition cursor-pointer'
                                     >
                                         <FaEdit className='text-sm' />
                                     </button>
-                                ) : null}
+                                )}
                             </div>
                             <p className='text-xs text-neutral1 flex items-center gap-2 mt-1'>
                                 <FaSchool />
@@ -394,7 +458,7 @@ const ProfileOverview = () => {
                                         <button
                                             type='button'
                                             onClick={openEditMajorModal}
-                                            className='absolute top-3 right-3 text-neutral1 hover:text-neutral0 transition cursor-pointer'
+                                            className='absolute right-4 top-4 p-2 rounded-lg text-neutral1 hover:text-neutral0 hover:bg-neutral5 transition cursor-pointer'
                                         >
                                             <FaEdit className='text-sm' />
                                         </button>
@@ -434,14 +498,14 @@ const ProfileOverview = () => {
                                                             max: GPA_MAX,
                                                             step: 0.01,
                                                         })}
-                                                        className='text-neutral1 hover:text-neutral0 transition cursor-pointer'
+                                                        className='absolute -right-4 self-center p-2 rounded-lg text-neutral1 hover:text-neutral0 hover:bg-neutral5 transition cursor-pointer'
                                                     >
                                                         <FaEdit className='text-sm' />
                                                     </button>
                                                 )}
                                             </div>
                                             <p className={`font-bold z-1 ${unweightedGpa ? 'text-neutral0 text-5xl' : 'text-neutral1 text-xl'}`}>{unweightedGpa ?? 'Not provided'}</p>
-                                            <Podium className={'absolute top-4 w-32 h-32 object-contain pointer-events-none'}/>
+                                            <Podium className={'absolute top-4 w-32 h-32 object-contain pointer-events-none'} />
                                         </div>
 
                                         <div className='relative flex flex-col gap-1 items-center w-32 h-24'>
@@ -458,14 +522,14 @@ const ProfileOverview = () => {
                                                             max: GPA_MAX,
                                                             step: 0.01,
                                                         })}
-                                                        className='text-neutral1 hover:text-neutral0 transition cursor-pointer'
+                                                        className='absolute -right-4 self-center p-2 rounded-lg text-neutral1 hover:text-neutral0 hover:bg-neutral5 transition cursor-pointer'
                                                     >
                                                         <FaEdit className='text-sm' />
                                                     </button>
                                                 )}
                                             </div>
                                             <p className={`font-bold z-1 ${weightedGpa ? 'text-neutral0 text-5xl' : 'text-neutral1 text-xl'}`}>{weightedGpa ?? 'Not provided'}</p>
-                                            <Podium className={'absolute top-4 w-32 h-32 object-contain pointer-events-none'}/>
+                                            <Podium className={'absolute top-4 w-32 h-32 object-contain pointer-events-none'} />
                                         </div>
 
                                     </div>
@@ -478,7 +542,7 @@ const ProfileOverview = () => {
 
                                     <p className='text-lg font-semibold text-white z-1 mt-6'>SAT®</p>
 
-                                    {isCurrentUser && isEditMode ? (
+                                    {(isCurrentUser && isEditMode) && (
                                         <button
                                             type='button'
                                             onClick={() => openEditStatsModal({
@@ -489,11 +553,11 @@ const ProfileOverview = () => {
                                                 max: SAT_MAX,
                                                 step: 1,
                                             })}
-                                            className='absolute top-3 right-3 text-white hover:text-white/80 transition cursor-pointer z-10'
+                                            className='absolute top-4 right-4 p-2 rounded-lg text-white hover:bg-white/20 transition cursor-pointer'
                                         >
                                             <FaEdit className='text-sm' />
                                         </button>
-                                    ) : null}
+                                    )}
 
                                     <div className='bg-white rounded-t-2xl rounded-b-none p-5 min-h-48 w-full max-w-xs flex flex-col'>
                                         <div className='flex-1 flex flex-col gap-1 items-center justify-center'>
@@ -510,11 +574,11 @@ const ProfileOverview = () => {
                                     </div>
                                 </Card>
 
-                                <Card className='relative gap-9! p-0! overflow-hidden flex items-center justify-end bg-sky-50'>
+                                <Card className='relative gap-9! p-0! overflow-hidden flex items-center justify-end bg-sky-50!'>
 
                                     <p className='text-lg font-semibold text-neutral1 z-1 mt-6'>ACT®</p>
 
-                                    {isCurrentUser && isEditMode ? (
+                                    {(isCurrentUser && isEditMode) && (
                                         <button
                                             type='button'
                                             onClick={() => openEditStatsModal({
@@ -525,11 +589,11 @@ const ProfileOverview = () => {
                                                 max: ACT_MAX,
                                                 step: 1,
                                             })}
-                                            className='absolute top-3 right-3 text-neutral1 hover:text-neutral0 transition cursor-pointer z-10'
+                                            className='absolute top-4 right-4 p-2 rounded-lg text-neutral1 hover:text-neutral0 hover:bg-black/4 transition cursor-pointer'
                                         >
                                             <FaEdit className='text-sm' />
                                         </button>
-                                    ) : null}
+                                    )}
 
                                     <div className='bg-white rounded-t-2xl rounded-b-none p-5 min-h-48 w-full max-w-xs flex flex-col'>
                                         <div className='flex-1 flex flex-col gap-3 items-center justify-center'>

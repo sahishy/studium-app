@@ -4,10 +4,93 @@ import { useAuth } from '../../auth/contexts/AuthContext'
 import { useModal } from '../../../shared/contexts/ModalContext'
 import logoLarge from '../../../assets/images/logo_lg.png'
 import heroImage from '../../../assets/images/landing/hero.jpg'
-import logoLargeWhite from '../../../assets/images/logo_lg_white.png' 
+import logoLargeWhite from '../../../assets/images/logo_lg_white.png'
 import Button from '../../../shared/components/ui/Button'
 import Card from '../../../shared/components/ui/Card'
 import LogInModal from '../../auth/components/modals/LogInModal'
+
+const LAUNCH_DATE = new Date('2026-07-10T00:00:00-04:00')
+
+const getTimeRemaining = (targetDate) => {
+
+    const difference = targetDate.getTime() - Date.now()
+
+    if (difference <= 0) {
+        return {
+            days: '00',
+            hours: '00',
+            minutes: '00',
+            seconds: '00'
+        }
+    }
+
+    const totalSeconds = Math.floor(difference / 1000)
+    const days = Math.floor(totalSeconds / 86400)
+    const hours = Math.floor((totalSeconds % 86400) / 3600)
+    const minutes = Math.floor((totalSeconds % 3600) / 60)
+    const seconds = totalSeconds % 60
+
+    return {
+        days: String(days).padStart(2, '0'),
+        hours: String(hours).padStart(2, '0'),
+        minutes: String(minutes).padStart(2, '0'),
+        seconds: String(seconds).padStart(2, '0')
+    }
+
+}
+
+const Countdown = ({ targetDate }) => {
+
+    const [timeRemaining, setTimeRemaining] = useState(() => getTimeRemaining(targetDate))
+
+    useEffect(() => {
+        const intervalId = window.setInterval(() => {
+            setTimeRemaining(getTimeRemaining(targetDate))
+        }, 1000)
+
+        return () => window.clearInterval(intervalId)
+    }, [targetDate])
+
+    const countdownUnits = [
+        { label: 'days', value: timeRemaining.days },
+        { label: 'hours', value: timeRemaining.hours },
+        { label: 'minutes', value: timeRemaining.minutes },
+        { label: 'seconds', value: timeRemaining.seconds }
+    ]
+
+    return (
+        <div className='flex w-full max-w-2xl flex-col items-center gap-3 mt-12 mb-6'>
+
+            <hr className='w-sm border border-neutral4 rounded-full mb-6'/>
+
+            <h1 className='text-xs text-neutral1'>
+                launching in
+            </h1>
+
+            <div className='flex max-w-xs gap-3'>
+                {countdownUnits.map((unit) => (
+                    <div className='flex flex-col items-center'>
+                        <div
+                            key={unit.label}
+                            className='rounded-xl border border-neutral4 bg-white px-4 py-6 shadow-lg shadow-shadow'
+                        >
+                            <div className='text-4xl font-bold text-neutral0'>
+                                {unit.value}
+                            </div>
+                        </div>
+                        <div className='mt-2 text-xs text-neutral1'>
+                            {unit.label}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            <hr className='w-sm border border-neutral4 rounded-full mt-6 mb-6'/>
+
+        </div>
+    )
+
+}
 
 const Landing = () => {
 
@@ -151,6 +234,7 @@ const Navbar = ({ onOpenLogIn, onOpenSignUp }) => {
                         onClick={onOpenLogIn}
                         type='secondary'
                         className='rounded-full whitespace-nowrap'
+                        disabled
                     >
                         Log In
                     </Button>
@@ -162,7 +246,7 @@ const Navbar = ({ onOpenLogIn, onOpenSignUp }) => {
                             onClick={onOpenSignUp}
                             type='primary'
                             className='w-22 rounded-full whitespace-nowrap'
-                            disabled={!visible}
+                            disabled
                         >
                             Sign Up
                         </Button>
@@ -187,28 +271,43 @@ const HeroSection = ({ onOpenLogIn, onOpenSignUp, scrollY }) => {
                 className='flex flex-col items-center'
                 style={{ transform: `translateY(${Math.min(16, scrollY * 0.03)}px)` }}
             >
+
+                <div className='rounded-full px-2 py-1 bg-white border border-neutral4 mb-6 shadow-lg shadow-shadow
+                    text-xs
+                    animate-shine bg-[length:200%_auto] 
+                    bg-gradient-to-r from-neutral1 via-neutral2 to-neutral1
+                    from-30% to-70%
+                    bg-clip-text text-transparent'
+                >
+                    Releasing on {LAUNCH_DATE.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })}
+                </div>
+
                 <h1 className='max-w-4xl text-balance text-4xl font-extrabold tracking-tight md:text-6xl'>
                     Make studying fun.
                 </h1>
 
-                <p className='mt-4 max-w-2xl text-neutral1 md:text-lg'>
+                <p className='mt-4 max-w-2xl text-neutral1 text-lg'>
                     Stay organized, compete with friends, and build real study momentum.
                 </p>
 
-                <div className='mt-8 flex flex-wrap items-center justify-center gap-3'>
+                <Countdown targetDate={LAUNCH_DATE} />
+
+                {/* <div className='mt-8 flex flex-wrap items-center justify-center gap-3'>
                     <Button
                         type='primary'
                         onClick={onOpenSignUp}
+                        disabled
                     >
                         Get started
                     </Button>
                     <Button
                         type='secondary'
                         onClick={onOpenLogIn}
+                        disabled
                     >
                         Learn more
                     </Button>
-                </div>
+                </div> */}
 
                 <img
                     src={heroImage}
@@ -314,6 +413,7 @@ const FinalCTA = ({ onOpenSignUp, scrollY }) => {
                 <Button
                     type='primary'
                     onClick={onOpenSignUp}
+                    disabled
                 >
                     Get started
                 </Button>
@@ -331,8 +431,8 @@ const Footer = () => {
                 <path fill="#1F2937" d="M0,160L60,149.3C120,139,240,117,360,128C480,139,600,181,720,176C840,171,960,117,1080,96C1200,75,1320,85,1380,90.7L1440,96L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
             </svg>
             <div className='w-full max-w-6xl flex flex-col gap-3 items-center z-1 pb-8'>
-                
-                <img src={logoLargeWhite} className='w-48 h-16 object-contain'/>
+
+                <img src={logoLargeWhite} className='w-48 h-16 object-contain' />
                 <p className='text-neutral1 text-sm'>© 2026 www.studium-app.com - All Rights Reserved.</p>
 
             </div>

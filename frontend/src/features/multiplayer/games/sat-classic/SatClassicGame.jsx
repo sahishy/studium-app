@@ -12,7 +12,7 @@ import QuestionPane from './components/QuestionPane'
 import GameHeader from './components/GameHeader'
 import MatchEndOverlay from './components/MatchEndOverlay'
 import CalculatorWindow from '../../components/windows/CalculatorWindow'
-import { buildRankedUiState } from '../../utils/multiplayerUtils'
+import { buildMultiplayerUiState } from '../../utils/multiplayerUtils'
 import { getRankInfoFromElo } from '../../../profile/utils/statsUtils'
 
 const SatClassicGame = ({ roomId, userId }) => {
@@ -291,6 +291,7 @@ const SatClassicGame = ({ roomId, userId }) => {
     const matchDurationSeconds = (matchStartedAt && matchEndedAt)
         ? Math.max(0, Math.floor((matchEndedAt.getTime() - matchStartedAt.getTime()) / 1000))
         : 0
+    const matchEloDelta = Number(latestGameEndedEvent?.data?.eloDeltaByUserId?.[userId]) || 0
     const roundHistory = useMemo(() => {
         return events
             .filter((eventEntry) => eventEntry?.type === 'ROUND_RESOLVED')
@@ -320,7 +321,7 @@ const SatClassicGame = ({ roomId, userId }) => {
             rankLabel,
             nextTierLabel,
             nextTierThreshold,
-        } = buildRankedUiState({ userStats, modeId: MODE_ID })
+        } = buildMultiplayerUiState({ userStats, modeId: MODE_ID })
 
         const nextRankInfo = nextTierThreshold
             ? getRankInfoFromElo(nextTierThreshold.minElo)
@@ -338,8 +339,9 @@ const SatClassicGame = ({ roomId, userId }) => {
             eloToNextTier,
             rankedElo: rankedStats.elo,
             peakProgress: Math.max(0, rankedStats.peakElo - currentTierMinElo),
+            eloDelta: matchEloDelta,
         }
-    }, [userStats])
+    }, [userStats, matchEloDelta])
 
     const activeOverlayMode = isResultOverlayActive
         ? resultOverlay?.type

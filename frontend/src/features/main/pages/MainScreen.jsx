@@ -5,8 +5,9 @@ import { useAuth } from '../../auth/contexts/AuthContext'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../../../lib/firebase'
 import ActivityHandler from '../components/ActivityHandler'
-import { CirclesProvider } from '../../circles/contexts/CirclesContext'
-import { MembersProvider } from '../../circles/contexts/MembersContext'
+import { CirclesProvider } from '../../socials/contexts/CirclesContext'
+import { MembersProvider } from '../../socials/contexts/MembersContext'
+import { FriendsProvider } from '../../socials/contexts/FriendsContext'
 import { TasksProvider } from '../../agenda/contexts/TasksContext'
 import { CoursesProvider } from '../../courses/contexts/CoursesContext'
 import { UserStatsProvider } from '../../profile/contexts/UserStatsContext'
@@ -17,13 +18,22 @@ const MainScreenLayout = ({ profile }) => {
 
     return (
         <>
-            <ActivityHandler profile={profile}/>
+            <ActivityHandler profile={profile} />
 
             <div className="flex min-h-screen">
 
-                <Sidebar profile={profile}/>
-                <main className="flex-1 h-screen max-w-[2560px] mx-auto">
-                    <Outlet context={{ profile }}/>
+                <Sidebar profile={profile} />
+
+                <main className="relative flex-1 h-screen max-w-[2560px] mx-auto overflow-x-hidden">
+
+                    {/* <div className='absolute w-full h-full opacity-[0.067] z-[-1]'>
+                        <img
+                            src='https://m.media-amazon.com/images/I/61yoCe8remL._AC_UF894,1000_QL80_.jpg'
+                            className='w-full h-full'
+                        />
+                    </div> */}
+
+                    <Outlet context={{ profile }} />
                 </main>
 
             </div>
@@ -32,21 +42,21 @@ const MainScreenLayout = ({ profile }) => {
 }
 
 const MainScreen = () => {
-    
+
     const { user, loading } = useAuth()
     const [profile, setProfile] = useState(null)
     const [profileLoading, setProfileLoading] = useState(true)
 
     useEffect(() => {
 
-        if(!user || loading) {
+        if (!user || loading) {
             return
         }
 
         const docRef = doc(db, 'users', user.uid)
 
         const unsubscribe = onSnapshot(docRef, (docSnap) => {
-            if(docSnap.exists()) {
+            if (docSnap.exists()) {
                 setProfile({ uid: docSnap.id, ...docSnap.data() })
             } else {
                 console.log('No user profile found.')
@@ -58,22 +68,24 @@ const MainScreen = () => {
 
     }, [user, loading])
 
-    if(profileLoading || !profile) {
-        return <LoadingState fullPage/>
+    if (profileLoading || !profile) {
+        return <LoadingState fullPage />
     }
 
     return (
         <UserStatsProvider userId={profile?.uid}>
             <MultiplayerProvider userId={profile?.uid}>
                 <CirclesProvider profile={profile}>
-                    <CoursesProvider profile={profile}>
-                        <MembersProvider>
-                            <TasksProvider profile={profile}>
-                                <MainScreenLayout profile={profile}/>
+                    <FriendsProvider profile={profile}>
+                        <CoursesProvider profile={profile}>
+                            <MembersProvider>
+                                <TasksProvider profile={profile}>
+                                    <MainScreenLayout profile={profile} />
 
-                            </TasksProvider>
-                        </MembersProvider>
-                    </CoursesProvider>
+                                </TasksProvider>
+                            </MembersProvider>
+                        </CoursesProvider>
+                    </FriendsProvider>
                 </CirclesProvider>
             </MultiplayerProvider>
         </UserStatsProvider>

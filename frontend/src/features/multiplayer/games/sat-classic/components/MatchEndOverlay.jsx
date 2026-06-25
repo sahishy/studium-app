@@ -21,6 +21,8 @@ const MatchEndOverlay = ({
 
     const isDraw = !winnerUserId
     const isMyWin = !isDraw && winnerUserId === userId
+    const eloDelta = Number(rankedProgression?.eloDelta) || 0
+    const eloDeltaLabel = eloDelta > 0 ? `+${eloDelta}` : `${eloDelta}`
 
     const title = isDraw ? 'Draw' : (isMyWin ? 'Victory' : 'Defeat')
     const reasonLabel = endReason === 'knockout'
@@ -96,7 +98,11 @@ const MatchEndOverlay = ({
                         <p className='text-sm font-semibold'>
                             {Math.max(0, Number(rankedProgression?.currentTierProgress) || 0)}{' '}
                             <span className='text-xs text-neutral1'>SAT</span>{' '}
-                            {!isDraw && <span className={`text-sm ${isMyWin ? 'text-sky-400' : 'text-red-400'}`}>{isMyWin ? '+20' : '-20'}</span>}
+                            {!isDraw && eloDelta !== 0 && (
+                                <span className={`text-sm ${eloDelta > 0 ? 'text-sky-400' : 'text-red-400'}`}>
+                                    {eloDeltaLabel}
+                                </span>
+                            )}
                         </p>
                     <p className='text-sm font-semibold'>
                             {Math.max(1, Number(rankedProgression?.currentTierSpan) || 1)} <span className='text-xs text-neutral1'>SAT</span>

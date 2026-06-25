@@ -19,7 +19,7 @@ const MyCoursesCard = ({ course, customization, teacherName, loading = false }) 
 
     return (
         <button onClick={openCourse} className='w-full text-left'>
-            <Card hoverable>
+            <Card hoverable className='p-2!'>
                 <div
                     className={`h-28 rounded-xl flex items-center justify-center text-neutral2`}
                     style={{ backgroundColor: hexToRgba(color, 0.2) }}
@@ -27,7 +27,7 @@ const MyCoursesCard = ({ course, customization, teacherName, loading = false }) 
                     <FaBook className='text-4xl' style={{ color: color }} />
                 </div>
 
-                <div className='flex flex-col gap-1'>
+                <div className='flex flex-col gap-1 px-2 pb-2'>
                     <p className='font-semibold text-neutral0 truncate'>{course.title}</p>
                     <p className='text-xs text-neutral1 truncate flex items-center gap-2'>
                         <SubjectIcon />

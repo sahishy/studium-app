@@ -6,8 +6,55 @@ const SAT_CLASSIC_POST_SUBMIT_GRACE_MS = 16000
 const SAT_CLASSIC_MIN_TIME_MULTIPLIER = 0.35
 const SAT_CLASSIC_TIME_SCALE_SEC = 8
 const ANSWERED_FIRST_MULTIPLIER = 1.5
-const SAT_CLASSIC_WIN_ELO_DELTA = 20
-const SAT_CLASSIC_LOSS_ELO_DELTA = -20
+const SAT_CLASSIC_WIN_ELO_MIN_DELTA = 10
+const SAT_CLASSIC_WIN_ELO_MAX_DELTA = 20
+const SAT_CLASSIC_LOSS_ELO_MIN_DELTA = -10
+const SAT_CLASSIC_LOSS_ELO_MAX_DELTA = -5
+
+const getRandomIntInclusive = (min, max) => {
+    const safeMin = Math.ceil(Math.min(min, max))
+    const safeMax = Math.floor(Math.max(min, max))
+    return Math.floor(Math.random() * (safeMax - safeMin + 1)) + safeMin
+}
+
+const getRankedEloDelta = ({ isWin = false, isLoss = false, roundsPlayed = 0 } = {}) => {
+    const safeRoundsPlayed = Math.max(0, Number(roundsPlayed) || 0)
+
+    if(isWin) {
+        const baseWinDelta = getRandomIntInclusive(SAT_CLASSIC_WIN_ELO_MIN_DELTA, SAT_CLASSIC_WIN_ELO_MAX_DELTA)
+
+        if(safeRoundsPlayed <= 1) {
+            return Math.round(baseWinDelta * 0.1)
+        }
+
+        if(safeRoundsPlayed <= 5) {
+            const partialMultiplier = Number((safeRoundsPlayed * 0.1).toFixed(1))
+            return Math.round(baseWinDelta * partialMultiplier)
+        }
+
+        return baseWinDelta
+    }
+
+    if(isLoss) {
+        const baseLossDelta = getRandomIntInclusive(SAT_CLASSIC_LOSS_ELO_MIN_DELTA, SAT_CLASSIC_LOSS_ELO_MAX_DELTA)
+
+        if(safeRoundsPlayed < 5) {
+            const earlyLossMultiplierByRounds = {
+                1: 2,
+                2: 1.8,
+                3: 1.6,
+                4: 1.4,
+            }
+
+            const earlyLossMultiplier = earlyLossMultiplierByRounds[safeRoundsPlayed] ?? 2
+            return Math.round(baseLossDelta * earlyLossMultiplier)
+        }
+
+        return baseLossDelta
+    }
+
+    return 0
+}
 
 const SAT_CLASSIC_BASE_DAMAGE = {
     Easy: 800,
@@ -223,8 +270,7 @@ export {
     SAT_CLASSIC_ROUND_DURATION_MS,
     SAT_CLASSIC_POST_SUBMIT_GRACE_MS,
     ANSWERED_FIRST_MULTIPLIER,
-    SAT_CLASSIC_WIN_ELO_DELTA,
-    SAT_CLASSIC_LOSS_ELO_DELTA,
+    getRankedEloDelta,
     getRoundDamageMultiplier,
     getBaseDamageByDifficulty,
     calculateDamage,

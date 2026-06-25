@@ -45,12 +45,12 @@ const MatchRoom = () => {
 
     useEffect(() => {
         if(!hasRoomId) {
-            navigate('/ranked', { replace: true })
+            navigate('/play', { replace: true })
             return
         }
 
         if(!roomLoading && !room) {
-            navigate('/ranked', { replace: true })
+            navigate('/play', { replace: true })
         }
     }, [hasRoomId, roomLoading, room, navigate])
 
@@ -63,7 +63,7 @@ const MatchRoom = () => {
         const inRoomState = session.status === 'in_room'
 
         if(!inRoomState || !isCurrentRoom) {
-            navigate('/ranked', { replace: true })
+            navigate('/play', { replace: true })
         }
     }, [session, roomId, navigate])
 

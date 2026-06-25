@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { FaChevronDown } from 'react-icons/fa6'
+import { FaArrowsUpDown, FaChevronDown } from 'react-icons/fa6'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import BottomPadding from '../../../shared/components/ui/BottomPadding'
@@ -8,15 +8,16 @@ import { toDateFromRelativeInput } from '../../../shared/utils/formatters'
 import ListTask from '../components/ListTask'
 import TaskParsingInput from '../components/TaskParsingInput'
 import { useTasks } from '../contexts/TasksContext'
-import { useCircles } from '../../circles/contexts/CirclesContext'
+import { useCircles } from '../../socials/contexts/CirclesContext'
 import { useCourses } from '../../courses/contexts/CoursesContext'
 import { updateTaskGroupingPreference } from '../services/taskService'
 import { enqueueTaskPatch } from '../services/taskCacheService'
-import { buildChildCounts, buildDepthMap, buildGroupedTaskSections, buildInheritedGroupTitleFromSourceTask, buildListReindexUpdates, buildShiftedListIndexUpdates, deriveStatusByTaskId, LIST_GROUP_OPTIONS, sortTasksByListIndex } from '../utils/taskListUtils'
+import { buildChildCounts, buildDepthMap, buildGroupedTaskSections, buildInheritedGroupTitleFromSourceTask, buildListReindexUpdates, buildShiftedListIndexUpdates, deriveStatusByTaskId, getTaskGroupKey, hasConflictingGroupWidget, injectGroupWidgetIfNeeded, LIST_GROUP_OPTIONS, sortTasksByListIndex } from '../utils/taskListUtils'
 import { buildListIndexPatchUpdates, buildReorderPlanForSection, buildSortableIds } from '../utils/taskDragDropUtils'
 import Select from '../../../shared/components/popovers/Select'
 import { MAX_USER_TASKS } from '../utils/taskUtils'
 import TextTooltip from '../../../shared/components/tooltips/TextTooltip'
+import { extractTaskTitleMetadata, flattenTaskTitle } from '../utils/naturalLanguage'
 
 const isDescendantOf = (task, ancestorId, tasksById) => {
     let parentId = task?.parentTaskId ?? null
@@ -78,7 +79,13 @@ const writeCollapsedSectionsToCache = (cacheKey, collapsedByKey) => {
 
 const ListTab = () => {
 
-    const { profile } = useOutletContext()
+    const {
+        profile,
+        circleId,
+        isCircleView = false,
+        hideCircleWidgetControl = false,
+        forceCircleWidget,
+    } = useOutletContext()
     const { user: userTasks, circle: circleTasks, applyTaskPatch, commitTaskPatch, createTaskOptimistic, deleteTaskOptimistic } = useTasks()
     const circles = useCircles()
     const { courses } = useCourses()
@@ -106,8 +113,16 @@ const ListTab = () => {
 
     const pendingOutdentRef = useRef(new Map())
     const taskFocusHandlersRef = useRef(new Map())
+    // Maps newTaskId -> { groupKey, groupBy, groupTasks } so we can inject the
+    // group widget at commit time rather than baking it into the initial title.
+    const pendingGroupContextRef = useRef(new Map())
 
-    const sortedTasks = useMemo(() => sortTasksByListIndex([...userTasks, ...circleTasks]), [userTasks, circleTasks])
+    const visibleTasks = useMemo(() => {
+        if (!isCircleView) return [...userTasks, ...circleTasks]
+        return circleTasks.filter((task) => String(extractTaskTitleMetadata(task.title).circleId || '') === String(circleId || ''))
+    }, [circleId, circleTasks, isCircleView, userTasks])
+
+    const sortedTasks = useMemo(() => sortTasksByListIndex([...visibleTasks]), [visibleTasks])
     const tasksById = useMemo(() => new Map(sortedTasks.map((t) => [t.uid, t])), [sortedTasks])
     const groupedTaskSections = useMemo(
         () => buildGroupedTaskSections(sortedTasks, selectedGroupBy, { forcedGroupKeyByTaskId }),
@@ -202,22 +217,28 @@ const ListTab = () => {
     }, [])
 
     const handleAddTask = useCallback(async (payload) => {
+
+        const normalizedTitle = isCircleView ? forceCircleWidget?.(payload.title) || payload.title : payload.title
+        const trimmedTitle = flattenTaskTitle(normalizedTitle).trim()
+        if (!trimmedTitle) {
+            return
+        }
+
         const nextIndex = sortedTasks.reduce((max, t) => (
             typeof t.listIndex === 'number' ? Math.max(max, t.listIndex) : max
         ), -1) + 1
 
         const fallback = sortedTasks[0] || null
         createTaskOptimistic({
-            title: payload.title,
-            ownerType: fallback?.ownerType || 'user',
-            ownerId: fallback?.ownerId || profile.uid,
+            title: normalizedTitle,
+            userId: fallback?.userId || profile.uid,
             status: 'Incomplete',
             listIndex: nextIndex,
             parentTaskId: null,
             siblingIndex: 0,
             type: payload.metadata.taskType || payload.parsedTaskType || 'assignment',
         })
-    }, [createTaskOptimistic, profile.uid, sortedTasks])
+    }, [createTaskOptimistic, forceCircleWidget, isCircleView, profile.uid, sortedTasks])
 
     const handleUpdateTask = useCallback(async (taskId, updates) => {
         await commitTaskPatch(taskId, updates)
@@ -225,6 +246,55 @@ const ListTab = () => {
             await syncParentStatuses(new Map([[taskId, updates.status]]))
         }
     }, [commitTaskPatch, syncParentStatuses])
+
+    const handleBeforeTaskCommit = useCallback((payload, meta = {}) => {
+        // Apply circle widget override first (existing behaviour)
+        let nextPayload = payload
+        if (isCircleView) {
+            const nextTitle = forceCircleWidget?.(payload.title) || payload.title
+            nextPayload = {
+                ...payload,
+                title: nextTitle,
+                plainTitle: flattenTaskTitle(nextTitle),
+                metadata: extractTaskTitleMetadata(nextTitle),
+            }
+        }
+
+        // find out which task is being committed by looking up the task that
+        // owns this payload. The editor fires onBeforeCommit from ListTask,
+        // which passes the task uid via the closure in handleCreateTaskAfter.
+        // we store the context keyed by taskId; meta.taskId is threaded below.
+        const taskId = meta?.taskId
+        const groupContext = taskId ? pendingGroupContextRef.current.get(taskId) : null
+
+        if (groupContext) {
+            const conflict = hasConflictingGroupWidget(nextPayload.title, groupContext.groupBy)
+            console.log('[beforeCommit] taskId:', taskId, 'groupContext:', groupContext, 'conflict:', conflict, 'plainTitle:', nextPayload.plainTitle)
+            if (conflict) {
+                // user typed their own conflicting widget — mark it so
+                // handleCreateTaskAfter can skip chaining a new task.
+                nextPayload = { ...nextPayload, _groupWidgetConflict: true }
+            } else if (!nextPayload.metadata?.taskType) {
+                // no conflict: append the group widget
+                const injected = injectGroupWidgetIfNeeded(
+                    nextPayload.title,
+                    groupContext.groupKey,
+                    groupContext.groupBy,
+                    groupContext.groupTasks,
+                )
+                if (injected !== nextPayload.title) {
+                    nextPayload = {
+                        ...nextPayload,
+                        title: injected,
+                        plainTitle: flattenTaskTitle(injected),
+                        metadata: extractTaskTitleMetadata(injected),
+                    }
+                }
+            }
+        }
+
+        return nextPayload
+    }, [forceCircleWidget, isCircleView])
 
     const handleOutdentTask = useCallback((taskId) => {
 
@@ -279,6 +349,28 @@ const ListTab = () => {
             } : {}),
         }
 
+        // if handleBeforeTaskCommit detected that the user typed a conflicting
+        // widget (like a different date than the group), it sets _groupWidgetConflict
+        // on the payload. In that case we should not chain into a new blank task,
+        // instead just re-focus the source task so the user can keep editing.
+        console.log('[createTaskAfter] sourceTask.uid:', sourceTask.uid, 'draftPayload:', draftPayload)
+        if (draftPayload?._groupWidgetConflict) {
+            pendingGroupContextRef.current.delete(sourceTask.uid)
+            // release the forced group pin so the task moves to its real new group
+            setForcedGroupKeyByTaskId((prev) => {
+                if (!Object.hasOwn(prev, sourceTask.uid)) return prev
+                const next = { ...prev }
+                delete next[sourceTask.uid]
+                return next
+            })
+            setPendingFocusTaskId(sourceTask.uid)
+            return
+        }
+        // clean up any consumed group context for the source task
+        if (draftPayload) {
+            pendingGroupContextRef.current.delete(sourceTask.uid)
+        }
+
         const insertIndex = getMaxSubtreeListIndex(effectiveSource, sortedTasks, tasksById) + 1
 
         buildShiftedListIndexUpdates(sortedTasks, insertIndex).forEach(({ taskId, listIndex }) => {
@@ -289,15 +381,10 @@ const ListTab = () => {
         const parentTaskId = isSubtask ? effectiveSource.parentTaskId : null
         const siblingIndex = getNextSiblingIndex(sortedTasks, parentTaskId)
 
-        // inherit group defaults for the new task from the source task
-        const inheritedTitle = isSubtask
-            ? ''
-            : buildInheritedGroupTitleFromSourceTask({ sourceTask, groupBy: selectedGroupBy })
-
+        // new tasks always start blank, group widget is injected at commit time
         const { taskId: newTaskId } = createTaskOptimistic({
-            title: inheritedTitle,
-            ownerType: effectiveSource.ownerType || 'user',
-            ownerId: effectiveSource.ownerId || profile.uid,
+            title: '',
+            userId: effectiveSource.userId || profile.uid,
             status: 'Incomplete',
             listIndex: insertIndex,
             parentTaskId,
@@ -305,11 +392,28 @@ const ListTab = () => {
             type: effectiveSource.type || 'assignment',
         })
 
-        setPendingFocusTaskId(newTaskId)
+        // store the group context so handleBeforeTaskCommit can inject later.
+        // only for top-level tasks (subtasks don't inherit group widgets).
+        if (!isSubtask) {
+            const sourceSection = groupedTaskSections.find((s) =>
+                s.tasks.some((t) => t.uid === effectiveSource.uid)
+            )
+            if (sourceSection && sourceSection.key !== 'none') {
+                pendingGroupContextRef.current.set(newTaskId, {
+                    groupKey: sourceSection.key,
+                    groupBy: selectedGroupBy,
+                    groupTasks: sourceSection.tasks,
+                })
+                // pin the new blank task to the source section so it doesn't
+                // float into the "No Date / No Course" group while still empty.
+                setForcedGroupKeyByTaskId((prev) => ({ ...prev, [newTaskId]: sourceSection.key }))
+            }
+        }
 
+        setPendingFocusTaskId(newTaskId)
         setTabEligibleSubtask({ taskId: newTaskId, parentTaskId: effectiveSource.uid })
 
-    }, [commitTaskPatch, createTaskOptimistic, profile.uid, selectedGroupBy, sortedTasks, tasksById])
+    }, [commitTaskPatch, createTaskOptimistic, groupedTaskSections, profile.uid, selectedGroupBy, sortedTasks, tasksById])
 
     const handleTaskBlur = useCallback((taskId) => {
 
@@ -318,6 +422,10 @@ const ListTab = () => {
             commitTaskPatch(taskId, pendingPatch)
             pendingOutdentRef.current.delete(taskId)
         }
+
+        // clean up any pending group context for this task (it was consumed or
+        // is no longer needed now that the task has been committed/blurred).
+        pendingGroupContextRef.current.delete(taskId)
 
         setForcedGroupKeyByTaskId((prev) => {
             if (!Object.hasOwn(prev, taskId)) return prev
@@ -400,7 +508,7 @@ const ListTab = () => {
         <>
             <div className='w-full h-full flex flex-col items-center gap-6'>
 
-                <div className='relative flex w-full h-11 justify-end'>
+                <div className='relative flex w-full h-11 items-center justify-end'>
                     <div
                         className={`absolute left-1/2 top-1/2 -translate-1/2
                                 bg-neutral5 rounded-full flex gap-3 items-center w-96 transition-all
@@ -424,6 +532,7 @@ const ListTab = () => {
                             allowEmptyCommit
                             onCommit={handleAddTask}
                             invertedWidgets
+                            hideCircleWidgets={hideCircleWidgetControl}
                         />
                     </div>
 
@@ -433,12 +542,12 @@ const ListTab = () => {
                         onSelect={handleChangeGroupBy}
                     >
                         {(isOpen) => (
-                            <p className='text-neutral1 text-xs hover:opacity-60 transition-all'>
-                                Grouping by: {' '}
-                                <span className='font-semibold text-neutral0'>
-                                    {LIST_GROUP_OPTIONS.find((x) => x.id === selectedGroupBy)?.label}
-                                </span>
-                            </p>
+                            <div className='px-4 py-2.5 rounded-full border border-neutral4 text-neutral0 font-semibold text-sm 
+                                hover:bg-neutral5 transition-all flex items-center gap-1'
+                            >
+                                <FaArrowsUpDown className='text-xs'/>
+                                {LIST_GROUP_OPTIONS.find((x) => x.id === selectedGroupBy)?.label}
+                            </div>
                         )}
                     </Select>
                 </div>
@@ -477,6 +586,8 @@ const ListTab = () => {
                                                 task={task}
                                                 circles={circles}
                                                 courses={courses}
+                                                onBeforeCommit={handleBeforeTaskCommit}
+                                                hideCircleWidgets={hideCircleWidgetControl}
                                                 onRegisterFocusHandle={handleRegisterFocusHandle}
                                                 depth={depthMap.get(task.uid) || 0}
                                                 hasChildren={(childCounts.get(task.uid) || 0) > 0}

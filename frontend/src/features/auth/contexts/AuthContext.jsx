@@ -5,6 +5,11 @@ import { getDoc, doc } from 'firebase/firestore'
 
 const AuthContext = createContext()
 
+const applyThemePreference = (theme) => {
+    const resolvedTheme = theme === 'dark' ? 'dark' : 'light'
+    document.documentElement.classList.toggle('dark', resolvedTheme === 'dark')
+}
+
 const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null)
     const [profile, setProfile] = useState(null)
@@ -18,12 +23,16 @@ const AuthProvider = ({ children }) => {
                 const profileRef = doc(db, 'users', firebaseUser.uid)
                 const profileSnap = await getDoc(profileRef)
                 if(profileSnap.exists()) {
-                    setProfile({ uid: profileSnap.id, ...profileSnap.data() })
+                    const nextProfile = { uid: profileSnap.id, ...profileSnap.data() }
+                    setProfile(nextProfile)
+                    applyThemePreference(nextProfile?.preferences?.theme)
                 } else {
                     setProfile(null)
+                    applyThemePreference('light')
                 }
             } else {
                 setProfile(null)
+                applyThemePreference('light')
             }
 
             setLoading(false)

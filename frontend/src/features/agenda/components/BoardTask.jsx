@@ -1,21 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { useCircles } from '../../circles/contexts/CirclesContext'
+import { useCircles } from '../../socials/contexts/CirclesContext'
 import { useCourses } from '../../courses/contexts/CoursesContext'
 import { enqueueTaskPatch } from '../services/taskCacheService'
 import TaskParsingInput from './TaskParsingInput'
 import { extractTaskTitleMetadata, flattenTaskTitle, normalizeTaskTitle, parseTaskInput } from '../utils/naturalLanguage'
-import { TaskCircleInput, TaskCourseInput, TaskDueDateInput, TaskStatusInput } from './TaskInputControls'
+import { TaskCourseInput, TaskDueDateInput, TaskStatusInput } from './TaskInputControls'
 import Card from '../../../shared/components/ui/Card'
 
-const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
+const BoardTask = ({ profile, task, autoFocus, setNewTaskId, hideCircleWidgetControl = false, onBeforeCommit }) => {
 
     const circles = useCircles()
     const { courses } = useCourses()
 
     const [status, setStatus] = useState(task.status)
     const [title, setTitle] = useState(normalizeTaskTitle(task.title))
-    const [ownerType, setOwnerType] = useState(task.ownerType || 'user')
-    const [ownerId, setOwnerId] = useState(task.ownerId || profile.uid)
     const inputRef = useRef(null)
     const pendingPayloadRef = useRef(null)
 
@@ -23,8 +21,6 @@ const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
     const prevTaskRef = useRef({
         status: task.status,
         title: normalizeTaskTitle(task.title),
-        ownerType: task.ownerType || 'user',
-        ownerId: task.ownerId || profile.uid,
     })
 
     useEffect(() => {
@@ -37,8 +33,6 @@ const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
         if(
             status === prev.status
             && JSON.stringify(title) === JSON.stringify(prev.title)
-            && ownerType === prev.ownerType
-            && ownerId === prev.ownerId
         ) {
             return
         }
@@ -53,14 +47,12 @@ const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
             {
                 status,
                 title,
-                ownerType,
-                ownerId,
                 type: resolvedTaskType,
             }
         )
 
-        prevTaskRef.current = { status, title, ownerType, ownerId }
-    }, [circles, courses, ownerId, ownerType, status, task.type, task.uid, title])
+        prevTaskRef.current = { status, title }
+    }, [circles, courses, status, task.type, task.uid, title])
 
     useEffect(() => {
         if(task.status !== status) setStatus(task.status)
@@ -68,45 +60,17 @@ const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
         if(taskTitleText !== flattenTaskTitle(title)) {
             setTitle(normalizeTaskTitle(task.title))
         }
-        if(task.ownerType !== ownerType) setOwnerType(task.ownerType || 'user')
-        if(task.ownerId !== ownerId) setOwnerId(task.ownerId || profile.uid)
-
         prevTaskRef.current = {
             status: task.status,
             title: normalizeTaskTitle(task.title),
-            ownerType: task.ownerType || 'user',
-            ownerId: task.ownerId || profile.uid,
         }
-    }, [task.status, task.title, task.ownerType, task.ownerId, profile.uid, title])
-
-    useEffect(() => {
-        if(ownerType === 'circle' && !circles.some((x) => x.uid === ownerId)) {
-            setOwnerType('user')
-            setOwnerId(profile.uid)
-        }
-    }, [circles, ownerType, ownerId, profile.uid])
+    }, [task.status, task.title, title])
 
     useEffect(() => {
         if(autoFocus) {
             inputRef.current?.focusAtEnd?.()
         }
     }, [autoFocus])
-
-    useEffect(() => {
-        const metadata = extractTaskTitleMetadata(title)
-        if (metadata.circleId) {
-            if (ownerType !== 'circle' || String(ownerId) !== String(metadata.circleId)) {
-                setOwnerType('circle')
-                setOwnerId(metadata.circleId)
-            }
-            return
-        }
-
-        if (ownerType === 'circle') {
-            setOwnerType('user')
-            setOwnerId(profile.uid)
-        }
-    }, [ownerId, ownerType, profile.uid, title])
 
     return (
         <Card>
@@ -118,6 +82,8 @@ const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
                         title={title}
                         circles={circles}
                         courses={courses}
+                        onBeforeCommit={onBeforeCommit}
+                        hideCircleWidgets={hideCircleWidgetControl}
                         className='w-full px-2 py-1'
                         placeholder='Title'
                         onCommit={(payload) => {
@@ -145,17 +111,6 @@ const BoardTask = ({ profile, task, autoFocus, setNewTaskId }) => {
                 <TaskDueDateInput
                     title={title}
                     setTitle={setTitle}
-                    className='justify-self-start self-start max-w-full'
-                />
-                <TaskCircleInput
-                    userId={profile.uid}
-                    ownerType={ownerType}
-                    ownerId={ownerId}
-                    title={title}
-                    setTitle={setTitle}
-                    setOwnerType={setOwnerType}
-                    setOwnerId={setOwnerId}
-                    circles={circles}
                     className='justify-self-start self-start max-w-full'
                 />
                 <TaskCourseInput

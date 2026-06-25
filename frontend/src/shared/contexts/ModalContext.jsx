@@ -8,9 +8,29 @@ export const useModal = () => useContext(ModalContext)
 export const ModalProvider = ({ children }) => {
     const [modalStack, setModalStack] = useState([])
 
-    const openModal = (content) => {
+    const openModal = (modalInput) => {
         const modalId = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-        setModalStack((previous) => [...previous, { id: modalId, content }])
+
+        const isConfigObject = (
+            modalInput
+            && typeof modalInput === 'object'
+            && !Array.isArray(modalInput)
+            && Object.prototype.hasOwnProperty.call(modalInput, 'content')
+        )
+
+        const modalEntry = isConfigObject
+            ? {
+                id: modalId,
+                content: modalInput.content,
+                maxWidthClass: modalInput.maxWidthClass,
+            }
+            : {
+                id: modalId,
+                content: modalInput,
+                maxWidthClass: undefined,
+            }
+
+        setModalStack((previous) => [...previous, modalEntry])
         return modalId
     }
 
@@ -33,6 +53,7 @@ export const ModalProvider = ({ children }) => {
                     key={modalEntry.id}
                     isOpen={true}
                     modalContent={modalEntry.content}
+                    maxWidthClass={modalEntry.maxWidthClass}
                     closeModal={() => closeModalById(modalEntry.id)}
                 />
             ))}
