@@ -8,8 +8,7 @@ import ChatBox from '../components/ChatBox'
 import { subscribeToRoomById } from '../services/roomService'
 import GameHandler from '../games/GameHandler'
 
-const MatchRoom = () => {
-    
+const MultiplayerGameShell = () => {
     const { roomId } = useParams()
     const { profile } = useOutletContext()
     const { session } = useMultiplayer()
@@ -86,9 +85,8 @@ const MatchRoom = () => {
                 userId={profile?.uid}
                 senderName={senderName}
             />
-
         </div>
     )
 }
 
-export default MatchRoom
+export default MultiplayerGameShell

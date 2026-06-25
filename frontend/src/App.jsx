@@ -22,7 +22,7 @@ import MyCoursesTab from './features/courses/pages/MyCoursesTab'
 import AllCoursesTab from './features/courses/pages/AllCoursesTab'
 import CourseOverview from './features/courses/pages/CourseOverview'
 import CoursesIndexRedirect from './routes/CoursesIndexRedirect'
-import MultiplayerSessionRedirect from './routes/MultiplayerSessionRedirect'
+import PlaySessionRedirect from './routes/PlaySessionRedirect'
 import Avatar from './features/profile/pages/Avatar'
 import Settings from './features/profile/pages/Settings'
 import ProfileOverview from './features/profile/pages/ProfileOverview'
@@ -33,8 +33,9 @@ import { ToastProvider } from './shared/contexts/ToastContext'
 import JoinCircle from './features/socials/pages/JoinCircle'
 import ErrorState from './shared/components/ui/ErrorState'
 import Resources from './features/resources/pages/Resources'
-import Play from './features/multiplayer/pages/Play'
-import MatchRoom from './features/multiplayer/pages/MatchRoom'
+import Play from './features/play/pages/Play'
+import MultiplayerGameShell from './features/play/pages/MultiplayerGameShell'
+import SingleplayerGameShell from './features/play/pages/SingleplayerGameShell'
 import MaintenanceRoute from './routes/MaintenanceRoute'
 import FriendsIndexRedirect from './routes/FriendsIndexRedirect'
 import CircleOverviewIndexRedirect from './routes/CircleOverviewIndexRedirect'
@@ -60,7 +61,7 @@ export default function App() {
 						}
 					>
 
-						<Route element={<MultiplayerSessionRedirect />}>
+						<Route element={<PlaySessionRedirect />}>
 							<Route path="/agenda" element={<Agenda />}>
 								<Route index element={<AgendaIndexRedirect />} />
 								<Route path="list" element={<ListTab />} />
@@ -94,7 +95,8 @@ export default function App() {
 							</Route>
 							<Route path="/resources" element={<Resources />} />
 							<Route path="/play" element={<Play />} />
-							<Route path="/play/room/:roomId" element={<MatchRoom />} />
+							<Route path="/play/game/:modeId" element={<SingleplayerGameShell />} />
+							<Route path="/play/room/:roomId" element={<MultiplayerGameShell />} />
 							<Route path="/join/:inviteCode" element={<JoinCircle />} />
 							<Route path="/avatar" element={<Avatar />} />
 							<Route path="/settings" element={<Settings />} />

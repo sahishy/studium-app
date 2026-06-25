@@ -1,8 +1,9 @@
 import { useEffect, useRef } from "react";
 import { updateStatus, updateStreak } from "../../auth/services/userService";
-import { useMultiplayer } from "../../multiplayer/contexts/MultiplayerContext";
-import { cancelQueue } from "../../multiplayer/services/matchmakingService";
-import { leaveRoom } from "../../multiplayer/services/roomService";
+import { useMultiplayer } from "../../play/contexts/MultiplayerContext";
+import { cancelQueue } from "../../play/services/matchmakingService";
+import { setPlaySessionState } from "../../play/services/playSessionService";
+import { leaveRoom } from "../../play/services/roomService";
 
 const ActivityHandler = ({ profile }) => {
 
@@ -34,6 +35,16 @@ const ActivityHandler = ({ profile }) => {
 
             if(currentSession.status === "in_room" && currentSession.currentRoomId) {
                 void leaveRoom({ roomId: currentSession.currentRoomId, userId });
+                return;
+            }
+
+            if(currentSession.status === "in_room" && currentSession.modeId) {
+                void setPlaySessionState({
+                    userId,
+                    status: 'idle',
+                    modeId: null,
+                    currentRoomId: null,
+                });
             }
         };
 

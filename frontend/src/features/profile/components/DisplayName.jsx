@@ -53,7 +53,7 @@ const DisplayName = ({ targetProfile, className }) => {
     const circleFlair = null;
 
     const flairLabel = (() => {
-        switch(flair) {
+        switch (flair) {
             case 'score:sat':
                 return satScore != null ? `${satScore} SAT` : null;
             case 'score:act':
@@ -72,10 +72,10 @@ const DisplayName = ({ targetProfile, className }) => {
     return (
         <div className={`${className} flex items-center gap-2`}>
 
-            {name}
+            <span className="truncate">{name}</span>
 
             {flairLabel && (
-                <span className="px-2 py-1 text-[10px] rounded-lg bg-neutral5 text-neutral1">
+                <span className="shrink-0 px-2 py-1 text-[10px] rounded-lg bg-neutral5 text-neutral1">
                     {flairLabel}
                 </span>
             )}

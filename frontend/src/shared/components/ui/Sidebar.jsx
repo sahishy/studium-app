@@ -2,8 +2,8 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { FaArrowRight, FaChild, FaGraduationCap, FaUserGroup, FaBookOpen, FaBoxArchive, FaCircle, FaArrowLeft } from 'react-icons/fa6';
 import { RiSwordFill } from 'react-icons/ri';
 import AvatarPicture from '../avatar/AvatarPicture.jsx';
-import { useMultiplayer } from '../../../features/multiplayer/contexts/MultiplayerContext.jsx'
-import { leaveRoom } from '../../../features/multiplayer/services/roomService.jsx'
+import { useMultiplayer } from '../../../features/play/contexts/MultiplayerContext.jsx'
+import { leaveRoom } from '../../../features/play/services/roomService.jsx'
 import { useFriends } from '../../../features/socials/contexts/FriendsContext.jsx'
 import Button from './Button.jsx';
 import Logo from '../misc/Logo.jsx';
@@ -47,7 +47,7 @@ const Sidebar = ({ profile }) => {
 
                     <div className='flex flex-col items-center'>
                         <h1 className='font-semibold'>{profile.firstName} {profile.lastName}</h1>
-                        <p className='text-xs text-neutral1'>@{displayName}</p>
+                        <p className='text-xs text-neutral1 truncate max-w-40'>@{displayName}</p>
                     </div>
                 </div>
 

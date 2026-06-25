@@ -42,6 +42,16 @@ const formatDurationMmSs = (totalSeconds = 0) => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
+const formatDurationMmSsMs = (totalMs = 0) => {
+    const safeMs = Math.max(0, Number(totalMs) || 0)
+    const totalSeconds = Math.floor(safeMs / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    const centiseconds = Math.floor((safeMs % 1000) / 10)
+
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(centiseconds).padStart(2, '0')}`
+}
+
 const toMillisFromFirestoreLike = (value) => {
     const dateValue = toDateFromFirestoreLike(value)
     return dateValue ? dateValue.getTime() : 0
@@ -165,6 +175,7 @@ export {
     formatDateFromSeconds,
     formatRelativeTaskDate,
     formatDurationMmSs,
+    formatDurationMmSsMs,
     formatTimeFromFirestoreLike,
     toDateFromFirestoreLike,
     toDateFromRelativeInput,

@@ -4,7 +4,7 @@ import { RiSwordFill } from 'react-icons/ri'
 
 const ROOMS_COLLECTION = 'multiplayerRooms'
 const MATCHMAKING_COLLECTION = 'multiplayerMatchmaking'
-const SESSIONS_COLLECTION = 'multiplayerSessions'
+const PLAY_SESSIONS_COLLECTION = 'playSessions'
 const DEFAULT_MODE_ID = 'sat-classic'
 const MATCH_JOIN_DELAY_SECONDS = 3
 
@@ -22,6 +22,7 @@ const GAME_MODES = [
         type: 'singleplayer',
         icon: FaBoltLightning,
         description: 'Answer 10 questions as fast possible, requiring quick thinking and accuracy under pressure.',
+        scoreLabel: 'Fastest Time',
     },
 ]
 
@@ -106,7 +107,7 @@ const buildSingleplayerUiState = ({ userStats, modeId = DEFAULT_MODE_ID }) => {
 export {
     ROOMS_COLLECTION,
     MATCHMAKING_COLLECTION,
-    SESSIONS_COLLECTION,
+    PLAY_SESSIONS_COLLECTION,
     DEFAULT_MODE_ID,
     MATCH_JOIN_DELAY_SECONDS,
     GAME_MODES,

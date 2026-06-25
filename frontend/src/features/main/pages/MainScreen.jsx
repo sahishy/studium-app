@@ -11,7 +11,7 @@ import { FriendsProvider } from '../../socials/contexts/FriendsContext'
 import { TasksProvider } from '../../agenda/contexts/TasksContext'
 import { CoursesProvider } from '../../courses/contexts/CoursesContext'
 import { UserStatsProvider } from '../../profile/contexts/UserStatsContext'
-import { MultiplayerProvider } from '../../multiplayer/contexts/MultiplayerContext'
+import { MultiplayerProvider } from '../../play/contexts/MultiplayerContext'
 import LoadingState from '../../../shared/components/ui/LoadingState'
 
 const MainScreenLayout = ({ profile }) => {

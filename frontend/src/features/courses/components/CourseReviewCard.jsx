@@ -3,6 +3,7 @@ import AvatarPicture from '../../../shared/components/avatar/AvatarPicture';
 import { FaSchool } from 'react-icons/fa6';
 import { FaChalkboardTeacher, FaEdit } from 'react-icons/fa';
 import { MdDelete } from 'react-icons/md';
+import DisplayName from '../../profile/components/DisplayName';
 
 const CourseReviewCard = ({ review, reviewer, teacherName, canManage = false, onEdit, onDelete, deleting = false }) => {
 
@@ -37,17 +38,15 @@ const CourseReviewCard = ({ review, reviewer, teacherName, canManage = false, on
                 <ChatBubbleSwoosh className={'absolute w-8 -bottom-33 left-16 hidden dark:flex'} color='#1c1c21' />
             </div>
 
-            <div className='flex gap-3 items-center'>
+            <div className='flex gap-3 items-center min-w-0'>
 
                 <AvatarPicture
                     profile={reviewer}
                     className='w-20 h-20'
                 />
 
-                <div className='flex flex-col gap-1'>
-                    <p className='font-semibold text-neutral0'>
-                        {reviewer?.profile?.displayName || 'Loading...'}
-                    </p>
+                <div className='flex flex-col gap-1 min-w-0'>
+                    <DisplayName targetProfile={reviewer} className={''} />
                     <p className='text-xs text-neutral1 flex items-center gap-2'>
                         <FaSchool /> Attends {(schoolName ? `${schoolName} High School` : 'an unknown high school')}
                     </p>

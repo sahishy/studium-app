@@ -3,7 +3,7 @@ import {
     cancelQueue,
     joinQueue,
     subscribeToMatchmakingByUserId,
-    subscribeToSessionByUserId,
+    subscribeToPlaySessionByUserId,
     tryMatchmake,
 } from '../services/matchmakingService'
 
@@ -42,7 +42,7 @@ const MultiplayerProvider = ({ userId, children }) => {
     useEffect(() => {
 
         setSessionLoading(true)
-        const unsubscribe = subscribeToSessionByUserId(
+        const unsubscribe = subscribeToPlaySessionByUserId(
             userId,
             setSession,
             setSessionLoading,

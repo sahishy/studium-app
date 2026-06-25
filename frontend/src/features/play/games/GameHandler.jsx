@@ -1,7 +1,12 @@
+import BlitzGame from './blitz/BlitzGame'
 import SatClassicGame from './sat-classic/SatClassicGame'
 import ErrorState from '../../../shared/components/ui/ErrorState'
 
 const GameHandler = ({ modeId, roomId, userId }) => {
+
+    if(modeId === 'blitz') {
+        return <BlitzGame userId={userId} />
+    }
 
     if(modeId === 'sat-classic') {
         return (

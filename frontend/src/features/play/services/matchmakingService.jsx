@@ -1,7 +1,7 @@
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../../../lib/firebase'
 import { post } from '../../../shared/services/apiService'
-import { MATCHMAKING_COLLECTION, SESSIONS_COLLECTION } from '../utils/multiplayerUtils'
+import { MATCHMAKING_COLLECTION, PLAY_SESSIONS_COLLECTION } from '../utils/multiplayerUtils'
 
 const joinQueue = async ({ userId, modeId, elo = 0, displayName = 'A player', profilePicture = null }) => {
 
@@ -59,7 +59,7 @@ const subscribeToMatchmakingByUserId = ( userId, onChange, setLoading = () => {}
 
 }
 
-const subscribeToSessionByUserId = ( userId, onChange, setLoading = () => {}, setError = () => {} ) => {
+const subscribeToPlaySessionByUserId = ( userId, onChange, setLoading = () => {}, setError = () => {} ) => {
 
     if(!userId) {
         onChange?.(null)
@@ -67,7 +67,7 @@ const subscribeToSessionByUserId = ( userId, onChange, setLoading = () => {}, se
         return () => {}
     }
 
-    const sessionRef = doc(db, SESSIONS_COLLECTION, userId)
+    const sessionRef = doc(db, PLAY_SESSIONS_COLLECTION, userId)
     return onSnapshot(sessionRef, (docSnap) => {
         onChange?.(docSnap.exists() ? { uid: docSnap.id, ...docSnap.data() } : null)
         setError(null)
@@ -84,5 +84,5 @@ export {
     cancelQueue,
     tryMatchmake,
     subscribeToMatchmakingByUserId,
-    subscribeToSessionByUserId,
+    subscribeToPlaySessionByUserId,
 }

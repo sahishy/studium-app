@@ -1,6 +1,7 @@
 import Card from '../../../shared/components/ui/Card'
 import AvatarPicture from '../../../shared/components/avatar/AvatarPicture'
 import { FaCircle } from 'react-icons/fa6'
+import DisplayName from '../../profile/components/DisplayName'
 
 const FriendCard = ({ friend }) => {
 
@@ -15,8 +16,8 @@ const FriendCard = ({ friend }) => {
                 <AvatarPicture profile={friend} className='w-16 h-16' />
 
                 <div className='flex flex-col'>
-                    <h2 className='text-sm font-semibold text-neutral0 truncate'>
-                        {friend?.profile?.displayName ?? 'Unknown user'}
+                    <h2 className='text-sm'>
+                        <DisplayName targetProfile={friend}/>
                     </h2>
                     <p className='flex gap-1 items-center text-sm text-neutral1'>
                         <FaCircle className='text-[6px] text-sky-400'/> Online

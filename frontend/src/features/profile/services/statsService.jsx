@@ -167,10 +167,44 @@ const applyRankedMatchResult = async ({
 
 }
 
+const applySingleplayerGameResult = async ({ userId, modeId, score = 0 }) => {
+
+    if(!userId || !modeId) {
+        throw new Error('userId and modeId are required to apply singleplayer game result.')
+    }
+
+    const userStatsRef = doc(db, 'userStats', userId)
+    const resolvedScore = Math.max(0, Number(score) || 0)
+
+    await runTransaction(db, async (transactionRef) => {
+        const userStatsSnap = await transactionRef.get(userStatsRef)
+        const resolvedUserStatsData = userStatsSnap.exists() ? (userStatsSnap.data() ?? {}) : {}
+        const currentPlay = resolvedUserStatsData?.play ?? {}
+        const modeStats = currentPlay?.[modeId] ?? {}
+
+        transactionRef.set(userStatsRef, {
+            userId,
+            play: {
+                ...currentPlay,
+                [modeId]: {
+                    ...modeStats,
+                    peakScore: Number(modeStats?.peakScore) > 0
+                        ? Math.min(Number(modeStats?.peakScore), resolvedScore)
+                        : resolvedScore,
+                    gamesPlayed: (Number(modeStats?.gamesPlayed) || 0) + 1,
+                },
+            },
+            lastUpdated: new Date(),
+        }, { merge: true })
+    })
+
+}
+
 export {
     createUserStatsDocument,
     getUserStatsByUserId,
     subscribeToUserStatsByUserId,
     updateUserStatsByUserId,
     applyRankedMatchResult,
+    applySingleplayerGameResult,
 }

@@ -11,6 +11,7 @@ import { useToast } from '../../../shared/contexts/ToastContext'
 import { useModal } from '../../../shared/contexts/ModalContext'
 import MatchmakingToast from '../components/toasts/MatchmakingToast'
 import { HiChevronDoubleUp } from 'react-icons/hi'
+import { formatDurationMmSsMs } from '../../../shared/utils/formatters'
 import {
     buildMultiplayerUiState,
     buildSingleplayerUiState,
@@ -172,6 +173,7 @@ const Play = () => {
         }
 
         if (!isSelectedModeMultiplayer) {
+            navigate(`/play/game/${selectedModeId}`)
             return
         }
 
@@ -303,8 +305,12 @@ const Play = () => {
                         ) : (
                             <>
                                 <div className='flex flex-col items-center gap-3 mt-6'>
-                                    <p className='text-sm font-semibold text-neutral1'>High Score</p>
-                                    <p className='text-6xl font-bold'>{singleplayerStats.peakScore}</p>
+                                    <p className='text-sm font-semibold text-neutral1'>{selectedMode.scoreLabel}</p>
+                                    {singleplayerStats.peakScore ? (
+                                        <p className='text-5xl font-bold tabular-nums'>{formatDurationMmSsMs(singleplayerStats.peakScore)}</p>
+                                    ) : (
+                                        <p className='text-3xl text-neutral1 font-bold'>Not played</p>
+                                    )}
                                 </div>
                             </>
                         )}
