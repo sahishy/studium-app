@@ -61,7 +61,7 @@ const Countdown = ({ targetDate }) => {
     return (
         <div className='flex w-full max-w-2xl flex-col items-center gap-3 mt-12 mb-6'>
 
-            <hr className='w-sm border border-neutral4 rounded-full mb-6'/>
+            <hr className='w-sm border border-neutral4 rounded-full mb-6' />
 
             <h1 className='text-xs text-neutral1'>
                 launching in
@@ -85,7 +85,7 @@ const Countdown = ({ targetDate }) => {
                 ))}
             </div>
 
-            <hr className='w-sm border border-neutral4 rounded-full mt-6 mb-6'/>
+            <hr className='w-sm border border-neutral4 rounded-full mt-6 mb-6' />
 
         </div>
     )
@@ -262,8 +262,33 @@ const Navbar = ({ onOpenLogIn, onOpenSignUp }) => {
 
 const HeroSection = ({ onOpenLogIn, onOpenSignUp, scrollY }) => {
 
-    const maxTilt = 12
-    const tilt = Math.max(0, maxTilt - (scrollY * 0.2))
+    const imgRef = useRef(null)
+    const smoothScrollY = useRef(0)
+    const rafRef = useRef(null)
+
+    const maxTilt = 20
+
+    useEffect(() => {
+        const lerp = (a, b, t) => a + (b - a) * t
+
+        const animate = () => {
+            smoothScrollY.current = lerp(smoothScrollY.current, scrollY, 0.08)
+
+            const s = smoothScrollY.current
+            const tilt = Math.max(0, maxTilt - s * 0.2)
+            const scale = 0.8 + 0.2 * Math.pow(Math.min(s / 300, 1), 0.7)
+
+            if (imgRef.current) {
+                imgRef.current.style.transform =
+                    `perspective(1400px) rotateX(${tilt}deg) scale(${scale})`
+            }
+
+            rafRef.current = requestAnimationFrame(animate)
+        }
+
+        rafRef.current = requestAnimationFrame(animate)
+        return () => cancelAnimationFrame(rafRef.current)
+    }, [scrollY])
 
     return (
         <section className='px-4 pb-8 pt-18 text-center md:px-8 md:pt-24'>
@@ -271,7 +296,6 @@ const HeroSection = ({ onOpenLogIn, onOpenSignUp, scrollY }) => {
                 className='flex flex-col items-center'
                 style={{ transform: `translateY(${Math.min(16, scrollY * 0.03)}px)` }}
             >
-
                 <div className='rounded-full px-2 py-1 bg-white border border-neutral4 mb-6 shadow-lg shadow-shadow
                     text-xs
                     animate-shine bg-[length:200%_auto] 
@@ -292,36 +316,20 @@ const HeroSection = ({ onOpenLogIn, onOpenSignUp, scrollY }) => {
 
                 <Countdown targetDate={LAUNCH_DATE} />
 
-                {/* <div className='mt-8 flex flex-wrap items-center justify-center gap-3'>
-                    <Button
-                        type='primary'
-                        onClick={onOpenSignUp}
-                        disabled
-                    >
-                        Get started
-                    </Button>
-                    <Button
-                        type='secondary'
-                        onClick={onOpenLogIn}
-                        disabled
-                    >
-                        Learn more
-                    </Button>
-                </div> */}
-
                 <img
+                    ref={imgRef}
                     src={heroImage}
-                    alt='Studium dashboard preview'
-                    className='mt-12 w-full max-w-5xl rounded-2xl object-cover shadow-2xl shadow-shadow border border-neutral3 transition-transform duration-300'
+                    alt='Studium preview'
+                    className='mt-12 w-full max-w-5xl rounded-2xl object-cover shadow-2xl shadow-shadow border border-neutral3'
                     style={{
-                        transform: `perspective(1400px) rotateX(${tilt}deg)`,
-                        transformOrigin: 'center top'
+                        transform: `perspective(1400px) rotateX(${maxTilt}deg) scale(0.8)`,
+                        transformOrigin: 'center top',
+                        willChange: 'transform',
                     }}
                 />
             </div>
         </section>
     )
-
 }
 
 const useScrollProgress = (scrollY) => {
