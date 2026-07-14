@@ -343,7 +343,7 @@ const UniversityMarquee = () => {
 
     return (
         <section className='pt-28 md:pt-40'>
-            <p className='text-center text-sm text-neutral1'>used by students who got into top universities</p>
+            <p className='text-center text-sm text-neutral1'>used by students admitted to top universities</p>
             <div className='mt-8 overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)] [-webkit-mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]'>
                 <div ref={trackRef} className='flex w-max items-center will-change-transform'>
                     {[0, 1].map((copy) => (
