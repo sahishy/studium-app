@@ -268,14 +268,14 @@ const HeroSection = ({ onOpenLogIn, onOpenSignUp, scrollY }) => {
 
                         <div className='pointer-events-none absolute bottom-3 right-3 md:bottom-5 md:right-5'>
                             <svg viewBox='0 0 36 36' aria-hidden='true' className='h-6 w-6 -rotate-90'>
-                                <circle cx='18' cy='18' r='14' fill='none' stroke='rgba(0, 0, 0, 0.45)' strokeWidth='6' />
+                                <circle cx='18' cy='18' r='14' fill='none' stroke='rgba(0, 0, 0, 0.45)' strokeWidth='5' />
                                 <circle
                                     cx='18'
                                     cy='18'
                                     r='14'
                                     fill='none'
-                                    stroke='rgba(255, 255, 255, 0.8)'
-                                    strokeWidth='6'
+                                    stroke='rgba(255, 255, 255, 1)'
+                                    strokeWidth='5'
                                     strokeLinecap='round'
                                     pathLength='100'
                                     strokeDasharray='100'
