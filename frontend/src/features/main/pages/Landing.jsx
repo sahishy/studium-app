@@ -5,7 +5,7 @@ import { RiInstagramFill } from 'react-icons/ri'
 import { useAuth } from '../../auth/contexts/AuthContext'
 import { useModal } from '../../../shared/contexts/ModalContext'
 import logoLarge from '../../../assets/images/logo_lg.png'
-import heroImage from '../../../assets/images/landing/hero.jpg'
+import studiumDemo from '../../../assets/videos/studium-demo.mov'
 import logoLargeWhite from '../../../assets/images/logo_lg_white.png'
 import bronzeRank from '../../../assets/images/ranked/bronze_IV.svg'
 import Button from '../../../shared/components/ui/Button'
@@ -196,6 +196,7 @@ const HeroSection = ({ onOpenLogIn, onOpenSignUp, scrollY }) => {
 
     const stageRef = useRef(null)
     const [stageProgress, setStageProgress] = useState(0)
+    const [videoProgress, setVideoProgress] = useState(0)
 
     useEffect(() => {
         const stage = stageRef.current
@@ -244,15 +245,46 @@ const HeroSection = ({ onOpenLogIn, onOpenSignUp, scrollY }) => {
 
             <div ref={stageRef} className='relative mt-12 md:h-[135vh]'>
                 <div className='flex w-full items-start justify-center md:sticky md:top-20 md:h-[calc(100vh-5rem)] md:items-center'>
-                    <img
-                        src={heroImage}
-                        alt='Studium dashboard preview'
-                        className='w-full max-w-[68rem] rounded-2xl border border-neutral3 object-cover shadow-2xl shadow-shadow transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none'
+                    <div
+                        className='relative w-full max-w-[68rem] transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none'
                         style={{
                             transform: `perspective(1400px) rotateX(${tilt}deg) scale(${scale})`,
                             transformOrigin: 'center top'
                         }}
-                    />
+                    >
+                        <video
+                            src={studiumDemo}
+                            aria-label='Studium dashboard preview'
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            onTimeUpdate={(event) => {
+                                const { currentTime, duration } = event.currentTarget
+                                setVideoProgress(duration ? (currentTime / duration) * 100 : 0)
+                            }}
+                            className='block w-full rounded-2xl border border-neutral3 object-cover shadow-2xl shadow-shadow'
+                        />
+
+                        <div className='pointer-events-none absolute bottom-3 right-3 md:bottom-5 md:right-5'>
+                            <svg viewBox='0 0 36 36' aria-hidden='true' className='h-6 w-6 -rotate-90'>
+                                <circle cx='18' cy='18' r='14' fill='none' stroke='rgba(0, 0, 0, 0.45)' strokeWidth='6' />
+                                <circle
+                                    cx='18'
+                                    cy='18'
+                                    r='14'
+                                    fill='none'
+                                    stroke='rgba(255, 255, 255, 0.8)'
+                                    strokeWidth='6'
+                                    strokeLinecap='round'
+                                    pathLength='100'
+                                    strokeDasharray='100'
+                                    strokeDashoffset={100 - videoProgress}
+                                    className='transition-[stroke-dashoffset] duration-200 ease-linear'
+                                />
+                            </svg>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -630,8 +662,14 @@ const Footer = () => {
 
     return (
         <footer className='relative mt-16 min-h-[28rem] w-full bg-neutral0 px-6 pb-10 pt-16 text-neutral6 md:px-10'>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" className='absolute -top-64 -left-24'>
-                <path fill="#1F2937" d="M0,160L60,149.3C120,139,240,117,360,128C480,139,600,181,720,176C840,171,960,117,1080,96C1200,75,1320,85,1380,90.7L1440,96L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z"></path>
+            <svg
+                xmlns='http://www.w3.org/2000/svg'
+                viewBox='0 0 1440 320'
+                preserveAspectRatio='none'
+                aria-hidden='true'
+                className='pointer-events-none absolute inset-x-0 -top-20 h-24 w-full text-neutral0 sm:-top-28 sm:h-32 md:-top-36 md:h-40 lg:-top-44 lg:h-48'
+            >
+                <path fill='currentColor' d='M0,160L60,149.3C120,139,240,117,360,128C480,139,600,181,720,176C840,171,960,117,1080,96C1200,75,1320,85,1380,90.7L1440,96L1440,320L1380,320C1320,320,1200,320,1080,320C960,320,840,320,720,320C600,320,480,320,360,320C240,320,120,320,60,320L0,320Z' />
             </svg>
             <div className='relative z-1 mx-auto flex min-h-[12em] w-full max-w-6xl flex-col justify-between gap-14'>
                 <div className='grid gap-12 md:grid-cols-[1fr_auto] md:items-start'>
