@@ -315,14 +315,15 @@ const UniversityMarquee = () => {
 
     const trackRef = useRef(null)
     const universities = [
-        ['https://upload.wikimedia.org/wikipedia/commons/c/cc/Harvard_University_coat_of_arms.svg', 'Harvard'],
-        ['https://upload.wikimedia.org/wikipedia/commons/thumb/5/5d/MIT_logo_2003-2023.svg/3840px-MIT_logo_2003-2023.svg.png', 'MIT'],
-        ['https://identity.stanford.edu/wp-content/uploads/sites/3/2020/07/block-s-right.png', 'Stanford'],
-        ['https://upload.wikimedia.org/wikipedia/commons/d/d0/Princeton_seal.svg', 'Princeton'],
-        ['https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ1i3xBES5ZFIHmhXLTFezgPMwEs6Iag1CsJl_SVnAqzA&s=10', 'Yale'],
-        ['https://www.wikicu.com/images/thumb/b/ba/BastardShield.png/300px-BastardShield.png', 'Columbia'],
+        ['https://cra.org/wp-content/uploads/2024/12/UVA-Logo.svg', 'UVA'],
+        ['https://1000logos.net/wp-content/uploads/2022/07/University-of-Pennsylvania-Symbol.png', 'UPenn'],
+        ['https://shrunkenhead.com/cdn/shop/products/9402B7D3-A84B-421A-8780-89ECC3336185.jpg', 'UNC'],
         ['https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Cornell_University_seal.svg/250px-Cornell_University_seal.svg.png', 'Cornell'],
-        ['https://1000logos.net/wp-content/uploads/2021/06/Duke-Blue-Devils-logo.png', 'Duke']
+        ['https://upload.wikimedia.org/wikipedia/commons/thumb/9/93/Seal_of_the_University_of_Michigan.svg/250px-Seal_of_the_University_of_Michigan.svg.png', 'UMich'],
+        ['https://upload.wikimedia.org/wikipedia/en/thumb/5/54/Virginia_Tech_seal.svg/1280px-Virginia_Tech_seal.svg.png', 'VT'],
+        ['https://iconlogovector.com/uploads/images/2024/10/lg-670c4476b44ab-Duke-University-Seal.webp', 'Duke'],
+        ['https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Georgia_Tech_seal.svg/960px-Georgia_Tech_seal.svg.png', 'Georgia Tech'],
+        ['https://brandcenter.ufl.edu/wp-content/uploads/sites/57/2024/06/NEW-IMAGES_The-University-Seal_The-University-Seal-1-2-768x768-1.png', 'UF'],
     ]
 
     useEffect(() => {
@@ -350,7 +351,7 @@ const UniversityMarquee = () => {
                         <div key={copy} aria-hidden={copy === 1} className='flex shrink-0 items-center'>
                             {universities.map(([imgUrl, university]) => (
                                 <div key={`${copy}-${university}`} className='flex items-center gap-3 px-8 sm:px-12'>
-                                    <img src={imgUrl} alt={university} className='h-24 w-24 object-contain grayscale opacity-40' />
+                                    <img src={imgUrl} alt={university} className='h-24 w-24 object-cover grayscale opacity-40' />
                                 </div>
                             ))}
                         </div>
