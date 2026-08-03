@@ -1,21 +1,63 @@
 import { createCacheKey, deleteCacheEntry, getCacheValue, setCacheEntry } from '../../../shared/services/cacheService'
 import { CACHE_DEBOUNCE_MS, CACHE_NAMESPACES, CACHE_STORAGE_KEYS } from '../../../shared/utils/cacheUtils'
 import { createTask, deleteTask, updateTask } from './taskService'
+import { auth } from '../../../lib/firebase'
 
 let flushTimeoutId = null
 let isFlushing = false
 const pendingTaskIds = new Set()
 const pendingTaskFlushPromises = new Map()
 let hasHydratedPendingTaskOps = false
+let hydratedPendingTaskOpsUserId = null
 const TASK_PENDING_PATCH_NAMESPACE = CACHE_NAMESPACES.TASK_PENDING_PATCH
 const TASK_PATCH_FLUSH_DEBOUNCE_MS = CACHE_DEBOUNCE_MS.TASK_PATCH_FLUSH
 const TASK_PENDING_OPS_STORAGE_KEY = CACHE_STORAGE_KEYS.TASK_PENDING_OPS
+
+const getCurrentTaskOpsUserId = () => auth.currentUser?.uid ?? null
+
+const getTaskPendingOpsStorageKey = () => {
+    const currentUserId = getCurrentTaskOpsUserId()
+    return currentUserId
+        ? `${TASK_PENDING_OPS_STORAGE_KEY}:${currentUserId}`
+        : TASK_PENDING_OPS_STORAGE_KEY
+}
+
+const clearInMemoryPendingTaskOps = () => {
+    pendingTaskIds.forEach((taskId) => {
+        deleteCacheEntry(getPendingPatchKey(taskId))
+    })
+    pendingTaskIds.clear()
+
+    pendingTaskFlushPromises.forEach(({ reject }) => {
+        reject?.(new Error('Pending task queue reset after account change'))
+    })
+    pendingTaskFlushPromises.clear()
+
+    if (flushTimeoutId) {
+        clearTimeout(flushTimeoutId)
+        flushTimeoutId = null
+    }
+
+    isFlushing = false
+}
+
+const ensureTaskOpsHydrationMatchesCurrentUser = () => {
+    const currentUserId = getCurrentTaskOpsUserId()
+
+    if (hasHydratedPendingTaskOps && hydratedPendingTaskOpsUserId === currentUserId) {
+        return
+    }
+
+    clearInMemoryPendingTaskOps()
+    hasHydratedPendingTaskOps = false
+    hydratedPendingTaskOpsUserId = currentUserId
+}
 
 const readPersistedPendingOps = () => {
     if(typeof window === 'undefined') return {}
 
     try {
-        const raw = window.localStorage.getItem(TASK_PENDING_OPS_STORAGE_KEY)
+        const raw = window.localStorage.getItem(getTaskPendingOpsStorageKey())
         if(!raw) return {}
         const parsed = JSON.parse(raw)
         return parsed && typeof parsed === 'object' ? parsed : {}
@@ -29,11 +71,11 @@ const writePersistedPendingOps = (opsByTaskId = {}) => {
 
     try {
         if(!Object.keys(opsByTaskId).length) {
-            window.localStorage.removeItem(TASK_PENDING_OPS_STORAGE_KEY)
+            window.localStorage.removeItem(getTaskPendingOpsStorageKey())
             return
         }
 
-        window.localStorage.setItem(TASK_PENDING_OPS_STORAGE_KEY, JSON.stringify(opsByTaskId))
+        window.localStorage.setItem(getTaskPendingOpsStorageKey(), JSON.stringify(opsByTaskId))
     } catch {
         //
     }
@@ -62,6 +104,8 @@ const persistPendingTaskOpsSnapshot = () => {
 }
 
 const hydratePendingTaskOps = () => {
+    ensureTaskOpsHydrationMatchesCurrentUser()
+
     if(hasHydratedPendingTaskOps) return
     hasHydratedPendingTaskOps = true
 

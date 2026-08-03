@@ -1,4 +1,4 @@
-import { doc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, query, getDoc, getDocs, writeBatch } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, query, getDoc, getDocs, writeBatch, where } from 'firebase/firestore'
 import { updateCircleXP, updateUserXP } from '../../profile/services/xpService';
 import confetti from 'canvas-confetti';
 import { updateUserPreference, userCompleteTask } from '../../auth/services/userService';
@@ -174,7 +174,7 @@ const completeTaskAnimation = (isCircle) => {
     });
 }
 
-const useUserTasks = () => {
+const useUserTasks = (userId) => {
 
     const [userTasks, setUserTasks] = useState([]);
     const [isReady, setIsReady] = useState(false);
@@ -182,8 +182,14 @@ const useUserTasks = () => {
     useEffect(() => {
         setIsReady(false);
 
+        if (!userId) {
+            setUserTasks([])
+            setIsReady(true)
+            return undefined
+        }
+
         const tasksRef = collection(db, 'tasks');
-        const q = query(tasksRef);
+        const q = query(tasksRef, where('userId', '==', userId));
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(doc => ({
@@ -200,7 +206,7 @@ const useUserTasks = () => {
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [userId]);
 
     return { tasks: userTasks, isReady };
 
