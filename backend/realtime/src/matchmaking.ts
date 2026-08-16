@@ -4,7 +4,7 @@ const BASE_ELO_RANGE = 60;
 const ELO_RANGE_STEP = 60;
 const ELO_RANGE_STEP_MS = 10_000;
 const UNRESTRICTED_AFTER_MS = 60_000;
-export const BOT_FILL_AFTER_MS = 1_000;//15_000;
+export const BOT_FILL_AFTER_MS = 15_000;
 
 export const findBotFillEntries = (queue: QueueEntry[], now = Date.now()) => [...queue]
   .filter((entry) => entry.userIds.length === 1 && now - entry.joinedAt >= BOT_FILL_AFTER_MS)
