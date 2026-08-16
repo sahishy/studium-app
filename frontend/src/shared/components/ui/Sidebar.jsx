@@ -1,20 +1,35 @@
+import { useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { FaArrowRight, FaChild, FaGraduationCap, FaUserGroup, FaBookOpen, FaBoxArchive, FaCircle, FaArrowLeft } from 'react-icons/fa6';
+import { FaArrowRight, FaBookOpen, FaBoxArchive, FaChild, FaChevronDown, FaGraduationCap, FaTrophy, FaUserGroup, FaHouse } from 'react-icons/fa6'
 import { RiSwordFill } from 'react-icons/ri';
 import AvatarPicture from '../avatar/AvatarPicture.jsx';
 import { useMultiplayer } from '../../../features/multiplayer/contexts/MultiplayerContext.jsx'
-import { leaveRoom } from '../../../features/multiplayer/services/roomService.jsx'
 import { useFriends } from '../../../features/socials/contexts/FriendsContext.jsx'
-import Button from './Button.jsx';
+import { useUserStats } from '../../../features/profile/contexts/UserStatsContext.jsx'
+import { getCombinedRankedElo } from '../../../features/multiplayer/utils/multiplayerUtils.jsx'
 import Logo from '../misc/Logo.jsx';
 
-const navItems = [
-    { title: 'Agenda', path: '/agenda', icon: <FaBookOpen /> },
-    { title: 'Courses', path: '/courses', icon: <FaGraduationCap /> },
+const PLAY_ITEMS = [
+    { title: 'Lobby', path: '/play', icon: <FaHouse /> },
+    { title: 'Leaderboards', path: '/leaderboards', icon: <FaTrophy /> },
     { title: 'Socials', path: '/socials', icon: <FaUserGroup /> },
-    { title: 'Resources', path: '/resources', icon: <FaBoxArchive /> },
     { title: 'Avatar', path: '/avatar', icon: <FaChild /> },
 ]
+
+const STUDY_ITEMS = [
+    { title: 'Agenda', path: '/agenda', icon: <FaBookOpen /> },
+    { title: 'Courses', path: '/courses', icon: <FaGraduationCap /> },
+    { title: 'Resources', path: '/resources', icon: <FaBoxArchive /> },
+]
+
+const getStoredGroupState = (key, defaultValue) => {
+    try {
+        const storedValue = localStorage.getItem(key)
+        return storedValue === null ? defaultValue : storedValue === 'true'
+    } catch {
+        return defaultValue
+    }
+}
 
 const Sidebar = ({ profile }) => {
 
@@ -23,12 +38,28 @@ const Sidebar = ({ profile }) => {
 
     const { incomingRequests } = useFriends()
     const { session } = useMultiplayer()
+    const { userStats } = useUserStats()
     const inRoom = session?.status === 'in_room' && Boolean(session?.currentRoomId)
 
     const displayName = profile?.profile?.displayName || ''
+    const combinedRankedElo = getCombinedRankedElo(userStats)
+    const [playExpanded, setPlayExpanded] = useState(() => getStoredGroupState('sidebar:playExpanded', true))
+    const [studyExpanded, setStudyExpanded] = useState(() => getStoredGroupState('sidebar:studyExpanded', false))
+
+    const toggleGroup = (key, setter) => {
+        setter((currentValue) => {
+            const nextValue = !currentValue
+            try {
+                localStorage.setItem(key, String(nextValue))
+            } catch {
+                // Keep the in-memory preference when storage is unavailable.
+            }
+            return nextValue
+        })
+    }
 
     return (
-        <aside className={`bg-neutral5 p-4 flex flex-col justify-between shrink-0 w-64 border-r border-neutral4`}>
+        <aside className={`bg-neutral5 p-4 flex flex-col justify-between shrink-0 w-56 border-r border-neutral4`}>
 
             <div className='flex flex-col gap-6'>
 
@@ -45,23 +76,33 @@ const Sidebar = ({ profile }) => {
                         </AvatarPicture>
                     </button>
 
-                    <div className='flex flex-col items-center'>
-                        <h1 className='font-semibold'>{profile.firstName} {profile.lastName}</h1>
-                        <p className='text-xs text-neutral1'>@{displayName}</p>
+                    <div className='flex flex-col items-center gap-1'>
+                        <h1 className='font-semibold'>{displayName}</h1>
+                        <p className='text-xs font-semibold text-neutral1'>
+                            {combinedRankedElo} <span className='text-[0.625rem] font-medium'>SAT</span>
+                        </p>
                     </div>
                 </div>
 
-                <div className='flex flex-col'>
-                    <MultiplayerButton profile={profile} inRoom={inRoom} />
-                    {navItems.map((item, index) => (
-                        <SidebarNavLink
-                            key={index}
-                            item={item}
-                            isActive={location.pathname.startsWith(item.path)}
-                            disabled={inRoom}
-                            showNotification={item.path === '/socials' && incomingRequests.length > 0}
-                        />
-                    ))}
+                <div className='flex flex-col gap-4'>
+                    <SidebarGroup
+                        title='Play'
+                        expanded={playExpanded}
+                        onToggle={() => toggleGroup('sidebar:playExpanded', setPlayExpanded)}
+                        items={PLAY_ITEMS}
+                        location={location}
+                        disabled={inRoom}
+                        incomingRequests={incomingRequests}
+                    />
+                    <SidebarGroup
+                        title='Study'
+                        expanded={studyExpanded}
+                        onToggle={() => toggleGroup('sidebar:studyExpanded', setStudyExpanded)}
+                        items={STUDY_ITEMS}
+                        location={location}
+                        disabled={inRoom}
+                        incomingRequests={incomingRequests}
+                    />
                 </div>
 
 
@@ -83,13 +124,6 @@ const Sidebar = ({ profile }) => {
                     >
                         Settings
                     </Link>
-                    <Link
-                        to='/updates'
-                        onClick={inRoom ? (event) => event.preventDefault() : undefined}
-                        className={`transition text-neutral1 ${inRoom ? 'cursor-not-allowed' : 'hover:text-neutral0'}`}
-                    >
-                        Updates
-                    </Link>
 
                 </div>
             </div>
@@ -99,39 +133,32 @@ const Sidebar = ({ profile }) => {
     )
 }
 
-const MultiplayerButton = ({ profile, inRoom }) => {
-
-    const navigate = useNavigate();
-    const { session } = useMultiplayer()
-
-    const handleClick = async () => {
-        if (!inRoom) {
-            navigate('/play')
-            return
-        }
-
-        const roomId = session?.currentRoomId
-        const userId = profile?.uid
-
-        if (!roomId || !userId) {
-            return
-        }
-
-        const leaverName = profile?.profile?.displayName || `${profile?.firstName ?? ''} ${profile?.lastName ?? ''}`.trim() || 'Player'
-
-        await leaveRoom({ roomId, userId, leaverName })
-        navigate('/play')
-    }
-
+const SidebarGroup = ({ title, expanded, onToggle, items, location, disabled, incomingRequests }) => {
     return (
-        <Button
-            onClick={handleClick}
-            type={inRoom ? 'negative' : 'primary'}
-            className='mb-3'
-        >
-            {inRoom ? <FaArrowLeft /> : <RiSwordFill />}
-            {inRoom ? 'Leave Game' : 'SAT Games'}
-        </Button>
+        <div className='flex flex-col'>
+            <button
+                type='button'
+                onClick={onToggle}
+                aria-expanded={expanded}
+                disabled={disabled}
+                className={`flex gap-3 items-center justify-between px-3 py-2 text-xs uppercase font-semibold text-neutral1 rounded-xl 
+                    transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-40`}
+            >
+                <span>{title}</span>
+                <hr className='w-full border-1 border-neutral3'/>
+                <FaChevronDown className={`shrink-0 text-xs text-neutral2 transition-transform ${expanded ? '' : '-rotate-90'}`} />
+            </button>
+
+            {expanded && items.map((item) => (
+                <SidebarNavLink
+                    key={item.path}
+                    item={item}
+                    isActive={location.pathname.startsWith(item.path)}
+                    disabled={disabled}
+                    showNotification={item.path === '/socials' && incomingRequests.length > 0}
+                />
+            ))}
+        </div>
     )
 }
 

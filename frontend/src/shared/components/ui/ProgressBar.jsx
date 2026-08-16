@@ -7,6 +7,7 @@ const ProgressBar = ({
     trackClassName = '',
     secondaryClassName = '',
     fillClassName = '',
+    fillTransitionClassName = 'transition-all duration-1000',
     fillStyle,
 }) => {
 
@@ -29,7 +30,7 @@ const ProgressBar = ({
             ) : null}
 
             <div
-                className={`relative h-full rounded-full transition-all duration-1000 bg-sky-400 ${fillClassName}`}
+                className={`relative h-full rounded-full ${fillTransitionClassName} bg-sky-400 ${fillClassName}`}
                 style={{ width: `${width}%`, ...fillStyle }}
             >
                 <div className={`h-[30%] translate-y-[3px] mx-[3px] rounded-full bg-white/30`} />

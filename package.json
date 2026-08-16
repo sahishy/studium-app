@@ -3,7 +3,10 @@
 	"version": "1.0.0",
 	"main": "index.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1",
+		"realtime:dev": "npm --prefix backend/realtime run dev",
+		"realtime:check": "npm --prefix backend/realtime run check",
+		"realtime:deploy": "npm --prefix backend/realtime run deploy",
+		"matchmaking:simulate": "npm --prefix backend/realtime run simulate",
 		"emulators:stop": "npx kill-port 8080",
    		"emulators:start": "firebase emulators:start --only functions,auth,firestore,storage --import=./emulator-data --export-on-exit"
 	},
@@ -19,4 +22,4 @@
 	},
 	"homepage": "https://github.com/sahishy/studium-app#readme",
 	"description": ""
-}
+	}

@@ -36,8 +36,6 @@ const Welcome = () => {
     const [selectedSchoolId, setSelectedSchoolId] = useState(null)
     const [attendsAcademies, setAttendsAcademies] = useState(null)
 
-    const [firstName, setFirstName] = useState('')
-    const [lastName, setLastName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [firebaseError, setFirebaseError] = useState({})
@@ -87,16 +85,6 @@ const Welcome = () => {
         let isValid = true
         const newErrors = {}
 
-        if (firstName === '') {
-            newErrors.firstName = 'First name is required'
-            isValid = false
-        }
-
-        if (lastName === '') {
-            newErrors.lastName = 'Last name is required'
-            isValid = false
-        }
-
         if (email === '') {
             newErrors.email = 'Email is required'
             isValid = false
@@ -142,8 +130,6 @@ const Welcome = () => {
             const userRef = doc(db, 'users', user.uid)
 
             const newUserObject = await createNewUserObject({
-                firstName,
-                lastName,
                 email: res.user.email,
             })
 
@@ -154,7 +140,7 @@ const Welcome = () => {
                 profileForThumbnail: newUserObject,
             })
 
-            navigate('/agenda')
+            navigate('/play')
         } catch (err) {
             setFirebaseError(err)
         }
@@ -172,12 +158,7 @@ const Welcome = () => {
             const userSnap = await getDoc(userRef)
 
             if (!userSnap.exists()) {
-                const [nextFirstName, ...rest] = (user.displayName || '').split(' ')
-                const nextLastName = rest.join(' ') || ''
-
                 const newUserObject = await createNewUserObject({
-                    firstName: nextFirstName,
-                    lastName: nextLastName,
                     email: user.email,
                 })
 
@@ -189,7 +170,7 @@ const Welcome = () => {
                 })
             }
 
-            navigate('/agenda')
+            navigate('/play')
         } catch (err) {
             setFirebaseError(err)
         }
@@ -334,34 +315,6 @@ const Welcome = () => {
                         </div>
 
                         <form onSubmit={handleSignup} noValidate className='flex flex-col gap-4'>
-                            <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
-                                <div className='flex flex-col gap-1.5'>
-                                    <input
-                                        type='text'
-                                        placeholder='First Name'
-                                        value={firstName}
-                                        onChange={(e) => setFirstName(e.target.value)}
-                                        className='w-full rounded-full bg-neutral5 px-4 py-3 text-sm outline-neutral3 transition-colors'
-                                        autoComplete='given-name'
-                                        name='firstName'
-                                    />
-                                    {errors.firstName && <p className='flex items-center gap-2 text-xs text-red-400'><FaCircleExclamation />{errors.firstName}</p>}
-                                </div>
-
-                                <div className='flex flex-col gap-1.5'>
-                                    <input
-                                        type='text'
-                                        placeholder='Last Name'
-                                        value={lastName}
-                                        onChange={(e) => setLastName(e.target.value)}
-                                        className='w-full rounded-full bg-neutral5 px-4 py-3 text-sm outline-neutral3 transition-colors'
-                                        autoComplete='family-name'
-                                        name='lastName'
-                                    />
-                                    {errors.lastName && <p className='flex items-center gap-2 text-xs text-red-400'><FaCircleExclamation />{errors.lastName}</p>}
-                                </div>
-                            </div>
-
                             <div className='flex flex-col gap-1.5'>
                                 <input
                                     type='email'

@@ -1,12 +1,7 @@
 import { useEffect, useRef } from "react";
 import { updateStatus, updateStreak } from "../../auth/services/userService";
-import { useMultiplayer } from "../../multiplayer/contexts/MultiplayerContext";
-import { cancelQueue } from "../../multiplayer/services/matchmakingService";
-import { leaveRoom } from "../../multiplayer/services/roomService";
 
 const ActivityHandler = ({ profile }) => {
-
-    const { session } = useMultiplayer();
 
     const inactivityPeriod = 24 * (60 * 60 * 1000);
     const checkPeriod = 5 * (1000);
@@ -15,42 +10,6 @@ const ActivityHandler = ({ profile }) => {
     const lastActivityTimeRef = useRef(Date.now());
     const lastCheckRef = useRef(Date.now());
     const lastSeen = useRef(profile.lastSeen);
-    const sessionRef = useRef(session);
-
-    useEffect(() => {
-
-        const handleMultiplayerDisconnect = () => {
-            const currentSession = sessionRef.current;
-            const userId = profile?.uid;
-
-            if(!currentSession || !userId) {
-                return;
-            }
-
-            if(currentSession.status === "queue") {
-                void cancelQueue({ userId });
-                return;
-            }
-
-            if(currentSession.status === "in_room" && currentSession.currentRoomId) {
-                void leaveRoom({ roomId: currentSession.currentRoomId, userId });
-            }
-        };
-
-        window.addEventListener("beforeunload", handleMultiplayerDisconnect);
-        window.addEventListener("offline", handleMultiplayerDisconnect);
-
-        return () => {
-            window.removeEventListener("beforeunload", handleMultiplayerDisconnect);
-            window.removeEventListener("offline", handleMultiplayerDisconnect);
-        };
-
-    }, [profile?.uid]);
-
-    useEffect(() => {
-        sessionRef.current = session;
-    }, [session]);
-
     useEffect(() => {
         lastSeen.current = profile.lastSeen;
     }, [profile.lastSeen])

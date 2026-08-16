@@ -27,19 +27,34 @@ class AvatarModelErrorBoundary extends Component {
     }
 }
 
-const Model = ({ profile, animation = null }) => {
+const AvatarSceneModel = ({
+    profile,
+    animation = null,
+    animationKey = 0,
+    loop = true,
+    fadeDuration = 0.12,
+    opacity = 1,
+    onAnimationFinished,
+    ...groupProps
+}) => {
     
     const groupRef = useRef();
 
     const { scene, animations } = useGLTF(characterModelUrl);
     const clonedScene = useMemo(() => SkeletonUtils.clone(scene), [scene]);
 
-    const { actions } = useAnimations(animations, groupRef);
+    const { actions, mixer } = useAnimations(animations, groupRef);
+    const onAnimationFinishedRef = useRef(onAnimationFinished);
 
     const faceTextures = useTexture(AVATAR_FACES);
     const avatar = profile?.profile?.avatar || profile?.avatar || {};
     const selectedFace = avatar?.face ?? 0;
+    const avatarColor = avatar?.color || "#ffffff";
     const faceTexture = faceTextures[selectedFace] || faceTextures[0];
+
+    useEffect(() => {
+        onAnimationFinishedRef.current = onAnimationFinished;
+    }, [onAnimationFinished]);
 
     useEffect(() => {
         if (!faceTexture) return;
@@ -50,6 +65,9 @@ const Model = ({ profile, animation = null }) => {
         clonedScene.traverse((obj) => {
             if (!obj.isMesh) return;
 
+            obj.castShadow = true;
+            obj.receiveShadow = true;
+
             const materials = Array.isArray(obj.material)
                 ? obj.material
                 : [obj.material];
@@ -57,30 +75,38 @@ const Model = ({ profile, animation = null }) => {
             const newMaterials = materials.map((mat) => {
                 if (!mat) return mat;
 
+                let nextMaterial;
+
                 if (mat.name === "body") {
-                    const bodyMat = new THREE.MeshToonMaterial({
-                        color: avatar?.color || "#ffffff",
+                    nextMaterial = new THREE.MeshToonMaterial({
+                        color: avatarColor,
                     });
-                    bodyMat.name = "body";
-                    return bodyMat;
+                    nextMaterial.name = "body";
                 }
 
-                if (mat.name === "face") {
-                    const faceMat = new THREE.MeshBasicMaterial({
+                else if (mat.name === "face") {
+                    nextMaterial = new THREE.MeshBasicMaterial({
                         map: faceTexture,
                         transparent: true,
                         alphaTest: 0.5,
                     });
-                    faceMat.name = "face";
-                    return faceMat;
+                    nextMaterial.name = "face";
                 }
 
-                return mat;
+                else {
+                    nextMaterial = mat.clone();
+                }
+
+                nextMaterial.transparent = opacity < 1 || nextMaterial.transparent;
+                nextMaterial.opacity = Math.max(0, Math.min(1, opacity));
+                nextMaterial.depthWrite = opacity >= 1;
+                if (nextMaterial.name === "face" && opacity < 1) nextMaterial.alphaTest = 0.05;
+                return nextMaterial;
             });
 
             obj.material = newMaterials.length === 1 ? newMaterials[0] : newMaterials;
         });
-    }, [clonedScene, faceTexture, profile]);
+    }, [avatarColor, clonedScene, faceTexture, opacity]);
 
     useEffect(() => {
         if (!actions) return;
@@ -93,18 +119,33 @@ const Model = ({ profile, animation = null }) => {
 
         const action = actions[animation];
         if (action) {
-            action.reset().fadeIn(0.2).play();
+            action.reset();
+            action.enabled = true;
+            action.clampWhenFinished = !loop;
+            action.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1);
+            action.setEffectiveWeight(1);
+            action.setEffectiveTimeScale(1);
+            if (fadeDuration > 0) action.fadeIn(fadeDuration);
+            action.play();
         }
 
-        return () => {
-            if (action) {
-                action.fadeOut(0.2);
+        const handleFinished = (event) => {
+            if (event.action === action) {
+                onAnimationFinishedRef.current?.();
             }
         };
-    }, [actions, animation]);
+        if (!loop && action) mixer.addEventListener("finished", handleFinished);
+
+        return () => {
+            mixer.removeEventListener("finished", handleFinished);
+            if (action) {
+                if (fadeDuration > 0) action.fadeOut(fadeDuration);
+            }
+        };
+    }, [actions, animation, animationKey, fadeDuration, loop, mixer]);
 
     return (
-        <group ref={groupRef}>
+        <group ref={groupRef} {...groupProps}>
             <primitive object={clonedScene} scale={1} position={[0, -1, 0]} />
         </group>
     );
@@ -120,7 +161,7 @@ const AvatarModel = ({ profile, animation = null, className }) => {
                     <directionalLight position={[0, 1, 1]} intensity={1.5} />
 
                     <Suspense fallback={null}>
-                        <Model profile={profile} animation={animation} />
+                        <AvatarSceneModel profile={profile} animation={animation} />
                     </Suspense>
 
                     <RotateControls />
@@ -132,4 +173,5 @@ const AvatarModel = ({ profile, animation = null, className }) => {
 
 useGLTF.preload(characterModelUrl);
 
+export { AvatarSceneModel };
 export default AvatarModel;

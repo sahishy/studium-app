@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "studium-realtime",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-16",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "durable_objects": {
+    "bindings": [
+      { "name": "USER", "class_name": "UserServer" },
+      { "name": "PARTY", "class_name": "SocialPartyServer" },
+      { "name": "MATCHMAKER", "class_name": "MatchmakerServer" },
+      { "name": "GAME", "class_name": "GameServer" },
+      { "name": "BOTCHAT", "class_name": "BotChatServer" }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "UserServer",
+        "SocialPartyServer",
+        "MatchmakerServer",
+        "GameServer",
+        "BotChatServer"
+      ]
+    }
+  ]
+}

@@ -41,13 +41,11 @@ const generateUniqueDisplayName = async (maxAttempts = 20) => {
 
 }
 
-const createNewUserObject = async ({ firstName, lastName, email }) => {
+const createNewUserObject = async ({ email }) => {
 
     const displayName = await generateUniqueDisplayName();
 
     return {
-        firstName: firstName,
-        lastName: lastName,
         email: email,
         profile: {
             displayName,

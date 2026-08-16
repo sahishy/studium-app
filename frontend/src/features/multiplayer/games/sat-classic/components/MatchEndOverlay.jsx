@@ -1,8 +1,9 @@
-import AvatarPicture from '../../../../../shared/components/avatar/AvatarPicture'
+import AvatarStack from '../../../../../shared/components/avatar/AvatarStack'
 import HealthPanel from './HealthPanel'
 import { formatDurationMmSs } from '../../../../../shared/utils/formatters'
 import Card from '../../../../../shared/components/ui/Card'
 import ProgressBar from '../../../../../shared/components/ui/ProgressBar'
+import { areGameTeammates } from '../../../utils/multiplayerUtils'
 
 const MatchEndOverlay = ({
     winnerUserId,
@@ -16,9 +17,7 @@ const MatchEndOverlay = ({
 
     const leftPlayer = healthBoard?.leftPlayer ?? null
     const rightPlayer = healthBoard?.rightPlayer ?? null
-    const myPlayer = [leftPlayer, rightPlayer].find((entry) => entry?.userId === userId) ?? null
-    const opponentPlayer = [leftPlayer, rightPlayer].find((entry) => entry?.userId && entry?.userId !== userId) ?? null
-
+    const localPlayer = [leftPlayer, rightPlayer].find((player) => player?.userId === userId) ?? null
     const isDraw = !winnerUserId
     const isMyWin = !isDraw && winnerUserId === userId
     const eloDelta = Number(rankedProgression?.eloDelta) || 0
@@ -55,9 +54,10 @@ const MatchEndOverlay = ({
                 <HealthPanel player={rightPlayer} align='end' />
             </div>
 
-            <h2 className='text-2xl font-bold mt-9 mb-6 underline underline-offset-12 decoration-neutral2'>Your Rank</h2>
+            {rankedProgression ? <>
+                <h2 className='text-2xl font-bold mt-9 mb-6 underline underline-offset-12 decoration-neutral2'>Your Rank</h2>
 
-            <div className='w-full max-w-xl mb-8 flex flex-col gap-4'>
+                <div className='w-full max-w-xl mb-8 flex flex-col gap-4'>
                 <div className='grid grid-cols-2 gap-4'>
                     <div className='flex items-center gap-4'>
                         <img
@@ -118,37 +118,31 @@ const MatchEndOverlay = ({
                     />                    
                 </div>
 
-            </div>
+                </div>
+            </> : <p className='text-sm text-neutral1 mt-6 mb-8'>Private match · ELO unchanged</p>}
 
             <h2 className='text-2xl font-bold mt-9 mb-6 underline underline-offset-12 decoration-neutral2'>Game Rounds</h2>
 
             <div className='w-full max-w-4xl flex flex-col gap-3'>
-                {rounds.map((roundEntry) => (
-                    <div key={roundEntry.id} className='flex items-center gap-4'>
-                        <div className='w-12 flex justify-center'>
-                            {roundEntry.myCorrect ? (
-                                <AvatarPicture
-                                    profile={{ profile: { profilePicture: myPlayer?.profilePicture ?? null } }}
-                                    className='w-10 h-10'
-                                />
-                            ) : null}
+                {rounds.map((roundEntry) => {
+                    const correctPlayers = roundEntry.correctPlayers ?? []
+                    const localTeamPlayers = correctPlayers.filter((player) => areGameTeammates(player, localPlayer))
+                    const opposingTeamPlayers = correctPlayers.filter((player) => !areGameTeammates(player, localPlayer))
+                    return (
+                    <div key={roundEntry.id} className='w-full flex items-center gap-4'>
+                        <div className='w-32 shrink-0 flex justify-end'>
+                            <AvatarStack users={localTeamPlayers} maxVisible={4} sizeClassName='w-10 h-10' />
                         </div>
-
-                        <Card className={'w-full gap-1! items-center'}>
+                        <Card className='flex-1 min-w-0 gap-1! items-center'>
                             <p className='text-sm font-semibold'>Round {roundEntry.roundNumber}</p>
                             <p className='text-xs text-neutral1'>Correct Answer: {roundEntry.correctAnswer ?? '—'}. Explanations coming soon.</p>
                         </Card>
-
-                        <div className='w-12 flex justify-center'>
-                            {roundEntry.opponentCorrect ? (
-                                <AvatarPicture
-                                    profile={{ profile: { profilePicture: opponentPlayer?.profilePicture ?? null } }}
-                                    className='w-10 h-10'
-                                />
-                            ) : null}
+                        <div className='w-32 shrink-0 flex justify-start'>
+                            <AvatarStack users={opposingTeamPlayers} maxVisible={4} sizeClassName='w-10 h-10' />
                         </div>
                     </div>
-                ))}
+                    )
+                })}
                 {!rounds.length ? (
                     <p className='text-center text-sm text-neutral1'>No rounds found.</p>
                 ) : null}

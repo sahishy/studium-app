@@ -28,7 +28,7 @@ const LogInModal = ({ onSwitchToSignUp }) => {
             try {
                 await signInWithEmailAndPassword(auth, email, password)
                 closeModal()
-                navigate('/agenda')
+                navigate('/play')
             } catch (err) {
                 setFirebaseError(err)
             }
@@ -47,10 +47,7 @@ const LogInModal = ({ onSwitchToSignUp }) => {
             const userSnap = await getDoc(userRef)
 
             if (!userSnap.exists()) {
-                const [firstName, ...rest] = (user.displayName || '').split(' ')
-                const lastName = rest.join(' ') || ''
-
-                const newUserObject = await createNewUserObject({ firstName, lastName, email: user.email })
+                const newUserObject = await createNewUserObject({ email: user.email })
                 await setDoc(userRef, newUserObject)
                 await createUserStatsDocument({ userId: user.uid })
                 await uploadProfilePicture({
@@ -60,7 +57,7 @@ const LogInModal = ({ onSwitchToSignUp }) => {
             }
 
             closeModal()
-            navigate('/agenda')
+            navigate('/play')
         } catch (err) {
             setFirebaseError(err)
         }

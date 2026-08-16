@@ -74,7 +74,7 @@ const MainScreen = () => {
 
     return (
         <UserStatsProvider userId={profile?.uid}>
-            <MultiplayerProvider userId={profile?.uid}>
+            <MultiplayerProvider userId={profile?.uid} profile={profile}>
                 <CirclesProvider profile={profile}>
                     <FriendsProvider profile={profile}>
                         <CoursesProvider profile={profile}>

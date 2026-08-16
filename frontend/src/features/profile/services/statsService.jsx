@@ -1,4 +1,4 @@
-import { doc, getDoc, onSnapshot, runTransaction, setDoc } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore'
 import { db } from '../../../lib/firebase'
 
 const createUserStatsDocument = async ({ userId, schoolId = null, schoolAffiliations = [] }) => {
@@ -103,74 +103,9 @@ const updateUserStatsByUserId = async (userId, userStatsData) => {
     
 }
 
-const applyRankedMatchResult = async ({
-    userId,
-    modeId,
-    eloDelta = 0,
-    transaction = null,
-    userStatsData = null,
-}) => {
-
-    if(!userId || !modeId) {
-        throw new Error('userId and modeId are required to apply ranked match result.')
-    }
-
-    const resolvedEloDelta = Number(eloDelta) || 0
-    if(!resolvedEloDelta) {
-        return
-    }
-
-    const userStatsRef = doc(db, 'userStats', userId)
-
-    const applyUpdate = async (activeTransaction) => {
-        let resolvedUserStatsData = userStatsData
-
-        if(!resolvedUserStatsData || typeof resolvedUserStatsData !== 'object') {
-            const userStatsSnap = await activeTransaction.get(userStatsRef)
-            resolvedUserStatsData = userStatsSnap.exists() ? (userStatsSnap.data() ?? {}) : {}
-        }
-
-        const currentPlay = resolvedUserStatsData?.play ?? {}
-        const modeStats = currentPlay?.[modeId] ?? {}
-
-        const currentElo = Number(modeStats?.elo) || 0
-        const currentPeakElo = Number(modeStats?.peakElo) || currentElo
-
-        const nextElo = Math.max(0, currentElo + resolvedEloDelta)
-        const nextPeakElo = Math.max(currentPeakElo, nextElo)
-
-        const nextPlay = {
-            ...currentPlay,
-            [modeId]: {
-                ...modeStats,
-                elo: nextElo,
-                peakElo: nextPeakElo,
-                gamesPlayed: (Number(modeStats?.gamesPlayed) || 0) + 1,
-            },
-        }
-
-        activeTransaction.set(userStatsRef, {
-            userId,
-            play: nextPlay,
-            lastUpdated: new Date(),
-        }, { merge: true })
-    }
-
-    if(transaction) {
-        await applyUpdate(transaction)
-        return
-    }
-
-    await runTransaction(db, async (transactionRef) => {
-        await applyUpdate(transactionRef)
-    })
-
-}
-
 export {
     createUserStatsDocument,
     getUserStatsByUserId,
     subscribeToUserStatsByUserId,
     updateUserStatsByUserId,
-    applyRankedMatchResult,
 }

@@ -1,6 +1,6 @@
 import { PiStarFourFill } from "react-icons/pi";
 import Card from "../../../shared/components/ui/Card";
-import AvatarPicture from "../../../shared/components/avatar/AvatarPicture";
+import AvatarStack from "../../../shared/components/avatar/AvatarStack";
 import { useCircleMembers } from "../services/circleService";
 import ProgressBar from "../../../shared/components/ui/ProgressBar";
 import { useMembers } from "../contexts/MembersContext";
@@ -23,6 +23,10 @@ const CircleCard = ({ circle }) => {
         return circleTasks.filter((task) => extractTaskTitleMetadata(task.title).circleId === circle.uid).length
     }, [circleTasks, circle.uid])
     const circleTotalElo = Number(circle.totalElo) || 0
+    const circleMemberProfiles = useMemo(
+        () => allMembers.filter((user) => circleMembers.some((member) => member.userId === user.uid)),
+        [allMembers, circleMembers]
+    )
 
     return (
         <Card
@@ -82,18 +86,14 @@ const CircleCard = ({ circle }) => {
                 </h1>
             </div>
 
-            <div className="flex items-center">
-
-                {Array.from({ length: Math.min(circle.memberCount || 0, 4) }).map((_, index) => (
-                    <AvatarPicture key={index} profile={allMembers.filter((user) => circleMembers.some((member) => member.userId === user.uid))[index]} className="w-10 h-10 outline-4 outline-neutral6 rounded-full" />
-                ))}
-                {(circle.memberCount || 0) > 4 && (
-                    <div className="w-12 h-12 rounded-full border-4 border-neutral6 -ml-3 flex items-center justify-center bg-neutral5 text-sm text-neutral1 transition-colors ">
-                        +{(circle.memberCount || 0) - 4}
-                    </div>
-                )}
-
-            </div>
+            <AvatarStack
+                users={circleMemberProfiles}
+                totalCount={circle.memberCount || 0}
+                maxVisible={4}
+                sizeClassName="w-10 h-10"
+                overlapClassName="-space-x-3"
+                outlineClassName="outline-4 outline-neutral6"
+            />
 
         </Card >
     )

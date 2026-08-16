@@ -29,7 +29,7 @@ const MatchmakingToast = ({
     const queueTimeLabel = useMemo(() => {
         const queuedAtMs = queuedAt?.toDate
             ? queuedAt.toDate().getTime()
-            : null
+            : (queuedAt instanceof Date ? queuedAt.getTime() : Number(queuedAt) || null)
 
         if(!queuedAtMs || !isQueueing) {
             return '0:00'

@@ -1,0 +1,23 @@
+{
+  "name": "studium-realtime",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "deploy": "wrangler deploy",
+    "build": "wrangler deploy --dry-run",
+    "typegen": "wrangler types --env-file .typegen.vars",
+    "check": "npm run typegen && tsc --noEmit",
+    "simulate": "node --import tsx scripts/simulate-matchmaking.ts"
+  },
+  "dependencies": {
+    "partyserver": "^0.5.10"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.21.3",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.0",
+    "wrangler": "^4.0.0"
+  }
+}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { FaCircleExclamation } from 'react-icons/fa6'
 import { FLAIR_OPTIONS } from '../../../auth/utils/userUtils'
 import Button from '../../../../shared/components/ui/Button'
@@ -9,8 +9,6 @@ const EditFlairModal = ({ currentFlair = '', closeModal, onSave }) => {
     const [draftFlair, setDraftFlair] = useState(currentFlair)
     const [isSaving, setIsSaving] = useState(false)
     const [submitError, setSubmitError] = useState('')
-
-    const selectedOption = FLAIR_OPTIONS.find((option) => option.value === draftFlair)
 
     const handleSave = async () => {
 

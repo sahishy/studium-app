@@ -29,6 +29,7 @@ const HealthPanel = ({ player, align = 'start', damageIndicator = null }) => {
 
                 <AvatarPicture
                     profile={{ profile: { profilePicture: player?.profilePicture ?? null } }}
+                    avatar={player?.avatar}
                     className='w-12 h-12'
                 />
 
