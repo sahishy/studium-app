@@ -1,4 +1,4 @@
-import type { GameContext, GameEngine, StoredGame } from "./contracts";
+import { changedAction, unchangedAction, type GameContext, type GameEngine, type StoredGame } from "./contracts";
 import { isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
 
 export type TimberSide = "left" | "right";
@@ -228,17 +228,17 @@ export const createTimberGame = (): GameEngine => ({
     context.addEvent("GAME_STARTED", { questionId: ids[0] ?? null });
   },
   handleAction(game, userId, message, context) {
-    if (game.status !== "active") return;
+    if (game.status !== "active") return unchangedAction();
     const player = game.players.find((entry) => entry.userId === userId);
-    if (!player) return;
+    if (!player) return unchangedAction();
 
     if (message.type === "game.answer" && game.state.phase === "question_active") {
-      if (context.now < Number(game.state.currentQuestionActiveAt || 0)) return;
-      if (context.now >= Number(game.state.currentQuestionDeadlineAt || 0)) return;
+      if (context.now < Number(game.state.currentQuestionActiveAt || 0)) return unchangedAction();
+      if (context.now >= Number(game.state.currentQuestionDeadlineAt || 0)) return unchangedAction();
       const questionId = game.state.currentQuestionId;
       const question = game.privateState.questionsById?.[questionId];
       const response = String((message.payload as any)?.submittedResponse ?? "").trim();
-      if (!question || !response || (player.state.answeredQuestionIds as string[]).includes(questionId)) return;
+      if (!question || !response || (player.state.answeredQuestionIds as string[]).includes(questionId)) return unchangedAction();
       game.privateState.answerSequence = Number(game.privateState.answerSequence || 0) + 1;
       const answer = {
         userId,
@@ -258,16 +258,16 @@ export const createTimberGame = (): GameEngine => ({
         game.state.currentQuestionDeadlineAt = Math.min(Number(game.state.currentQuestionDeadlineAt), context.now + POST_SUBMIT_GRACE_MS);
         game.state.phaseDeadlineAt = game.state.currentQuestionDeadlineAt;
       }
-      return;
+      return changedAction();
     }
 
-    if (message.type !== "game.chop" || game.state.phase !== "timber_active") return;
-    if (context.now >= Number(game.state.timberRoundDeadlineAt || 0)) return;
+    if (message.type !== "game.chop" || game.state.phase !== "timber_active") return unchangedAction();
+    if (context.now >= Number(game.state.timberRoundDeadlineAt || 0)) return unchangedAction();
     const side = (message.payload as any)?.side;
-    if (side !== "left" && side !== "right") return;
-    if (context.now < Number(player.state.stunnedUntil || 0)) return;
+    if (side !== "left" && side !== "right") return unchangedAction();
+    if (context.now < Number(player.state.stunnedUntil || 0)) return unchangedAction();
     const lastChopAt = Number(player.state.lastChopAt || 0);
-    if (lastChopAt && context.now - lastChopAt < MIN_CHOP_INTERVAL_MS) return;
+    if (lastChopAt && context.now - lastChopAt < MIN_CHOP_INTERVAL_MS) return unchangedAction();
 
     const actualChops = Number(player.state.timberActualChops) || 0;
     const branch = (game.privateState.branchSequence ?? [])[actualChops] as TimberBranch;
@@ -283,6 +283,7 @@ export const createTimberGame = (): GameEngine => ({
     if (Number(player.state.timberProgress) >= Number(game.state.requiredChops)) {
       resolveTimberRound(game, userId, "target_reached", context);
     }
+    return changedAction();
   },
   handleDeadline(game, context) {
     if (game.status !== "active" || context.now < Number(game.state.phaseDeadlineAt || 0)) return;

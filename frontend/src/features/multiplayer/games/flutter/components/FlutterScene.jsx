@@ -187,7 +187,7 @@ const FlutterWings = ({ opacity = 1, ...groupProps }) => {
     )
 }
 
-const FlightAvatar = ({ player, local = false, input, winner = false, falling = false, fallStartedAt = null, resultAnimationKey = 0 }) => {
+const FlightAvatar = ({ player, local = false, input, winner = false, falling = false, fallStartedAt = null, resultAnimationKey = 0, serverNow = Date.now }) => {
     const placementRef = useRef(null)
     const positionRef = useRef(new THREE.Vector2(Number(player?.state?.flutterX) || 0, Number(player?.state?.flutterY) || 0))
     const velocityRef = useRef(new THREE.Vector2(Number(player?.state?.flutterVelocityX) || 0, Number(player?.state?.flutterVelocityY) || 0))
@@ -209,7 +209,9 @@ const FlightAvatar = ({ player, local = false, input, winner = false, falling = 
 
     useEffect(() => {
         authoritativeRef.current.set(Number(player?.state?.flutterX) || 0, Number(player?.state?.flutterY) || 0)
-        positionRef.current.lerp(authoritativeRef.current, local ? 0.42 : 0.68)
+        const error = positionRef.current.distanceTo(authoritativeRef.current)
+        if(error > 2.5) positionRef.current.copy(authoritativeRef.current)
+        else positionRef.current.lerp(authoritativeRef.current, local ? 0.35 : 0.55)
         velocityRef.current.set(Number(player?.state?.flutterVelocityX) || 0, Number(player?.state?.flutterVelocityY) || 0)
     }, [local, player?.state?.flutterVelocityX, player?.state?.flutterVelocityY, player?.state?.flutterX, player?.state?.flutterY])
 
@@ -222,7 +224,7 @@ const FlightAvatar = ({ player, local = false, input, winner = false, falling = 
     useFrame((_, delta) => {
         if(!placementRef.current) return
         if(falling && fallStartedAt) {
-            const elapsed = Math.max(0, (Date.now() - Number(fallStartedAt)) / 1000)
+            const elapsed = Math.max(0, (serverNow() - Number(fallStartedAt)) / 1000)
             placementRef.current.position.set(
                 fallOriginRef.current.x + spin.drift * elapsed,
                 fallOriginRef.current.y - (3.9 * elapsed * elapsed),
@@ -245,7 +247,6 @@ const FlightAvatar = ({ player, local = false, input, winner = false, falling = 
         velocityRef.current.y += (targetY - velocityRef.current.y) * blend
         positionRef.current.x = THREE.MathUtils.clamp(positionRef.current.x + velocityRef.current.x * delta, -BOUNDS.x, BOUNDS.x)
         positionRef.current.y = THREE.MathUtils.clamp(positionRef.current.y + velocityRef.current.y * delta, -BOUNDS.y, BOUNDS.y)
-        if(!local) positionRef.current.lerp(authoritativeRef.current, Math.min(1, delta * 4))
         placementRef.current.position.set(positionRef.current.x, positionRef.current.y, local ? 0.25 : -0.2)
         const horizontalTilt = THREE.MathUtils.clamp(velocityRef.current.x * 0.09, -0.48, 0.48)
         const verticalTilt = THREE.MathUtils.clamp(velocityRef.current.y * 0.1, -0.55, 0.55)
@@ -292,7 +293,7 @@ const FlightAvatar = ({ player, local = false, input, winner = false, falling = 
     )
 }
 
-const FlutterWorld = ({ localPlayer, opponent, rings, now, localInput, resultWinnerUserId, fallingUserIds, slowdownStartedAt, animationKey }) => {
+const FlutterWorld = ({ localPlayer, opponent, rings, now, localInput, resultWinnerUserId, fallingUserIds, slowdownStartedAt, animationKey, serverNow }) => {
     return (
         <>
             <ambientLight intensity={1.4} />
@@ -308,6 +309,7 @@ const FlutterWorld = ({ localPlayer, opponent, rings, now, localInput, resultWin
                 falling={fallingUserIds.includes(opponent?.userId)}
                 fallStartedAt={slowdownStartedAt}
                 resultAnimationKey={animationKey}
+                serverNow={serverNow}
             />
             <FlightAvatar
                 player={localPlayer}
@@ -317,12 +319,13 @@ const FlutterWorld = ({ localPlayer, opponent, rings, now, localInput, resultWin
                 falling={fallingUserIds.includes(localPlayer?.userId)}
                 fallStartedAt={slowdownStartedAt}
                 resultAnimationKey={animationKey}
+                serverNow={serverNow}
             />
         </>
     )
 }
 
-const FlutterScene = ({ localPlayer, opponent, rings = [], now, localInput, resultWinnerUserId = null, fallingUserIds = [], slowdownStartedAt = null, animationKey = 0 }) => (
+const FlutterScene = ({ localPlayer, opponent, rings = [], now, localInput, resultWinnerUserId = null, fallingUserIds = [], slowdownStartedAt = null, animationKey = 0, serverNow = Date.now }) => (
     <Canvas
         className='absolute inset-0 h-full! w-full!'
         dpr={[1, 2]}
@@ -341,6 +344,7 @@ const FlutterScene = ({ localPlayer, opponent, rings = [], now, localInput, resu
                 fallingUserIds={fallingUserIds}
                 slowdownStartedAt={slowdownStartedAt}
                 animationKey={animationKey}
+                serverNow={serverNow}
             />
         </Suspense>
     </Canvas>

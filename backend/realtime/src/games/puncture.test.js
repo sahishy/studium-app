@@ -164,6 +164,20 @@ test("collides with a player-attached pin and throttles shot bursts", () => {
   assert.equal(player.state.lastShotHit, true);
 });
 
+test("returns compact shot deltas and rejects duplicate client action ids", () => {
+  const fixture = setup();
+  enterPuncture(fixture);
+  const message = { id: "shot-delta", type: "game.shoot", payload: { clientActionId: "client-shot-1" } };
+  const accepted = fixture.engine.handleAction(fixture.game, "p1", message, fixture.context());
+  assert.equal(accepted.changed, true);
+  assert.equal(accepted.delivery, "delta");
+  assert.equal(accepted.delta.type, "game.punctureShotResult");
+  assert.equal(accepted.delta.payload.clientActionId, "client-shot-1");
+  fixture.setNow(fixture.context().now + 100);
+  const duplicate = fixture.engine.handleAction(fixture.game, "p1", message, fixture.context());
+  assert.equal(duplicate.changed, false);
+});
+
 test("resolves target wins, timeout leaders, and a tied tenth round", () => {
   const targetFixture = setup();
   enterPuncture(targetFixture);

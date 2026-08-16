@@ -113,9 +113,12 @@ test("accepts fresh valid input and rejects stale or malformed input", () => {
   const fixture = setup();
   enterFlutter(fixture);
   const player = fixture.game.players[0];
-  fixture.engine.handleAction(fixture.game, "p1", { type: "game.flutterInput", payload: { sequence: 2, up: true, down: false, left: false, right: true } }, fixture.context());
+  const accepted = fixture.engine.handleAction(fixture.game, "p1", { type: "game.flutterInput", payload: { sequence: 2, up: true, down: false, left: false, right: true } }, fixture.context());
+  assert.equal(accepted.changed, true);
+  assert.equal(accepted.delivery, "delta");
   assert.equal(player.state.flutterInputSequence, 2);
-  fixture.engine.handleAction(fixture.game, "p1", { type: "game.flutterInput", payload: { sequence: 1, up: false, down: true, left: false, right: false } }, fixture.context());
+  const stale = fixture.engine.handleAction(fixture.game, "p1", { type: "game.flutterInput", payload: { sequence: 1, up: false, down: true, left: false, right: false } }, fixture.context());
+  assert.equal(stale.changed, false);
   assert.equal(player.state.flutterInput.up, true);
   fixture.engine.handleAction(fixture.game, "p1", { type: "game.flutterInput", payload: { sequence: 3, up: "yes", down: false, left: false, right: false } }, fixture.context());
   assert.equal(player.state.flutterInputSequence, 2);

@@ -1,4 +1,4 @@
-import type { GameEngine } from "./contracts";
+import { changedAction, unchangedAction, type GameEngine } from "./contracts";
 
 const MAX_QUESTIONS = 10;
 const PENALTY_MS = 20_000;
@@ -11,11 +11,11 @@ export const createBlitzGame = (): GameEngine => ({
     game.state = { phase: "active", questionIndex: 0, startedAt: context.now + 3_000, penaltyMs: 0, answers: [] };
   },
   handleAction(game, userId, message, context) {
-    if (message.type !== "game.answer" || game.status !== "active" || context.now < Number(game.state.startedAt)) return;
+    if (message.type !== "game.answer" || game.status !== "active" || context.now < Number(game.state.startedAt)) return unchangedAction();
     const index = Number(game.state.questionIndex);
     const question = game.privateState.questions[index];
     const response = String((message.payload as any)?.submittedResponse ?? "").trim();
-    if (!question || !response) return;
+    if (!question || !response) return unchangedAction();
     const correct = String(question.questionType).toLowerCase() === "spr"
       ? (question.acceptableAnswersComparable ?? []).includes(comparable(response))
       : response.toUpperCase() === question.correctAnswer;
@@ -40,6 +40,7 @@ export const createBlitzGame = (): GameEngine => ({
       };
       context.addEvent("GAME_ENDED", { score });
     }
+    return changedAction();
   },
   handleDeadline() {},
   publicState(game) {

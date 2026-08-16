@@ -1,4 +1,4 @@
-import type { GameEngine, StoredGame } from "./contracts";
+import { changedAction, unchangedAction, type GameEngine, type StoredGame } from "./contracts";
 import { isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
 
 const INITIAL_HEALTH = 3000;
@@ -109,13 +109,13 @@ export const createSatClassicGame = (): GameEngine => ({
     context.addEvent("GAME_STARTED", { questionId: ids[0] });
   },
   handleAction(game, userId, message, context) {
-    if (message.type !== "game.answer" || game.status !== "active") return;
-    if (context.now >= Number(game.state.currentRoundDeadlineAt || 0)) return;
+    if (message.type !== "game.answer" || game.status !== "active") return unchangedAction();
+    if (context.now >= Number(game.state.currentRoundDeadlineAt || 0)) return unchangedAction();
     const player = game.players.find((entry) => entry.userId === userId);
     const questionId = game.state.currentQuestionId;
     const question = game.privateState.questionsById?.[questionId];
     const response = String((message.payload as any)?.submittedResponse ?? "").trim();
-    if (!player || !question || !response || (player.state.answeredQuestionIds as string[]).includes(questionId)) return;
+    if (!player || !question || !response || (player.state.answeredQuestionIds as string[]).includes(questionId)) return unchangedAction();
     const elapsedMs = Math.max(0, context.now - Number(game.state.currentRoundStartedAt));
     player.state.answeredQuestionIds = [...(player.state.answeredQuestionIds as string[]), questionId];
     player.state.lastAnswer = { questionId, submittedResponse: response, elapsedMs, isCorrect: isCorrectSatAnswer(question, response) };
@@ -125,6 +125,7 @@ export const createSatClassicGame = (): GameEngine => ({
     } else {
       game.state.currentRoundDeadlineAt = Math.min(Number(game.state.currentRoundDeadlineAt), context.now + 16_000);
     }
+    return changedAction();
   },
   handleDeadline(game, context) {
     if (game.status === "active" && context.now >= Number(game.state.currentRoundDeadlineAt || 0)) {

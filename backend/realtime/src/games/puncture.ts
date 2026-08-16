@@ -1,4 +1,4 @@
-import type { GameContext, GameEngine, StoredGame } from "./contracts";
+import { changedAction, unchangedAction, type GameContext, type GameEngine, type StoredGame } from "./contracts";
 import { isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
 
 const MAX_QUESTIONS = 10;
@@ -267,17 +267,17 @@ export const createPunctureGame = (): GameEngine => ({
     context.addEvent("GAME_STARTED", { questionId: ids[0] ?? null });
   },
   handleAction(game, userId, message, context) {
-    if (game.status !== "active") return;
+    if (game.status !== "active") return unchangedAction();
     const player = game.players.find((entry) => entry.userId === userId);
-    if (!player) return;
+    if (!player) return unchangedAction();
 
     if (message.type === "game.answer" && game.state.phase === "question_active") {
-      if (context.now < Number(game.state.currentQuestionActiveAt || 0)) return;
-      if (context.now >= Number(game.state.currentQuestionDeadlineAt || 0)) return;
+      if (context.now < Number(game.state.currentQuestionActiveAt || 0)) return unchangedAction();
+      if (context.now >= Number(game.state.currentQuestionDeadlineAt || 0)) return unchangedAction();
       const questionId = game.state.currentQuestionId;
       const question = game.privateState.questionsById?.[questionId];
       const response = String((message.payload as any)?.submittedResponse ?? "").trim();
-      if (!question || !response || (player.state.answeredQuestionIds as string[]).includes(questionId)) return;
+      if (!question || !response || (player.state.answeredQuestionIds as string[]).includes(questionId)) return unchangedAction();
       game.privateState.answerSequence = Number(game.privateState.answerSequence || 0) + 1;
       const answer = {
         userId,
@@ -297,14 +297,17 @@ export const createPunctureGame = (): GameEngine => ({
         game.state.currentQuestionDeadlineAt = Math.min(Number(game.state.currentQuestionDeadlineAt), context.now + POST_SUBMIT_GRACE_MS);
         game.state.phaseDeadlineAt = game.state.currentQuestionDeadlineAt;
       }
-      return;
+      return changedAction();
     }
 
-    if (message.type !== "game.shoot" || game.state.phase !== "puncture_active") return;
-    if (context.now >= Number(game.state.punctureRoundDeadlineAt || 0)) return;
-    if (context.now < Number(player.state.stunnedUntil || 0)) return;
+    if (message.type !== "game.shoot" || game.state.phase !== "puncture_active") return unchangedAction();
+    if (context.now >= Number(game.state.punctureRoundDeadlineAt || 0)) return unchangedAction();
+    if (context.now < Number(player.state.stunnedUntil || 0)) return unchangedAction();
     const lastShotAt = Number(player.state.lastShotAt || 0);
-    if (lastShotAt && context.now - lastShotAt < MIN_SHOT_INTERVAL_MS) return;
+    if (lastShotAt && context.now - lastShotAt < MIN_SHOT_INTERVAL_MS) return unchangedAction();
+
+    const clientActionId = String((message.payload as any)?.clientActionId ?? "").slice(0, 100) || null;
+    if (clientActionId && player.state.lastClientActionId === clientActionId) return unchangedAction();
 
     const shotImpactAt = context.now + SHOT_TRAVEL_MS;
     const elapsedMs = Math.max(0, shotImpactAt - Number(game.state.punctureRoundStartedAt));
@@ -317,14 +320,20 @@ export const createPunctureGame = (): GameEngine => ({
     const hit = existingAngles.some((angle) => angularDistance(Number(angle), attachedAngle) <= PUNCTURE_COLLISION_DEGREES);
 
     player.state.lastShotAt = context.now;
+    player.state.lastClientActionId = clientActionId;
     player.state.lastShotHit = hit;
     player.state.shotImpactAt = shotImpactAt;
     player.state.punctureShotCount = (Number(player.state.punctureShotCount) || 0) + 1;
     if (hit) {
       player.state.stunnedUntil = context.now + STUN_MS;
-      context.addEvent("PUNCTURE_SHOT", { roundIndex: game.state.punctureRoundIndex, hit: true }, userId);
+      context.addEvent("PUNCTURE_SHOT", { roundIndex: game.state.punctureRoundIndex, hit: true, clientActionId }, userId);
       context.addEvent("PLAYER_STUNNED", { roundIndex: game.state.punctureRoundIndex, stunnedUntil: player.state.stunnedUntil }, userId);
-      return;
+      return changedAction({ type: "game.punctureShotResult", payload: {
+        userId, clientActionId, accepted: true, hit: true,
+        shotCount: player.state.punctureShotCount, pinsRemaining: player.state.pinsRemaining,
+        attachedPinAngles: player.state.puncturePinAngles, stunnedUntil: player.state.stunnedUntil,
+        shotImpactAt,
+      } });
     }
 
     player.state.puncturePinAngles = [
@@ -336,8 +345,18 @@ export const createPunctureGame = (): GameEngine => ({
       roundIndex: game.state.punctureRoundIndex,
       hit: false,
       pinsRemaining: player.state.pinsRemaining,
+      clientActionId,
     }, userId);
-    if (Number(player.state.pinsRemaining) <= 0) resolvePunctureRound(game, userId, "target_reached", context);
+    if (Number(player.state.pinsRemaining) <= 0) {
+      resolvePunctureRound(game, userId, "target_reached", context);
+      return changedAction();
+    }
+    return changedAction({ type: "game.punctureShotResult", payload: {
+      userId, clientActionId, accepted: true, hit: false, attachedAngle,
+      shotCount: player.state.punctureShotCount, pinsRemaining: player.state.pinsRemaining,
+      attachedPinAngles: player.state.puncturePinAngles, stunnedUntil: player.state.stunnedUntil,
+      shotImpactAt,
+    } });
   },
   handleDeadline(game, context) {
     if (game.status !== "active" || context.now < Number(game.state.phaseDeadlineAt || 0)) return;

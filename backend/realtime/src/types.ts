@@ -34,7 +34,7 @@ export type GameResult = {
   botPlayerIds?: string[];
 };
 
-export type ConnectionState = PlayerIdentity & { connectedAt: number };
+export type ConnectionState = PlayerIdentity & { connectedAt: number; protocolVersion: number };
 
 declare global {
   interface Env {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { sendGameMessage, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
+import { getGameServerNow, sendGameMessage, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
 import QuestionPane from '../sat-classic/components/QuestionPane'
 import CalculatorWindow from '../../components/windows/CalculatorWindow'
 import LoadingState from '../../../../shared/components/ui/LoadingState'
@@ -282,7 +282,7 @@ const TimberGame = ({ roomId, userId }) => {
     const [response, setResponse] = useState('')
     const [calculatorOpen, setCalculatorOpen] = useState(false)
     const [questionReveal, setQuestionReveal] = useState(null)
-    const [now, setNow] = useState(Date.now())
+    const [now, setNow] = useState(() => getGameServerNow(roomId))
     const shownAnswerToastEventIdsRef = useRef(new Set())
     const lastProcessedAnswerSequenceRef = useRef(null)
     const previousLocalChopsRef = useRef(null)
@@ -294,9 +294,9 @@ const TimberGame = ({ roomId, userId }) => {
 
     useEffect(() => subscribeToGameSnapshot(roomId, setSnapshot), [roomId])
     useEffect(() => {
-        const timer = setInterval(() => setNow(Date.now()), 50)
+        const timer = setInterval(() => setNow(getGameServerNow(roomId)), 50)
         return () => clearInterval(timer)
-    }, [])
+    }, [roomId])
 
     const state = snapshot?.room?.state ?? null
     const players = snapshot?.players ?? EMPTY_PLAYERS
@@ -408,11 +408,11 @@ const TimberGame = ({ roomId, userId }) => {
                 isCorrect: Boolean(myResult?.isCorrect),
                 correctAnswer: event?.data?.correctAnswer ?? null,
                 answerResponses,
-                startedAtMs: Date.now(),
+                startedAtMs: getGameServerNow(roomId),
                 durationMs: QUESTION_REVEAL_DURATION_MS,
             })
         })
-    }, [snapshot?.events, state?.questionIndex, userId, players])
+    }, [snapshot?.events, state?.questionIndex, userId, players, roomId])
     useEffect(() => {
         if(phase !== 'timber_active') return () => {}
         const onKeyDown = (event) => {

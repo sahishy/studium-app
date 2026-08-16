@@ -16,11 +16,13 @@ const MultiplayerProvider = ({ userId, profile = null, children }) => {
     const { showToast, hideToast } = useToast()
 
     useEffect(() => {
-        if(!userId) return () => {}
         configureRealtimeProfile(profile || { uid: userId }, userStats)
+    }, [userId, profile, userStats])
+
+    useEffect(() => {
+        if(!userId) return () => {}
         const socket = createSocket({ party: 'user', room: userId })
         socketRef.current = socket
-        const onOpen = () => socket.send(message('session.subscribe'))
         const onMessage = (event) => {
             try {
                 const incoming = JSON.parse(event.data)
@@ -35,11 +37,10 @@ const MultiplayerProvider = ({ userId, profile = null, children }) => {
                 setError(new Error('Received an invalid realtime response.'))
             }
         }
-        socket.addEventListener('open', onOpen)
         socket.addEventListener('message', onMessage)
         socket.addEventListener('close', () => setLoading(false))
         return () => socket.close()
-    }, [userId, profile, userStats])
+    }, [userId])
 
     const sendCommand = useCallback((type, payload = {}) => {
         const socket = socketRef.current

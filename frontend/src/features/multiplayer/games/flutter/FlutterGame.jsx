@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { sendGameMessage, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
+import { getGameServerNow, sendGameMessage, subscribeToGameReconnect, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
 import QuestionPane from '../sat-classic/components/QuestionPane'
 import CalculatorWindow from '../../components/windows/CalculatorWindow'
 import LoadingState from '../../../../shared/components/ui/LoadingState'
@@ -221,7 +221,7 @@ const FlutterGame = ({ roomId, userId }) => {
     const [calculatorOpen, setCalculatorOpen] = useState(false)
     const [questionReveal, setQuestionReveal] = useState(null)
     const [localInput, setLocalInput] = useState(EMPTY_INPUT)
-    const [now, setNow] = useState(Date.now())
+    const [now, setNow] = useState(() => getGameServerNow(roomId))
     const inputRef = useRef(EMPTY_INPUT)
     const inputSequenceRef = useRef(0)
     const shownAnswerEventsRef = useRef(new Set())
@@ -232,12 +232,13 @@ const FlutterGame = ({ roomId, userId }) => {
     const lastProcessedAnswerSequenceRef = useRef(null)
     const { screenShakeRef, shake } = useScreenShake()
     const { showToast } = useToast()
+    const serverNow = useCallback(() => getGameServerNow(roomId), [roomId])
 
     useEffect(() => subscribeToGameSnapshot(roomId, setSnapshot), [roomId])
     useEffect(() => {
-        const timer = setInterval(() => setNow(Date.now()), 50)
+        const timer = setInterval(() => setNow(getGameServerNow(roomId)), 50)
         return () => clearInterval(timer)
-    }, [])
+    }, [roomId])
 
     const state = snapshot?.room?.state ?? null
     const players = snapshot?.players ?? EMPTY_PLAYERS
@@ -289,7 +290,7 @@ const FlutterGame = ({ roomId, userId }) => {
                 const myResult = roundResults.find((result) => result?.userId === userId)
                 const answerResponses = roundResults.map((result) => ({ submittedResponse: result?.submittedResponse, isCorrect: Boolean(result?.isCorrect), player: players.find((player) => player.userId === result?.userId) })).filter((entry) => entry.submittedResponse != null && entry.player)
                 shownQuestionRevealEventsRef.current.add(event.uid)
-                setQuestionReveal({ question, questionIndex: state?.questionIndex ?? 0, submittedResponse: myResult?.submittedResponse ?? '', isCorrect: Boolean(myResult?.isCorrect), correctAnswer: event.data?.correctAnswer ?? null, answerResponses, startedAtMs: Date.now(), durationMs: QUESTION_REVEAL_DURATION_MS })
+                setQuestionReveal({ question, questionIndex: state?.questionIndex ?? 0, submittedResponse: myResult?.submittedResponse ?? '', isCorrect: Boolean(myResult?.isCorrect), correctAnswer: event.data?.correctAnswer ?? null, answerResponses, startedAtMs: getGameServerNow(roomId), durationMs: QUESTION_REVEAL_DURATION_MS })
             }
             if(event?.type === 'FLUTTER_SHIELD_CONSUMED' && event?.uid && event.actorUserId === userId && !shownShieldEventsRef.current.has(event.uid)) {
                 shownShieldEventsRef.current.add(event.uid)
@@ -301,12 +302,17 @@ const FlutterGame = ({ roomId, userId }) => {
                 if(!winnerUserId || winnerUserId !== userId) shake('impact')
             }
         })
-    }, [players, shake, snapshot?.events, state?.questionIndex, userId])
+    }, [players, roomId, shake, snapshot?.events, state?.questionIndex, userId])
 
     const sendInput = useCallback((next) => {
         inputSequenceRef.current += 1
         sendGameMessage(roomId, 'game.flutterInput', { sequence: inputSequenceRef.current, ...next })
     }, [roomId])
+
+    useEffect(() => {
+        const serverSequence = Number(localPlayer?.state?.flutterInputSequence)
+        if(Number.isSafeInteger(serverSequence)) inputSequenceRef.current = Math.max(inputSequenceRef.current, serverSequence)
+    }, [localPlayer?.state?.flutterInputSequence])
 
     useEffect(() => {
         if(phase !== 'flutter_active') {
@@ -335,18 +341,23 @@ const FlutterGame = ({ roomId, userId }) => {
             if(pressed.delete(direction)) update()
         }
         const onBlur = () => { if(pressed.size) { pressed.clear(); update() } }
+        const onVisibilityChange = () => { if(document.hidden) onBlur() }
         window.addEventListener('keydown', onKeyDown)
         window.addEventListener('keyup', onKeyUp)
         window.addEventListener('blur', onBlur)
-        const heartbeat = setInterval(() => sendInput(inputRef.current), 100)
+        document.addEventListener('visibilitychange', onVisibilityChange)
         update()
         return () => {
-            clearInterval(heartbeat)
             window.removeEventListener('keydown', onKeyDown)
             window.removeEventListener('keyup', onKeyUp)
             window.removeEventListener('blur', onBlur)
+            document.removeEventListener('visibilitychange', onVisibilityChange)
         }
     }, [phase, sendInput])
+
+    useEffect(() => subscribeToGameReconnect(roomId, () => {
+        if(phase === 'flutter_active') sendInput(inputRef.current)
+    }), [phase, roomId, sendInput])
 
     if(!state || !localPlayer || !opponent) return <LoadingState className='min-h-[420px]' />
     if(phase === 'finished' || snapshot?.room?.status === 'finished') return <FlutterMatchEnd snapshot={snapshot} userId={userId} startedAt={state.startedAt} />
@@ -394,6 +405,7 @@ const FlutterGame = ({ roomId, userId }) => {
                         fallingUserIds={fallingUserIds}
                         slowdownStartedAt={isResult ? state.flutterRoundResolvedAt : null}
                         animationKey={`${state.flutterRoundIndex}-${state.flutterAttempt}`}
+                        serverNow={serverNow}
                     />
                     {phase === 'flutter_countdown' ? (
                         <TransitionOverlay
