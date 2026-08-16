@@ -10,25 +10,20 @@ import Button from '../../../shared/components/ui/Button'
 import Card from '../../../shared/components/ui/Card'
 import ProgressBar from '../../../shared/components/ui/ProgressBar'
 import { useModal } from '../../../shared/contexts/ModalContext'
-import { getSchoolNameById } from '../services/schoolService'
 import { getMajorNameById } from '../services/majorService'
 import { getUserStatsByUserId, updateUserStatsByUserId } from '../services/statsService'
-import { getUserByDisplayName, isDisplayNameAvailable, updateUserInfo } from '../../auth/services/userService'
-import { buildMultiplayerUiState } from '../../multiplayer/utils/multiplayerUtils'
-import { FaGear, FaSchool, FaFlask } from 'react-icons/fa6'
+import { getUserByDisplayName, updateUserInfo } from '../../auth/services/userService'
+import { buildMultiplayerUiState, GAME_MODES, getCombinedRankedElo } from '../../multiplayer/utils/multiplayerUtils'
+import { FaGear } from 'react-icons/fa6'
 import { FaEdit } from 'react-icons/fa'
 import EditStatsModal from '../components/modals/EditStatsModal'
-import EditDisplayNameModal from '../components/modals/EditDisplayNameModal'
-import EditDisplayNameOrFlairModal from '../components/modals/EditDisplayNameOrFlairModal'
 import EditFlairModal from '../components/modals/EditFlairModal'
 import EditMajorModal from '../components/modals/EditMajorModal'
-import { ACT_MAX, ACT_MIN, GPA_MAX, GPA_MIN, SAT_MAX, SAT_MIN, getDraftAcademicFromStats, getParsedNumber, toModeLabel } from '../utils/profileUtils'
+import { ACT_MAX, ACT_MIN, GPA_MAX, GPA_MIN, SAT_MAX, SAT_MIN, getDraftAcademicFromStats, getParsedNumber } from '../utils/profileUtils'
 import { useUserStats } from '../contexts/UserStatsContext'
 import Podium from '../../../shared/components/avatar/Podium'
 import { removeFriend, sendFriendRequestByUserId, useHasOutgoingFriendRequest, useIsFriend } from '../../socials/services/friendService'
 import DisplayName from '../components/DisplayName'
-
-const SAT_CLASSIC_MODE_ID = 'sat-classic'
 
 const ProfileOverview = () => {
 
@@ -45,7 +40,7 @@ const ProfileOverview = () => {
     const [userStats, setUserStats] = useState(null)
     const [statsLoading, setStatsLoading] = useState(true)
     const [isEditMode, setIsEditMode] = useState(false)
-    const [draftAcademic, setDraftAcademic] = useState(getDraftAcademicFromStats({ userStats: null, displayName: '' }))
+    const [draftAcademic, setDraftAcademic] = useState(getDraftAcademicFromStats({ userStats: null }))
     const [saveError, setSaveError] = useState('')
 
     const isCurrentUser = (currentUserProfile?.profile?.displayName ?? '') === username
@@ -134,8 +129,7 @@ const ProfileOverview = () => {
 
     useEffect(() => {
         if (!isEditMode) {
-            const currentDisplayName = displayedProfile?.profile?.displayName ?? displayedProfile?.displayName ?? ''
-            setDraftAcademic(getDraftAcademicFromStats({ userStats: displayedUserStats, displayName: currentDisplayName }))
+            setDraftAcademic(getDraftAcademicFromStats({ userStats: displayedUserStats }))
         }
     }, [displayedUserStats, displayedProfile, isEditMode])
 
@@ -144,11 +138,6 @@ const ProfileOverview = () => {
         : profileLoading || statsLoading
 
     const academic = displayedUserStats?.academic ?? {}
-    const schoolId = academic?.schoolId ?? null
-    const schoolAffiliations = Array.isArray(academic?.schoolAffiliations) ? academic.schoolAffiliations : []
-    const schoolName = getSchoolNameById(schoolId)
-    const attendsAcademies = schoolAffiliations.includes('LCPS-000')
-
     const targetMajors = Array.isArray(academic?.targetMajors) ? academic.targetMajors : []
     const targetMajorNames = targetMajors
         .map((majorId) => getMajorNameById(majorId) ?? majorId)
@@ -158,57 +147,21 @@ const ProfileOverview = () => {
     const actScore = academic?.scores?.act
     const unweightedGpa = academic?.gpa?.unweighted
     const weightedGpa = academic?.gpa?.weighted
+    const combinedRankedElo = getCombinedRankedElo(displayedUserStats)
 
-    const satClassicRankedUi = useMemo(() => {
-        return buildMultiplayerUiState({ userStats: displayedUserStats, modeId: SAT_CLASSIC_MODE_ID })
+    const multiplayerModeUiStates = useMemo(() => {
+        return GAME_MODES
+            .filter((mode) => mode.type === 'multiplayer')
+            .map((mode) => ({
+                mode,
+                ...buildMultiplayerUiState({ userStats: displayedUserStats, modeId: mode.id }),
+            }))
     }, [displayedUserStats])
 
-    const {
-        rankedStats,
-        rankInfo,
-        currentTierMinElo,
-        currentTierSpan,
-        currentTierProgress,
-        eloToNextTier,
-        rankLabel,
-        nextTierLabel,
-        nextTierThreshold,
-    } = satClassicRankedUi
-
     const handleCancelEditMode = () => {
-        const currentDisplayName = displayedProfile?.profile?.displayName ?? displayedProfile?.displayName ?? ''
-        setDraftAcademic(getDraftAcademicFromStats({ userStats: displayedUserStats, displayName: currentDisplayName }))
+        setDraftAcademic(getDraftAcademicFromStats({ userStats: displayedUserStats }))
         setSaveError('')
         setIsEditMode(false)
-    }
-
-    const openEditDisplayNameModal = () => {
-        openModal(
-            <EditDisplayNameModal
-                value={draftAcademic.displayName}
-                closeModal={closeModal}
-                onCheckAvailability={async (nextValue) => {
-                    return isDisplayNameAvailable(nextValue, targetUserId)
-                }}
-                onSave={async (nextValue) => {
-                    try {
-                        await updateUserInfo(targetUserId, {
-                            'profile.displayName': nextValue,
-                        })
-                        setSaveError('')
-                    } catch (error) {
-                        setSaveError(error?.message || 'Unable to update display name.')
-                        return
-                    }
-
-                    setDraftAcademic((prev) => ({
-                        ...prev,
-                        displayName: nextValue,
-                    }))
-                }}
-                displayName={draftAcademic.displayName}
-            />
-        )
     }
 
     const openEditFlairModal = () => {
@@ -228,16 +181,6 @@ const ProfileOverview = () => {
                         throw error
                     }
                 }}
-            />
-        )
-    }
-
-    const openEditDisplayNameOrFlairModal = () => {
-        openModal(
-            <EditDisplayNameOrFlairModal
-                closeModal={closeModal}
-                onOpenDisplayName={openEditDisplayNameModal}
-                onOpenFlair={openEditFlairModal}
             />
         )
     }
@@ -421,29 +364,67 @@ const ProfileOverview = () => {
                                 {isCurrentUser && isEditMode && (
                                     <button
                                         type='button'
-                                        onClick={openEditDisplayNameOrFlairModal}
+                                        onClick={openEditFlairModal}
                                         className='p-2 rounded-lg text-neutral1 hover:text-neutral0 hover:bg-neutral5 transition cursor-pointer'
                                     >
                                         <FaEdit className='text-sm' />
                                     </button>
                                 )}
                             </div>
-                            <p className='text-xs text-neutral1 flex items-center gap-2 mt-1'>
-                                <FaSchool />
-                                {schoolName ? `Attends ${schoolName} High School` : 'School unavailable'}
+                            <p className='text-sm font-semibold text-neutral1 mt-1'>
+                                {combinedRankedElo} <span className='text-[0.625rem] font-medium'>SAT</span>
                             </p>
-                            {attendsAcademies && (
-                                <p className='text-xs text-neutral1 flex items-center gap-2 mt-1'>
-                                    <FaFlask />
-                                    Attends Academies of Loudoun
-                                </p>
-                            )}
 
                         </div>
 
                         {saveError ? (
                             <p className='text-xs text-red-400 mt-3'>{saveError}</p>
                         ) : null}
+
+                        <hr className='border-neutral4 my-6' />
+
+                        <section className='flex flex-col gap-4'>
+                            <h2 className='text-lg font-semibold text-neutral0'>Ranked</h2>
+
+                            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                                {multiplayerModeUiStates.map(({ mode, rankedStats, rankInfo, currentTierMinElo, currentTierSpan, currentTierProgress, rankLabel }) => {
+                                    const ModeIcon = mode.icon
+
+                                    return (
+                                        <Card key={mode.id} className='p-5! gap-4 items-center'>
+                                            <div className='w-full flex items-center gap-3'>
+                                                <div className='w-10 h-10 shrink-0 rounded-xl bg-neutral5 flex items-center justify-center'>
+                                                    <ModeIcon className='text-xl text-neutral1' />
+                                                </div>
+                                                <div className='flex flex-col'>
+                                                    <p className='text-sm font-semibold text-neutral0 truncate'>{mode.name}</p>
+                                                    <p className='text-xs text-neutral1'>{rankLabel}</p>
+                                                </div>
+                                            </div>
+
+                                            <img
+                                                src={rankInfo.imageSrc}
+                                                alt={`${rankLabel} icon`}
+                                                className='absolute w-30 h-30 bottom-20 object-cover'
+                                            />
+
+                                            <div className='mt-30 w-full flex flex-col gap-1'>
+                                                <p className='text-2xl font-bold text-center'>
+                                                    {rankedStats.elo} <span className='text-sm font-semibold text-neutral1'>SAT</span>
+                                                </p>
+                                                <ProgressBar
+                                                    value={currentTierProgress}
+                                                    max={currentTierSpan}
+                                                    secondaryValue={Math.max(0, rankedStats.peakElo - currentTierMinElo)}
+                                                    secondaryMax={currentTierSpan}
+                                                    secondaryClassName='bg-sky-300/40'
+                                                />
+                                            </div>
+                                        </Card>
+                                    )
+                                })}
+                            </div>
+                        </section>
 
                         <hr className='border-neutral4 my-6' />
 
@@ -505,7 +486,7 @@ const ProfileOverview = () => {
                                                 )}
                                             </div>
                                             <p className={`font-bold z-1 ${unweightedGpa ? 'text-neutral0 text-5xl' : 'text-neutral1 text-xl'}`}>{unweightedGpa ?? 'Not provided'}</p>
-                                            <Podium className={'absolute top-4 w-32 h-32 object-contain pointer-events-none'} />
+                                            <Podium className={'absolute top-12 w-32 h-32 object-contain pointer-events-none'} />
                                         </div>
 
                                         <div className='relative flex flex-col gap-1 items-center w-32 h-24'>
@@ -529,7 +510,7 @@ const ProfileOverview = () => {
                                                 )}
                                             </div>
                                             <p className={`font-bold z-1 ${weightedGpa ? 'text-neutral0 text-5xl' : 'text-neutral1 text-xl'}`}>{weightedGpa ?? 'Not provided'}</p>
-                                            <Podium className={'absolute top-4 w-32 h-32 object-contain pointer-events-none'} />
+                                            <Podium className={'absolute top-12 w-32 h-32 object-contain pointer-events-none'} />
                                         </div>
 
                                     </div>
@@ -612,41 +593,6 @@ const ProfileOverview = () => {
                                 </Card>
 
                             </div>
-                        </section>
-
-                        <hr className='border-neutral4 my-6' />
-
-                        <section className='flex flex-col gap-4'>
-                            <h2 className='text-lg font-semibold text-neutral0'>Ranked</h2>
-
-                            <Card className='max-w-md p-6! gap-3 flex-row items-center'>
-                                <img
-                                    src={rankInfo.imageSrc}
-                                    alt={`${rankLabel} icon`}
-                                    className='w-32 h-32 object-cover'
-                                />
-                                <div className='flex-1 flex flex-col gap-3'>
-
-                                    <div className='flex flex-col'>
-                                        <p className='text-xs text-neutral1 uppercase tracking-wide'>{toModeLabel(SAT_CLASSIC_MODE_ID)}</p>
-                                        <p className='text-lg font-semibold text-neutral0'>{rankLabel}</p>
-                                    </div>
-
-                                    <div className='flex flex-col gap-1'>
-                                        <p className='text-4xl font-bold'>
-                                            {rankedStats.elo} <span className='text-lg font-semibold text-neutral1'>SAT</span>
-                                        </p>
-                                        <ProgressBar
-                                            value={currentTierProgress}
-                                            max={currentTierSpan}
-                                            secondaryValue={Math.max(0, rankedStats.peakElo - currentTierMinElo)}
-                                            secondaryMax={currentTierSpan}
-                                            secondaryClassName='bg-sky-300/40'
-                                        />
-                                    </div>
-
-                                </div>
-                            </Card>
                         </section>
 
                     </section>

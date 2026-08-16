@@ -39,7 +39,8 @@ import MaintenanceRoute from './routes/MaintenanceRoute'
 import FriendsIndexRedirect from './routes/FriendsIndexRedirect'
 import CircleOverviewIndexRedirect from './routes/CircleOverviewIndexRedirect'
 import CircleAgendaIndexRedirect from './routes/CircleAgendaIndexRedirect'
-import Updates from './features/main/pages/Updates'
+import PartyJoinRedirect from './routes/PartyJoinRedirect'
+import Leaderboards from './features/profile/pages/Leaderboards'
 
 export default function App() {
 	return (
@@ -93,12 +94,13 @@ export default function App() {
 								<Route path="all/:courseId" element={<CourseOverview />} />
 							</Route>
 							<Route path="/resources" element={<Resources />} />
+							<Route path="/leaderboards" element={<Leaderboards />} />
 							<Route path="/play" element={<Play />} />
-							<Route path="/play/room/:roomId" element={<MatchRoom />} />
+							<Route path="/play/party/:partyId" element={<PartyJoinRedirect />} />
+							<Route path="/play/game/:roomId" element={<MatchRoom />} />
 							<Route path="/join/:inviteCode" element={<JoinCircle />} />
 							<Route path="/avatar" element={<Avatar />} />
 							<Route path="/settings" element={<Settings />} />
-							<Route path="/updates" element={<Updates />} />
 							<Route path="/profile/:username" element={<ProfileOverview />} />
 						</Route>
 

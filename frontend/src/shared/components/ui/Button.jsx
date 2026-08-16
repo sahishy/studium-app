@@ -26,6 +26,8 @@ const Button = ( { children, onClick, type = 'secondary', htmlType = 'button', c
                 text-sm font-semibold
                 ${getClass()}
                 px-4 py-2 rounded-2xl cursor-pointer
+                bg-linear-to-b from-white/10 to-transparent
+                shadow-[inset_0_1px_0_rgba(255,255,255,0.28)]
                 disabled:opacity-60 disabled:cursor-not-allowed transition-all`}
         >
             {children}

@@ -4,6 +4,9 @@
 	"main": "index.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
+		"partykit:dev": "npm --prefix partykit run dev",
+		"partykit:check": "npm --prefix partykit run check",
+		"matchmaking:simulate": "npm --prefix partykit run simulate",
 		"emulators:stop": "npx kill-port 8080",
    		"emulators:start": "firebase emulators:start --only functions,auth,firestore,storage --import=./emulator-data --export-on-exit"
 	},
@@ -19,4 +22,4 @@
 	},
 	"homepage": "https://github.com/sahishy/studium-app#readme",
 	"description": ""
-}
+	}

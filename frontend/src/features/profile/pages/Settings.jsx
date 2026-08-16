@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { useAuth } from '../../auth/contexts/AuthContext'
-import { updateUserPreference } from '../../auth/services/userService'
+import { isDisplayNameAvailable, updateUserInfo, updateUserPreference } from '../../auth/services/userService'
 import Topbar from '../../../shared/components/ui/Topbar'
 import Button from '../../../shared/components/ui/Button'
 import PageHeader from '../../../shared/components/ui/PageHeader'
 import { FaGear } from 'react-icons/fa6'
 import BottomFade from '../../../shared/components/ui/BottomFade'
+import { useModal } from '../../../shared/contexts/ModalContext'
+import EditDisplayNameModal from '../components/modals/EditDisplayNameModal'
 
-const DetailRow = ({ label, value, action }) => {
+const DetailRow = ({ label, value, action, onAction }) => {
 
     return (
         <div className='py-3'>
@@ -19,14 +21,15 @@ const DetailRow = ({ label, value, action }) => {
                     {value ? <p className='text-sm text-neutral1'>{value}</p> : null}
                 </div>
 
-                {/* {action && (
+                {action && onAction && (
                     <button
                         type='button'
-                        className={`text-sm font-semibold transition-colors text-neutral2 cursor-not-allowed`}
+                        onClick={onAction}
+                        className='text-sm font-semibold text-neutral1 hover:text-neutral0 transition-colors cursor-pointer'
                     >
                         {action}
                     </button>
-                )} */}
+                )}
 
             </div>
         </div>
@@ -38,15 +41,10 @@ const Settings = () => {
 
     const { profile } = useOutletContext()
     const { logout } = useAuth()
+    const { openModal, closeModal } = useModal()
     const [selectedTheme, setSelectedTheme] = useState('light')
 
-    const resolvedName = useMemo(() => {
-        const first = String(profile?.firstName ?? '').trim()
-        const last = String(profile?.lastName ?? '').trim()
-        const combined = `${first} ${last}`.trim()
-        return combined || profile?.profile?.displayName || '—'
-    }, [profile])
-
+    const displayName = profile?.profile?.displayName || '—'
     const resolvedEmail = profile?.email || '—'
     const preferenceTheme = profile?.preferences?.theme
 
@@ -71,6 +69,20 @@ const Settings = () => {
         }
     }
 
+    const openDisplayNameModal = () => {
+        openModal(
+            <EditDisplayNameModal
+                value={profile?.profile?.displayName ?? ''}
+                displayName={profile?.profile?.displayName ?? ''}
+                closeModal={closeModal}
+                onCheckAvailability={(nextValue) => isDisplayNameAvailable(nextValue, profile?.uid)}
+                onSave={(nextValue) => updateUserInfo(profile.uid, {
+                    'profile.displayName': nextValue,
+                })}
+            />
+        )
+    }
+
     return (
         <div className='flex flex-col h-full overflow-scroll'>
             <Topbar profile={profile} />
@@ -82,7 +94,7 @@ const Settings = () => {
                     <h2 className='text-xl font-semibold text-neutral0'>Personal Details</h2>
 
                     <div className='divide-y divide-neutral4'>
-                        <DetailRow label='Name' value={resolvedName} action='Edit' />
+                        <DetailRow label='Display name' value={displayName} action='Edit' onAction={openDisplayNameModal} />
                         <DetailRow label='Email address' value={resolvedEmail} action='Edit' />
                         <DetailRow label='Password' value='••••••••' action='Edit' />
                     </div>

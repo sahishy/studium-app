@@ -1,23 +1,9 @@
-import { post } from '../../../../../shared/services/apiService'
+import { sendGameMessage } from '../../../services/realtimeSocketService'
 
-const submitSatClassicAnswer = async ({ roomId, userId, submittedResponse = '', isTimeout = false }) => {
-
+const submitSatClassicAnswer = async ({ roomId, submittedResponse = '' }) => {
     const normalizedResponse = String(submittedResponse ?? '').trim()
-    const timeoutSubmission = Boolean(isTimeout)
-
-    if(!roomId || !userId || (!timeoutSubmission && !normalizedResponse)) {
-        throw new Error('roomId, userId, and submittedResponse are required to submit an answer.')
-    }
-
-    await post('/multiplayer/games/sat-classic/answer/submit', {
-        roomId,
-        userId,
-        submittedResponse: normalizedResponse,
-        isTimeout: timeoutSubmission,
-    })
-
+    if(!roomId || !normalizedResponse) throw new Error('roomId and submittedResponse are required.')
+    sendGameMessage(roomId, 'game.answer', { submittedResponse: normalizedResponse })
 }
 
-export {
-    submitSatClassicAnswer
-}
+export { submitSatClassicAnswer }

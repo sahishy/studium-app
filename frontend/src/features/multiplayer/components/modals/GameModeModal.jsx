@@ -8,7 +8,7 @@ const TABS = [
     { name: 'singleplayer', label: 'Singleplayer' },
 ]
 
-const GameModeModal = ({ modes = [], selectedModeId, onSelectMode, closeModal }) => {
+const GameModeModal = ({ modes = [], selectedModeId, onSelectMode }) => {
 
     const selectedMode = modes.find((mode) => mode.id === selectedModeId)
     const defaultTab = selectedMode?.type === 'singleplayer' ? 'singleplayer' : 'multiplayer'

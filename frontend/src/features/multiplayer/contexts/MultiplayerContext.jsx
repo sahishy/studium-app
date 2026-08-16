@@ -1,99 +1,107 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
-import {
-    cancelQueue,
-    joinQueue,
-    subscribeToMatchmakingByUserId,
-    subscribeToSessionByUserId,
-    tryMatchmake,
-} from '../services/matchmakingService'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { configureRealtimeProfile, createSocket, message } from '../services/realtimeSocketService'
+import { useUserStats } from '../../profile/contexts/UserStatsContext'
+import { useToast } from '../../../shared/contexts/ToastContext'
+import PartyInviteToast from '../components/toasts/PartyInviteToast'
 
-const MultiplayerContext = createContext({
-    matchmaking: null,
-    session: null,
-    loading: true,
-    error: null,
-    joinQueue: async () => {},
-    leaveQueue: async () => {},
-    findMatch: async () => ({ matched: false, roomId: null }),
-})
+const MultiplayerContext = createContext(null)
 
-const MultiplayerProvider = ({ userId, children }) => {
-
-    const [matchmaking, setMatchmaking] = useState(null)
+const MultiplayerProvider = ({ userId, profile = null, children }) => {
     const [session, setSession] = useState(null)
-    const [matchmakingLoading, setMatchmakingLoading] = useState(true)
-    const [sessionLoading, setSessionLoading] = useState(true)
+    const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
+    const socketRef = useRef(null)
+    const invitationToastIdsRef = useRef(new Map())
+    const { userStats } = useUserStats()
+    const { showToast, hideToast } = useToast()
 
     useEffect(() => {
+        if(!userId) return () => {}
+        configureRealtimeProfile(profile || { uid: userId }, userStats)
+        const socket = createSocket({ party: 'user', room: userId })
+        socketRef.current = socket
+        const onOpen = () => socket.send(message('session.subscribe'))
+        const onMessage = (event) => {
+            try {
+                const incoming = JSON.parse(event.data)
+                if(incoming.type === 'session.snapshot') {
+                    setSession(incoming.payload)
+                    setLoading(false)
+                    setError(null)
+                } else if(incoming.type === 'error') {
+                    setError(new Error(incoming.payload?.message || 'Realtime request failed.'))
+                }
+            } catch {
+                setError(new Error('Received an invalid realtime response.'))
+            }
+        }
+        socket.addEventListener('open', onOpen)
+        socket.addEventListener('message', onMessage)
+        socket.addEventListener('close', () => setLoading(false))
+        return () => socket.close()
+    }, [userId, profile, userStats])
 
-        setMatchmakingLoading(true)
-        const unsubscribe = subscribeToMatchmakingByUserId(
-            userId,
-            setMatchmaking,
-            setMatchmakingLoading,
-            setError,
-        )
-
-        return () => unsubscribe()
-
-    }, [userId])
+    const sendCommand = useCallback((type, payload = {}) => {
+        const socket = socketRef.current
+        if(!socket) throw new Error('Realtime session is not connected.')
+        const sendNow = () => socket.send(message(type, payload))
+        if(socket.readyState === WebSocket.OPEN) sendNow()
+        else socket.addEventListener('open', sendNow, { once: true })
+    }, [])
 
     useEffect(() => {
+        const invitations = session?.partyId ? [] : (session?.invitations ?? [])
+        const activeKeys = new Set(invitations.map((invitation) => `${invitation.partyId}:${invitation.fromUserId}`))
 
-        setSessionLoading(true)
-        const unsubscribe = subscribeToSessionByUserId(
-            userId,
-            setSession,
-            setSessionLoading,
-            setError,
-        )
+        invitationToastIdsRef.current.forEach((toastId, key) => {
+            if(activeKeys.has(key)) return
+            hideToast(toastId, { force: true })
+            invitationToastIdsRef.current.delete(key)
+        })
 
-        return () => unsubscribe()
+        invitations.forEach((invitation) => {
+            const key = `${invitation.partyId}:${invitation.fromUserId}`
+            if(invitationToastIdsRef.current.has(key)) return
 
-    }, [userId])
-
-    const loading = matchmakingLoading || sessionLoading
+            let toastId = null
+            const dismiss = () => {
+                sendCommand('party.invite.dismiss', { partyId: invitation.partyId, fromUserId: invitation.fromUserId })
+                if(toastId) hideToast(toastId, { force: true })
+            }
+            toastId = showToast({
+                component: PartyInviteToast,
+                canHide: false,
+                duration: 10000,
+                props: {
+                    invitation,
+                    onIgnore: dismiss,
+                    onAccept: () => {
+                        sendCommand('party.join', { partyId: invitation.partyId, quietly: true })
+                        if(toastId) hideToast(toastId, { force: true })
+                    },
+                },
+            })
+            if(toastId) invitationToastIdsRef.current.set(key, toastId)
+        })
+    }, [session?.partyId, session?.invitations, sendCommand, showToast, hideToast])
 
     const value = useMemo(() => ({
-        matchmaking,
         session,
+        matchmaking: session?.status === 'queue' ? { modeId: session.modeId, queuedAt: new Date(session.queuedAt || Date.now()) } : null,
         loading,
         error,
-        joinQueue: async ({ modeId, elo = 0, displayName = 'A player', profilePicture = null }) => {
-            if(!userId) {
-                throw new Error('A valid userId is required to join queue.')
-            }
+        joinQueue: async ({ modeId, elo = 0 }) => sendCommand('queue.join', { modeId, elo }),
+        leaveQueue: async () => sendCommand('queue.leave'),
+        findMatch: async () => ({ matched: false, roomId: null }),
+        startSoloGame: async ({ modeId }) => sendCommand('game.startSolo', { modeId }),
+        createPartyAndInvite: async ({ userId: targetUserId }) => sendCommand('party.createAndInvite', { userId: targetUserId }),
+        joinParty: async ({ partyId }) => sendCommand('party.join', { partyId }),
+        leaveParty: async () => sendCommand('party.leave'),
+    }), [session, loading, error, sendCommand])
 
-            await joinQueue({ userId, modeId, elo, displayName, profilePicture })
-        },
-        leaveQueue: async () => {
-            if(!userId) {
-                throw new Error('A valid userId is required to leave queue.')
-            }
-
-            await cancelQueue({ userId })
-        },
-        findMatch: async ({ modeId }) => {
-            if(!userId) {
-                return { matched: false, roomId: null }
-            }
-
-            return tryMatchmake({ userId, modeId })
-        },
-    }), [matchmaking, session, loading, error, userId])
-
-    return (
-        <MultiplayerContext.Provider value={value}>
-            {children}
-        </MultiplayerContext.Provider>
-    )
-    
+    return <MultiplayerContext.Provider value={value}>{children}</MultiplayerContext.Provider>
 }
 
 const useMultiplayer = () => useContext(MultiplayerContext)
 
-export {
-    MultiplayerProvider,
-    useMultiplayer,
-}
+export { MultiplayerProvider, useMultiplayer }

@@ -1,25 +1,63 @@
-import { FaBoltLightning } from 'react-icons/fa6'
+import { FaBoltLightning, FaFeatherPointed, FaMapPin, FaTree } from 'react-icons/fa6'
 import { RANK_TIERS, getRankInfoFromElo, getModeStats } from '../../profile/utils/statsUtils'
 import { RiSwordFill } from 'react-icons/ri'
 
-const ROOMS_COLLECTION = 'multiplayerRooms'
-const MATCHMAKING_COLLECTION = 'multiplayerMatchmaking'
-const SESSIONS_COLLECTION = 'multiplayerSessions'
 const DEFAULT_MODE_ID = 'sat-classic'
 const MATCH_JOIN_DELAY_SECONDS = 3
 
 const GAME_MODES = [
     {
         id: 'sat-classic',
-        name: 'SAT Classic',
+        name: 'Classic',
         type: 'multiplayer',
+        playerCount: 2,
+        ranked: true,
+        supportsPublicMatchmaking: true,
+        supportsPartyGames: true,
         icon: RiSwordFill,
         description: 'Compete head-to-head in SAT battles and outscore your opponent across timed rounds.',
+    },
+    {
+        id: 'sat-timber',
+        name: 'Timber',
+        type: 'multiplayer',
+        playerCount: 2,
+        ranked: true,
+        supportsPublicMatchmaking: true,
+        supportsPartyGames: true,
+        icon: FaTree,
+        description: 'Earn an edge with SAT questions, then race your opponent to chop through the Timber rounds.',
+    },
+    {
+        id: 'sat-puncture',
+        name: 'Puncture',
+        type: 'multiplayer',
+        playerCount: 2,
+        ranked: true,
+        supportsPublicMatchmaking: true,
+        supportsPartyGames: true,
+        icon: FaMapPin,
+        description: 'Win SAT advantages, then time your shots to clear every pin without striking another.',
+    },
+    {
+        id: 'sat-flutter',
+        name: 'Flutter',
+        type: 'multiplayer',
+        playerCount: 2,
+        ranked: true,
+        supportsPublicMatchmaking: true,
+        supportsPartyGames: true,
+        icon: FaFeatherPointed,
+        description: 'Earn a shield with SAT questions, then fly together through an endless accelerating ring course.',
     },
     {
         id: 'blitz',
         name: 'Blitz',
         type: 'singleplayer',
+        playerCount: 1,
+        ranked: false,
+        supportsPublicMatchmaking: false,
+        supportsPartyGames: false,
         icon: FaBoltLightning,
         description: 'Answer 10 questions as fast possible, requiring quick thinking and accuracy under pressure.',
     },
@@ -27,6 +65,12 @@ const GAME_MODES = [
 
 const getModeById = (modeId = DEFAULT_MODE_ID) => {
     return GAME_MODES.find((mode) => mode.id === modeId) ?? GAME_MODES[0]
+}
+
+const getCombinedRankedElo = (userStats) => {
+    return GAME_MODES
+        .filter((mode) => mode.ranked)
+        .reduce((total, mode) => total + (Number(userStats?.play?.[mode.id]?.elo) || 0), 0)
 }
 
 const getQueueState = (session) => (
@@ -38,7 +82,9 @@ const getQueueState = (session) => (
 const getQueueTimeSeconds = ({ matchmaking, isQueueing, nowMs }) => {
     const queuedAtMs = matchmaking?.queuedAt?.toDate
         ? matchmaking.queuedAt.toDate().getTime()
-        : null
+        : (matchmaking?.queuedAt instanceof Date
+            ? matchmaking.queuedAt.getTime()
+            : Number(matchmaking?.queuedAt) || null)
 
     if(!queuedAtMs || !isQueueing) {
         return 0
@@ -51,6 +97,18 @@ const formatQueueTimeLabel = (queueTimeSeconds = 0) => {
     const minutes = Math.floor(queueTimeSeconds / 60)
     const seconds = queueTimeSeconds % 60
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
+const getGameTeamId = (player) => player?.teamId ?? player?.team?.id ?? player?.state?.teamId ?? null
+
+const areGameTeammates = (firstPlayer, secondPlayer) => {
+    const firstTeamId = getGameTeamId(firstPlayer)
+    const secondTeamId = getGameTeamId(secondPlayer)
+    if(firstTeamId != null && secondTeamId != null) return String(firstTeamId) === String(secondTeamId)
+
+    const firstUserId = firstPlayer?.userId ?? firstPlayer?.uid ?? null
+    const secondUserId = secondPlayer?.userId ?? secondPlayer?.uid ?? null
+    return firstUserId != null && secondUserId != null && String(firstUserId) === String(secondUserId)
 }
 
 const buildMultiplayerUiState = ({ userStats, modeId = DEFAULT_MODE_ID }) => {
@@ -104,16 +162,15 @@ const buildSingleplayerUiState = ({ userStats, modeId = DEFAULT_MODE_ID }) => {
 }
 
 export {
-    ROOMS_COLLECTION,
-    MATCHMAKING_COLLECTION,
-    SESSIONS_COLLECTION,
     DEFAULT_MODE_ID,
     MATCH_JOIN_DELAY_SECONDS,
     GAME_MODES,
     getModeById,
+    getCombinedRankedElo,
     getQueueState,
     getQueueTimeSeconds,
     formatQueueTimeLabel,
+    areGameTeammates,
     buildMultiplayerUiState,
     buildSingleplayerUiState,
 }

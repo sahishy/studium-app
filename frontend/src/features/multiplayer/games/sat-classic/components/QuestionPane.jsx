@@ -1,10 +1,11 @@
 import HtmlContent from '../../../../../shared/components/ui/HtmlContent'
 import ChoiceButton from './ChoiceButton'
+import AvatarStack from '../../../../../shared/components/avatar/AvatarStack'
 import { FaCalculator } from 'react-icons/fa6'
 
 const DASHES = Array.from({ length: 12 }, (_, i) => i)
 
-const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQuestion, isCalculatorOpen, onToggleCalculator, isBusy, hasAnswered, onChoiceSelect, onResponseChange, onSubmit }) => {
+const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQuestion, isCalculatorOpen, onToggleCalculator, isBusy, hasAnswered, onChoiceSelect, onResponseChange, onSubmit, answerReveal = null }) => {
 
     const normalizedResponse = String(submittedResponse ?? '').trim()
     const normalizedResponseUpper = normalizedResponse.toUpperCase()
@@ -12,6 +13,24 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
     const isMathQuestion = module === 'math'
     const isMathMcq = module === 'math' && !isSprQuestion
     const hasValidResponse = normalizedResponse.length > 0
+    const normalizedCorrectAnswer = String(answerReveal?.correctAnswer ?? '').trim().toUpperCase()
+    const isAnswerReveal = Boolean(answerReveal)
+    const isRevealCorrect = Boolean(answerReveal?.isCorrect)
+    const answerResponses = Array.isArray(answerReveal?.responses) ? answerReveal.responses : []
+    const playersForAnswer = (answer) => answerResponses
+        .filter((entry) => String(entry?.submittedResponse ?? '').trim().toUpperCase() === String(answer ?? '').trim().toUpperCase())
+        .map((entry) => entry.player)
+        .filter(Boolean)
+    const responseGroups = answerResponses.reduce((groups, entry) => {
+        const submittedResponse = String(entry?.submittedResponse ?? '').trim()
+        const player = entry?.player
+        if(!submittedResponse || !player) return groups
+        const key = submittedResponse.toUpperCase()
+        const existing = groups.get(key) ?? { submittedResponse, players: [] }
+        existing.players.push(player)
+        groups.set(key, existing)
+        return groups
+    }, new Map())
 
     const contentSection = (
         <div className='flex-1 flex flex-col min-h-0 pl-6'>
@@ -47,28 +66,49 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
                     <HtmlContent html={currentQuestion?.prompt || 'Loading question...'} />
 
                     {isSprQuestion ? (
+                        <div className='flex flex-col items-center gap-2'>
                         <div className='relative max-w-24 flex items-center justify-center'>
                             <input
                                 type='text'
                                 value={submittedResponse ?? ''}
                                 onChange={(event) => onResponseChange?.(event.target.value)}
                                 disabled={isBusy}
-                                className='text-center w-full rounded-xl border border-neutral0 bg-neutral6 p-3 text-neutral0 focus:outline-none focus:ring-2 focus:ring-sat0 disabled:opacity-60'
+                                className={`text-center w-full rounded-xl border bg-neutral6 p-3 text-neutral0 focus:outline-none focus:ring-2 focus:ring-sat0 disabled:opacity-60 transition-colors duration-300 ${isAnswerReveal ? (isRevealCorrect ? 'border-green-500 bg-green-50 dark:bg-green-500/15' : 'border-red-500 bg-red-50 dark:bg-red-500/15') : 'border-neutral0'}`}
                             />   
                             <hr className='absolute bottom-2 w-18 border-neutral0'/>                         
                         </div>
+                        {isAnswerReveal && answerReveal?.correctAnswer != null ? (
+                            <p className='animate-answer-text-reveal text-sm font-medium text-green-600 dark:text-green-400'>Correct answer: {answerReveal.correctAnswer}</p>
+                        ) : null}
+                        {isAnswerReveal && responseGroups.size ? (
+                            <ul className='flex flex-col gap-2'>
+                                {[...responseGroups.values()].map((group) => (
+                                    <li key={group.submittedResponse.toUpperCase()} className='flex items-center justify-center gap-3'>
+                                        <span className='font-medium'>{group.submittedResponse}</span>
+                                        <AvatarStack users={group.players} overlapClassName='-space-x-4' />
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : null}
+                        </div>
 
                     ) : (
-                        <div className='flex flex-col gap-3 w-full'>
-                            {(currentQuestion?.choices ?? []).map((choice) => (
-                                <ChoiceButton
-                                    key={choice.id}
-                                    choice={choice}
-                                    isSelected={normalizedResponseUpper === choice.id}
-                                    isDisabled={isBusy}
-                                    onSelect={onChoiceSelect}
-                                />
-                            ))}
+                        <div className={`flex flex-col gap-3 w-full ${isAnswerReveal ? 'pr-16' : ''}`}>
+                            {(currentQuestion?.choices ?? []).map((choice) => {
+                                const answeringPlayers = isAnswerReveal ? playersForAnswer(choice.id) : []
+                                return (
+                                    <ChoiceButton
+                                        key={choice.id}
+                                        choice={choice}
+                                        isSelected={normalizedResponseUpper === choice.id}
+                                        isDisabled={isBusy}
+                                        isCorrectAnswer={isAnswerReveal && normalizedCorrectAnswer === String(choice.id).toUpperCase()}
+                                        isIncorrectSelected={isAnswerReveal && normalizedResponseUpper === String(choice.id).toUpperCase() && normalizedCorrectAnswer !== String(choice.id).toUpperCase()}
+                                        answeringPlayers={answeringPlayers}
+                                        onSelect={onChoiceSelect}
+                                    />
+                                )
+                            })}
                         </div>
                     )}
                 </div>

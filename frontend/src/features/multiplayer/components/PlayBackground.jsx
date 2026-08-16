@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-const ORIGIN_X = 33;
+const ORIGIN_X = 45;
 
 const COLORS = [
     "#F3F4F6",
@@ -94,7 +94,7 @@ const PlayBackground = () => {
         <div className="absolute inset-0 z-[-1] overflow-hidden">
             <canvas
                 ref={canvasRef}
-                className="absolute inset-0 w-full h-full"
+                className="absolute inset-0 w-full h-full opacity-80"
             />
         </div>
     )

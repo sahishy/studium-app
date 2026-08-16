@@ -32,7 +32,7 @@ const Landing = () => {
 
     useEffect(() => {
         if (!loading && user) {
-            navigate('/agenda')
+            navigate('/play')
         }
     }, [user, loading, navigate])
 

@@ -2,13 +2,10 @@ import { useMemo, useState } from 'react'
 import Button from '../../../../shared/components/ui/Button'
 import { hasFlaggedWords } from '../../../../shared/services/censorService'
 import { validateDisplayNameFormat } from '../../utils/profileUtils'
-import { FaCircleExclamation, FaExclamation } from 'react-icons/fa6'
-import { useNavigate } from 'react-router-dom'
+import { FaCircleExclamation } from 'react-icons/fa6'
 
 const EditDisplayNameModal = ({ value = '', closeModal, onSave, onCheckAvailability, displayName }) => {
     
-    const navigate = useNavigate();
-
     const [draftValue, setDraftValue] = useState(value)
     const [submitError, setSubmitError] = useState('')
     const [isSaving, setIsSaving] = useState(false)
@@ -49,8 +46,6 @@ const EditDisplayNameModal = ({ value = '', closeModal, onSave, onCheckAvailabil
 
             await onSave?.(nextValue)
             closeModal?.()
-
-            navigate(`/profile/${nextValue}`)
             
         } catch (error) {
             setSubmitError(error?.message || 'Unable to update display name.')

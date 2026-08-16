@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { sendRoomChatMessage, subscribeToRoomChat } from '../services/chatService'
 import { formatTimeFromFirestoreLike, toMillisFromFirestoreLike } from '../../../shared/utils/formatters'
+import { cleanText } from '../../../shared/services/censorService'
 
-const ChatBox = ({ roomId, userId, senderName }) => {
+const ChatBox = ({ roomId, userId, senderName, messages = null, onSendMessage = null, className = '' }) => {
 
     const [chatMessages, setChatMessages] = useState([])
     const [pendingMessages, setPendingMessages] = useState([])
@@ -11,6 +12,11 @@ const ChatBox = ({ roomId, userId, senderName }) => {
     const chatInputRef = useRef(null)
 
     useEffect(() => {
+
+        if(Array.isArray(messages)) {
+            setChatMessages(messages)
+            return () => {}
+        }
 
         if(!roomId) {
             setChatMessages([])
@@ -21,7 +27,7 @@ const ChatBox = ({ roomId, userId, senderName }) => {
         const unsubscribe = subscribeToRoomChat(roomId, setChatMessages)
         return () => unsubscribe()
 
-    }, [roomId])
+    }, [roomId, messages])
 
     useEffect(() => {
 
@@ -59,7 +65,7 @@ const ChatBox = ({ roomId, userId, senderName }) => {
     const handleSendMessage = async () => {
 
         const trimmedInput = chatInput.trim()
-        if(!trimmedInput || !roomId || !userId) {
+        if(!trimmedInput || (!roomId && !onSendMessage) || !userId) {
             return
         }
 
@@ -79,27 +85,23 @@ const ChatBox = ({ roomId, userId, senderName }) => {
         chatInputRef.current?.focus()
 
         try {
-            await sendRoomChatMessage({
-                roomId,
-                userId,
-                text: trimmedInput,
-                senderName: senderName ?? null,
-                clientMessageId,
-            })
+            const outgoingMessage = { text: cleanText(trimmedInput), clientMessageId }
+            if(onSendMessage) await onSendMessage(outgoingMessage)
+            else await sendRoomChatMessage({ roomId, ...outgoingMessage })
         } catch {
             setPendingMessages((previous) => previous.filter((message) => message.clientMessageId !== clientMessageId))
         }
     }
 
     return (
-        <div className='absolute z-100 left-6 bottom-6 w-72 h-44 flex flex-col mask-t-from-50% pointer-events-none'>
+        <div className={`absolute z-[200] left-6 bottom-6 w-72 h-44 flex flex-col pointer-events-none ${className}`}>
             <div
                 ref={chatMessagesContainerRef}
                 className='flex-1 min-h-0 overflow-y-auto flex flex-col justify-end text-[10px]'
             >
                 {mergedMessages.map((message) => {
 
-                    const isSystemMessage = message.senderName === 'System';
+                    const isSystemMessage = message.system || message.senderName === 'System';
                     const isOwnMessage = message.userId === userId
                     const senderLabel = isOwnMessage ? 'You' : (message.senderName ?? 'Opponent')
                     const timestamp = formatTimeFromFirestoreLike(message.createdAt)
@@ -107,7 +109,7 @@ const ChatBox = ({ roomId, userId, senderName }) => {
                     return (
                         <div
                             key={message.uid}
-                            className={`p-1 whitespace-pre-wrap break-words bg-neutral0/5 flex justify-between gap-2 
+                            className={`p-1 whitespace-pre-wrap break-words bg-neutral0/[0.05] [backdrop-filter:blur(14px)_saturate(125%)] [-webkit-backdrop-filter:blur(14px)_saturate(125%)] flex justify-between gap-2
                                 ${message.pending && 'text-neutral1'}
                                 ${isSystemMessage && 'text-neutral1'}
                             `}
@@ -135,7 +137,7 @@ const ChatBox = ({ roomId, userId, senderName }) => {
                         }
                     }}
                     placeholder='Type a message...'
-                    className='w-full bg-neutral0/5 p-1 text-[10px] outline-none rounded-b-md pointer-events-auto'
+                    className='w-full bg-neutral0/[0.05] [backdrop-filter:blur(14px)_saturate(125%)] [-webkit-backdrop-filter:blur(14px)_saturate(125%)] p-1 text-[10px] outline-none rounded-b-md pointer-events-auto'
                 />
             </div>
         </div>

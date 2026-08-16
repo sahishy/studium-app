@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext, useParams } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
 import { useMultiplayer } from '../contexts/MultiplayerContext'
 import { useToast } from '../../../shared/contexts/ToastContext'
 import MatchmakingToast from '../components/toasts/MatchmakingToast'
 import ChatBox from '../components/ChatBox'
-import { subscribeToRoomById } from '../services/roomService'
+import { leaveRoom, subscribeToRoomById } from '../services/roomService'
 import GameHandler from '../games/GameHandler'
 
 const MatchRoom = () => {
@@ -20,16 +20,34 @@ const MatchRoom = () => {
     const [roomLoading, setRoomLoading] = useState(true)
 
     const hasRoomId = useMemo(() => Boolean(roomId), [roomId])
-    const initialToastStackRef = useRef(toastStack)
     const senderName = useMemo(() => (profile?.profile?.displayName), [profile])
+    const isGameFinished = room?.status === 'finished'
+        || room?.state?.phase === 'match_result'
+        || room?.state?.phase === 'finished'
+
+    const handleLeaveGame = async () => {
+        if(!roomId) return
+        await leaveRoom({ roomId })
+        navigate('/play')
+    }
+
+    const handleReturnHome = async () => {
+        try {
+            if(roomId && room?.status === 'active') {
+                await leaveRoom({ roomId })
+            }
+        } finally {
+            navigate('/play')
+        }
+    }
 
     useEffect(() => {
-        initialToastStackRef.current.forEach((toastEntry) => {
+        toastStack.forEach((toastEntry) => {
             if(toastEntry.component === MatchmakingToast) {
                 hideToast(toastEntry.id, { force: true })
             }
         })
-    }, [hideToast])
+    }, [toastStack, hideToast])
 
     useEffect(() => {
         if(!roomId) {
@@ -59,20 +77,28 @@ const MatchRoom = () => {
             return
         }
 
+        if(isGameFinished) return
+
         const isCurrentRoom = session.currentRoomId === roomId
         const inRoomState = session.status === 'in_room'
 
         if(!inRoomState || !isCurrentRoom) {
             navigate('/play', { replace: true })
         }
-    }, [session, roomId, navigate])
+    }, [session, isGameFinished, roomId, navigate])
 
     return (
         <div className='relative flex flex-col h-full overflow-hidden'>
-            <Topbar profile={profile} />
+            <Topbar
+                profile={profile}
+                showGameAction={Boolean(room)}
+                isGameFinished={isGameFinished}
+                onLeaveGame={handleLeaveGame}
+                onReturnHome={handleReturnHome}
+            />
 
-            <div className='w-full flex-1 min-h-0 px-24 pb-24 pt-2 flex items-center justify-center'>
-                <div className='w-full max-w-5xl h-full min-h-[420px] max-h-[72vh]'>
+            <div className='w-full flex-1 min-h-0 px-8 xl:px-12 pb-8 pt-2 flex items-center justify-center'>
+                <div className='w-full max-w-[88rem] h-full min-h-[420px]'>
                     <GameHandler
                         modeId={room?.modeId || session?.modeId}
                         roomId={roomId}

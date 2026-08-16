@@ -16,7 +16,6 @@ import { buildMultiplayerUiState } from '../../utils/multiplayerUtils'
 import { getRankInfoFromElo } from '../../../profile/utils/statsUtils'
 
 const SatClassicGame = ({ roomId, userId }) => {
-
     const [room, setRoom] = useState(null)
     const [players, setPlayers] = useState([])
     const [events, setEvents] = useState([])
@@ -31,9 +30,7 @@ const SatClassicGame = ({ roomId, userId }) => {
     const previousHealthRef = useRef({ left: null, right: null })
     const shownRoundResolvedEventIdsRef = useRef(new Set())
     const shownAnswerToastEventIdsRef = useRef(new Set())
-    const shownAnswerToastQuestionIdsRef = useRef(new Set())
     const lastProcessedAnswerSubmitSequenceRef = useRef(null)
-    const timeoutSubmittedQuestionIdsRef = useRef(new Set())
 
     const { showToast } = useToast()
     const { userStats } = useUserStats()
@@ -126,24 +123,6 @@ const SatClassicGame = ({ roomId, userId }) => {
         setSubmittedResponse('')
     }, [currentQuestionId])
 
-    useEffect(() => {
-        if(!roomId || !userId || !currentQuestionId || !roundDeadlineAt || hasAnswered) return
-
-        if(nowMs < roundDeadlineAt.getTime()) return
-        if(timeoutSubmittedQuestionIdsRef.current.has(currentQuestionId)) return
-
-        timeoutSubmittedQuestionIdsRef.current.add(currentQuestionId)
-
-        void submitSatClassicAnswer({
-            roomId,
-            userId,
-            submittedResponse: '',
-            isTimeout: true,
-        }).catch(() => {
-            timeoutSubmittedQuestionIdsRef.current.delete(currentQuestionId)
-        })
-    }, [roomId, userId, currentQuestionId, roundDeadlineAt, hasAnswered, nowMs])
-
     const questionType = String(currentQuestion?.questionType ?? 'mcq').toLowerCase()
     const isSprQuestion = questionType === 'spr'
 
@@ -227,19 +206,19 @@ const SatClassicGame = ({ roomId, userId }) => {
             if(eventEntry?.data?.isTimeout) return
 
             const questionId = eventEntry?.data?.questionId
-            if(!questionId || shownAnswerToastQuestionIdsRef.current.has(questionId)) return
+            if(!questionId) return
             if(shownAnswerToastEventIdsRef.current.has(eventEntry.uid)) return
 
             const submitter = players.find((e) => e?.userId === eventEntry?.actorUserId)
 
             shownAnswerToastEventIdsRef.current.add(eventEntry.uid)
-            shownAnswerToastQuestionIdsRef.current.add(questionId)
 
             showToast({
                 component: SatClassicSubmittedToast,
                 props: {
                     submitterName: submitter?.displayName || 'A player',
                     profilePicture: submitter?.profilePicture ?? null,
+                    avatar: submitter?.avatar ?? null,
                 },
                 duration: 2200,
             })
@@ -299,6 +278,10 @@ const SatClassicGame = ({ roomId, userId }) => {
                 const roundResults = Array.isArray(eventEntry?.data?.roundResults) ? eventEntry.data.roundResults : []
                 const myRoundResult = roundResults.find((entry) => entry?.userId === userId)
                 const opponentRoundResult = roundResults.find((entry) => entry?.userId !== userId)
+                const correctPlayers = roundResults
+                    .filter((entry) => entry?.isCorrect)
+                    .map((entry) => players.find((player) => player.userId === entry.userId))
+                    .filter(Boolean)
 
                 return {
                     id: eventEntry?.uid ?? `${eventEntry?.data?.questionId ?? 'q'}-${idx}`,
@@ -306,9 +289,10 @@ const SatClassicGame = ({ roomId, userId }) => {
                     correctAnswer: eventEntry?.data?.correctAnswer ?? null,
                     myCorrect: Boolean(myRoundResult?.isCorrect),
                     opponentCorrect: Boolean(opponentRoundResult?.isCorrect),
+                    correctPlayers,
                 }
             })
-    }, [events, userId])
+    }, [events, players, userId])
 
     const rankedProgression = useMemo(() => {
         const {
@@ -392,7 +376,7 @@ const SatClassicGame = ({ roomId, userId }) => {
                 endReason={matchEndReason}
                 healthBoard={healthBoard}
                 matchDurationSeconds={matchDurationSeconds}
-                rankedProgression={rankedProgression}
+                rankedProgression={room?.ranked ? rankedProgression : null}
                 rounds={roundHistory}
             />
         )

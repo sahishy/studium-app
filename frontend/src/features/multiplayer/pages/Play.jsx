@@ -3,7 +3,6 @@ import { useNavigate, useOutletContext } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
 import Button from '../../../shared/components/ui/Button'
 import Card from '../../../shared/components/ui/Card'
-import AvatarModel from '../../../shared/components/avatar/AvatarModel'
 import ProgressBar from '../../../shared/components/ui/ProgressBar'
 import { useUserStats } from '../../profile/contexts/UserStatsContext'
 import { useMultiplayer } from '../contexts/MultiplayerContext'
@@ -19,31 +18,53 @@ import {
     getQueueState,
     MATCH_JOIN_DELAY_SECONDS,
 } from '../utils/multiplayerUtils'
-import Podium from '../../../shared/components/avatar/Podium'
 import GameModeModal from '../components/modals/GameModeModal'
 import TextTooltip from '../../../shared/components/tooltips/TextTooltip'
 import PlayBackground from '../components/PlayBackground'
+import PartyStage from '../components/PartyStage'
+import { createSocket, message } from '../services/realtimeSocketService'
+import { useFriends } from '../../socials/contexts/FriendsContext'
+import PartyInviteModal from '../components/modals/PartyInviteModal'
+import ChatBox from '../components/ChatBox'
+import JoinPartyModal from '../components/modals/JoinPartyModal'
+import LoadingState from '../../../shared/components/ui/LoadingState'
+
+const SELECTED_MODE_STORAGE_KEY = 'play:lastSelectedModeId'
+
+const getStoredSelectedModeId = () => {
+    try {
+        const storedModeId = window.localStorage.getItem(SELECTED_MODE_STORAGE_KEY)
+        return GAME_MODES.some((mode) => mode.id === storedModeId) ? storedModeId : 'sat-classic'
+    } catch {
+        return 'sat-classic'
+    }
+}
 
 const Play = () => {
 
     const { profile } = useOutletContext()
     const navigate = useNavigate()
     const { userStats } = useUserStats()
-    const { matchmaking, session, joinQueue, leaveQueue, findMatch } = useMultiplayer()
+    const { matchmaking, session, error: realtimeError, joinQueue, leaveQueue, findMatch, startSoloGame, createPartyAndInvite, joinParty, leaveParty } = useMultiplayer()
+    const { friends } = useFriends()
     const { toastStack, showToast, updateToast, hideToast } = useToast()
     const { openModal, closeModal } = useModal()
 
-    const [selectedModeId, setSelectedModeId] = useState('sat-classic')
+    const [selectedModeId, setSelectedModeId] = useState(getStoredSelectedModeId)
     const [matchCountdownSeconds, setMatchCountdownSeconds] = useState(MATCH_JOIN_DELAY_SECONDS)
     const [isQueueingOptimistic, setIsQueueingOptimistic] = useState(false)
     const matchmakingToastIdRef = useRef(null)
     const autoJoinRoomIdRef = useRef(null)
+    const partySocketRef = useRef(null)
+    const [party, setParty] = useState(null)
+    const [partyError, setPartyError] = useState(null)
 
-    const selectedMode = useMemo(() => getModeById(selectedModeId), [selectedModeId])
+    const activeModeId = party?.modeId ?? selectedModeId
+    const selectedMode = useMemo(() => getModeById(activeModeId), [activeModeId])
     const isSelectedModeMultiplayer = selectedMode?.type === 'multiplayer'
 
-    const multiplayerUi = buildMultiplayerUiState({ userStats, modeId: selectedModeId })
-    const singleplayerUi = buildSingleplayerUiState({ userStats, modeId: selectedModeId })
+    const multiplayerUi = buildMultiplayerUiState({ userStats, modeId: activeModeId })
+    const singleplayerUi = buildSingleplayerUiState({ userStats, modeId: activeModeId })
 
     const {
         rankedStats,
@@ -68,17 +89,118 @@ const Play = () => {
     )
 
     const ModeIcon = selectedMode?.icon;
+    const isInParty = Boolean(session?.partyId)
+    const isPartyLoading = isInParty && (!party || party.id !== session.partyId)
+    const isPartyLeader = party?.leaderUserId === profile?.uid
+    const partyPlayerCount = selectedMode?.playerCount ?? 1
+    const partyOverCapacity = (party?.members?.length ?? 0) > partyPlayerCount
+    const currentPartyMember = party?.members?.find((member) => member.userId === profile?.uid)
+    const stageParty = useMemo(() => {
+        if(party) return party
+        return {
+            id: null,
+            leaderUserId: profile?.uid,
+            members: [{
+                userId: profile?.uid,
+                displayName: profile?.profile?.displayName || 'Player',
+                profilePicture: profile?.profile?.profilePicture ?? null,
+                avatar: profile?.profile?.avatar ?? null,
+                eloByMode: Object.fromEntries(Object.entries(userStats?.play ?? {}).map(([modeId, stats]) => [modeId, Number(stats?.elo) || 0])),
+                ready: false,
+            }],
+        }
+    }, [party, profile, userStats])
+
+    useEffect(() => {
+        try {
+            window.localStorage.setItem(SELECTED_MODE_STORAGE_KEY, selectedModeId)
+        } catch {
+            // Keep mode selection functional when browser storage is unavailable.
+        }
+    }, [selectedModeId])
+
+    useEffect(() => {
+        if (party?.modeId && GAME_MODES.some((mode) => mode.id === party.modeId)) {
+            setSelectedModeId(party.modeId)
+        }
+    }, [party?.modeId])
+
+    useEffect(() => {
+        if(!session?.partyId) {
+            partySocketRef.current?.close()
+            partySocketRef.current = null
+            setParty(null)
+            setPartyError(null)
+            return () => {}
+        }
+
+        const socket = createSocket({ party: 'party', room: session.partyId })
+        partySocketRef.current = socket
+        const onMessage = (event) => {
+            try {
+                const incoming = JSON.parse(event.data)
+                if(incoming.type === 'party.snapshot') {
+                    setParty(incoming.payload)
+                    setPartyError(null)
+                }
+                if(incoming.type === 'error') setPartyError(incoming.payload?.message ?? 'Party request failed.')
+            } catch {
+                setPartyError('Unable to read the party state.')
+            }
+        }
+        socket.addEventListener('message', onMessage)
+        return () => {
+            socket.removeEventListener('message', onMessage)
+            socket.close()
+            if(partySocketRef.current === socket) partySocketRef.current = null
+        }
+    }, [session?.partyId])
+
+    const sendPartyMessage = (type, payload = {}) => {
+        const socket = partySocketRef.current
+        if(!socket) return
+        const sendNow = () => socket.send(message(type, payload))
+        if(socket.readyState === WebSocket.OPEN) sendNow()
+        else socket.addEventListener('open', sendNow, { once: true })
+    }
+
+    const openPartyInviteModal = () => {
+        openModal({
+            content: (
+                <PartyInviteModal
+                    currentUserId={profile?.uid}
+                    memberIds={stageParty.members.map((member) => member.userId)}
+                    pendingInviteUserIds={(party?.pendingInvites ?? []).map((invite) => invite.userId)}
+                    friends={friends}
+                    onInvite={(userId) => (
+                        party
+                            ? sendPartyMessage('party.invite', { userId })
+                            : createPartyAndInvite({ userId })
+                    )}
+                    closeModal={closeModal}
+                />
+            ),
+            maxWidthClass: 'max-w-md',
+        })
+    }
+
+    const openJoinPartyModal = () => {
+        openModal({
+            content: <JoinPartyModal onJoin={(partyId) => joinParty({ partyId })} closeModal={closeModal} />,
+            maxWidthClass: 'max-w-md',
+        })
+    }
 
     const openGameModeModal = () => {
         openModal(
             {
                 content: (
                     <GameModeModal
-                        modes={GAME_MODES}
-                        selectedModeId={selectedModeId}
-                        closeModal={closeModal}
+                        modes={isInParty ? GAME_MODES.filter((mode) => mode.supportsPartyGames) : GAME_MODES}
+                        selectedModeId={activeModeId}
                         onSelectMode={(modeId) => {
-                            setSelectedModeId(modeId)
+                            if(isInParty) sendPartyMessage('party.selectMode', { modeId })
+                            else setSelectedModeId(modeId)
                             closeModal()
                         }}
                     />
@@ -171,7 +293,14 @@ const Play = () => {
             return
         }
 
+        if(isInParty) {
+            if(!party || partyOverCapacity) return
+            sendPartyMessage('party.ready', { ready: !currentPartyMember?.ready })
+            return
+        }
+
         if (!isSelectedModeMultiplayer) {
+            await startSoloGame({ modeId: selectedModeId })
             return
         }
 
@@ -179,14 +308,14 @@ const Play = () => {
 
         try {
             await joinQueue({
-                modeId: selectedModeId,
+                modeId: activeModeId,
                 elo: rankedStats.elo,
                 displayName: profile?.profile?.displayName || 'A player',
                 profilePicture: profile?.profile?.profilePicture ?? null,
             })
 
             await findMatch({
-                modeId: selectedModeId,
+                modeId: activeModeId,
             })
         } catch (error) {
             setIsQueueingOptimistic(false)
@@ -217,7 +346,7 @@ const Play = () => {
                 hideToast(matchmakingToastIdRef.current, { force: true })
                 matchmakingToastIdRef.current = null
             }
-            navigate(`/play/room/${session.currentRoomId}`)
+            navigate(`/play/game/${session.currentRoomId}`)
             return
         }
 
@@ -241,25 +370,32 @@ const Play = () => {
     }, [isSelectedModeMultiplayer, queueStateForMode, matchCountdownSeconds, matchmaking?.queuedAt])
 
     return (
-        <div className='flex flex-col h-full overflow-hidden'>
-            <Topbar profile={profile} />
+        <div className='relative flex flex-col h-full overflow-hidden'>
+            <Topbar
+                profile={profile}
+                party={isInParty ? party : null}
+                onLeaveParty={leaveParty}
+            />
 
             <PlayBackground />
 
-            <div className='relative w-full flex-1 flex min-h-0 px-24 pb-24 pt-2 gap-8'>
+            <div className='relative w-full flex-1 flex min-h-0 px-8 xl:px-16 pb-0 pt-2 gap-5 xl:gap-7'>
 
-                <div className='relative flex-1 flex items-center justify-center min-h-0'>
-                    <Podium className={'absolute -bottom-52'} />
-                    <AvatarModel
-                        profile={profile}
-                        animation={'Idle'}
-                        className='w-[36rem]! h-[36rem]!'
-                    />
-                </div>
+                {isPartyLoading ? <LoadingState className='flex-1 min-h-0' /> : <>
 
-                <div className='flex-1 min-h-0 max-w-sm flex flex-col justify-center gap-8'>
+                <PartyStage
+                    party={stageParty}
+                    mode={selectedMode}
+                    currentProfile={profile}
+                    friends={friends}
+                    onInvite={openPartyInviteModal}
+                    onJoinParty={openJoinPartyModal}
+                    showJoinParty={!isInParty}
+                />
 
-                    <Card className='max-w-8xl p-8! gap-3 items-center'>
+                <div className='w-full min-h-0 max-w-[19rem] gap-4 flex flex-col justify-center pb-8'>
+
+                    <Card className='max-w-8xl p-5! gap-2! items-center'>
                         <Card className='absolute! -top-7 font-semibold flex-row items-center gap-3!'>
                             <ModeIcon className='text-lg' />
                             {selectedMode.name}
@@ -268,16 +404,16 @@ const Play = () => {
                             <>
                                 <div className='flex flex-col items-center gap-3'>
 
-                                    <div className="w-32 h-32 overflow-hidden flex items-center justify-center">
+                                    <div className='absolute mt-4 w-20 h-20 overflow-hidden flex items-center justify-center'>
                                         <img
                                             src={rankInfo.imageSrc}
                                             alt={`${rankLabel} icon`}
-                                            className='w-32 h-32 object-cover'
+                                            className='w-24 h-24 object-cover'
                                         />
                                     </div>
 
-                                    <div className='flex items-center gap-3'>
-                                        <h2 className='text-2xl font-semibold'>{rankLabel}</h2>
+                                    <div className='flex items-center gap-3 mt-24'>
+                                        <h2 className='text-lg font-semibold'>{rankLabel}</h2>
                                     </div>
 
                                 </div>
@@ -313,17 +449,20 @@ const Play = () => {
                     <div className='flex gap-3'>
                         <Button
                             type='primary'
-                            className='p-6! text-2xl! font-bold! flex-3'
+                            className='p-4! text-xl! font-bold! flex-3'
                             onClick={handlePlayClick}
-                            disabled={effectiveQueueState !== 'idle'}
-                            loading={effectiveQueueState === 'queueing'}
+                            disabled={effectiveQueueState !== 'idle' || (isInParty && (!party || partyOverCapacity))}
+                            loading={!isInParty && effectiveQueueState === 'queueing'}
                         >
-                            {effectiveQueueState === 'queueing' ? 'QUEUEING' : effectiveQueueState === 'matched' ? 'JOINING' : 'PLAY'}
+                            {isInParty
+                                ? (currentPartyMember?.ready ? 'UNREADY' : 'READY')
+                                : (effectiveQueueState === 'queueing' ? 'QUEUEING' : effectiveQueueState === 'matched' ? 'JOINING' : 'PLAY')}
                         </Button>
-                        <TextTooltip text={'Change mode'} className='flex-1' placement='top'>
+                        <TextTooltip text={isInParty && !isPartyLeader ? 'Party Leader Only' : 'Change mode'} className='flex-1' placement='top'>
                             <button
                                 onClick={openGameModeModal}
-                                className='block w-full h-full appearance-none bg-transparent border-0 p-0 m-0 text-inherit leading-none align-top'
+                                disabled={isInParty && !isPartyLeader}
+                                className='block w-full h-full appearance-none bg-transparent border-0 p-0 m-0 text-inherit leading-none align-top disabled:opacity-50 disabled:cursor-not-allowed'
                             >
                                 <Card className='w-full h-full justify-center items-center hover:bg-neutral5 dark:hover:bg-neutral4 transition cursor-pointer'>
                                     <ModeIcon className='text-2xl' />
@@ -332,8 +471,21 @@ const Play = () => {
                         </TextTooltip>
                     </div>
 
+                    {realtimeError || partyError ? <p className='text-sm text-red-400 text-center'>{partyError || realtimeError.message}</p> : null}
+
                 </div>
+                </>}
             </div>
+
+            {isInParty && party ? (
+                <ChatBox
+                    userId={profile?.uid}
+                    senderName={profile?.profile?.displayName}
+                    messages={party.chat ?? []}
+                    onSendMessage={({ text, clientMessageId }) => sendPartyMessage('chat.send', { text, clientMessageId })}
+                    className='z-[100]'
+                />
+            ) : null}
         </div>
     )
 

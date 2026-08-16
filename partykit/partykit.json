@@ -1,0 +1,12 @@
+{
+  "name": "studium-realtime",
+  "main": "src/servers/user.ts",
+  "parties": {
+    "user": "src/servers/user.ts",
+    "party": "src/servers/party.ts",
+    "matchmaker": "src/servers/matchmaker.ts",
+    "game": "src/servers/game.ts",
+    "botchat": "src/servers/bot-chat.ts"
+  },
+  "compatibilityDate": "2025-03-01"
+}

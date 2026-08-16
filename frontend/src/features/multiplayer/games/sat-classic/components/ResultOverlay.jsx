@@ -133,6 +133,7 @@ const ResultOverlay = ({ activeOverlayMode, roundCountdown, roundOverlayRemainin
                             <div className='flex flex-col gap-3 items-center text-center'>
                                 <AvatarPicture
                                     profile={{ profile: { profilePicture: myOverlayPlayer?.profilePicture ?? null } }}
+                                    avatar={myOverlayPlayer?.avatar}
                                     className='w-12 h-12'
                                 />
 
@@ -202,6 +203,7 @@ const ResultOverlay = ({ activeOverlayMode, roundCountdown, roundOverlayRemainin
                             <div className='flex flex-col gap-3 items-center text-center'>
                                 <AvatarPicture
                                     profile={{ profile: { profilePicture: opponentOverlayPlayer?.profilePicture ?? null } }}
+                                    avatar={opponentOverlayPlayer?.avatar}
                                     className='w-12 h-12'
                                 />
 

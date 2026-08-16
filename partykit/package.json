@@ -1,0 +1,19 @@
+{
+  "name": "studium-partykit",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "partykit dev",
+    "deploy": "partykit deploy",
+    "check": "tsc --noEmit",
+    "simulate": "node --import tsx scripts/simulate-matchmaking.ts",
+    "test": "node --import tsx --test src/*.test.js src/**/*.test.js"
+  },
+  "dependencies": {
+    "partykit": "^0.0.112"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  }
+}

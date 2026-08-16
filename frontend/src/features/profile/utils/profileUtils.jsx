@@ -5,12 +5,11 @@ const ACT_MAX = 36
 const GPA_MIN = 0
 const GPA_MAX = 5
 
-const getDraftAcademicFromStats = ({ userStats, displayName = '' }) => {
+const getDraftAcademicFromStats = ({ userStats }) => {
     
     const academic = userStats?.academic ?? {}
 
     return {
-        displayName,
         targetMajors: Array.isArray(academic.targetMajors) ? academic.targetMajors : [],
         sat: academic?.scores?.sat ?? '',
         act: academic?.scores?.act ?? '',
