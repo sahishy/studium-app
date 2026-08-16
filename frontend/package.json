@@ -8,6 +8,7 @@
 		"dev": "vite",
 		"build": "vite build",
 		"lint": "eslint .",
+		"test:multiplayer": "node --test src/features/multiplayer/services/serverClock.test.js",
 		"preview": "vite preview",
 		"predeploy": "npm run build",
 		"deploy": "gh-pages -d dist"

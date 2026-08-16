@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { subscribeToGameSnapshot, sendGameMessage } from '../../services/realtimeSocketService'
+import { getGameServerNow, subscribeToGameSnapshot, sendGameMessage } from '../../services/realtimeSocketService'
 import QuestionPane from '../sat-classic/components/QuestionPane'
 import CalculatorWindow from '../../components/windows/CalculatorWindow'
 import LoadingState from '../../../../shared/components/ui/LoadingState'
@@ -17,14 +17,14 @@ const BlitzGame = ({ roomId }) => {
     const [snapshot, setSnapshot] = useState(null)
     const [response, setResponse] = useState('')
     const [calculatorOpen, setCalculatorOpen] = useState(false)
-    const [now, setNow] = useState(Date.now())
+    const [now, setNow] = useState(() => getGameServerNow(roomId))
     const [lastEventId, setLastEventId] = useState(null)
 
     useEffect(() => subscribeToGameSnapshot(roomId, setSnapshot), [roomId])
     useEffect(() => {
-        const timer = setInterval(() => setNow(Date.now()), 20)
+        const timer = setInterval(() => setNow(getGameServerNow(roomId)), 20)
         return () => clearInterval(timer)
-    }, [])
+    }, [roomId])
 
     const state = snapshot?.room?.state
     const currentQuestion = state?.currentQuestion

@@ -101,9 +101,12 @@ const PunctureScene = ({
     shotImpactAt = null,
     slowdownStartedAt = null,
     playerColor = '#60a5fa',
+    optimisticShot = null,
+    lastClientActionId = null,
+    serverNow = Date.now,
 }) => {
     const [reducedMotion, setReducedMotion] = useState(false)
-    const [animationNow, setAnimationNow] = useState(Date.now())
+    const [animationNow, setAnimationNow] = useState(() => serverNow())
     const [launch, setLaunch] = useState(null)
     const previousShotCountRef = useRef(shotCount)
 
@@ -120,28 +123,46 @@ const PunctureScene = ({
         if(!roundStartedAt) return () => {}
         let frameId = null
         const animate = () => {
-            setAnimationNow(Date.now())
+            setAnimationNow(serverNow())
             frameId = window.requestAnimationFrame(animate)
         }
         frameId = window.requestAnimationFrame(animate)
         return () => window.cancelAnimationFrame(frameId)
-    }, [roundStartedAt])
+    }, [roundStartedAt, serverNow])
+
+    useLayoutEffect(() => {
+        if(!optimisticShot?.id || reducedMotion) return
+        const impactAt = Number(optimisticShot.startedAt) + LAUNCH_DURATION_MS
+        const launchKey = optimisticShot.id
+        setLaunch({ shotCount: launchKey, successful: false, target: pointAt(90, PIN_HEAD_DISTANCE), impactAt, isMoving: false, durationMs: LAUNCH_DURATION_MS })
+        let timeoutId = null
+        const frameId = window.requestAnimationFrame(() => {
+            const durationMs = Math.max(1, impactAt - serverNow())
+            setLaunch((current) => current?.shotCount === launchKey ? { ...current, isMoving: true, durationMs } : current)
+            timeoutId = window.setTimeout(() => setLaunch((current) => current?.shotCount === launchKey ? null : current), durationMs)
+        })
+        return () => {
+            window.cancelAnimationFrame(frameId)
+            if(timeoutId != null) window.clearTimeout(timeoutId)
+        }
+    }, [optimisticShot, reducedMotion, serverNow])
 
     useLayoutEffect(() => {
         if(previousShotCountRef.current === shotCount) return
         previousShotCountRef.current = shotCount
+        if(lastClientActionId && lastClientActionId === optimisticShot?.id) return
         if(reducedMotion) {
             setLaunch(null)
             return
         }
         const newlyAttachedAngle = lastShotHit ? null : attachedPinAngles.at(-1)
-        const impactAt = Number(shotImpactAt) || (Date.now() + LAUNCH_DURATION_MS)
+        const impactAt = Number(shotImpactAt) || (serverNow() + LAUNCH_DURATION_MS)
         setLaunch({ shotCount, successful: newlyAttachedAngle != null, target: pointAt(90, PIN_HEAD_DISTANCE), impactAt, isMoving: false, durationMs: LAUNCH_DURATION_MS })
         let secondFrameId = null
         let timeoutId = null
         const firstFrameId = window.requestAnimationFrame(() => {
             secondFrameId = window.requestAnimationFrame(() => {
-                const durationMs = Math.max(0, impactAt - Date.now())
+                const durationMs = Math.max(0, impactAt - serverNow())
                 if(durationMs <= 0) {
                     setLaunch((current) => current?.shotCount === shotCount ? null : current)
                     return
@@ -159,9 +180,9 @@ const PunctureScene = ({
             if(secondFrameId != null) window.cancelAnimationFrame(secondFrameId)
             if(timeoutId != null) window.clearTimeout(timeoutId)
         }
-    }, [attachedPinAngles, lastShotHit, reducedMotion, shotCount, shotImpactAt])
+    }, [attachedPinAngles, lastClientActionId, lastShotHit, optimisticShot?.id, reducedMotion, serverNow, shotCount, shotImpactAt])
 
-    const isLaunching = launch?.shotCount === shotCount
+    const isLaunching = Boolean(launch)
     const visibleAttachedPinAngles = isLaunching && launch?.successful
         ? attachedPinAngles.slice(0, -1)
         : attachedPinAngles
@@ -236,6 +257,7 @@ const PunctureScene = ({
                 originY={CENTER_Y + PIN_HEAD_DISTANCE}
                 velocityX={[-42, 42]}
                 velocityY={[48, 88]}
+                now={serverNow}
             >
                 <g style={{ color: playerColor }}>
                     <line x1='0' y1={-(PIN_HEAD_DISTANCE - PIN_STEM_START)} x2='0' y2={-1} stroke='currentColor' strokeWidth={PIN_LINE_WIDTH} strokeLinecap='round' />

@@ -3,7 +3,7 @@ import { appendChatMessage, type ChatMessage } from "../chat";
 import type { GameContext, StoredGame } from "../games/contracts";
 import { getGameMode } from "../games/registry";
 import type { PlayerIdentity } from "../types";
-import { makeId, parseMessage, requestRoom, send, stateFromRequest } from "../utils";
+import { makeId, parseMessage, requestRoom, stateFromRequest } from "../utils";
 import { decodeQuestionChunks, encodeQuestionChunks } from "../question-storage";
 import {
   beginBotChatGeneration,
@@ -21,13 +21,21 @@ import {
 import type { BotChatDispatch } from "../bots/chat";
 
 const DISCONNECT_GRACE_MS = 30_000;
+const PROTOCOL_VERSION = 2;
+const MAX_RECENT_SNAPSHOT_EVENTS = 200;
+const SUMMARY_EVENT_TYPES = new Set([
+  "GAME_STARTED", "GAME_ENDED", "QUESTION_RESOLVED", "ROUND_RESOLVED",
+  "TIMBER_ROUND_RESOLVED", "PUNCTURE_ROUND_RESOLVED", "FLUTTER_ROUND_RESOLVED",
+]);
 
 export class GameServer extends Server<Env> {
   static options = { hibernate: true };
   game: StoredGame | null = null;
+  scheduledAlarmAt: number | null = null;
 
   async onStart() {
     this.game = (await this.ctx.storage.get<StoredGame>("game")) ?? null;
+    this.scheduledAlarmAt = await this.ctx.storage.getAlarm();
     if (!this.game) return;
 
     const embeddedQuestions = this.embeddedQuestions();
@@ -55,8 +63,10 @@ export class GameServer extends Server<Env> {
     connection.setState(state);
     const player = this.game?.players.find((entry) => entry.userId === state.userId);
     if (!player) return connection.close(1008, "Not a player in this game");
-    player.disconnectedAt = null;
-    await this.save();
+    if (player.disconnectedAt != null) {
+      player.disconnectedAt = null;
+      await this.save();
+    }
     this.emit(connection);
   }
 
@@ -64,15 +74,30 @@ export class GameServer extends Server<Env> {
     const message = parseMessage(raw);
     const identity = connection.state as PlayerIdentity;
     if (!message || !this.game || !identity?.userId) return;
-    if (message.type === "game.subscribe") return this.emit(connection, message.id);
+    if (message.type === "game.subscribe" || message.type === "game.resync") return this.emit(connection, message.id);
+    if (message.type === "system.clockPing") {
+      const receivedAt = Date.now();
+      return this.sendMessage(connection, "system.clockPong", {
+        clientWallTime: Number((message.payload as any)?.clientWallTime) || 0,
+        clientMonotonic: Number((message.payload as any)?.clientMonotonic) || 0,
+        serverReceivedAt: receivedAt,
+        serverSentAt: Date.now(),
+      }, message.id);
+    }
     let chatDispatches: BotChatDispatch[] = [];
+    let changed = false;
+    let delivery: "snapshot" | "delta" = "snapshot";
+    let delta: { type: string; payload: Record<string, unknown> } | undefined;
+    const eventCountBefore = this.game.events.length;
     if (message.type === "chat.send" || message.type === "game.chat") {
       const appended = this.addChat(identity, message.payload as any);
       if (!identity.isBot && appended) chatDispatches = scheduleBotChatReply(this.game, appended, Date.now());
+      changed = Boolean(appended);
     }
     else if (message.type === "game.leave") {
       this.forfeit(identity.userId);
       await requestRoom(this.env.USER, identity.userId, { type: "game.finished", gameId: this.name });
+      changed = true;
     }
     else {
       const engine = this.engine();
@@ -80,14 +105,20 @@ export class GameServer extends Server<Env> {
       const deadline = engine?.nextDeadline(this.game) ?? null;
       if (engine && deadline && now >= deadline) {
         engine.handleDeadline(this.game, this.context(now));
+        changed = true;
       } else {
         const before = { ...(this.game.players.find((player) => player.userId === identity.userId)?.state ?? {}) };
-        engine?.handleAction(this.game, identity.userId, message, this.context(now));
-        observeHumanAction(this.game, identity.userId, message, now, before);
+        const result = engine?.handleAction(this.game, identity.userId, message, this.context(now));
+        changed = Boolean(result?.changed);
+        delivery = result?.delivery ?? "snapshot";
+        delta = result?.delta;
+        if (changed) observeHumanAction(this.game, identity.userId, message, now, before);
       }
     }
+    if (!changed) return;
     ensureBotActions(this.game, Date.now());
-    await this.afterMutation();
+    if (delta) delta.payload = { ...delta.payload, events: this.game.events.slice(eventCountBefore) };
+    await this.afterMutation({ delivery, delta });
     if (chatDispatches.length) await Promise.all(chatDispatches.map((dispatch) => this.dispatchBotChatJob(dispatch)));
   }
 
@@ -172,6 +203,7 @@ export class GameServer extends Server<Env> {
 
   async onAlarm() {
     if (!this.game) return;
+    this.scheduledAlarmAt = null;
     if (this.game.status !== "active") {
       if (this.game.result && !this.game.privateState.resultCommitted) await this.commitResult();
       if (this.game.privateState.expiresAt && Date.now() >= this.game.privateState.expiresAt && (this.game.privateState.resultCommitted || !this.game.result)) {
@@ -220,14 +252,30 @@ export class GameServer extends Server<Env> {
     if (!this.game) return null;
     const engine = this.engine();
     return {
+      protocolVersion: PROTOCOL_VERSION,
+      revision: Number(this.game.revision) || 0,
+      serverNow: Date.now(),
       room: { uid: this.game.gameId, modeId: this.game.modeId, ranked: this.game.ranked, status: this.game.status === "active" ? "active" : "finished", state: engine?.publicState(this.game) ?? this.game.state },
       players: this.game.players.map(({ disconnectedAt, isBot: _isBot, ...player }) => player),
-      events: this.game.events,
+      events: this.snapshotEvents(),
       chat: this.game.chat,
     };
   }
 
-  private emit(connection: Connection, id = makeId()) { send(connection, "game.snapshot", this.snapshot(), id); }
+  private snapshotEvents() {
+    if (!this.game) return [];
+    const recent = this.game.events.slice(-MAX_RECENT_SNAPSHOT_EVENTS);
+    const recentIds = new Set(recent.map((event) => event.uid));
+    return [
+      ...this.game.events.filter((event) => SUMMARY_EVENT_TYPES.has(String(event.type)) && !recentIds.has(event.uid)),
+      ...recent,
+    ];
+  }
+
+  private sendMessage(connection: Connection, type: string, payload: unknown, id = makeId()) {
+    connection.send(JSON.stringify({ id, type, payload, protocolVersion: PROTOCOL_VERSION, revision: Number(this.game?.revision) || 0, serverNow: Date.now() }));
+  }
+  private emit(connection: Connection, id = makeId()) { this.sendMessage(connection, "game.snapshot", this.snapshot(), id); }
   private async save() {
     if (!this.game) return;
     const privateState = { ...this.game.privateState };
@@ -260,13 +308,21 @@ export class GameServer extends Server<Env> {
     this.game.privateState.questionStorageKeys = questionStorageKeys;
   }
 
-  private async afterMutation() {
+  private async afterMutation(options: { delivery?: "snapshot" | "delta"; delta?: { type: string; payload: Record<string, unknown> } } = {}) {
     if (!this.game) return;
     this.game.updatedAt = Date.now();
+    this.game.revision = (Number(this.game.revision) || 0) + 1;
     if (this.game.status !== "active" && !this.game.privateState.expiresAt) this.game.privateState.expiresAt = Date.now() + 15 * 60_000;
     await this.releasePlayerSessions();
     await this.save();
-    this.broadcast(JSON.stringify({ id: makeId(), type: "game.snapshot", payload: this.snapshot() }));
+    const snapshot = this.snapshot();
+    for (const connection of this.getConnections<PlayerIdentity & { protocolVersion?: number }>()) {
+      if (options.delivery === "delta" && options.delta && Number(connection.state?.protocolVersion) >= PROTOCOL_VERSION) {
+        this.sendMessage(connection, options.delta.type, options.delta.payload);
+      } else {
+        this.sendMessage(connection, "game.snapshot", snapshot);
+      }
+    }
     if (this.game.result) await this.commitResult();
     await this.scheduleNextAlarm();
   }
@@ -291,7 +347,11 @@ export class GameServer extends Server<Env> {
       ? [this.engine()?.nextDeadline(this.game) ?? null, nextBotDeadline(this.game), nextBotChatExpiry(this.game), ...this.game.players.filter((player) => !player.isBot).map((player) => player.disconnectedAt ? player.disconnectedAt + DISCONNECT_GRACE_MS : null)]
       : [this.game.result && !this.game.privateState.resultCommitted ? Date.now() + 10_000 : null, this.game.privateState.expiresAt ?? null];
     const concreteDeadlines = deadlines.filter((value): value is number => Boolean(value));
-    if (concreteDeadlines.length) await this.ctx.storage.setAlarm(Math.min(...concreteDeadlines));
+    const next = concreteDeadlines.length ? Math.min(...concreteDeadlines) : null;
+    if (next === this.scheduledAlarmAt) return;
+    if (next == null) await this.ctx.storage.deleteAlarm();
+    else await this.ctx.storage.setAlarm(next);
+    this.scheduledAlarmAt = next;
   }
 
   private addChat(identity: PlayerIdentity, payload: { text?: string; clientMessageId?: string }): ChatMessage | null {
@@ -355,7 +415,8 @@ export class GameServer extends Server<Env> {
     }
     this.game.privateState.resultCommitted = true;
     await this.save();
-    this.broadcast(JSON.stringify({ id: makeId(), type: "game.snapshot", payload: this.snapshot() }));
+    const snapshot = this.snapshot();
+    for (const connection of this.getConnections()) this.sendMessage(connection, "game.snapshot", snapshot);
   }
 }
 

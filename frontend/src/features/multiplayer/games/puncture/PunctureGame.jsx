@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { sendGameMessage, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { getGameServerNow, sendGameMessage, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
 import QuestionPane from '../sat-classic/components/QuestionPane'
 import CalculatorWindow from '../../components/windows/CalculatorWindow'
 import LoadingState from '../../../../shared/components/ui/LoadingState'
@@ -78,7 +78,7 @@ const PunctureHeader = ({ localPlayer, opponent, remainingMs }) => {
     )
 }
 
-const PunctureBoard = ({ player, gameState, isFaded = false, now, slowdownStartedAt = null }) => {
+const PunctureBoard = ({ player, gameState, isFaded = false, now, slowdownStartedAt = null, optimisticShot = null, serverNow }) => {
     const playerState = player?.state ?? {}
     const pinsRemaining = Math.max(0, Number(playerState.pinsRemaining) || 0)
     const stunnedMs = Math.max(0, Number(playerState.stunnedUntil || 0) - now)
@@ -98,6 +98,9 @@ const PunctureBoard = ({ player, gameState, isFaded = false, now, slowdownStarte
                 shotImpactAt={playerState.shotImpactAt}
                 slowdownStartedAt={slowdownStartedAt}
                 playerColor={playerColor}
+                optimisticShot={optimisticShot}
+                lastClientActionId={playerState.lastClientActionId}
+                serverNow={serverNow}
             />
 
             {stunnedMs > 0 ? (
@@ -253,21 +256,24 @@ const PunctureGame = ({ roomId, userId }) => {
     const [response, setResponse] = useState('')
     const [calculatorOpen, setCalculatorOpen] = useState(false)
     const [questionReveal, setQuestionReveal] = useState(null)
-    const [now, setNow] = useState(Date.now())
+    const [now, setNow] = useState(() => getGameServerNow(roomId))
+    const [optimisticShot, setOptimisticShot] = useState(null)
     const shownAnswerToastEventIdsRef = useRef(new Set())
     const lastProcessedAnswerSequenceRef = useRef(null)
     const previousLocalShotCountRef = useRef(null)
     const previousLocalStunnedUntilRef = useRef(null)
+    const lastOptimisticShotAtRef = useRef(0)
     const shownQuestionRevealEventIdsRef = useRef(new Set())
     const questionsByIdRef = useRef(new Map())
     const { screenShakeRef, shake } = useScreenShake()
     const { showToast } = useToast()
+    const serverNow = useCallback(() => getGameServerNow(roomId), [roomId])
 
     useEffect(() => subscribeToGameSnapshot(roomId, setSnapshot), [roomId])
     useEffect(() => {
-        const timer = setInterval(() => setNow(Date.now()), 50)
+        const timer = setInterval(() => setNow(getGameServerNow(roomId)), 50)
         return () => clearInterval(timer)
-    }, [])
+    }, [roomId])
 
     const state = snapshot?.room?.state ?? null
     const players = snapshot?.players ?? EMPTY_PLAYERS
@@ -370,11 +376,11 @@ const PunctureGame = ({ roomId, userId }) => {
                 isCorrect: Boolean(myResult?.isCorrect),
                 correctAnswer: event?.data?.correctAnswer ?? null,
                 answerResponses,
-                startedAtMs: Date.now(),
+                startedAtMs: getGameServerNow(roomId),
                 durationMs: QUESTION_REVEAL_DURATION_MS,
             })
         })
-    }, [snapshot?.events, state?.questionIndex, userId, players])
+    }, [snapshot?.events, state?.questionIndex, userId, players, roomId])
 
     useEffect(() => {
         if(phase !== 'puncture_active') return () => {}
@@ -383,11 +389,20 @@ const PunctureGame = ({ roomId, userId }) => {
             const key = String(event.key).toLowerCase()
             if(key !== 'w' && key !== 'arrowup') return
             event.preventDefault()
-            sendGameMessage(roomId, 'game.shoot', {})
+            const shotAt = getGameServerNow(roomId)
+            if(shotAt < localStunnedUntil || shotAt - lastOptimisticShotAtRef.current < 50) return
+            lastOptimisticShotAtRef.current = shotAt
+            const clientActionId = `shot_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+            setOptimisticShot({ id: clientActionId, startedAt: shotAt })
+            sendGameMessage(roomId, 'game.shoot', { clientActionId })
         }
         window.addEventListener('keydown', onKeyDown)
         return () => window.removeEventListener('keydown', onKeyDown)
-    }, [phase, roomId])
+    }, [localStunnedUntil, phase, roomId])
+
+    useEffect(() => {
+        if(phase !== 'puncture_active') setOptimisticShot(null)
+    }, [phase, state?.punctureRoundIndex])
 
     const questionRemaining = Math.max(0, Number(state?.currentQuestionDeadlineAt || 0) - now)
     const punctureRemaining = Math.max(0, Number(state?.punctureRoundDeadlineAt || 0) - now)
@@ -441,6 +456,8 @@ const PunctureGame = ({ roomId, userId }) => {
                         isFaded={isRoundHold && Boolean(resolvedWinnerUserId) && resolvedWinnerUserId !== localPlayer.userId}
                         slowdownStartedAt={isRoundHold ? state.punctureRoundResolvedAt : null}
                         now={now}
+                        optimisticShot={optimisticShot}
+                        serverNow={serverNow}
                     />
                     <PunctureBoard
                         player={opponent}
@@ -448,6 +465,7 @@ const PunctureGame = ({ roomId, userId }) => {
                         isFaded={isRoundHold && Boolean(resolvedWinnerUserId) && resolvedWinnerUserId !== opponent.userId}
                         slowdownStartedAt={isRoundHold ? state.punctureRoundResolvedAt : null}
                         now={now}
+                        serverNow={serverNow}
                     />
                     {phase === 'puncture_countdown' ? (
                         <TransitionOverlay

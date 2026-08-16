@@ -14,6 +14,7 @@ import MatchEndOverlay from './components/MatchEndOverlay'
 import CalculatorWindow from '../../components/windows/CalculatorWindow'
 import { buildMultiplayerUiState } from '../../utils/multiplayerUtils'
 import { getRankInfoFromElo } from '../../../profile/utils/statsUtils'
+import { getGameServerNow } from '../../services/realtimeSocketService'
 
 const SatClassicGame = ({ roomId, userId }) => {
     const [room, setRoom] = useState(null)
@@ -23,7 +24,7 @@ const SatClassicGame = ({ roomId, userId }) => {
     const [lockedQuestionId, setLockedQuestionId] = useState(null)
     const [submittedResponse, setSubmittedResponse] = useState('')
     const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
-    const [nowMs, setNowMs] = useState(Date.now())
+    const [nowMs, setNowMs] = useState(() => getGameServerNow(roomId))
     const [resultOverlay, setResultOverlay] = useState(null)
     const [damageIndicators, setDamageIndicators] = useState({ left: null, right: null })
 
@@ -127,9 +128,9 @@ const SatClassicGame = ({ roomId, userId }) => {
     const isSprQuestion = questionType === 'spr'
 
     useEffect(() => {
-        const intervalId = setInterval(() => setNowMs(Date.now()), 50)
+        const intervalId = setInterval(() => setNowMs(getGameServerNow(roomId)), 50)
         return () => clearInterval(intervalId)
-    }, [])
+    }, [roomId])
 
     useEffect(() => {
 
@@ -144,7 +145,7 @@ const SatClassicGame = ({ roomId, userId }) => {
                 ...prev,
                 left: {
                     amount: previousLeft - leftHealth,
-                    startedAtMs: Date.now(),
+                    startedAtMs: getGameServerNow(roomId),
                 },
             }))
         }
@@ -154,14 +155,14 @@ const SatClassicGame = ({ roomId, userId }) => {
                 ...prev,
                 right: {
                     amount: previousRight - rightHealth,
-                    startedAtMs: Date.now(),
+                    startedAtMs: getGameServerNow(roomId),
                 },
             }))
         }
 
         previousHealthRef.current = { left: leftHealth, right: rightHealth }
 
-    }, [healthBoard.leftPlayer?.health, healthBoard.rightPlayer?.health])
+    }, [healthBoard.leftPlayer?.health, healthBoard.rightPlayer?.health, roomId])
 
     useEffect(() => {
 
@@ -248,7 +249,7 @@ const SatClassicGame = ({ roomId, userId }) => {
 
             setResultOverlay({
                 type: 'round_result',
-                startedAtMs: Date.now(),
+                startedAtMs: getGameServerNow(roomId),
                 durationMs: OVERLAY_DURATION_MS,
                 questionId: eventEntry?.data?.questionId,
                 myResult: myRoundResult,
@@ -256,7 +257,7 @@ const SatClassicGame = ({ roomId, userId }) => {
                 correctAnswer: eventEntry?.data?.correctAnswer ?? null,
             })
         })
-    }, [events, userId])
+    }, [events, roomId, userId])
 
     const currentRoundMultiplier = Number(gameState?.currentRoundMultiplier) || 1
     const isMatchFinished = gameState?.phase === 'finished'
@@ -390,6 +391,7 @@ const SatClassicGame = ({ roomId, userId }) => {
                 damageIndicators={damageIndicators}
                 elapsedSeconds={displayRoundSeconds}
                 currentRoundMultiplier={currentRoundMultiplier}
+                nowMs={nowMs}
             />
 
             <div className='relative flex-1 flex min-h-0'>

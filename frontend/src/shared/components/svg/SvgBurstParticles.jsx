@@ -17,6 +17,7 @@ const SvgBurstParticles = ({
     originY = 0,
     velocityX = [-36, 36],
     velocityY = [42, 82],
+    now = Date.now,
 }) => {
     const [particles, setParticles] = useState([])
     const previousTimeRef = useRef(null)
@@ -25,7 +26,7 @@ const SvgBurstParticles = ({
 
     useEffect(() => {
         if(!burstKey || disabled) return () => {}
-        const resolvedDelayMs = startAt == null ? delayMs : Math.max(0, Number(startAt) - Date.now())
+        const resolvedDelayMs = startAt == null ? delayMs : Math.max(0, Number(startAt) - now())
         const timeoutId = window.setTimeout(() => {
             setParticles((current) => [
                 ...current,
@@ -43,7 +44,7 @@ const SvgBurstParticles = ({
             ])
         }, Math.max(0, resolvedDelayMs))
         return () => window.clearTimeout(timeoutId)
-    }, [burstKey, count, delayMs, disabled, lifetimeMs, originX, originY, startAt, velocityXMaximum, velocityXMinimum, velocityYMaximum, velocityYMinimum])
+    }, [burstKey, count, delayMs, disabled, lifetimeMs, now, originX, originY, startAt, velocityXMaximum, velocityXMinimum, velocityYMaximum, velocityYMinimum])
 
     useEffect(() => {
         if(!particles.length) {

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { formatDurationMmSs } from '../../../../../shared/utils/formatters'
 import HealthPanel from './HealthPanel'
 
-const GameHeader = ({ healthBoard, damageIndicators, elapsedSeconds, currentRoundMultiplier }) => {
+const GameHeader = ({ healthBoard, damageIndicators, elapsedSeconds, currentRoundMultiplier, nowMs }) => {
     
     const [isPopping, setIsPopping] = useState(false)
     const previousSecondRef = useRef(elapsedSeconds)
@@ -46,6 +46,7 @@ const GameHeader = ({ healthBoard, damageIndicators, elapsedSeconds, currentRoun
             <HealthPanel
                 player={healthBoard.leftPlayer}
                 damageIndicator={damageIndicators.left}
+                nowMs={nowMs}
             />
 
             <div className='flex flex-col items-center justify-center'>
@@ -63,6 +64,7 @@ const GameHeader = ({ healthBoard, damageIndicators, elapsedSeconds, currentRoun
                 player={healthBoard.rightPlayer}
                 align='end'
                 damageIndicator={damageIndicators.right}
+                nowMs={nowMs}
             />
         </div>
     )

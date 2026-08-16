@@ -82,6 +82,7 @@ export const stateFromRequest = (request: Request): ConnectionState => ({
   avatar: parseJson(decodeURIComponent(request.headers.get("X-Avatar") || "null"), null),
   eloByMode: parseJson(decodeURIComponent(request.headers.get("X-Elo-By-Mode") || "{}"), {}),
   connectedAt: Date.now(),
+  protocolVersion: Math.max(1, Number(new URL(request.url).searchParams.get("protocolVersion")) || 1),
 });
 
 export const requestRoom = <T extends Server<Env>>(

@@ -1,4 +1,4 @@
-import type { GameContext, GameEngine, StoredGame } from "./contracts";
+import { changedAction, unchangedAction, type GameContext, type GameEngine, type StoredGame } from "./contracts";
 import { isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
 
 const MAX_QUESTIONS = 10;
@@ -315,16 +315,16 @@ export const createFlutterGame = (): GameEngine => ({
     context.addEvent("GAME_STARTED", { questionId: ids[0] ?? null });
   },
   handleAction(game, userId, message, context) {
-    if (game.status !== "active") return;
+    if (game.status !== "active") return unchangedAction();
     const player = game.players.find((entry) => entry.userId === userId);
-    if (!player) return;
+    if (!player) return unchangedAction();
 
     if (message.type === "game.answer" && game.state.phase === "question_active") {
-      if (context.now < Number(game.state.currentQuestionActiveAt || 0) || context.now >= Number(game.state.currentQuestionDeadlineAt || 0)) return;
+      if (context.now < Number(game.state.currentQuestionActiveAt || 0) || context.now >= Number(game.state.currentQuestionDeadlineAt || 0)) return unchangedAction();
       const questionId = game.state.currentQuestionId;
       const question = game.privateState.questionsById?.[questionId];
       const response = String((message.payload as any)?.submittedResponse ?? "").trim();
-      if (!question || !response || (player.state.answeredQuestionIds as string[]).includes(questionId)) return;
+      if (!question || !response || (player.state.answeredQuestionIds as string[]).includes(questionId)) return unchangedAction();
       game.privateState.answerSequence = Number(game.privateState.answerSequence || 0) + 1;
       game.privateState.answersByUserId[userId] = {
         userId, questionId, submittedResponse: response,
@@ -339,14 +339,14 @@ export const createFlutterGame = (): GameEngine => ({
         game.state.currentQuestionDeadlineAt = Math.min(Number(game.state.currentQuestionDeadlineAt), context.now + POST_SUBMIT_GRACE_MS);
         game.state.phaseDeadlineAt = game.state.currentQuestionDeadlineAt;
       }
-      return;
+      return changedAction();
     }
 
-    if (message.type !== "game.flutterInput" || game.state.phase !== "flutter_active") return;
+    if (message.type !== "game.flutterInput" || game.state.phase !== "flutter_active") return unchangedAction();
     const payload = (message.payload ?? {}) as Record<string, unknown>;
     const sequence = Number(payload.sequence);
-    if (!Number.isSafeInteger(sequence) || sequence <= Number(player.state.flutterInputSequence ?? -1)) return;
-    if ([payload.up, payload.down, payload.left, payload.right].some((value) => typeof value !== "boolean")) return;
+    if (!Number.isSafeInteger(sequence) || sequence <= Number(player.state.flutterInputSequence ?? -1)) return unchangedAction();
+    if ([payload.up, payload.down, payload.left, payload.right].some((value) => typeof value !== "boolean")) return unchangedAction();
     integratePlayerTo(player, context.now);
     player.state.flutterInputSequence = sequence;
     player.state.flutterInput = {
@@ -355,6 +355,16 @@ export const createFlutterGame = (): GameEngine => ({
       left: payload.left as boolean,
       right: payload.right as boolean,
     };
+    return changedAction({ type: "game.flutterState", payload: {
+      userId,
+      sequence,
+      flutterX: player.state.flutterX,
+      flutterY: player.state.flutterY,
+      flutterVelocityX: player.state.flutterVelocityX,
+      flutterVelocityY: player.state.flutterVelocityY,
+      flutterInput: player.state.flutterInput,
+      flutterLastUpdatedAt: player.state.flutterLastUpdatedAt,
+    } });
   },
   handleDeadline(game, context) {
     if (game.status !== "active" || context.now < Number(game.state.phaseDeadlineAt || 0)) return;

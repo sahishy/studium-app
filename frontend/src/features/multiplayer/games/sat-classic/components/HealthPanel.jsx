@@ -6,7 +6,7 @@ import { evaluateGradientColor } from '../../../../../shared/utils/colorUtils'
 
 const DAMAGE_INDICATOR_DURATION_MS = 1500
 
-const HealthPanel = ({ player, align = 'start', damageIndicator = null }) => {
+const HealthPanel = ({ player, align = 'start', damageIndicator = null, nowMs = Date.now() }) => {
 
     const healthValue = Math.max(0, Number(player?.health) || 0)
     const isEndAligned = align === 'end'
@@ -17,7 +17,7 @@ const HealthPanel = ({ player, align = 'start', damageIndicator = null }) => {
     )
 
     const indicatorProgress = damageIndicator
-        ? Math.max(0, Math.min(1, (Date.now() - damageIndicator.startedAtMs) / DAMAGE_INDICATOR_DURATION_MS))
+        ? Math.max(0, Math.min(1, (nowMs - damageIndicator.startedAtMs) / DAMAGE_INDICATOR_DURATION_MS))
         : 1
 
     const showDamageIndicator = damageIndicator && indicatorProgress < 1

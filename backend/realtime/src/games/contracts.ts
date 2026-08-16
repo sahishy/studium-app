@@ -12,6 +12,7 @@ export type StoredGame = {
   chat: Array<Record<string, any>>;
   startedAt: number;
   updatedAt: number;
+  revision?: number;
   result?: GameResult;
 };
 
@@ -20,9 +21,22 @@ export type GameContext = {
   addEvent: (type: string, data?: Record<string, unknown>, actorUserId?: string | null) => void;
 };
 
+export type GameActionResult = {
+  changed: boolean;
+  delivery?: "snapshot" | "delta";
+  delta?: { type: string; payload: Record<string, unknown> };
+};
+
+export const unchangedAction = (): GameActionResult => ({ changed: false });
+export const changedAction = (delta?: GameActionResult["delta"]): GameActionResult => ({
+  changed: true,
+  delivery: delta ? "delta" : "snapshot",
+  delta,
+});
+
 export type GameEngine = {
   initialize: (game: StoredGame, questions: any[], context: GameContext) => void;
-  handleAction: (game: StoredGame, userId: string, message: RealtimeMessage, context: GameContext) => void;
+  handleAction: (game: StoredGame, userId: string, message: RealtimeMessage, context: GameContext) => GameActionResult;
   handleDeadline: (game: StoredGame, context: GameContext) => void;
   publicState: (game: StoredGame) => Record<string, unknown>;
   nextDeadline: (game: StoredGame) => number | null;
