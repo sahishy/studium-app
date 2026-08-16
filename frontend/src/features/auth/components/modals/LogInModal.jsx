@@ -162,7 +162,6 @@ const LogInModal = ({ onSwitchToSignUp }) => {
                     onClick={handleGoogleContinue}
                     type='secondary'
                     className='w-full rounded-full py-3'
-                    disabled={true}
                 >
                     <img src={googleIcon} alt='Google' className='h-4 w-4' />
                     Continue with Google

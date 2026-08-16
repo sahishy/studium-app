@@ -314,7 +314,7 @@ const Welcome = () => {
                             <p className='mt-2 text-neutral1'>You're one step away from getting started.</p>
                         </div>
 
-                        <form onSubmit={handleSignup} noValidate className='flex flex-col gap-4'>
+                        <form onSubmit={handleSignup} noValidate className='flex flex-col gap-4 min-w-xs'>
                             <div className='flex flex-col gap-1.5'>
                                 <input
                                     type='email'
