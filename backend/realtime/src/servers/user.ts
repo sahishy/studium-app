@@ -1,7 +1,7 @@
-import type * as Party from "partykit/server";
+import { Server, type Connection, type ConnectionContext, type WSMessage } from "partyserver";
 import { getGameMode } from "../games/registry";
-import type { PartyEnv, PlayerIdentity, QueueEntry } from "../types";
-import { makeId, parseMessage, send, stateFromRequest, verifyConnection } from "../utils";
+import type { PlayerIdentity, QueueEntry } from "../types";
+import { makeId, parseMessage, requestRoom, send, stateFromRequest } from "../utils";
 
 type UserState = {
   userId: string;
@@ -17,53 +17,43 @@ const initialState = (userId: string): UserState => ({
   userId, status: "idle", modeId: null, currentRoomId: null, queuedAt: null, partyId: null, invitations: [],
 });
 
-export default class UserServer implements Party.Server {
-  state: UserState;
-  constructor(readonly room: Party.Room) { this.state = initialState(room.id); }
-
-  static onBeforeConnect(request: Party.Request, lobby: Party.Lobby) {
-    return verifyConnection(request, lobby.env as PartyEnv);
-  }
+export class UserServer extends Server<Env> {
+  static options = { hibernate: true };
+  state!: UserState;
 
   async onStart() {
-    this.state = (await this.room.storage.get<UserState>("state")) ?? initialState(this.room.id);
+    this.state = (await this.ctx.storage.get<UserState>("state")) ?? initialState(this.name);
     this.pruneInvitations();
   }
 
-  async onConnect(connection: Party.Connection, context: Party.ConnectionContext) {
+  async onConnect(connection: Connection, context: ConnectionContext) {
     const identity = stateFromRequest(context.request);
-    if (identity.userId !== this.room.id) return connection.close(1008, "Invalid user room");
+    if (identity.userId !== this.name) return connection.close(1008, "Invalid user room");
     connection.setState(identity);
     await this.reconcileCurrentRoom();
     if (this.state.partyId) {
-      const response = await this.room.context.parties.party.get(this.state.partyId).fetch({
-        method: "POST", body: JSON.stringify({ type: "party.hasMember", userId: this.room.id }),
-      });
+      const response = await requestRoom(this.env.PARTY, this.state.partyId, { type: "party.hasMember", userId: this.name });
       const membership = response.ok ? await response.json() as { exists?: boolean } : { exists: false };
       if (!membership.exists) {
         this.state.partyId = null;
-        await this.room.storage.put("state", this.state);
+        await this.ctx.storage.put("state", this.state);
       } else {
-        await this.room.context.parties.party.get(this.state.partyId).fetch({
-          method: "POST", body: JSON.stringify({ type: "party.presence", userId: this.room.id, connected: true }),
-        });
+        await requestRoom(this.env.PARTY, this.state.partyId, { type: "party.presence", userId: this.name, connected: true });
       }
     }
     this.emit(connection);
   }
 
-  async onClose(connection: Party.Connection) {
+  async onClose(connection: Connection) {
     const identity = connection.state as PlayerIdentity;
     if (!identity?.userId || !this.state.partyId) return;
-    const stillConnected = [...this.room.getConnections()].some((candidate) => (candidate.state as PlayerIdentity)?.userId === identity.userId);
+    const stillConnected = [...this.getConnections<PlayerIdentity>()].some((candidate) => candidate.state?.userId === identity.userId);
     if (!stillConnected) {
-      await this.room.context.parties.party.get(this.state.partyId).fetch({
-        method: "POST", body: JSON.stringify({ type: "party.presence", userId: identity.userId, connected: false }),
-      });
+      await requestRoom(this.env.PARTY, this.state.partyId, { type: "party.presence", userId: identity.userId, connected: false });
     }
   }
 
-  async onMessage(raw: string | ArrayBuffer, connection: Party.Connection) {
+  async onMessage(connection: Connection, raw: WSMessage) {
     const message = parseMessage(raw);
     if (!message) return send(connection, "error", { message: "Invalid message." });
     const identity = connection.state as PlayerIdentity;
@@ -82,7 +72,7 @@ export default class UserServer implements Party.Server {
     }
   }
 
-  async onRequest(request: Party.Request) {
+  async onRequest(request: Request) {
     if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
     const body = await request.json<any>();
     if (body.type === "game.assigned") {
@@ -112,32 +102,29 @@ export default class UserServer implements Party.Server {
     return Response.json(this.state);
   }
 
-  private emit(connection: Party.Connection, id = makeId()) {
+  private emit(connection: Connection, id = makeId()) {
     this.pruneInvitations();
     send(connection, "session.snapshot", this.state, id);
   }
 
   private async saveAndBroadcast() {
-    await this.room.storage.put("state", this.state);
-    this.room.broadcast(JSON.stringify({ id: makeId(), type: "session.snapshot", payload: this.state }));
+    await this.ctx.storage.put("state", this.state);
+    this.broadcast(JSON.stringify({ id: makeId(), type: "session.snapshot", payload: this.state }));
   }
 
   private async reconcileCurrentRoom() {
     if (this.state.status !== "in_room" || !this.state.currentRoomId) return;
-    const response = await this.room.context.parties.game.get(this.state.currentRoomId).fetch({
-      method: "POST",
-      body: JSON.stringify({ type: "game.sessionStatus" }),
-    });
+    const response = await requestRoom(this.env.GAME, this.state.currentRoomId, { type: "game.sessionStatus" });
     if (response.ok) {
       const game = await response.json() as { status?: string; playerIds?: string[] };
-      const playerIsInGame = Array.isArray(game.playerIds) && game.playerIds.includes(this.room.id);
+      const playerIsInGame = Array.isArray(game.playerIds) && game.playerIds.includes(this.name);
       if (game.status === "active" && playerIsInGame) return;
     }
     this.state.status = "idle";
     this.state.modeId = null;
     this.state.currentRoomId = null;
     this.state.queuedAt = null;
-    await this.room.storage.put("state", this.state);
+    await this.ctx.storage.put("state", this.state);
   }
 
   private pruneInvitations() {
@@ -156,15 +143,13 @@ export default class UserServer implements Party.Server {
     const mode = getGameMode(payload.modeId);
     if (!mode?.supportsPublicMatchmaking) throw new Error("This mode does not support public matchmaking.");
     const entry: QueueEntry = {
-      id: this.room.id,
-      userIds: [this.room.id],
+      id: this.name,
+      userIds: [this.name],
       players: [{ ...identity, elo: Number(payload.elo) || 0 }],
       averageElo: Number(payload.elo) || 0,
       joinedAt: Date.now(),
     };
-    const response = await this.room.context.parties.matchmaker.get(payload.modeId).fetch({
-      method: "POST", body: JSON.stringify({ type: "queue.join", entry, requesterUserId: this.room.id }),
-    });
+    const response = await requestRoom(this.env.MATCHMAKER, payload.modeId, { type: "queue.join", entry, requesterUserId: this.name });
     if (!response.ok) throw new Error(await response.text());
     const assignment = await response.json() as { gameId?: string };
     if (assignment.gameId) {
@@ -181,9 +166,7 @@ export default class UserServer implements Party.Server {
 
   private async leaveQueue() {
     if (this.state.status !== "queue" || !this.state.modeId) return;
-    await this.room.context.parties.matchmaker.get(this.state.modeId).fetch({
-      method: "POST", body: JSON.stringify({ type: "queue.leave", entryId: this.room.id }),
-    });
+    await requestRoom(this.env.MATCHMAKER, this.state.modeId, { type: "queue.leave", entryId: this.name });
     this.state.status = "idle";
     this.state.modeId = null;
     this.state.queuedAt = null;
@@ -194,9 +177,7 @@ export default class UserServer implements Party.Server {
     const mode = getGameMode(payload.modeId);
     if (!mode || mode.playerCount !== 1) throw new Error("This is not a solo mode.");
     const gameId = crypto.randomUUID();
-    const response = await this.room.context.parties.game.get(gameId).fetch({
-      method: "POST", body: JSON.stringify({ type: "game.initialize", modeId: mode.id, ranked: false, players: [identity] }),
-    });
+    const response = await requestRoom(this.env.GAME, gameId, { type: "game.initialize", modeId: mode.id, ranked: false, players: [identity] });
     if (!response.ok) throw new Error(await response.text());
     this.state.status = "in_room";
     this.state.modeId = mode.id;
@@ -207,9 +188,7 @@ export default class UserServer implements Party.Server {
   private async createParty(identity: PlayerIdentity) {
     if (this.state.partyId) throw new Error("You are already in a party.");
     const partyId = crypto.randomUUID().replaceAll("-", "").slice(0, 10).toUpperCase();
-    const response = await this.room.context.parties.party.get(partyId).fetch({
-      method: "POST", body: JSON.stringify({ type: "party.initialize", player: identity }),
-    });
+    const response = await requestRoom(this.env.PARTY, partyId, { type: "party.initialize", player: identity });
     if (!response.ok) throw new Error(await response.text());
     this.state.partyId = partyId;
   }
@@ -217,19 +196,14 @@ export default class UserServer implements Party.Server {
   private async createPartyAndInvite(identity: PlayerIdentity, targetUserId: string) {
     if (!targetUserId) throw new Error("Choose a player to invite.");
     await this.createParty(identity);
-    const response = await this.room.context.parties.party.get(this.state.partyId!).fetch({
-      method: "POST",
-      body: JSON.stringify({ type: "party.inviteUser", identity, targetUserId }),
-    });
+    const response = await requestRoom(this.env.PARTY, this.state.partyId!, { type: "party.inviteUser", identity, targetUserId });
     if (!response.ok) throw new Error(await response.text());
   }
 
   private async joinParty(identity: PlayerIdentity, partyId: string, quietly = false) {
     if (!partyId) throw new Error("Enter a party code.");
     if (this.state.partyId) throw new Error("Leave your current party first.");
-    const response = await this.room.context.parties.party.get(partyId.toUpperCase()).fetch({
-      method: "POST", body: JSON.stringify({ type: "party.join", player: identity }),
-    });
+    const response = await requestRoom(this.env.PARTY, partyId.toUpperCase(), { type: "party.join", player: identity });
     if (!response.ok) {
       if (quietly) return;
       throw new Error(await response.text());
@@ -246,9 +220,9 @@ export default class UserServer implements Party.Server {
   private async leaveParty(identity: PlayerIdentity) {
     if (!this.state.partyId) return;
     const partyId = this.state.partyId;
-    await this.room.context.parties.party.get(partyId).fetch({
-      method: "POST", body: JSON.stringify({ type: "party.leave", userId: identity.userId }),
-    });
+    await requestRoom(this.env.PARTY, partyId, { type: "party.leave", userId: identity.userId });
     this.state.partyId = null;
   }
 }
+
+export default UserServer;

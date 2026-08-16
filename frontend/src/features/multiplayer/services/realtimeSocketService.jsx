@@ -1,7 +1,7 @@
 import PartySocket from 'partysocket'
 import { auth } from '../../../lib/firebase'
 
-const host = import.meta.env.VITE_PARTYKIT_HOST || 'localhost:1999'
+const host = import.meta.env.VITE_REALTIME_HOST || 'localhost:8787'
 let currentProfile = null
 let currentUserStats = null
 const gameChannels = new Map()

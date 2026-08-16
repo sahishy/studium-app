@@ -1,9 +1,9 @@
-import type * as Party from "partykit/server";
+import { Server, type Connection, type ConnectionContext, type WSMessage } from "partyserver";
 import { appendChatMessage, type ChatMessage } from "../chat";
 import type { GameContext, StoredGame } from "../games/contracts";
 import { getGameMode } from "../games/registry";
-import type { PartyEnv, PlayerIdentity } from "../types";
-import { makeId, parseMessage, send, stateFromRequest, verifyConnection } from "../utils";
+import type { PlayerIdentity } from "../types";
+import { makeId, parseMessage, requestRoom, send, stateFromRequest } from "../utils";
 import { decodeQuestionChunks, encodeQuestionChunks } from "../question-storage";
 import {
   beginBotChatGeneration,
@@ -22,20 +22,19 @@ import type { BotChatDispatch } from "../bots/chat";
 
 const DISCONNECT_GRACE_MS = 30_000;
 
-export default class GameServer implements Party.Server {
+export class GameServer extends Server<Env> {
+  static options = { hibernate: true };
   game: StoredGame | null = null;
-  constructor(readonly room: Party.Room) {}
 
-  static onBeforeConnect(request: Party.Request, lobby: Party.Lobby) { return verifyConnection(request, lobby.env as PartyEnv); }
   async onStart() {
-    this.game = (await this.room.storage.get<StoredGame>("game")) ?? null;
+    this.game = (await this.ctx.storage.get<StoredGame>("game")) ?? null;
     if (!this.game) return;
 
     const embeddedQuestions = this.embeddedQuestions();
     const questionStorageKeys = this.game.privateState.questionStorageKeys as string[][] | undefined;
     if (questionStorageKeys?.length) {
       const questions = await Promise.all(questionStorageKeys.map(async (keys) => {
-        const chunks = await Promise.all(keys.map((key) => this.room.storage.get<Uint8Array>(key)));
+        const chunks = await Promise.all(keys.map((key) => this.ctx.storage.get<Uint8Array>(key)));
         if (chunks.some((chunk) => !chunk)) throw new Error("Stored game question is missing.");
         return decodeQuestionChunks(chunks as Uint8Array[]);
       }));
@@ -51,7 +50,7 @@ export default class GameServer implements Party.Server {
     await this.scheduleNextAlarm();
   }
 
-  async onConnect(connection: Party.Connection, context: Party.ConnectionContext) {
+  async onConnect(connection: Connection, context: ConnectionContext) {
     const state = stateFromRequest(context.request);
     connection.setState(state);
     const player = this.game?.players.find((entry) => entry.userId === state.userId);
@@ -61,7 +60,7 @@ export default class GameServer implements Party.Server {
     this.emit(connection);
   }
 
-  async onMessage(raw: string | ArrayBuffer, connection: Party.Connection) {
+  async onMessage(connection: Connection, raw: WSMessage) {
     const message = parseMessage(raw);
     const identity = connection.state as PlayerIdentity;
     if (!message || !this.game || !identity?.userId) return;
@@ -73,7 +72,7 @@ export default class GameServer implements Party.Server {
     }
     else if (message.type === "game.leave") {
       this.forfeit(identity.userId);
-      await this.room.context.parties.user.get(identity.userId).fetch({ method: "POST", body: JSON.stringify({ type: "game.finished", gameId: this.room.id }) });
+      await requestRoom(this.env.USER, identity.userId, { type: "game.finished", gameId: this.name });
     }
     else {
       const engine = this.engine();
@@ -92,17 +91,17 @@ export default class GameServer implements Party.Server {
     if (chatDispatches.length) await Promise.all(chatDispatches.map((dispatch) => this.dispatchBotChatJob(dispatch)));
   }
 
-  async onClose(connection: Party.Connection) {
+  async onClose(connection: Connection) {
     const identity = connection.state as PlayerIdentity;
     const player = this.game?.players.find((entry) => entry.userId === identity?.userId);
-    const stillConnected = [...this.room.getConnections()].some((candidate) => (candidate.state as PlayerIdentity)?.userId === identity?.userId);
+    const stillConnected = [...this.getConnections<PlayerIdentity>()].some((candidate) => candidate.state?.userId === identity?.userId);
     if (!stillConnected && player && this.game?.status === "active") {
       player.disconnectedAt = Date.now();
       await this.afterMutation();
     }
   }
 
-  async onRequest(request: Party.Request) {
+  async onRequest(request: Request) {
     if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
     const body = await request.json<any>();
     if (body.type === "bot.chatContext") {
@@ -143,12 +142,12 @@ export default class GameServer implements Party.Server {
       });
     }
     if (body.type !== "game.initialize") return new Response("Unknown request", { status: 400 });
-    if (this.game) return Response.json({ ok: true, gameId: this.room.id });
+    if (this.game) return Response.json({ ok: true, gameId: this.name });
     const mode = getGameMode(body.modeId);
     if (!mode || body.players?.length !== mode.playerCount) return new Response("Invalid game configuration", { status: 400 });
     const now = Date.now();
     this.game = {
-      gameId: this.room.id, modeId: mode.id, ranked: Boolean(body.ranked), status: "active",
+      gameId: this.name, modeId: mode.id, ranked: Boolean(body.ranked), status: "active",
       players: body.players.map((player: PlayerIdentity) => ({ ...player, state: {}, disconnectedAt: null })),
       state: {}, privateState: {}, events: [], chat: [], startedAt: now, updatedAt: now,
     };
@@ -168,7 +167,7 @@ export default class GameServer implements Party.Server {
     initializeBots(this.game);
     ensureBotActions(this.game, now);
     await this.afterMutation();
-    return Response.json({ ok: true, gameId: this.room.id });
+    return Response.json({ ok: true, gameId: this.name });
   }
 
   async onAlarm() {
@@ -176,7 +175,7 @@ export default class GameServer implements Party.Server {
     if (this.game.status !== "active") {
       if (this.game.result && !this.game.privateState.resultCommitted) await this.commitResult();
       if (this.game.privateState.expiresAt && Date.now() >= this.game.privateState.expiresAt && (this.game.privateState.resultCommitted || !this.game.result)) {
-        await this.room.storage.deleteAll();
+        await this.ctx.storage.deleteAll();
         this.game = null;
         return;
       }
@@ -228,13 +227,13 @@ export default class GameServer implements Party.Server {
     };
   }
 
-  private emit(connection: Party.Connection, id = makeId()) { send(connection, "game.snapshot", this.snapshot(), id); }
+  private emit(connection: Connection, id = makeId()) { send(connection, "game.snapshot", this.snapshot(), id); }
   private async save() {
     if (!this.game) return;
     const privateState = { ...this.game.privateState };
     delete privateState.questions;
     delete privateState.questionsById;
-    await this.room.storage.put("game", { ...this.game, privateState });
+    await this.ctx.storage.put("game", { ...this.game, privateState });
   }
 
   private embeddedQuestions(): any[] {
@@ -255,7 +254,7 @@ export default class GameServer implements Party.Server {
     for (const [questionIndex, question] of questions.entries()) {
       const chunks = encodeQuestionChunks(question);
       const keys = chunks.map((_, chunkIndex) => `question:${questionIndex}:${chunkIndex}`);
-      await Promise.all(chunks.map((chunk, chunkIndex) => this.room.storage.put(keys[chunkIndex], chunk)));
+      await Promise.all(chunks.map((chunk, chunkIndex) => this.ctx.storage.put(keys[chunkIndex], chunk)));
       questionStorageKeys.push(keys);
     }
     this.game.privateState.questionStorageKeys = questionStorageKeys;
@@ -267,7 +266,7 @@ export default class GameServer implements Party.Server {
     if (this.game.status !== "active" && !this.game.privateState.expiresAt) this.game.privateState.expiresAt = Date.now() + 15 * 60_000;
     await this.releasePlayerSessions();
     await this.save();
-    this.room.broadcast(JSON.stringify({ id: makeId(), type: "game.snapshot", payload: this.snapshot() }));
+    this.broadcast(JSON.stringify({ id: makeId(), type: "game.snapshot", payload: this.snapshot() }));
     if (this.game.result) await this.commitResult();
     await this.scheduleNextAlarm();
   }
@@ -275,10 +274,7 @@ export default class GameServer implements Party.Server {
   private async releasePlayerSessions() {
     if (!this.game || this.game.status === "active" || this.game.privateState.playerSessionsReleased) return;
     const results = await Promise.allSettled(this.game.players.filter((player) => !player.isBot).map(async (player) => {
-      const response = await this.room.context.parties.user.get(player.userId).fetch({
-        method: "POST",
-        body: JSON.stringify({ type: "game.finished", gameId: this.game!.gameId }),
-      });
+      const response = await requestRoom(this.env.USER, player.userId, { type: "game.finished", gameId: this.game!.gameId });
       if (!response.ok) throw new Error(`Unable to release ${player.userId}: ${response.status}`);
     }));
     const failed = results.filter((result) => result.status === "rejected");
@@ -295,7 +291,7 @@ export default class GameServer implements Party.Server {
       ? [this.engine()?.nextDeadline(this.game) ?? null, nextBotDeadline(this.game), nextBotChatExpiry(this.game), ...this.game.players.filter((player) => !player.isBot).map((player) => player.disconnectedAt ? player.disconnectedAt + DISCONNECT_GRACE_MS : null)]
       : [this.game.result && !this.game.privateState.resultCommitted ? Date.now() + 10_000 : null, this.game.privateState.expiresAt ?? null];
     const concreteDeadlines = deadlines.filter((value): value is number => Boolean(value));
-    if (concreteDeadlines.length) await this.room.storage.setAlarm(Math.min(...concreteDeadlines));
+    if (concreteDeadlines.length) await this.ctx.storage.setAlarm(Math.min(...concreteDeadlines));
   }
 
   private addChat(identity: PlayerIdentity, payload: { text?: string; clientMessageId?: string }): ChatMessage | null {
@@ -309,10 +305,7 @@ export default class GameServer implements Party.Server {
   private async dispatchBotChatJob(dispatch: BotChatDispatch) {
     let response: Response | null = null;
     try {
-      response = await this.room.context.parties.botchat.get(dispatch.gameId).fetch({
-        method: "POST",
-        body: JSON.stringify({ type: "bot.chatSchedule", ...dispatch }),
-      });
+      response = await requestRoom(this.env.BOTCHAT, dispatch.gameId, { type: "bot.chatSchedule", ...dispatch });
     } catch {
       response = null;
     }
@@ -336,9 +329,8 @@ export default class GameServer implements Party.Server {
   }
 
   private async fetchQuestions(modeId: string, count: number): Promise<any[]> {
-    const env = this.room.env as PartyEnv;
-    if (!env.BACKEND_API_BASE_URL) return [];
-    const response = await fetch(`${env.BACKEND_API_BASE_URL}/realtime/questions`, {
+    if (!this.env.BACKEND_API_BASE_URL) return [];
+    const response = await fetch(`${this.env.BACKEND_API_BASE_URL}/realtime/questions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ modeId, count }),
@@ -349,9 +341,8 @@ export default class GameServer implements Party.Server {
 
   private async commitResult() {
     if (!this.game?.result || this.game.privateState.resultCommitted) return;
-    const env = this.room.env as PartyEnv;
-    if (!env.BACKEND_API_BASE_URL) return;
-    const response = await fetch(`${env.BACKEND_API_BASE_URL}/realtime/results`, {
+    if (!this.env.BACKEND_API_BASE_URL) return;
+    const response = await fetch(`${this.env.BACKEND_API_BASE_URL}/realtime/results`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...this.game.result, botPlayerIds: this.game.players.filter((player) => player.isBot).map((player) => player.userId) }),
@@ -364,6 +355,8 @@ export default class GameServer implements Party.Server {
     }
     this.game.privateState.resultCommitted = true;
     await this.save();
-    this.room.broadcast(JSON.stringify({ id: makeId(), type: "game.snapshot", payload: this.snapshot() }));
+    this.broadcast(JSON.stringify({ id: makeId(), type: "game.snapshot", payload: this.snapshot() }));
   }
 }
+
+export default GameServer;

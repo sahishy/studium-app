@@ -1,4 +1,4 @@
-import usernames from "../../../frontend/src/data/usernames.json";
+import usernames from "../../../../frontend/src/data/usernames.json";
 import type { PlayerIdentity } from "../types";
 import { hashValue } from "./random";
 import type { BotRuntime, BotTraits, HumanPerformanceProfile } from "./types";

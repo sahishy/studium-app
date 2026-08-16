@@ -14,7 +14,7 @@
 		]
 	},
 	"functions": {
-		"source": "backend"
+		"source": "backend/functions"
 	},
 	"firestore": {
 		"rules": "firestore.rules"

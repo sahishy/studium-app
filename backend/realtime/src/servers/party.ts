@@ -1,8 +1,8 @@
-import type * as Party from "partykit/server";
+import { Server, type Connection, type ConnectionContext, type WSMessage } from "partyserver";
 import { appendChatMessage, appendSystemChatMessage, type ChatMessage } from "../chat";
 import { getGameMode } from "../games/registry";
-import type { PartyEnv, PlayerIdentity } from "../types";
-import { makeId, parseMessage, send, stateFromRequest, verifyConnection } from "../utils";
+import type { PlayerIdentity } from "../types";
+import { makeId, parseMessage, requestRoom, send, stateFromRequest } from "../utils";
 
 type PartyState = {
   id: string;
@@ -16,13 +16,12 @@ type PartyState = {
   launching?: boolean;
 };
 
-export default class SocialPartyServer implements Party.Server {
+export class SocialPartyServer extends Server<Env> {
+  static options = { hibernate: true };
   state: PartyState | null = null;
-  constructor(readonly room: Party.Room) {}
 
-  static onBeforeConnect(request: Party.Request, lobby: Party.Lobby) { return verifyConnection(request, lobby.env as PartyEnv); }
   async onStart() {
-    this.state = (await this.room.storage.get<PartyState>("state")) ?? null;
+    this.state = (await this.ctx.storage.get<PartyState>("state")) ?? null;
     if (this.state) {
       if (!this.state.chat) this.state.chat = [];
       if (!this.state.pendingInvites) this.state.pendingInvites = [];
@@ -30,7 +29,7 @@ export default class SocialPartyServer implements Party.Server {
     }
   }
 
-  async onConnect(connection: Party.Connection, context: Party.ConnectionContext) {
+  async onConnect(connection: Connection, context: ConnectionContext) {
     const identity = stateFromRequest(context.request);
     const member = this.state?.members.find((entry) => entry.userId === identity.userId);
     if (!member) return connection.close(1008, "Not a party member");
@@ -39,7 +38,7 @@ export default class SocialPartyServer implements Party.Server {
     await this.saveAndBroadcast();
   }
 
-  async onMessage(raw: string | ArrayBuffer, connection: Party.Connection) {
+  async onMessage(connection: Connection, raw: WSMessage) {
     const message = parseMessage(raw);
     const identity = connection.state as PlayerIdentity;
     if (!message || !this.state || !this.state.members.some((member) => member.userId === identity.userId)) return;
@@ -59,7 +58,7 @@ export default class SocialPartyServer implements Party.Server {
     }
   }
 
-  async onRequest(request: Party.Request) {
+  async onRequest(request: Request) {
     const body = await request.json<any>();
     if (body.type === "party.hasMember") {
       return Response.json({ exists: Boolean(this.state?.members.some((member) => member.userId === body.userId)) });
@@ -73,7 +72,7 @@ export default class SocialPartyServer implements Party.Server {
     }
     if (body.type === "party.initialize") {
       if (!this.state) {
-        this.state = { id: this.room.id, leaderUserId: body.player.userId, members: [{ ...body.player, joinedAt: Date.now(), ready: false }], modeId: "sat-classic", joinCodeExpiresAt: Date.now() + 10 * 60_000, expiresAt: null, pendingInvites: [], chat: [], launching: false };
+        this.state = { id: this.name, leaderUserId: body.player.userId, members: [{ ...body.player, joinedAt: Date.now(), ready: false }], modeId: "sat-classic", joinCodeExpiresAt: Date.now() + 10 * 60_000, expiresAt: null, pendingInvites: [], chat: [], launching: false };
         this.state.chat = appendSystemChatMessage(this.state.chat, `${body.player.displayName} joined the party.`);
       }
     } else if (body.type === "party.inviteUser") {
@@ -110,7 +109,7 @@ export default class SocialPartyServer implements Party.Server {
       if (expired.length || invitationsExpired) await this.saveAndBroadcast();
     }
     if (this.state?.members.length === 0 && this.state.expiresAt && Date.now() >= this.state.expiresAt) {
-      await this.room.storage.deleteAll();
+      await this.ctx.storage.deleteAll();
       this.state = null;
       return;
     }
@@ -149,9 +148,9 @@ export default class SocialPartyServer implements Party.Server {
     await this.saveAndBroadcast();
     const gameId = crypto.randomUUID();
     try {
-      const response = await this.room.context.parties.game.get(gameId).fetch({ method: "POST", body: JSON.stringify({ type: "game.initialize", modeId: mode.id, ranked: false, players: this.state.members }) });
+      const response = await requestRoom(this.env.GAME, gameId, { type: "game.initialize", modeId: mode.id, ranked: false, players: this.state.members });
       if (!response.ok) throw new Error(await response.text());
-      await Promise.all(this.state.members.map((member) => this.room.context.parties.user.get(member.userId).fetch({ method: "POST", body: JSON.stringify({ type: "game.assigned", gameId, modeId: mode.id }) })));
+      await Promise.all(this.state.members.map((member) => requestRoom(this.env.USER, member.userId, { type: "game.assigned", gameId, modeId: mode.id })));
       this.clearReady();
       await this.saveAndBroadcast();
     } catch (error) {
@@ -165,7 +164,7 @@ export default class SocialPartyServer implements Party.Server {
     if (!this.state || !targetUserId) return;
     if (this.state.pendingInvites.some((invite) => invite.userId === targetUserId && invite.expiresAt > Date.now())) throw new Error("That player already has a pending party invitation.");
     this.state.joinCodeExpiresAt = Date.now() + 10 * 60_000;
-    const response = await this.room.context.parties.user.get(targetUserId).fetch({ method: "POST", body: JSON.stringify({ type: "party.invite", invitation: { partyId: this.room.id, fromUserId: identity.userId, fromName: identity.displayName, fromProfilePicture: identity.profilePicture } }) });
+    const response = await requestRoom(this.env.USER, targetUserId, { type: "party.invite", invitation: { partyId: this.name, fromUserId: identity.userId, fromName: identity.displayName, fromProfilePicture: identity.profilePicture } });
     if (!response.ok) throw new Error(await response.text());
     this.state.pendingInvites.push({ userId: targetUserId, expiresAt: Date.now() + 10_000 });
   }
@@ -179,7 +178,7 @@ export default class SocialPartyServer implements Party.Server {
     this.clearReady();
     if (!this.state.members.length) {
       this.state.expiresAt = Date.now() + 15 * 60_000;
-      await this.room.storage.setAlarm(this.state.expiresAt);
+      await this.ctx.storage.setAlarm(this.state.expiresAt);
     }
   }
 
@@ -190,7 +189,7 @@ export default class SocialPartyServer implements Party.Server {
       ...this.state.pendingInvites.map((invite) => invite.expiresAt),
       ...this.state.members.map((member) => member.disconnectedAt ? member.disconnectedAt + 30_000 : null),
     ].filter((value): value is number => Boolean(value));
-    if (deadlines.length) await this.room.storage.setAlarm(Math.min(...deadlines));
+    if (deadlines.length) await this.ctx.storage.setAlarm(Math.min(...deadlines));
   }
 
   private clearReady() {
@@ -198,9 +197,11 @@ export default class SocialPartyServer implements Party.Server {
     this.state.launching = false;
     this.state.members.forEach((member) => { member.ready = false; });
   }
-  private emit(connection: Party.Connection) { send(connection, "party.snapshot", this.state); }
+  private emit(connection: Connection) { send(connection, "party.snapshot", this.state); }
   private async saveAndBroadcast() {
-    if (this.state) await this.room.storage.put("state", this.state);
-    this.room.broadcast(JSON.stringify({ id: makeId(), type: "party.snapshot", payload: this.state }));
+    if (this.state) await this.ctx.storage.put("state", this.state);
+    this.broadcast(JSON.stringify({ id: makeId(), type: "party.snapshot", payload: this.state }));
   }
 }
+
+export default SocialPartyServer;

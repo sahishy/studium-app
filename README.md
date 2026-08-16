@@ -47,9 +47,9 @@ Studium is a web app for managing school work in one place. It includes course o
 | Frontend | React, Vite, Tailwind CSS |
 | Backend | Firebase Cloud Functions, Express |
 | Database and auth | Firebase Authentication, Firestore, Storage |
-| Multiplayer | Firebase, Express, Phaser |
+| Multiplayer | Cloudflare Workers, PartyServer, Durable Objects, PartySocket |
 | 3D interface | Three.js, React Three Fiber |
-| Deployment | Firebase Hosting |
+| Deployment | Firebase Hosting and Functions; Cloudflare Workers |
 
 ## Simple project structure
 
@@ -60,17 +60,33 @@ studium-app/
 ├── frontend/          # React and Vite application
 │   └── src/
 │       └── features/  # Courses, agenda, profile, multiplayer, and more
-├── backend/           # Firebase Cloud Functions and Express routes
-│   └── src/
-│       └── features/  # Multiplayer services and game logic
+├── backend/
+│   ├── functions/     # Firebase Functions and permanent-data APIs
+│   └── realtime/      # Cloudflare Worker and multiplayer rooms
 ```
 
-## Firebase Emulators
+## Local development
 
-```npm run emulators:start```
-```npm run emulators:stop```
+Install each independent package:
 
-## Frontend Testing
+```bash
+npm --prefix frontend install
+npm --prefix backend/functions install
+npm --prefix backend/realtime install
+```
 
-```cd frontend```
-```npm run dev```
+Run Firebase emulators, the PartyServer Worker, and the frontend in separate terminals:
+
+```bash
+npm run emulators:start
+npm run realtime:dev
+npm --prefix frontend run dev
+```
+
+The frontend uses `localhost:8787` for real-time rooms by default. Production builds receive `VITE_REALTIME_HOST` from GitHub Actions. The main-branch workflow deploys the Worker with `CLOUDFLARE_API_TOKEN` (and `CLOUDFLARE_ACCOUNT_ID` when needed). See [the real-time service guide](backend/realtime/README.md) for `.dev.vars`, Cloudflare secrets, deployment, and logs.
+
+Stop the Firebase emulators with:
+
+```bash
+npm run emulators:stop
+```

@@ -1,20 +1,19 @@
-import type * as Party from "partykit/server";
+import { Server } from "partyserver";
 import { getGameMode } from "../games/registry";
 import { BOT_FILL_AFTER_MS, findBotFillEntries, findMatch } from "../matchmaking";
 import type { QueueEntry } from "../types";
 import { createBotIdentity } from "../bots/profile";
+import { requestRoom } from "../utils";
 
-export default class MatchmakerServer implements Party.Server {
+export class MatchmakerServer extends Server<Env> {
   queue: QueueEntry[] = [];
-  matchTimer: ReturnType<typeof setTimeout> | null = null;
-  constructor(readonly room: Party.Room) {}
 
   async onStart() {
-    this.queue = (await this.room.storage.get<QueueEntry[]>("queue")) ?? [];
-    this.scheduleMatchCheck();
+    this.queue = (await this.ctx.storage.get<QueueEntry[]>("queue")) ?? [];
+    await this.scheduleMatchCheck();
   }
 
-  async onRequest(request: Party.Request) {
+  async onRequest(request: Request) {
     if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
     const body = await request.json<any>();
     if (body.type === "queue.join") {
@@ -25,34 +24,40 @@ export default class MatchmakerServer implements Party.Server {
         gameId = await this.match(body.requesterUserId);
       } catch (error) {
         this.queue = previousQueue;
-        await this.room.storage.put("queue", this.queue);
+        await this.ctx.storage.put("queue", this.queue);
         return new Response(error instanceof Error ? error.message : "Unable to create a game.", { status: 502 });
       }
-      await this.room.storage.put("queue", this.queue);
-      this.scheduleMatchCheck();
+      await this.ctx.storage.put("queue", this.queue);
+      await this.scheduleMatchCheck();
       return Response.json({ ok: true, gameId });
     } else if (body.type === "queue.leave") {
       this.queue = this.queue.filter((entry) => entry.id !== body.entryId);
     }
-    await this.room.storage.put("queue", this.queue);
-    this.scheduleMatchCheck();
+    await this.ctx.storage.put("queue", this.queue);
+    await this.scheduleMatchCheck();
     return Response.json({ ok: true });
   }
 
-  private scheduleMatchCheck() {
-    if (this.matchTimer) clearTimeout(this.matchTimer);
-    this.matchTimer = null;
-    if (!this.queue.length) return;
+  async onAlarm() {
+    try {
+      await this.match();
+    } finally {
+      await this.scheduleMatchCheck();
+    }
+  }
+
+  private async scheduleMatchCheck() {
+    if (!this.queue.length) {
+      await this.ctx.storage.deleteAlarm();
+      return;
+    }
     const untilBotFill = Math.max(0, Math.min(...this.queue.map((entry) => entry.joinedAt + BOT_FILL_AFTER_MS - Date.now())));
     const delay = untilBotFill === 0 ? 5_000 : Math.min(10_000, untilBotFill);
-    this.matchTimer = setTimeout(() => {
-      this.matchTimer = null;
-      void this.match().finally(() => this.scheduleMatchCheck());
-    }, delay);
+    await this.ctx.storage.setAlarm(Date.now() + delay);
   }
 
   private async match(requesterUserId?: string): Promise<string | null> {
-    const mode = getGameMode(this.room.id);
+    const mode = getGameMode(this.name);
     if (!mode?.supportsPublicMatchmaking) return null;
     let requesterGameId: string | null = null;
     let selected = findMatch(this.queue, mode.playerCount);
@@ -60,16 +65,12 @@ export default class MatchmakerServer implements Party.Server {
       const selectedIds = new Set(selected.map((entry) => entry.id));
       const players = selected.flatMap((entry) => entry.players);
       const gameId = crypto.randomUUID();
-      const initialized = await this.room.context.parties.game.get(gameId).fetch({
-        method: "POST", body: JSON.stringify({ type: "game.initialize", modeId: mode.id, ranked: mode.ranked, players }),
-      });
+      const initialized = await requestRoom(this.env.GAME, gameId, { type: "game.initialize", modeId: mode.id, ranked: mode.ranked, players });
       if (!initialized.ok) throw new Error((await initialized.text()) || "Unable to initialize the game.");
       this.queue = this.queue.filter((entry) => !selectedIds.has(entry.id));
-      await this.room.storage.put("queue", this.queue);
+      await this.ctx.storage.put("queue", this.queue);
       if (players.some((player) => player.userId === requesterUserId)) requesterGameId = gameId;
-      await Promise.all(players.filter((player) => player.userId !== requesterUserId).map((player) => this.room.context.parties.user.get(player.userId).fetch({
-        method: "POST", body: JSON.stringify({ type: "game.assigned", gameId, modeId: mode.id }),
-      })));
+      await Promise.all(players.filter((player) => player.userId !== requesterUserId).map((player) => requestRoom(this.env.USER, player.userId, { type: "game.assigned", gameId, modeId: mode.id })));
       selected = findMatch(this.queue, mode.playerCount);
     }
 
@@ -81,18 +82,16 @@ export default class MatchmakerServer implements Party.Server {
         const bot = createBotIdentity(human, mode.id, `${entry.id}:${entry.joinedAt}`);
         const players = [human, bot];
         const gameId = crypto.randomUUID();
-        const initialized = await this.room.context.parties.game.get(gameId).fetch({
-          method: "POST", body: JSON.stringify({ type: "game.initialize", modeId: mode.id, ranked: mode.ranked, players }),
-        });
+        const initialized = await requestRoom(this.env.GAME, gameId, { type: "game.initialize", modeId: mode.id, ranked: mode.ranked, players });
         if (!initialized.ok) continue;
         this.queue = this.queue.filter((queued) => queued.id !== entry.id);
-        await this.room.storage.put("queue", this.queue);
+        await this.ctx.storage.put("queue", this.queue);
         if (human.userId === requesterUserId) requesterGameId = gameId;
-        else await this.room.context.parties.user.get(human.userId).fetch({
-          method: "POST", body: JSON.stringify({ type: "game.assigned", gameId, modeId: mode.id }),
-        });
+        else await requestRoom(this.env.USER, human.userId, { type: "game.assigned", gameId, modeId: mode.id });
       }
     }
     return requesterGameId;
   }
 }
+
+export default MatchmakerServer;

@@ -1,4 +1,6 @@
 {
+	"name": "studium-functions",
+	"private": true,
 	"main": "src/index.js",
 	"type": "module",
 	"dependencies": {

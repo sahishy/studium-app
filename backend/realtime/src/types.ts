@@ -1,5 +1,3 @@
-import type * as Party from "partykit/server";
-
 export type RealtimeMessage<T = unknown> = { id: string; type: string; payload?: T };
 
 export type PlayerIdentity = {
@@ -36,12 +34,11 @@ export type GameResult = {
   botPlayerIds?: string[];
 };
 
-export type PartyEnv = {
-  BACKEND_API_BASE_URL?: string;
-  OPENAI_API_KEY?: string;
-  /** Public PartyKit host, without a path. Defaults to localhost:1999 in development. */
-  PARTYKIT_HOST?: string;
-};
-
 export type ConnectionState = PlayerIdentity & { connectedAt: number };
-export type ServerRoom = Party.Room;
+
+declare global {
+  interface Env {
+    BACKEND_API_BASE_URL: string;
+    OPENAI_API_KEY?: string;
+  }
+}
