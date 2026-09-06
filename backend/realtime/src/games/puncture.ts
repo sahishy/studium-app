@@ -1,5 +1,5 @@
 import { changedAction, unchangedAction, type GameContext, type GameEngine, type StoredGame } from "./contracts";
-import { isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
+import { buildReviewQuestionsById, isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
 
 const MAX_QUESTIONS = 10;
 const SCORE_TO_WIN = 3;
@@ -11,13 +11,48 @@ const PUNCTURE_COUNTDOWN_MS = 3_000;
 const PUNCTURE_ROUND_MS = 30_000;
 const PUNCTURE_RESULT_MS = 3_000;
 const MATCH_RESULT_MS = 3_000;
-const STUN_MS = 2_000;
 const MIN_SHOT_INTERVAL_MS = 50;
-const SHOT_WORLD_ANGLE = 90;
-const SHOT_TRAVEL_MS = 75;
+const RECENT_SHOT_LIMIT = 16;
+// How far a client-reported shotAt may diverge from the server's own compensated receipt time
+// before it's clamped. Lets an honest client's exact keydown instant drive the authoritative angle
+// (matching what it predicted) while bounding how much a modified client could shift a shot to
+// dodge the collision window.
+const CLIENT_SHOT_AT_CLAMP_MS = 200;
 
+// Exported so the client can predict a shot's outcome locally, using the exact same formula,
+// instead of waiting a full round trip - see frontend/.../puncture/puncturePrediction.js, kept
+// in sync by backend/realtime/src/games/puncture-prediction-parity.test.js.
+export const STUN_MS = 2_000;
+export const SHOT_WORLD_ANGLE = 90;
+export const SHOT_TRAVEL_MS = 75;
 export const PUNCTURE_COLLISION_DEGREES = 7;
 export const GENERATED_PIN_SPACING_DEGREES = 14;
+
+type PunctureShotRecord = {
+  sequence: number;
+  roundIndex: number;
+  clientActionId: string | null;
+  shotAt: number;
+  impactAt: number;
+  hit: boolean;
+  attachedAngle: number | null;
+  targetAngle: number;
+};
+
+const shotReply = (
+  clientActionId: string | null,
+  accepted: boolean,
+  options: { reason?: string; shot?: PunctureShotRecord } = {},
+) => clientActionId ? {
+  type: "game.actionResult",
+  payload: {
+    action: "game.shoot",
+    clientActionId,
+    accepted,
+    ...(options.reason ? { reason: options.reason } : {}),
+    ...(options.shot ? { shot: options.shot } : {}),
+  },
+} : undefined;
 
 const ADVANTAGES = {
   fewer_pins: {
@@ -134,7 +169,6 @@ const startQuestion = (game: StoredGame, context: GameContext) => {
   game.players.forEach((player) => {
     player.state.answeredQuestionIds = [];
   });
-  context.addEvent("QUESTION_STARTED", { questionIndex: index, questionId });
 };
 
 const startPunctureCountdown = (game: StoredGame, context: GameContext) => {
@@ -170,10 +204,11 @@ const startPunctureCountdown = (game: StoredGame, context: GameContext) => {
       : round.requiredPins;
     player.state.puncturePinAngles = [];
     player.state.punctureShotCount = 0;
+    player.state.punctureRecentShots = [];
     player.state.stunnedUntil = null;
     player.state.lastShotAt = null;
+    player.state.lastClientActionId = null;
     player.state.lastShotHit = false;
-    player.state.shotImpactAt = null;
   });
 
   const questionId = game.state.currentQuestionId;
@@ -193,12 +228,6 @@ const startPunctureCountdown = (game: StoredGame, context: GameContext) => {
     roundResults,
     advantageOwnerUserId,
     advantage: game.state.activeAdvantage,
-  });
-  context.addEvent("PUNCTURE_COUNTDOWN_STARTED", {
-    roundIndex,
-    advantageOwnerUserId,
-    advantage: game.state.activeAdvantage,
-    requiredPins: round.requiredPins,
   });
 };
 
@@ -244,6 +273,7 @@ const publicState = (game: StoredGame) => {
     questionsById: questionId && game.state.phase === "question_active"
       ? { [questionId]: sanitizeSatQuestion(question) }
       : {},
+    ...(game.state.phase === "finished" ? { reviewQuestionsById: buildReviewQuestionsById(game.privateState.questionsById, game.events) } : {}),
   };
 };
 
@@ -300,16 +330,28 @@ export const createPunctureGame = (): GameEngine => ({
       return changedAction();
     }
 
-    if (message.type !== "game.shoot" || game.state.phase !== "puncture_active") return unchangedAction();
-    if (context.now >= Number(game.state.punctureRoundDeadlineAt || 0)) return unchangedAction();
-    if (context.now < Number(player.state.stunnedUntil || 0)) return unchangedAction();
-    const lastShotAt = Number(player.state.lastShotAt || 0);
-    if (lastShotAt && context.now - lastShotAt < MIN_SHOT_INTERVAL_MS) return unchangedAction();
-
+    if (message.type !== "game.shoot") return unchangedAction();
     const clientActionId = String((message.payload as any)?.clientActionId ?? "").slice(0, 100) || null;
-    if (clientActionId && player.state.lastClientActionId === clientActionId) return unchangedAction();
+    if (game.state.phase !== "puncture_active") return unchangedAction(shotReply(clientActionId, false, { reason: "phase_closed" }));
+    if (context.now >= Number(game.state.punctureRoundDeadlineAt || 0)) return unchangedAction(shotReply(clientActionId, false, { reason: "round_ended" }));
+    if (clientActionId) {
+      const duplicate = ((player.state.punctureRecentShots as PunctureShotRecord[] | undefined) ?? [])
+        .find((shot) => shot.clientActionId === clientActionId);
+      if (duplicate) return unchangedAction(shotReply(clientActionId, true, { shot: duplicate }));
+      if (player.state.lastClientActionId === clientActionId) {
+        return unchangedAction(shotReply(clientActionId, false, { reason: "duplicate" }));
+      }
+    }
+    if (context.now < Number(player.state.stunnedUntil || 0)) return unchangedAction(shotReply(clientActionId, false, { reason: "stunned" }));
+    const lastShotAt = Number(player.state.lastShotAt || 0);
+    if (lastShotAt && context.now - lastShotAt < MIN_SHOT_INTERVAL_MS) return unchangedAction(shotReply(clientActionId, false, { reason: "rate_limited" }));
 
-    const shotImpactAt = context.now + SHOT_TRAVEL_MS;
+    const serverShotAt = context.nowCompensated ?? context.now;
+    const clientShotAt = Number((message.payload as any)?.shotAt);
+    const shotAt = Number.isFinite(clientShotAt)
+      ? Math.min(serverShotAt + CLIENT_SHOT_AT_CLAMP_MS, Math.max(serverShotAt - CLIENT_SHOT_AT_CLAMP_MS, clientShotAt))
+      : serverShotAt;
+    const shotImpactAt = shotAt + SHOT_TRAVEL_MS;
     const elapsedMs = Math.max(0, shotImpactAt - Number(game.state.punctureRoundStartedAt));
     const rotationDegrees = Number(game.state.rotationTurnsPerSecond) * 360 * (elapsedMs / 1000);
     const attachedAngle = normalizeAngle(SHOT_WORLD_ANGLE - rotationDegrees);
@@ -317,23 +359,30 @@ export const createPunctureGame = (): GameEngine => ({
       ...(game.state.generatedPinAngles ?? []),
       ...((player.state.puncturePinAngles as number[] | undefined) ?? []),
     ];
-    const hit = existingAngles.some((angle) => angularDistance(Number(angle), attachedAngle) <= PUNCTURE_COLLISION_DEGREES);
+    const collidedAngle = existingAngles.find((angle) => angularDistance(Number(angle), attachedAngle) <= PUNCTURE_COLLISION_DEGREES);
+    const hit = collidedAngle != null;
 
     player.state.lastShotAt = context.now;
     player.state.lastClientActionId = clientActionId;
     player.state.lastShotHit = hit;
-    player.state.shotImpactAt = shotImpactAt;
     player.state.punctureShotCount = (Number(player.state.punctureShotCount) || 0) + 1;
+    const shot: PunctureShotRecord = {
+      sequence: Number(player.state.punctureShotCount),
+      roundIndex: Number(game.state.punctureRoundIndex) || 0,
+      clientActionId,
+      shotAt,
+      impactAt: shotImpactAt,
+      hit,
+      attachedAngle: hit ? null : attachedAngle,
+      targetAngle: hit ? Number(collidedAngle) : attachedAngle,
+    };
+    player.state.punctureRecentShots = [
+      ...((player.state.punctureRecentShots as PunctureShotRecord[] | undefined) ?? []),
+      shot,
+    ].slice(-RECENT_SHOT_LIMIT);
     if (hit) {
       player.state.stunnedUntil = context.now + STUN_MS;
-      context.addEvent("PUNCTURE_SHOT", { roundIndex: game.state.punctureRoundIndex, hit: true, clientActionId }, userId);
-      context.addEvent("PLAYER_STUNNED", { roundIndex: game.state.punctureRoundIndex, stunnedUntil: player.state.stunnedUntil }, userId);
-      return changedAction({ type: "game.punctureShotResult", payload: {
-        userId, clientActionId, accepted: true, hit: true,
-        shotCount: player.state.punctureShotCount, pinsRemaining: player.state.pinsRemaining,
-        attachedPinAngles: player.state.puncturePinAngles, stunnedUntil: player.state.stunnedUntil,
-        shotImpactAt,
-      } });
+      return changedAction(shotReply(clientActionId, true, { shot }));
     }
 
     player.state.puncturePinAngles = [
@@ -341,22 +390,10 @@ export const createPunctureGame = (): GameEngine => ({
       attachedAngle,
     ];
     player.state.pinsRemaining = Math.max(0, (Number(player.state.pinsRemaining) || 0) - 1);
-    context.addEvent("PUNCTURE_SHOT", {
-      roundIndex: game.state.punctureRoundIndex,
-      hit: false,
-      pinsRemaining: player.state.pinsRemaining,
-      clientActionId,
-    }, userId);
     if (Number(player.state.pinsRemaining) <= 0) {
       resolvePunctureRound(game, userId, "target_reached", context);
-      return changedAction();
     }
-    return changedAction({ type: "game.punctureShotResult", payload: {
-      userId, clientActionId, accepted: true, hit: false, attachedAngle,
-      shotCount: player.state.punctureShotCount, pinsRemaining: player.state.pinsRemaining,
-      attachedPinAngles: player.state.puncturePinAngles, stunnedUntil: player.state.stunnedUntil,
-      shotImpactAt,
-    } });
+    return changedAction(shotReply(clientActionId, true, { shot }));
   },
   handleDeadline(game, context) {
     if (game.status !== "active" || context.now < Number(game.state.phaseDeadlineAt || 0)) return;
@@ -367,12 +404,6 @@ export const createPunctureGame = (): GameEngine => ({
       game.state.punctureRoundStartedAt = context.now;
       game.state.punctureRoundDeadlineAt = context.now + PUNCTURE_ROUND_MS;
       game.state.phaseDeadlineAt = game.state.punctureRoundDeadlineAt;
-      context.addEvent("PUNCTURE_ROUND_STARTED", {
-        roundIndex: game.state.punctureRoundIndex,
-        requiredPins: game.state.requiredPins,
-        generatedPinCount: game.state.generatedPinCount,
-        rotationTurnsPerSecond: game.state.rotationTurnsPerSecond,
-      });
     } else if (game.state.phase === "puncture_active") {
       const sorted = [...game.players].sort((first, second) => Number(first.state.pinsRemaining) - Number(second.state.pinsRemaining));
       const winner = Number(sorted[0]?.state.pinsRemaining) < Number(sorted[1]?.state.pinsRemaining) ? sorted[0].userId : null;

@@ -7,8 +7,8 @@
 		"realtime:check": "npm --prefix backend/realtime run check",
 		"realtime:deploy": "npm --prefix backend/realtime run deploy",
 		"matchmaking:simulate": "npm --prefix backend/realtime run simulate",
-		"emulators:stop": "npx kill-port 8080",
-   		"emulators:start": "firebase emulators:start --only functions,auth,firestore,storage --import=./emulator-data --export-on-exit"
+		"emulators:stop": "npx kill-port 8080 9000",
+   		"emulators:start": "firebase emulators:start --only functions,auth,firestore,storage,database --import=./emulator-data --export-on-exit"
 	},
 	"repository": {
 		"type": "git",

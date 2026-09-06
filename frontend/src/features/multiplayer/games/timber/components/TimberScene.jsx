@@ -1,5 +1,5 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { memo, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AvatarSceneModel } from '../../../../../shared/components/avatar/AvatarModel'
 import CubeBurstParticles from '../../../../../shared/components/three/CubeBurstParticles'
 
@@ -104,12 +104,16 @@ const TimberWorld = ({ player, branches, actualChops, side, resultAnimation, res
             <meshStandardMaterial color={TREE_COLOR} roughness={0.88} />
         </mesh>
 
+        {/* Only a branch entering at the top of the window drops in - that is the one genuinely
+            scrolling into view as the tree is chopped. Any other row appearing mid-list means the
+            predicted chop count moved backwards (a chop the server rejected, say), and dropping
+            that branch in from 2.6 above reads as a fall the player did nothing to cause. */}
         {branches.map((branch, index) => branch ? (
             <TimberBranch
                 key={`${actualChops + index}-${branch}`}
                 side={branch}
                 row={index}
-                spawnFromAbove={actualChops > 0}
+                spawnFromAbove={actualChops > 0 && index >= branches.length - 1}
             />
         ) : null)}
 
@@ -131,7 +135,10 @@ const TimberWorld = ({ player, branches, actualChops, side, resultAnimation, res
     </>
 )
 
-const TimberScene = ({ player, branches = [], actualChops = 0, side = 'left', resultAnimation = null, resultAnimationKey = 0 }) => (
+// Memoised: branches and the avatar both animate in useFrame, so nothing here is driven by React
+// state. Without this the game's 50ms clock tick - which only the stun overlay outside this canvas
+// actually reads - reconciled the whole three tree 20 times a second, on top of the frame loop.
+const TimberScene = memo(({ player, branches = [], actualChops = 0, side = 'left', resultAnimation = null, resultAnimationKey = 0 }) => (
     <Canvas
         className='absolute inset-0 h-full! w-full!'
         shadows
@@ -151,6 +158,6 @@ const TimberScene = ({ player, branches = [], actualChops = 0, side = 'left', re
             />
         </Suspense>
     </Canvas>
-)
+))
 
 export default TimberScene

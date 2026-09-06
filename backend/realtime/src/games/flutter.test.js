@@ -35,7 +35,7 @@ const makeGame = () => ({
 const setup = () => {
   let now = 1_000;
   const events = [];
-  const context = () => ({ now, addEvent: (type, data = {}, actorUserId = null) => events.push({ type, data, actorUserId }) });
+  const context = (nowCompensated = now) => ({ now, nowCompensated, addEvent: (type, data = {}, actorUserId = null) => events.push({ type, data, actorUserId }) });
   const game = makeGame();
   const engine = createFlutterGame();
   engine.initialize(game, questions, context());
@@ -115,7 +115,6 @@ test("accepts fresh valid input and rejects stale or malformed input", () => {
   const player = fixture.game.players[0];
   const accepted = fixture.engine.handleAction(fixture.game, "p1", { type: "game.flutterInput", payload: { sequence: 2, up: true, down: false, left: false, right: true } }, fixture.context());
   assert.equal(accepted.changed, true);
-  assert.equal(accepted.delivery, "delta");
   assert.equal(player.state.flutterInputSequence, 2);
   const stale = fixture.engine.handleAction(fixture.game, "p1", { type: "game.flutterInput", payload: { sequence: 1, up: false, down: true, left: false, right: false } }, fixture.context());
   assert.equal(stale.changed, false);

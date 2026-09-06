@@ -34,8 +34,9 @@ test("Classic rejects deadline answers and resolves the round server-side", () =
   const game = makeGame();
   const engine = createSatClassicGame();
   const events = [];
-  const context = (now) => ({
+  const context = (now, nowCompensated = now) => ({
     now,
+    nowCompensated,
     addEvent: (type, data = {}, actorUserId = null) => events.push({ type, data, actorUserId }),
   });
 
@@ -53,4 +54,19 @@ test("Classic rejects deadline answers and resolves the round server-side", () =
   engine.handleDeadline(game, context(deadline));
   assert.equal(game.state.questionIndex, 1);
   assert.equal(events.filter((event) => event.type === "ROUND_RESOLVED").length, 1);
+});
+
+test("Classic exposes sanitized resolved questions only after the match finishes", () => {
+  const game = makeGame();
+  const engine = createSatClassicGame();
+  engine.initialize(game, questions, { now: 1_000, nowCompensated: 1_000, addEvent() {} });
+  assert.equal(engine.publicState(game).reviewQuestionsById, undefined);
+
+  game.events.push({ type: "ROUND_RESOLVED", data: { questionId: "question-0", correctAnswer: "A" } });
+  game.state.phase = "finished";
+  const state = engine.publicState(game);
+  assert.equal(state.reviewQuestionsById["question-0"].prompt, "Question 1");
+  assert.equal(state.reviewQuestionsById["question-0"].correctAnswer, undefined);
+  assert.equal(state.reviewQuestionsById["question-1"], undefined);
+  assert.deepEqual(state.questionsById, {});
 });

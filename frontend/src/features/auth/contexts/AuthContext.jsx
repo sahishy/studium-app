@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth, db } from '../../../lib/firebase'
 import { getDoc, doc } from 'firebase/firestore'
+import { startPresence, stopPresence } from '../services/presenceService'
 
 const AuthContext = createContext()
 
@@ -14,12 +15,17 @@ const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null)
     const [profile, setProfile] = useState(null)
     const [loading, setLoading] = useState(true)
+    const presenceUnsubscribeRef = useRef(null)
+    const presenceUidRef = useRef(null)
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             setUser(firebaseUser)
 
             if (firebaseUser) {
+                presenceUnsubscribeRef.current = startPresence(firebaseUser.uid)
+                presenceUidRef.current = firebaseUser.uid
+
                 const profileRef = doc(db, 'users', firebaseUser.uid)
                 const profileSnap = await getDoc(profileRef)
                 if(profileSnap.exists()) {
@@ -31,6 +37,14 @@ const AuthProvider = ({ children }) => {
                     applyThemePreference('light')
                 }
             } else {
+                if(presenceUnsubscribeRef.current) {
+                    presenceUnsubscribeRef.current()
+                    presenceUnsubscribeRef.current = null
+                }
+                if(presenceUidRef.current) {
+                    stopPresence(presenceUidRef.current)
+                    presenceUidRef.current = null
+                }
                 setProfile(null)
                 applyThemePreference('light')
             }

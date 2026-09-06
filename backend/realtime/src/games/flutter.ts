@@ -1,5 +1,5 @@
 import { changedAction, unchangedAction, type GameContext, type GameEngine, type StoredGame } from "./contracts";
-import { isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
+import { buildReviewQuestionsById, isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
 
 const MAX_QUESTIONS = 10;
 const SCORE_TO_WIN = 3;
@@ -17,6 +17,15 @@ const RING_ACCELERATION_MS = 135;
 const VISIBLE_RING_COUNT = 8;
 const RING_SPACING = 15;
 const FLIGHT_ACCELERATION = 10;
+/**
+ * How long a ring waits, after the plane it is judged at, before the engine actually scores it.
+ * Positions are still computed at the exact pass time - this only buys the last few inputs a
+ * player made before the ring a chance to arrive first. Without it a keypress made in front of
+ * the ring but landing a hop later was simply not part of the judgment, so the engine scored the
+ * player on an input they had already changed. The cost is that a miss is announced this much
+ * later, which is invisible against a three-second result overlay.
+ */
+const RING_RESOLVE_GRACE_MS = 70;
 
 export const FLUTTER_BOUNDS = { x: 5.2, y: 3.15 } as const;
 export const FLUTTER_MAX_SPEED = 6.4;
@@ -138,7 +147,6 @@ const startQuestion = (game: StoredGame, context: GameContext) => {
   game.privateState.answersByUserId = {};
   game.privateState.answerSequence = 0;
   game.players.forEach((player) => { player.state.answeredQuestionIds = []; });
-  context.addEvent("QUESTION_STARTED", { questionIndex: index, questionId });
 };
 
 const resetFlightPlayer = (player: StoredGame["players"][number], at: number) => {
@@ -202,23 +210,27 @@ const startFlutterCountdown = (game: StoredGame, context: GameContext, retry = f
       advantage: game.state.activeAdvantage,
     });
   }
-  context.addEvent("FLUTTER_COUNTDOWN_STARTED", { roundIndex, attempt, advantageOwnerUserId: shieldOwnerUserId, advantage: game.state.activeAdvantage });
 };
 
 const integratePlayerTo = (player: StoredGame["players"][number], at: number) => {
+  // A non-finite `at` would silently poison position/velocity with NaN for the rest of the round,
+  // and latency compensation can hand us a timestamp slightly behind the last one - clamp both so
+  // the integration window is always a sane forward step.
+  if (!Number.isFinite(at)) return;
   const lastUpdatedAt = Number(player.state.flutterLastUpdatedAt) || at;
+  const target = Math.max(at, lastUpdatedAt);
   const next = integrateFlutterMotion({
     x: Number(player.state.flutterX) || 0,
     y: Number(player.state.flutterY) || 0,
     velocityX: Number(player.state.flutterVelocityX) || 0,
     velocityY: Number(player.state.flutterVelocityY) || 0,
     input: (player.state.flutterInput as FlutterInput | undefined) ?? EMPTY_INPUT,
-  }, Math.max(0, at - lastUpdatedAt));
+  }, target - lastUpdatedAt);
   player.state.flutterX = next.x;
   player.state.flutterY = next.y;
   player.state.flutterVelocityX = next.velocityX;
   player.state.flutterVelocityY = next.velocityY;
-  player.state.flutterLastUpdatedAt = at;
+  player.state.flutterLastUpdatedAt = target;
 };
 
 const ringCenter = (game: StoredGame, index: number) => generateFlutterRingCenters(Number(game.state.flutterSeed), index + 1)[index];
@@ -277,9 +289,8 @@ const passCurrentRing = (game: StoredGame, context: GameContext) => {
   game.players.forEach((player) => { player.state.flutterRingsCleared = index + 1; });
   const nextIndex = index + 1;
   game.state.flutterRingIndex = nextIndex;
-  game.state.flutterAccelerationProgress = nextIndex;
   game.state.flutterCurrentRingPassAt = passAt + getFlutterRingIntervalMs(nextIndex);
-  game.state.phaseDeadlineAt = game.state.flutterCurrentRingPassAt;
+  game.state.phaseDeadlineAt = game.state.flutterCurrentRingPassAt + RING_RESOLVE_GRACE_MS;
 };
 
 const visibleRings = (game: StoredGame): FlutterRing[] => {
@@ -300,6 +311,7 @@ const publicState = (game: StoredGame) => {
   return {
     ...game.state,
     questionsById: questionId && game.state.phase === "question_active" ? { [questionId]: sanitizeSatQuestion(question) } : {},
+    ...(game.state.phase === "finished" ? { reviewQuestionsById: buildReviewQuestionsById(game.privateState.questionsById, game.events) } : {}),
     visibleFlutterRings: game.state.phase === "flutter_active" || game.state.phase === "flutter_result" ? visibleRings(game) : [],
   };
 };
@@ -347,7 +359,15 @@ export const createFlutterGame = (): GameEngine => ({
     const sequence = Number(payload.sequence);
     if (!Number.isSafeInteger(sequence) || sequence <= Number(player.state.flutterInputSequence ?? -1)) return unchangedAction();
     if ([payload.up, payload.down, payload.left, payload.right].some((value) => typeof value !== "boolean")) return unchangedAction();
-    integratePlayerTo(player, context.now);
+    // Never carry a player past the ring that is still awaiting judgment. An input that arrives
+    // inside the grace window above but was made after the plane is applied at the plane instead:
+    // the position the ring is scored on stays exactly the one the player flew into it, and only
+    // the motion afterwards starts at most RING_RESOLVE_GRACE_MS early - which the next snapshot
+    // corrects. Without this clamp the input would advance flutterLastUpdatedAt past the ring and
+    // integratePlayerTo's monotonic clamp would then score the ring on a position from after it.
+    const pendingRingPassAt = Number(game.state.flutterCurrentRingPassAt);
+    const requestedAt = Number.isFinite(context.nowCompensated) ? context.nowCompensated : context.now;
+    integratePlayerTo(player, Number.isFinite(pendingRingPassAt) ? Math.min(requestedAt, pendingRingPassAt) : requestedAt);
     player.state.flutterInputSequence = sequence;
     player.state.flutterInput = {
       up: payload.up as boolean,
@@ -355,16 +375,7 @@ export const createFlutterGame = (): GameEngine => ({
       left: payload.left as boolean,
       right: payload.right as boolean,
     };
-    return changedAction({ type: "game.flutterState", payload: {
-      userId,
-      sequence,
-      flutterX: player.state.flutterX,
-      flutterY: player.state.flutterY,
-      flutterVelocityX: player.state.flutterVelocityX,
-      flutterVelocityY: player.state.flutterVelocityY,
-      flutterInput: player.state.flutterInput,
-      flutterLastUpdatedAt: player.state.flutterLastUpdatedAt,
-    } });
+    return changedAction();
   },
   handleDeadline(game, context) {
     if (game.status !== "active" || context.now < Number(game.state.phaseDeadlineAt || 0)) return;
@@ -373,11 +384,9 @@ export const createFlutterGame = (): GameEngine => ({
       game.state.phase = "flutter_active";
       game.state.flutterRoundStartedAt = context.now;
       game.state.flutterRingIndex = 0;
-      game.state.flutterAccelerationProgress = 0;
       game.state.flutterCurrentRingPassAt = context.now + FIRST_RING_DELAY_MS;
-      game.state.phaseDeadlineAt = game.state.flutterCurrentRingPassAt;
+      game.state.phaseDeadlineAt = game.state.flutterCurrentRingPassAt + RING_RESOLVE_GRACE_MS;
       game.players.forEach((player) => resetFlightPlayer(player, context.now));
-      context.addEvent("FLUTTER_ROUND_STARTED", { roundIndex: game.state.flutterRoundIndex, attempt: game.state.flutterAttempt });
     } else if (game.state.phase === "flutter_active") passCurrentRing(game, context);
     else if (game.state.phase === "flutter_result") {
       if (game.state.lastFlutterResult?.retry) startFlutterCountdown(game, context, true);

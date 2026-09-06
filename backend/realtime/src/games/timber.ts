@@ -1,5 +1,5 @@
 import { changedAction, unchangedAction, type GameContext, type GameEngine, type StoredGame } from "./contracts";
-import { isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
+import { buildReviewQuestionsById, isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
 
 export type TimberSide = "left" | "right";
 export type TimberBranch = TimberSide | null;
@@ -14,9 +14,28 @@ const TIMBER_COUNTDOWN_MS = 3_000;
 const TIMBER_ROUND_MS = 60_000;
 const TIMBER_RESULT_MS = 3_000;
 const MATCH_RESULT_MS = 3_000;
-const STUN_MS = 2_000;
-const MIN_CHOP_INTERVAL_MS = 50;
+// Exported so the client can predict a chop's outcome locally, instead of waiting a full round
+// trip - see frontend/.../timber/timberPrediction.js, kept in sync by
+// backend/realtime/src/games/timber-prediction-parity.test.js.
+export const STUN_MS = 2_000;
+export const MIN_CHOP_INTERVAL_MS = 50;
 const VISIBLE_BRANCHES = 6;
+
+const chopReply = (
+  clientActionId: string | null,
+  accepted: boolean,
+  options: { reason?: string; actualChops?: number; hit?: boolean } = {},
+) => clientActionId ? {
+  type: "game.actionResult",
+  payload: {
+    action: "game.chop",
+    clientActionId,
+    accepted,
+    ...(options.reason ? { reason: options.reason } : {}),
+    ...(options.actualChops != null ? { actualChops: options.actualChops } : {}),
+    ...(options.hit != null ? { hit: options.hit } : {}),
+  },
+} : undefined;
 
 export const getRequiredChops = (_roundIndex = 0) => 50;
 
@@ -101,7 +120,6 @@ const startQuestion = (game: StoredGame, context: GameContext) => {
   game.players.forEach((player) => {
     player.state.answeredQuestionIds = [];
   });
-  context.addEvent("QUESTION_STARTED", { questionIndex: index, questionId });
 };
 
 const startTimberCountdown = (game: StoredGame, context: GameContext) => {
@@ -117,6 +135,15 @@ const startTimberCountdown = (game: StoredGame, context: GameContext) => {
 
   game.privateState.branchSequence = generateBranchSequence(seed);
   game.state.phase = "timber_countdown";
+  // Published so the client can generate the identical sequence and predict arbitrarily far ahead
+  // (see frontend/.../timber/timberPrediction.js). Prediction used to be limited to the
+  // visibleBranchesByUserId window, which is only VISIBLE_BRANCHES deep - shallower than a fast
+  // player's in-flight chop queue, so predictions past its end read undefined, silently became
+  // "miss", and mispredicted the stuns that follow a hit. That window is still published and still
+  // drives the opponent's board, which needs no prediction. Nothing is leaked here: both players
+  // chop one shared sequence, and a client bent on cheating only ever needed the next branch,
+  // which the window already gave it.
+  game.state.timberBranchSeed = seed;
   game.state.requiredChops = requiredChops;
   game.state.timberRoundIndex = roundIndex;
   game.state.timberCountdownStartedAt = context.now + QUESTION_REVEAL_MS;
@@ -154,7 +181,6 @@ const startTimberCountdown = (game: StoredGame, context: GameContext) => {
     advantageOwnerUserId,
     advantage: game.state.activeAdvantage,
   });
-  context.addEvent("TIMBER_COUNTDOWN_STARTED", { roundIndex, advantageOwnerUserId, advantage: game.state.activeAdvantage });
 };
 
 const resolveTimberRound = (game: StoredGame, winnerUserId: string | null, reason: "target_reached" | "timeout", context: GameContext) => {
@@ -204,6 +230,7 @@ const publicState = (game: StoredGame) => {
     questionsById: questionId && game.state.phase === "question_active"
       ? { [questionId]: sanitizeSatQuestion(question) }
       : {},
+    ...(game.state.phase === "finished" ? { reviewQuestionsById: buildReviewQuestionsById(game.privateState.questionsById, game.events) } : {}),
     visibleBranchesByUserId,
   };
 };
@@ -261,29 +288,38 @@ export const createTimberGame = (): GameEngine => ({
       return changedAction();
     }
 
-    if (message.type !== "game.chop" || game.state.phase !== "timber_active") return unchangedAction();
-    if (context.now >= Number(game.state.timberRoundDeadlineAt || 0)) return unchangedAction();
+    if (message.type !== "game.chop") return unchangedAction();
+    const clientActionId = String((message.payload as any)?.clientActionId ?? "").slice(0, 100) || null;
+    if (game.state.phase !== "timber_active") return unchangedAction(chopReply(clientActionId, false, { reason: "phase_closed" }));
+    // Every gate below judges the chop at the time the player actually made it, not the time it
+    // reached the Worker. The client predicts against its own synced clock, so gating on arrival
+    // time made the server's stun end ~RTT/2 later than predicted and let a compressed pair of
+    // chops trip the rate limit that the client had already cleared - each such rejection was
+    // silent, and knocked the client's whole pending queue one branch out of alignment.
+    const chopAt = Number.isFinite(context.nowCompensated) ? context.nowCompensated : context.now;
+    if (chopAt >= Number(game.state.timberRoundDeadlineAt || 0)) return unchangedAction(chopReply(clientActionId, false, { reason: "round_ended" }));
     const side = (message.payload as any)?.side;
-    if (side !== "left" && side !== "right") return unchangedAction();
-    if (context.now < Number(player.state.stunnedUntil || 0)) return unchangedAction();
+    if (side !== "left" && side !== "right") return unchangedAction(chopReply(clientActionId, false, { reason: "invalid_side" }));
+    if (chopAt < Number(player.state.stunnedUntil || 0)) return unchangedAction(chopReply(clientActionId, false, { reason: "stunned" }));
     const lastChopAt = Number(player.state.lastChopAt || 0);
-    if (lastChopAt && context.now - lastChopAt < MIN_CHOP_INTERVAL_MS) return unchangedAction();
+    if (lastChopAt && chopAt - lastChopAt < MIN_CHOP_INTERVAL_MS) return unchangedAction(chopReply(clientActionId, false, { reason: "rate_limited" }));
 
     const actualChops = Number(player.state.timberActualChops) || 0;
     const branch = (game.privateState.branchSequence ?? [])[actualChops] as TimberBranch;
-    player.state.lastChopAt = context.now;
+    player.state.lastChopAt = chopAt;
     player.state.timberSide = side;
     player.state.timberActualChops = actualChops + 1;
     player.state.timberProgress = Math.min(Number(game.state.requiredChops), (Number(player.state.timberProgress) || 0) + 1);
     const hit = branch === side;
     if (hit) {
-      player.state.stunnedUntil = context.now + STUN_MS;
-      context.addEvent("PLAYER_STUNNED", { roundIndex: game.state.timberRoundIndex, stunnedUntil: player.state.stunnedUntil }, userId);
+      player.state.stunnedUntil = chopAt + STUN_MS;
     }
     if (Number(player.state.timberProgress) >= Number(game.state.requiredChops)) {
       resolveTimberRound(game, userId, "target_reached", context);
     }
-    return changedAction();
+    // actualChops rides along so the client can retire this entry from its pending queue the
+    // moment the matching count arrives in a snapshot, without counting entries positionally.
+    return changedAction(chopReply(clientActionId, true, { actualChops: actualChops + 1, hit }));
   },
   handleDeadline(game, context) {
     if (game.status !== "active" || context.now < Number(game.state.phaseDeadlineAt || 0)) return;
@@ -294,7 +330,6 @@ export const createTimberGame = (): GameEngine => ({
       game.state.timberRoundStartedAt = context.now;
       game.state.timberRoundDeadlineAt = context.now + TIMBER_ROUND_MS;
       game.state.phaseDeadlineAt = game.state.timberRoundDeadlineAt;
-      context.addEvent("TIMBER_ROUND_STARTED", { roundIndex: game.state.timberRoundIndex, requiredChops: game.state.requiredChops });
     } else if (game.state.phase === "timber_active") {
       const sorted = [...game.players].sort((a, b) => Number(b.state.timberProgress) - Number(a.state.timberProgress));
       const winner = Number(sorted[0]?.state.timberProgress) > Number(sorted[1]?.state.timberProgress) ? sorted[0].userId : null;

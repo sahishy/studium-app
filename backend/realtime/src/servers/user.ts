@@ -1,7 +1,7 @@
 import { Server, type Connection, type ConnectionContext, type WSMessage } from "partyserver";
 import { getGameMode } from "../games/registry";
 import type { PlayerIdentity, QueueEntry } from "../types";
-import { makeId, parseMessage, requestRoom, send, stateFromRequest } from "../utils";
+import { makeId, parseMessage, publishActivities, requestRoom, send, stateFromRequest } from "../utils";
 
 type UserState = {
   userId: string;
@@ -41,6 +41,7 @@ export class UserServer extends Server<Env> {
         await requestRoom(this.env.PARTY, this.state.partyId, { type: "party.presence", userId: this.name, connected: true });
       }
     }
+    await this.publishOwnActivity();
     this.emit(connection);
   }
 
@@ -67,6 +68,7 @@ export class UserServer extends Server<Env> {
       if (message.type === "party.leave") await this.leaveParty(identity);
       if (message.type === "party.invite.dismiss") this.dismissInvitation(message.payload as any);
       await this.saveAndBroadcast();
+      if (["queue.join", "game.startSolo", "party.createAndInvite", "party.join", "party.leave"].includes(message.type)) await this.publishOwnActivity();
     } catch (error) {
       send(connection, "error", { message: error instanceof Error ? error.message : "Request failed." }, message.id);
     }
@@ -99,6 +101,7 @@ export class UserServer extends Server<Env> {
       this.pruneInvitations();
     }
     await this.saveAndBroadcast();
+    if (["game.assigned", "game.finished", "party.joined", "party.left"].includes(body.type)) await this.publishOwnActivity();
     return Response.json(this.state);
   }
 
@@ -125,6 +128,27 @@ export class UserServer extends Server<Env> {
     this.state.currentRoomId = null;
     this.state.queuedAt = null;
     await this.ctx.storage.put("state", this.state);
+  }
+
+  private async publishOwnActivity() {
+    if (this.state.status === "in_room" && this.state.modeId) {
+      await publishActivities(this.env, [{ userId: this.name, activity: { state: "in_game", modeId: this.state.modeId } }]);
+      return;
+    }
+    if (this.state.partyId) {
+      const response = await requestRoom(this.env.PARTY, this.state.partyId, { type: "party.activity", userId: this.name });
+      if (response.ok) {
+        const party = await response.json() as { activity?: { modeId?: string; partyPlayerCount?: number } };
+        if (party.activity?.modeId && party.activity.partyPlayerCount) {
+          await publishActivities(this.env, [{
+            userId: this.name,
+            activity: { state: "in_party", modeId: party.activity.modeId, partyPlayerCount: party.activity.partyPlayerCount },
+          }]);
+          return;
+        }
+      }
+    }
+    await publishActivities(this.env, [{ userId: this.name, activity: { state: "online" } }]);
   }
 
   private pruneInvitations() {

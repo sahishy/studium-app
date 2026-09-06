@@ -33,8 +33,9 @@ const makeGame = () => ({
 const setup = () => {
   let now = 1_000;
   const events = [];
-  const context = () => ({
+  const context = (nowCompensated = now) => ({
     now,
+    nowCompensated,
     addEvent: (type, data = {}, actorUserId = null) => events.push({ type, data, actorUserId }),
   });
   const setNow = (value) => { now = value; };

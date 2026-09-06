@@ -1,6 +1,7 @@
-import { FaCircle, FaCrown } from 'react-icons/fa6'
+import { FaCrown } from 'react-icons/fa6'
 import AvatarPicture from '../../../shared/components/avatar/AvatarPicture'
 import Card from '../../../shared/components/ui/Card'
+import PlayerActivityLabel from '../../../shared/components/ui/PlayerActivityLabel'
 
 const CircleMember = ({ profile, isOwner }) => {
 
@@ -19,9 +20,7 @@ const CircleMember = ({ profile, isOwner }) => {
                         <span className='truncate'>{profile?.profile?.displayName ?? 'Unknown user'}</span>
                         {isOwner && <FaCrown className='text-neutral1 shrink-0' />}
                     </h2>
-                    <p className='flex gap-1 items-center text-sm text-neutral1'>
-                        <FaCircle className='text-[6px] text-sky-400' /> Online
-                    </p>
+                    <PlayerActivityLabel profile={profile} />
                 </div>
 
             </div>

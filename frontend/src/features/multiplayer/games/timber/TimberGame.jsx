@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
-import { getGameServerNow, sendGameMessage, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { getGameServerNow, sendGameMessage, subscribeToGameActionResults, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
 import QuestionPane from '../sat-classic/components/QuestionPane'
+import MatchEndOverlay from '../sat-classic/components/MatchEndOverlay'
+import { buildMatchEndRounds, countAnsweredQuestions } from '../sat-classic/utils/matchEndUtils'
 import CalculatorWindow from '../../components/windows/CalculatorWindow'
 import LoadingState from '../../../../shared/components/ui/LoadingState'
 import ProgressBar from '../../../../shared/components/ui/ProgressBar'
@@ -14,11 +16,17 @@ import SatClassicSubmittedToast from '../sat-classic/components/toasts/SatClassi
 import { useToast } from '../../../../shared/contexts/ToastContext'
 import TimberScene from './components/TimberScene'
 import useScreenShake from '../../../../shared/utils/useScreenShake'
+import { activePendingChops, generateBranchSequence, MIN_CHOP_INTERVAL_MS, predictChop, STUN_MS, VISIBLE_BRANCHES } from './timberPrediction'
 
 const EMPTY_PLAYERS = []
+const EMPTY_BRANCHES = []
 const QUESTION_DURATION_MS = 120_000
 const TIMBER_ROUND_DURATION_MS = 60_000
 const QUESTION_REVEAL_DURATION_MS = 2000
+// Backstop only. Chops are now retired by the server's own accept/reject acknowledgement (see
+// chopReply in backend/realtime/src/games/timber.ts); this catches an acknowledgement that never
+// arrives at all, rather than being the primary reconciliation mechanism it used to be.
+const PENDING_CHOP_TIMEOUT_MS = 500
 
 const formatClock = (milliseconds = 0) => {
     const secondsTotal = Math.max(0, Math.ceil((Number(milliseconds) || 0) / 1000))
@@ -148,7 +156,7 @@ const TimberTransitionOverlay = ({ remainingMs = 0, countdown = null, title, sub
     )
 }
 
-const TimberMatchEnd = ({ snapshot, userId, startedAt }) => {
+const LegacyTimberMatchEnd = ({ snapshot, userId, startedAt }) => {
     const { userStats } = useUserStats()
     const state = snapshot?.room?.state ?? {}
     const players = snapshot?.players ?? EMPTY_PLAYERS
@@ -277,16 +285,54 @@ const TimberMatchEnd = ({ snapshot, userId, startedAt }) => {
     )
 }
 
+const TimberMatchEnd = ({ snapshot, userId, startedAt }) => {
+    const { userStats } = useUserStats()
+    const state = snapshot?.room?.state ?? {}
+    const players = snapshot?.players ?? EMPTY_PLAYERS
+    const localPlayer = players.find((player) => player.userId === userId) ?? null
+    const opponent = players.find((player) => player.userId !== userId) ?? null
+    const winnerUserId = state.winnerUserId ?? null
+    const isWin = winnerUserId === userId
+    const endedEvent = [...(snapshot?.events ?? [])].reverse().find((event) => event.type === 'GAME_ENDED')
+    const endReason = endedEvent?.data?.endReason ?? null
+    const reasonLabel = endReason === 'first_to_three'
+        ? (isWin ? 'You won the Timber match.' : 'Your opponent won the Timber match.')
+        : (endReason === 'max_questions' ? 'Reached max questions' : (endReason === 'player_left'
+            ? (isWin ? 'Your opponent left the match.' : 'You left the match.') : null))
+    const rounds = buildMatchEndRounds({
+        events: snapshot?.events,
+        modeId: 'sat-timber',
+        userId,
+        opponentUserId: opponent?.userId,
+        reviewQuestionsById: state.reviewQuestionsById,
+    })
+    const endedAt = Number(endedEvent?.createdAt) || Date.now()
+    return <MatchEndOverlay
+        winnerUserId={winnerUserId}
+        userId={userId}
+        modeId='sat-timber'
+        reasonLabel={reasonLabel}
+        localPlayer={localPlayer}
+        opponent={opponent}
+        matchDurationSeconds={Math.max(0, (endedAt - Number(startedAt || endedAt)) / 1000)}
+        questionsAnswered={countAnsweredQuestions(rounds)}
+        rankedProgression={snapshot?.room?.ranked ? buildMultiplayerUiState({ userStats, modeId: 'sat-timber' }) : null}
+        eloDelta={Number(endedEvent?.data?.eloDeltaByUserId?.[userId]) || 0}
+        players={players}
+        rounds={rounds}
+    />
+}
+
 const TimberGame = ({ roomId, userId }) => {
     const [snapshot, setSnapshot] = useState(null)
     const [response, setResponse] = useState('')
     const [calculatorOpen, setCalculatorOpen] = useState(false)
     const [questionReveal, setQuestionReveal] = useState(null)
     const [now, setNow] = useState(() => getGameServerNow(roomId))
+    const [pendingChops, setPendingChops] = useState([])
     const shownAnswerToastEventIdsRef = useRef(new Set())
     const lastProcessedAnswerSequenceRef = useRef(null)
-    const previousLocalChopsRef = useRef(null)
-    const previousLocalStunnedUntilRef = useRef(null)
+    const lastLocalChopAtRef = useRef(0)
     const shownQuestionRevealEventIdsRef = useRef(new Set())
     const questionsByIdRef = useRef(new Map())
     const { screenShakeRef, shake } = useScreenShake()
@@ -322,23 +368,52 @@ const TimberGame = ({ roomId, userId }) => {
         if(questionReveal && questionRevealRemainingMs <= 0) setQuestionReveal(null)
     }, [questionReveal, questionRevealRemainingMs])
 
+    // Reconciliation, by acknowledgement rather than by counting. The old scheme trimmed as many
+    // entries off the front of the queue as the server's confirmed count had advanced, which is
+    // only correct while the server accepts every chop: a chop rejected by the stun or rate-limit
+    // gate was never confirmed, so the trim consumed the wrong entry and left the queue - and with
+    // it the predicted branch alignment - permanently one out, until the age sweep below snapped
+    // it back. Now the server names the chop it is answering, so a rejection removes exactly that
+    // entry and an acceptance retires exactly its own.
+    useEffect(() => subscribeToGameActionResults(roomId, (result) => {
+        if(result?.action !== 'game.chop' || !result?.clientActionId) return
+        setPendingChops((current) => (result.accepted
+            ? current.map((chop) => (chop.clientActionId === result.clientActionId
+                ? { ...chop, actualChops: Number(result.actualChops) || null }
+                : chop))
+            : current.filter((chop) => chop.clientActionId !== result.clientActionId)))
+    }), [roomId])
+
+    // An accepted chop is only retired once the count it produced has actually arrived in a
+    // snapshot - the acknowledgement travels ahead of the coalesced broadcast, so dropping it on
+    // the acknowledgement alone would briefly rewind the predicted view by one chop.
+    //
+    // Derived during render rather than pruned in an effect. An effect lands a render late, so for
+    // one committed frame the predicted view counted a chop the arriving snapshot already
+    // included. TimberScene keys each branch on its absolute index and lerps it toward a row
+    // height, so that single frame of overshoot shifted every row down by one and unmounted the
+    // bottom branch - which then remounted and replayed its spawn-from-above drop. That was the
+    // branch jitter: a row dipping, snapping back, and falling in again.
+    const activeChops = useMemo(() => activePendingChops(pendingChops, localActualChops), [localActualChops, pendingChops])
+
+    // Pure housekeeping now that `activeChops` is what drives the view - this only keeps the
+    // backing array from growing for the length of a round.
     useEffect(() => {
-        if(previousLocalChopsRef.current == null) {
-            previousLocalChopsRef.current = localActualChops
-            return
-        }
-        if(localActualChops > previousLocalChopsRef.current) shake('subtle')
-        previousLocalChopsRef.current = localActualChops
-    }, [localActualChops, shake])
+        setPendingChops((current) => {
+            const next = activePendingChops(current, localActualChops)
+            return next.length === current.length ? current : next
+        })
+    }, [localActualChops])
 
     useEffect(() => {
-        if(previousLocalStunnedUntilRef.current == null) {
-            previousLocalStunnedUntilRef.current = localStunnedUntil
-            return
-        }
-        if(localStunnedUntil > previousLocalStunnedUntilRef.current) shake('impact')
-        previousLocalStunnedUntilRef.current = localStunnedUntil
-    }, [localStunnedUntil, shake])
+        if(!pendingChops.length) return
+        if(now - pendingChops[0].sentAt <= PENDING_CHOP_TIMEOUT_MS) return
+        setPendingChops((current) => current.filter((chop) => now - chop.sentAt <= PENDING_CHOP_TIMEOUT_MS))
+    }, [now, pendingChops])
+
+    useEffect(() => {
+        if(phase !== 'timber_active') setPendingChops([])
+    }, [phase, state?.timberRoundIndex])
 
     useEffect(() => {
         const events = snapshot?.events ?? []
@@ -413,6 +488,63 @@ const TimberGame = ({ roomId, userId }) => {
             })
         })
     }, [snapshot?.events, state?.questionIndex, userId, players, roomId])
+    // The predicted view: server state as a base, with each not-yet-confirmed local chop applied
+    // on top in order (every chop advances progress regardless of hit/miss; a hit also stuns).
+    // This is what drives the whole TimberScene (swing, particles, branch scroll, stun overlay)
+    // for the local board - it reacts purely to actualChops/timberProgress/timberSide/stunnedUntil
+    // changing, so overlaying predicted values here is enough, no separate scene-side plumbing.
+    // Generated from the round's published seed, so prediction can look as far ahead as the chop
+    // queue is deep. The server's visibleBranchesByUserId window remains the source for the
+    // opponent's board and for round holds below, and stands in here for a game that was already
+    // under way when the seed was introduced.
+    const branchSeed = Number(state?.timberBranchSeed)
+    const fullSequence = useMemo(() => (Number.isFinite(branchSeed) ? generateBranchSequence(branchSeed) : null), [branchSeed])
+    const serverWindow = state?.visibleBranchesByUserId?.[localPlayer?.userId] ?? EMPTY_BRANCHES
+    const serverBranches = useMemo(
+        () => (fullSequence ? fullSequence.slice(localActualChops) : serverWindow),
+        [fullSequence, localActualChops, serverWindow],
+    )
+    const requiredChops = Math.max(1, Number(state?.requiredChops) || 50)
+    const predicted = useMemo(() => {
+        if(!activeChops.length || !localPlayer) {
+            return { player: localPlayer, branches: serverBranches.slice(0, VISIBLE_BRANCHES), stunnedUntil: localStunnedUntil }
+        }
+        let progress = Number(localPlayer.state?.timberProgress) || 0
+        let stunnedUntil = localStunnedUntil
+        let side = localPlayer.state?.timberSide === 'right' ? 'right' : 'left'
+        activeChops.forEach((chop, index) => {
+            const { hit } = predictChop({ branches: serverBranches, index, side: chop.side })
+            side = chop.side
+            progress = Math.min(requiredChops, progress + 1)
+            if(hit) stunnedUntil = Math.max(stunnedUntil, chop.sentAt + STUN_MS)
+        })
+        return {
+            player: {
+                ...localPlayer,
+                state: {
+                    ...localPlayer.state,
+                    timberActualChops: (Number(localPlayer.state?.timberActualChops) || 0) + activeChops.length,
+                    timberProgress: progress,
+                    timberSide: side,
+                    stunnedUntil,
+                },
+            },
+            branches: serverBranches.slice(activeChops.length, activeChops.length + VISIBLE_BRANCHES),
+            stunnedUntil,
+        }
+    }, [activeChops, localPlayer, localStunnedUntil, requiredChops, serverBranches])
+
+    const predictionInputsRef = useRef(null)
+    predictionInputsRef.current = { stunnedUntil: predicted.stunnedUntil, branches: serverBranches, pendingCount: activeChops.length }
+
+    // Tried smoothing the opponent's timberActualChops through a progress buffer here, but
+    // TimberScene keys its branch/particle DOM elements directly on actualChops (see the branch
+    // `key={${actualChops+index}-${branch}}`) and drives the swing animation off that same value
+    // changing. Artificially stepping it at a fixed cadence remounted those elements mid-animation
+    // and froze the swing before it completed (confirmed via live testing in Puncture's identical
+    // pattern - see PunctureGame.jsx). A3+B1 already bound real bursts to a handful of actions per
+    // coalesced update, so the benefit wasn't worth that regression - render raw.
+
     useEffect(() => {
         if(phase !== 'timber_active') return () => {}
         const onKeyDown = (event) => {
@@ -421,11 +553,19 @@ const TimberGame = ({ roomId, userId }) => {
             const side = key === 'a' || key === 'arrowleft' ? 'left' : (key === 'd' || key === 'arrowright' ? 'right' : null)
             if(!side) return
             event.preventDefault()
-            sendGameMessage(roomId, 'game.chop', { side })
+            const chopAt = getGameServerNow(roomId)
+            const inputs = predictionInputsRef.current
+            if(chopAt < inputs.stunnedUntil || chopAt - lastLocalChopAtRef.current < MIN_CHOP_INTERVAL_MS) return
+            lastLocalChopAtRef.current = chopAt
+            const { hit } = predictChop({ branches: inputs.branches, index: inputs.pendingCount, side })
+            const clientActionId = `chop_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+            setPendingChops((current) => [...current, { clientActionId, side, sentAt: chopAt, actualChops: null }])
+            shake(hit ? 'impact' : 'subtle')
+            sendGameMessage(roomId, 'game.chop', { clientActionId, side })
         }
         window.addEventListener('keydown', onKeyDown)
         return () => window.removeEventListener('keydown', onKeyDown)
-    }, [phase, roomId])
+    }, [phase, roomId, shake])
 
     const questionRemaining = Math.max(0, Number(state?.currentQuestionDeadlineAt || 0) - now)
     const timberRemaining = Math.max(0, Number(state?.timberRoundDeadlineAt || 0) - now)
@@ -486,8 +626,8 @@ const TimberGame = ({ roomId, userId }) => {
             ) : (
                 <div className='relative flex-1 min-h-0 flex justify-center gap-5'>
                     <TimberBoard
-                        player={localPlayer}
-                        branches={state.visibleBranchesByUserId?.[localPlayer.userId] ?? []}
+                        player={isRoundHold ? localPlayer : predicted.player}
+                        branches={isRoundHold ? (state.visibleBranchesByUserId?.[localPlayer.userId] ?? EMPTY_BRANCHES) : predicted.branches}
                         requiredChops={state.requiredChops}
                         isFaded={isRoundHold && Boolean(resolvedWinnerUserId) && resolvedWinnerUserId !== localPlayer.userId}
                         now={now}
@@ -496,7 +636,7 @@ const TimberGame = ({ roomId, userId }) => {
                     />
                     <TimberBoard
                         player={opponent}
-                        branches={state.visibleBranchesByUserId?.[opponent.userId] ?? []}
+                        branches={state.visibleBranchesByUserId?.[opponent.userId] ?? EMPTY_BRANCHES}
                         requiredChops={state.requiredChops}
                         isFaded={isRoundHold && Boolean(resolvedWinnerUserId) && resolvedWinnerUserId !== opponent.userId}
                         now={now}

@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../../auth/contexts/AuthContext'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../../../lib/firebase'
-import ActivityHandler from '../components/ActivityHandler'
 import { CirclesProvider } from '../../socials/contexts/CirclesContext'
 import { MembersProvider } from '../../socials/contexts/MembersContext'
 import { FriendsProvider } from '../../socials/contexts/FriendsContext'
@@ -18,8 +17,6 @@ const MainScreenLayout = ({ profile }) => {
 
     return (
         <>
-            <ActivityHandler profile={profile} />
-
             <div className="flex min-h-screen">
 
                 <Sidebar profile={profile} />

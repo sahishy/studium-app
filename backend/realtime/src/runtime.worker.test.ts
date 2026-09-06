@@ -40,6 +40,11 @@ const mockExternalServices = () => vi.spyOn(globalThis, "fetch").mockImplementat
   if (url.origin === "https://backend.test" && url.pathname === "/realtime/results") {
     return Response.json({ ok: true, duplicate: false, eloDeltaByUserId: {} });
   }
+  if (url.origin === "https://backend.test" && url.pathname === "/realtime/activity") {
+    const headers = new Headers(input instanceof Request ? input.headers : init?.headers);
+    if (headers.get("Authorization") !== "Bearer test-activity-secret") return new Response("Unauthorized", { status: 401 });
+    return Response.json({ updated: 1 });
+  }
   if (url.origin === "https://api.openai.com" && url.pathname === "/v1/responses") {
     return Response.json({ output: [{ type: "message", content: [{ type: "output_text", text: "gg" }] }] });
   }
@@ -140,6 +145,7 @@ describe("Durable realtime state", () => {
 
     await runInDurableObject(stub, async (instance: MatchmakerServer, state: DurableObjectState) => {
       instance.queue[0].joinedAt = Date.now() - 60_000;
+      instance.queue[0].botFillAt = Date.now() - 1;
       await state.storage.put("queue", instance.queue);
       await instance.alarm();
     });

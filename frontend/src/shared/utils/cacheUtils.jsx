@@ -6,6 +6,7 @@ const CACHE_NAMESPACES = {
     SOCIALS_USER_CIRCLES: 'socials-user-circles',
     SOCIALS_FRIEND_IDS: 'socials-friend-ids',
     SOCIALS_INCOMING_FRIEND_REQUESTS: 'socials-incoming-friend-requests',
+    LEADERBOARD_PAGE: 'leaderboard-page',
 }
 
 const CACHE_TTLS_MS = {
@@ -15,6 +16,7 @@ const CACHE_TTLS_MS = {
     SOCIALS_USER_CIRCLES: 60 * 1000,
     SOCIALS_FRIEND_IDS: 60 * 1000,
     SOCIALS_INCOMING_FRIEND_REQUESTS: 30 * 1000,
+    LEADERBOARD_PAGE: 30 * 1000,
 }
 
 const CACHE_DEBOUNCE_MS = {

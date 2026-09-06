@@ -1,6 +1,6 @@
 import { Server } from "partyserver";
 import { getGameMode } from "../games/registry";
-import { BOT_FILL_AFTER_MS, findBotFillEntries, findMatch } from "../matchmaking";
+import { botFillAt, createBotFillAt, findBotFillEntries, findMatch, nextEloWideningAt } from "../matchmaking";
 import type { QueueEntry } from "../types";
 import { createBotIdentity } from "../bots/profile";
 import { requestRoom } from "../utils";
@@ -17,8 +17,9 @@ export class MatchmakerServer extends Server<Env> {
     if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
     const body = await request.json<any>();
     if (body.type === "queue.join") {
+      const entry: QueueEntry = { ...body.entry, botFillAt: createBotFillAt(body.entry.joinedAt) };
       const previousQueue = this.queue;
-      this.queue = [...this.queue.filter((entry) => entry.id !== body.entry.id), body.entry];
+      this.queue = [...this.queue.filter((queued) => queued.id !== entry.id), entry];
       let gameId: string | null;
       try {
         gameId = await this.match(body.requesterUserId);
@@ -51,9 +52,22 @@ export class MatchmakerServer extends Server<Env> {
       await this.ctx.storage.deleteAlarm();
       return;
     }
-    const untilBotFill = Math.max(0, Math.min(...this.queue.map((entry) => entry.joinedAt + BOT_FILL_AFTER_MS - Date.now())));
-    const delay = untilBotFill === 0 ? 5_000 : Math.min(10_000, untilBotFill);
-    await this.ctx.storage.setAlarm(Date.now() + delay);
+    const mode = getGameMode(this.name);
+    const now = Date.now();
+    const candidates: number[] = [];
+    const anchor = [...this.queue].sort((a, b) => a.joinedAt - b.joinedAt)[0];
+    const eloWideningAt = nextEloWideningAt(anchor.joinedAt, now);
+    if (eloWideningAt != null) candidates.push(eloWideningAt);
+    if (mode?.playerCount === 2) {
+      for (const entry of this.queue) {
+        if (entry.userIds.length === 1) candidates.push(Math.max(now, botFillAt(entry)));
+      }
+    }
+    if (!candidates.length) {
+      await this.ctx.storage.deleteAlarm();
+      return;
+    }
+    await this.ctx.storage.setAlarm(Math.max(now + 250, Math.min(...candidates)));
   }
 
   private async match(requesterUserId?: string): Promise<string | null> {

@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app'
 import { browserLocalPersistence, connectAuthEmulator, getAuth, setPersistence } from 'firebase/auth'
 import { connectFirestoreEmulator, initializeFirestore, persistentLocalCache } from 'firebase/firestore'
 import { connectStorageEmulator, getStorage } from 'firebase/storage'
+import { connectDatabaseEmulator, getDatabase } from 'firebase/database'
 import { getAI, GoogleAIBackend } from "firebase/ai"
 
 const firebaseConfig = {
@@ -11,7 +12,8 @@ const firebaseConfig = {
     storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
-    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+    databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL
 }
 
 const app = initializeApp(firebaseConfig)
@@ -21,6 +23,7 @@ export const db = initializeFirestore(app, {
     localCache: persistentLocalCache({}),
 })
 export const storage = getStorage(app)
+export const rtdb = getDatabase(app)
 export const ai = getAI(app, { backend: new GoogleAIBackend() })
 
 const shouldUseEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true'
@@ -42,6 +45,12 @@ if(shouldUseEmulators) {
         storage,
         '127.0.0.1',
         9199
+    )
+
+    connectDatabaseEmulator(
+        rtdb,
+        '127.0.0.1',
+        9000
     )
 
 }

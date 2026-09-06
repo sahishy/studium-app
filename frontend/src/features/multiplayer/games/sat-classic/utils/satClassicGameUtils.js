@@ -31,6 +31,7 @@ const mapHealthPlayer = (entry = {}) => ({
     name: entry?.displayName ?? '',
     health: Number(entry?.state?.health) || 0,
     profilePicture: entry?.profilePicture ?? null,
+    avatar: entry?.avatar ?? null,
 })
 
 const getHealthBoard = ({ players = [], userId }) => {

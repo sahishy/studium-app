@@ -169,7 +169,7 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
 
 }
 
-const FreeResponseDirections = () => {
+export const FreeResponseDirections = () => {
     return (
         <div className="flex flex-col gap-6 mr-3">
             <div className="flex flex-col gap-3 text-sm">

@@ -5,6 +5,7 @@ import { useToast } from '../../../shared/contexts/ToastContext'
 import PartyInviteToast from '../components/toasts/PartyInviteToast'
 
 const MultiplayerContext = createContext(null)
+const IDLE_DISCONNECT_MS = 2 * 60_000
 
 const MultiplayerProvider = ({ userId, profile = null, children }) => {
     const [session, setSession] = useState(null)
@@ -21,8 +22,9 @@ const MultiplayerProvider = ({ userId, profile = null, children }) => {
 
     useEffect(() => {
         if(!userId) return () => {}
-        const socket = createSocket({ party: 'user', room: userId })
-        socketRef.current = socket
+        let socket = null
+        let idleTimer = null
+
         const onMessage = (event) => {
             try {
                 const incoming = JSON.parse(event.data)
@@ -37,9 +39,46 @@ const MultiplayerProvider = ({ userId, profile = null, children }) => {
                 setError(new Error('Received an invalid realtime response.'))
             }
         }
-        socket.addEventListener('message', onMessage)
-        socket.addEventListener('close', () => setLoading(false))
-        return () => socket.close()
+
+        const connect = () => {
+            if(socket) return
+            socket = createSocket({ party: 'user', room: userId })
+            socketRef.current = socket
+            socket.addEventListener('message', onMessage)
+            socket.addEventListener('close', () => setLoading(false))
+        }
+
+        const disconnect = () => {
+            if(!socket) return
+            socket.close()
+            socket = null
+            socketRef.current = null
+        }
+
+        const clearIdleTimer = () => {
+            if(!idleTimer) return
+            window.clearTimeout(idleTimer)
+            idleTimer = null
+        }
+
+        // Backgrounded tabs don't need a live UserServer connection; close it after a grace
+        // period to cut idle Durable Object wall-time, and reconnect as soon as the tab is visible again.
+        const onVisibilityChange = () => {
+            clearIdleTimer()
+            if(document.visibilityState === 'hidden') idleTimer = window.setTimeout(disconnect, IDLE_DISCONNECT_MS)
+            else connect()
+        }
+
+        connect()
+        document.addEventListener('visibilitychange', onVisibilityChange)
+        window.addEventListener('beforeunload', disconnect)
+
+        return () => {
+            clearIdleTimer()
+            document.removeEventListener('visibilitychange', onVisibilityChange)
+            window.removeEventListener('beforeunload', disconnect)
+            disconnect()
+        }
     }, [userId])
 
     const sendCommand = useCallback((type, payload = {}) => {

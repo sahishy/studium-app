@@ -17,6 +17,8 @@ export type QueueEntry = {
   players: PlayerIdentity[];
   averageElo: number;
   joinedAt: number;
+  /** Server-assigned deadline for falling back to a bot opponent. */
+  botFillAt?: number;
 };
 
 export type GameResult = {
@@ -34,11 +36,12 @@ export type GameResult = {
   botPlayerIds?: string[];
 };
 
-export type ConnectionState = PlayerIdentity & { connectedAt: number; protocolVersion: number };
+export type ConnectionState = PlayerIdentity & { connectedAt: number; protocolVersion: number; rttMs?: number };
 
 declare global {
   interface Env {
     BACKEND_API_BASE_URL: string;
+    REALTIME_ACTIVITY_SECRET?: string;
     OPENAI_API_KEY?: string;
   }
 }

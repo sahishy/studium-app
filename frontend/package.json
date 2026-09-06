@@ -8,7 +8,7 @@
 		"dev": "vite",
 		"build": "vite build",
 		"lint": "eslint .",
-		"test:multiplayer": "node --test src/features/multiplayer/services/serverClock.test.js",
+		"test:multiplayer": "node --test src/features/multiplayer/services/serverClock.test.js src/features/multiplayer/services/gameViewPatch.test.js src/features/multiplayer/services/replayBuffer.test.js src/features/multiplayer/games/puncture/punctureShotLedger.test.js src/features/multiplayer/games/timber/timberPrediction.test.js src/features/multiplayer/games/sat-classic/utils/satClassicGameUtils.test.js src/features/multiplayer/games/sat-classic/utils/matchEndUtils.test.js src/shared/utils/playerActivity.test.js",
 		"preview": "vite preview",
 		"predeploy": "npm run build",
 		"deploy": "gh-pages -d dist"

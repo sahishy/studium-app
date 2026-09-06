@@ -8,6 +8,7 @@ export default defineConfig({
       miniflare: {
         bindings: {
           BACKEND_API_BASE_URL: "https://backend.test",
+          REALTIME_ACTIVITY_SECRET: "test-activity-secret",
           OPENAI_API_KEY: "test-openai-key",
         },
       },

@@ -28,8 +28,8 @@ const TextTabSelector = ({ tabs = [], currentIndex = 0, onSelect, notificationTa
                         <button
                             key={tab.name ?? index}
                             onClick={() => onSelect?.(tab, index)}
-                            className={`w-full px-4 py-2 flex items-center justify-center gap-2 rounded-full text-sm 
-                                transition-colors cursor-pointer 
+                            className={`w-full px-4 py-2 flex items-center justify-center gap-2 rounded-full text-sm
+                                transition-colors cursor-pointer
                                 ${isCurrent ? 'text-neutral0' : 'text-neutral1 hover:text-neutral0'
                             }`}
                         >

@@ -3,6 +3,9 @@
 	"private": true,
 	"main": "src/index.js",
 	"type": "module",
+	"scripts": {
+		"test": "node --test src/features/realtime/activityService.test.js src/features/realtime/resultUtils.test.js"
+	},
 	"dependencies": {
 		"cors": "^2.8.6",
 		"express": "^5.2.1",

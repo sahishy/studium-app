@@ -1,0 +1,413 @@
+% FeatKT - IEEE MIT Undergraduate Research Technology Conference
+% 24 x 36 inch portrait beamerposter
+% Compile with: tectonic FeatKT_MIT_URTC_beamerposter.tex
+\documentclass[final,xcolor={table}]{beamer}
+
+\usepackage[orientation=portrait,size=custom,width=60.96,height=91.44,scale=1.0]{beamerposter}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[scaled=0.96]{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,array,graphicx,ragged2e,tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+
+% 26 pt = 9.14 mm nominal type size. No text-bearing diagram or table is
+% subsequently scaled down, so 26 pt is the minimum throughout the poster.
+\newcommand{\bodyfont}{\fontsize{26}{31}\selectfont}
+\newcommand{\captionfont}{\fontsize{26}{31}\selectfont}
+% Figure 1 labels are slightly smaller than body copy while remaining above
+% the conference's 9 mm minimum text-height requirement. Figure 2 is further
+% compacted to preserve the requested page margin.
+\newcommand{\diagramfont}{\fontsize{25.7}{29.5}\selectfont}
+\newcommand{\figtwofont}{\fontsize{23}{27}\selectfont}
+
+\definecolor{ieeeblue}{HTML}{00629B}
+\definecolor{navy}{HTML}{173A55}
+\definecolor{mitred}{HTML}{A31F34}
+\definecolor{ink}{HTML}{1B1F23}
+\definecolor{papergray}{HTML}{F3F5F6}
+\definecolor{rulegray}{HTML}{C8CED3}
+\definecolor{softblue}{HTML}{EAF1F5}
+\definecolor{softred}{HTML}{F8ECEE}
+
+\usetheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamercolor{background canvas}{bg=white}
+\setbeamercolor{normal text}{fg=ink}
+\setbeamercolor{block title}{fg=white,bg=navy}
+\setbeamercolor{block body}{fg=ink,bg=white}
+\setbeamercolor{itemize item}{fg=ieeeblue}
+\setbeamerfont{block title}{size=\fontsize{34}{40},series=\bfseries}
+\setbeamerfont{block body}{size=\fontsize{26}{31}}
+\setbeamertemplate{itemize item}{\raisebox{0.15ex}{\rule{0.48ex}{0.48ex}}}
+
+\setbeamertemplate{block begin}{
+  \begin{beamercolorbox}[wd=\textwidth,sep=0pt]{block title}
+    \parbox[c][1.75cm][c]{\textwidth}{%
+      \hspace*{0.71cm}\usebeamerfont{block title}\insertblocktitle}
+  \end{beamercolorbox}
+  \nointerlineskip
+  \begin{beamercolorbox}[wd=\textwidth,leftskip=1.05cm,rightskip=1.05cm,
+    vmode]{block body}
+    \vskip0.70ex\usebeamerfont{block body}\justifying
+}
+\setbeamertemplate{block end}{
+    \vskip0.70ex
+  \end{beamercolorbox}
+  \vskip0.15ex
+}
+
+\setlength{\parskip}{0.18ex}
+\newlength{\sepwidth}
+\newlength{\colwidth}
+\setlength{\sepwidth}{0.025\paperwidth}
+\setlength{\colwidth}{0.4625\paperwidth}
+\newcommand{\separatorcolumn}{\begin{column}{\sepwidth}\end{column}}
+\newenvironment{posterbullets}{%
+  \begingroup
+  \setlength{\leftmargini}{0.82cm}%
+  \begin{itemize}
+  \setlength{\topsep}{0pt}%
+  \setlength{\partopsep}{0pt}%
+  \setlength{\parsep}{0pt}%
+  \setlength{\itemsep}{0.14ex}%
+}{%
+  \end{itemize}
+  \endgroup
+}
+
+\begin{document}
+\begin{frame}[t]
+
+% --------------------------------------------------------------------
+% Compact institutional header. Logos are anchored to the lower corners.
+% --------------------------------------------------------------------
+\begin{beamercolorbox}[wd=\paperwidth,sep=0pt]{block body}
+\begin{tikzpicture}
+  \useasboundingbox (0,0) rectangle (\paperwidth,11.65cm);
+  \fill[white] (0,0) rectangle (\paperwidth,11.65cm);
+  \fill[mitred] (0,0) rectangle (\paperwidth,0.32cm);
+
+  \node[anchor=north,text=navy,align=center,
+    font=\fontsize{76}{82}\selectfont\bfseries]
+    at (0.5\paperwidth,10.95cm)
+    {FEATKT: FEATURE-DRIVEN\\
+     MULTI-STEP KNOWLEDGE TRACING};
+
+  \node[anchor=north,text=ink,
+    font=\fontsize{32}{38}\selectfont\bfseries]
+    at (0.5\paperwidth,4.05cm)
+    {Sahishnu Durgam\textsuperscript{1}\qquad
+     Prajith Pandrate\textsuperscript{2}};
+
+  \node[anchor=north,text=navy,align=center,
+    font=\fontsize{26}{31}\selectfont]
+    at (0.5\paperwidth,1.95cm)
+    {\textsuperscript{1}Academy of Engineering and Technology\qquad
+     \textsuperscript{2}University of Illinois Urbana--Champaign};
+
+  \node[anchor=south west] at (1.2cm,0.72cm)
+    {\includegraphics[width=7.2cm]{ieee_logo.png}};
+  \node[anchor=south east] at (\paperwidth-1.2cm,0.68cm)
+    {\includegraphics[height=4.1cm]{urtc_logo.png}};
+\end{tikzpicture}
+\end{beamercolorbox}
+
+\vspace{0cm}
+
+\begin{columns}[t]
+\separatorcolumn
+
+% ============================ LEFT COLUMN ============================
+\begin{column}{\colwidth}
+
+\begin{block}{Introduction}
+\begin{posterbullets}
+  \item \textbf{Knowledge tracing (KT) predicts whether a student will
+        answer a question correctly based on their previous learning
+        history.}
+  \item Most KT models are evaluated using one-step-ahead prediction, where
+        the correct answer to each previous question is revealed before
+        making the next prediction. However, many real learning scenarios
+        require predicting an entire future sequence without receiving
+        per-question feedback.
+  \item pyKT, a benchmark platform for KT models, calls this
+        \textbf{non-accumulative multi-step (NAMS)} prediction. Once
+        prediction begins, a sequence model receives no new responses to
+        update on, so its main advantage over a simpler model disappears.
+\end{posterbullets}
+\end{block}
+
+\begin{block}{Methodology}
+\begin{posterbullets}
+  \item This study uses the EdNet-KT1 data as distributed through the Riiid
+        AIEd Challenge. 5{,}000 students were randomly selected using a fixed
+        seed of 42.
+  \item The data were preprocessed using the same pipeline as pyKT. Each
+        student interaction was expanded so that every row represented one
+        question--concept pair. Student sequences were padded or shortened
+        to a maximum length of 200 interactions.
+  \item The selected users were divided into 4{,}000 training users and
+        1{,}000 testing users at the user level, meaning that no student's
+        interactions appeared in both sets.
+  \item For a student sequence of length $L$ and a prefix ratio $r$, the
+        model is given the first $\lceil rL\rceil$ interactions and their
+        correct or incorrect labels. It must then predict every remaining
+        interaction without receiving any additional feedback.
+\end{posterbullets}
+
+\vspace{0.45cm}
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \def\cell{1.32}
+  \foreach \i/\lab in {0/1,1/0,2/1,3/1}{
+    \fill[navy] (\i*\cell,0) rectangle +(1.15,1.15);
+    \node[white,font=\diagramfont\bfseries]
+      at (\i*\cell+0.575,0.575) {\lab};
+  }
+  \foreach \i in {4,...,9}{
+    \draw[navy,line width=1.5pt,dashed]
+      (\i*\cell,0) rectangle +(1.15,1.15);
+    \node[navy,font=\diagramfont\bfseries]
+      at (\i*\cell+0.575,0.575) {?};
+  }
+  % Separate centered headers make the two sequence regions unambiguous.
+  \node[fill=softblue,text=navy,rounded corners=3pt,align=center,
+    minimum height=0.90cm,text width=4.75cm,font=\diagramfont\bfseries]
+    at ({(3*\cell+1.15)/2},1.78) {Observed};
+  \node[fill=softred,text=navy,rounded corners=3pt,align=center,
+    minimum height=0.90cm,text width=7.25cm,font=\diagramfont\bfseries]
+    at ({(4*\cell+9*\cell+1.15)/2},1.78) {Predicted};
+  \draw[mitred,line width=2.2pt]
+    ({(3*\cell+1.15+4*\cell)/2},-0.08) --
+    ({(3*\cell+1.15+4*\cell)/2},1.23);
+  \node[mitred,font=\diagramfont\bfseries,anchor=north]
+    at ({(9*\cell+1.15)/2},-0.38)
+    {Prediction boundary: $n=\lceil r\!\cdot\!L\rceil$};
+\end{tikzpicture}
+
+\vspace{0.50cm}
+\justifying
+{\captionfont\textbf{Fig.~1. The NAMS protocol at prefix ratio $r=0.4$ for a
+sequence of length $L=10$. Correctness labels are never revealed after
+$t=n$.}}
+
+\vspace{0.25cm}
+\begin{posterbullets}
+  \item Performance was measured using AUC, averaged across five prefix
+        ratios.
+\end{posterbullets}
+\end{block}
+
+\begin{block}{Proposed Model: FeatKT}
+FeatKT is a gradient-boosted decision tree model built using LightGBM.
+FeatKT predicts each interaction using five carefully selected features:
+
+\begin{enumerate}\setlength{\itemsep}{0.35ex}
+  \item \textbf{Concept identifier} -- represents the concept or skill
+        tested by the question.
+  \item \textbf{Question difficulty} -- measures how difficult a question
+        is based on the percentage of training students who answered it
+        incorrectly.
+  \item \textbf{Log elapsed time} -- the logarithm of one plus the time
+        spent answering the previous question, $\log(1+t_e)$.
+  \item \textbf{Log lag time} -- the logarithm of one plus the time between
+        consecutive interactions, $\log(1+t_l)$.
+  \item \textbf{Frozen prefix accuracy} --
+        $a_u=\frac{1}{n}\sum_{i=1}^{n}y_{u,i}$, computed once at the
+        prediction boundary.
+\end{enumerate}
+
+\begin{beamercolorbox}[wd=\linewidth,sep=0.45cm]{block body}
+\color{navy}The value is calculated once at the end of the observed prefix
+and remains unchanged throughout the prediction period. Updating it during
+prediction would require information from future responses, which would
+violate the NAMS protocol.
+\end{beamercolorbox}
+\end{block}
+
+\begin{block}{Selected References}
+{\captionfont
+\setlength{\parskip}{0.22ex}
+\noindent\hangindent=1.15cm [1] A. T. Corbett and J. R. Anderson,
+``Knowledge Tracing: Modeling the Acquisition of Procedural Knowledge,''
+\emph{User Modeling and User-Adapted Interaction}, 1994.
+
+\noindent\hangindent=1.15cm [2] C. Piech et al., ``Deep Knowledge
+Tracing,'' \emph{NeurIPS}, 2015.
+
+\noindent\hangindent=1.15cm [3] Z. Liu et al., ``pyKT: A Python Library to
+Benchmark Deep Learning Based Knowledge Tracing Models,'' in
+\emph{NeurIPS}, 2022.
+
+\noindent\hangindent=1.15cm [4] Y. Choi et al., ``EdNet: A Large-Scale
+Hierarchical Dataset in Education,'' \emph{AIED}, 2020.
+
+\noindent\hangindent=1.15cm [5] G. Ke et al., ``LightGBM: A Highly
+Efficient Gradient Boosting Decision Tree,'' \emph{NeurIPS}, 2017.
+}
+\end{block}
+
+\end{column}
+
+\separatorcolumn
+
+% ============================ RIGHT COLUMN ===========================
+\begin{column}{\colwidth}
+
+\begin{block}{Model Architecture}
+\vspace{0.35cm}
+\centering
+\begin{tikzpicture}[
+  box/.style={draw=navy,line width=1.5pt,rounded corners=4pt,
+    align=center,minimum height=1.25cm,font=\figtwofont},
+  feat/.style={box,fill=softblue,text width=4.25cm,minimum height=2.25cm},
+  wide/.style={box,text width=24.2cm},
+  flow/.style={navy,line width=1.6pt,line cap=round,line join=round},
+  arr/.style={flow,-{Stealth[length=3.2mm,width=2.4mm]}}]
+  \node[wide,fill=navy,text=white] (raw)
+    {Raw EdNet-KT1 interaction};
+  \node[feat,below=1.00cm of raw.south west,anchor=north west,xshift=-0.80cm] (f1)
+    {Concept\\identifier\\\phantom{g}};
+  \node[feat,right=0.55cm of f1] (f2)
+    {Question\\difficulty\\\phantom{g}};
+  \node[feat,right=0.55cm of f2] (f3) {Log\\elapsed\\time};
+  \node[feat,right=0.55cm of f3] (f4) {Log\\lag time\\\phantom{g}};
+  \node[feat,right=0.55cm of f4] (f5) {Frozen\\prefix\\accuracy};
+  \node[wide,below=0.95cm of f3,fill=white] (gbm)
+    {LightGBM gradient-boosted trees};
+  \node[box,below=0.60cm of gbm,fill=softred,text width=11.0cm] (out)
+    {$P(\text{correct response})$};
+
+  % Clean split-and-merge buses keep the information flow orthogonal.
+  \coordinate (upperbus) at ($(f3.north)+(0,0.45cm)$);
+  \draw[flow] (raw.south) -- (upperbus);
+  \draw[flow] (upperbus -| f1.north) -- (upperbus -| f5.north);
+  \foreach \f in {f1,f2,f3,f4,f5}{
+    \draw[arr] (upperbus -| \f.north) -- (\f.north);
+  }
+
+  \coordinate (lowerbus) at ($(f3.south)+(0,-0.45cm)$);
+  \draw[flow] (lowerbus -| f1.south) -- (lowerbus -| f5.south);
+  \foreach \f in {f1,f2,f3,f4,f5}{
+    \draw[flow] (\f.south) -- (lowerbus -| \f.south);
+  }
+  \draw[arr] (lowerbus) -- (gbm.north);
+  \draw[arr] (gbm.south) -- (out.north);
+\end{tikzpicture}
+
+\vspace{0.35cm}
+\justifying
+{\captionfont\textbf{Fig.~2. FeatKT architecture. FeatKT does not use a
+sequence encoder, attention mechanism, or learned embeddings.}}
+\end{block}
+
+\begin{block}{Results}
+\centering
+{\fontsize{26}{31}\selectfont
+\begin{tabular}{@{}p{8.1cm}p{10.7cm}r@{}}
+\toprule
+\textbf{Model} & \textbf{Model class} & \textbf{Avg. AUC} \\
+\midrule
+DKT                    & Recurrent              & 0.594 \\
+sparseKT               & Sparse attention       & 0.646 \\
+simpleKT               & Transformer            & 0.666 \\
+AKT                    & Difficulty-aware       & 0.666 \\
+Transformer + features & Transformer            & 0.726 \\
+\rowcolor{softred}
+\textbf{FeatKT}        & \textbf{Boosted trees} & \textbf{0.747} \\
+\bottomrule
+\end{tabular}}
+
+\vspace{0.30cm}
+{\captionfont\textbf{Table I. Average AUC across five NAMS prefix ratios.}}
+
+\vspace{0.35cm}
+\justifying
+\begin{itemize}\setlength{\itemsep}{0.35ex}
+  \item FeatKT achieved the highest average AUC of all the models tested and
+        had the highest AUC at every single ratio.
+  \item Providing the engineered feature set to a transformer increased its
+        average AUC from 0.666 to 0.726.
+  \item The features themselves have a large impact on performance.
+\end{itemize}
+
+Among the published KT models, AKT and simpleKT achieved the best
+performance, likely because they are the only baselines that explicitly
+include question difficulty. Baseline results should be read as
+default-configuration performance rather than as tuned upper bounds.
+\end{block}
+
+\begin{block}{Validation}
+The label-shuffled model achieved an AUC of 0.5093, indicating that the
+preprocessing pipeline did not introduce target leakage.
+
+\vspace{0.10cm}
+\centering
+{\fontsize{26}{31}\selectfont
+\renewcommand{\arraystretch}{1.04}
+\begin{tabular}{@{}
+  >{\RaggedRight\arraybackslash}p{9.6cm}
+  >{\RaggedRight\arraybackslash}p{5.4cm}
+  >{\RaggedRight\arraybackslash}p{8.0cm}@{}}
+\toprule
+\textbf{Check} & \textbf{Result} & \textbf{Interpretation} \\
+\midrule
+Five-seed retraining & std. = 0.0001 & Effectively\newline deterministic \\
+Label-shuffle control & 0.5093 AUC & Chance level;\newline no leakage \\
+Train/test overlap & 0 of 1{,}000 & Splits are disjoint \\
+Maximum feature gain & 26.8\% & No feature\newline dominance \\
+\bottomrule
+\end{tabular}}
+
+\vspace{0.22cm}
+{\captionfont\textbf{Table II. Validation checks for leakage and feature
+dominance.}}
+
+\vspace{0.22cm}
+\justifying
+
+A paired bootstrap over test users confirmed that FeatKT's advantage holds
+at every prefix ratio ($p<0.001$).
+
+\vspace{0.25cm}
+\centering
+{\fontsize{26}{31}\selectfont
+\begin{tabular}{@{}c c c c@{}}
+\toprule
+\textbf{Ratio} & \textbf{Gap} & \textbf{95\% CI} & \textbf{FeatKT wins} \\
+\midrule
+0.2 & 0.024 & [0.014, 0.034] & 100.0\% \\
+0.4 & 0.027 & [0.018, 0.037] & 100.0\% \\
+0.6 & 0.019 & [0.014, 0.025] & 100.0\% \\
+0.8 & 0.022 & [0.014, 0.029] & 100.0\% \\
+0.9 & 0.012 & [0.006, 0.020] &  99.9\% \\
+\bottomrule
+\end{tabular}}
+
+\vspace{0.30cm}
+{\captionfont\textbf{Table III. Paired-bootstrap comparison with the
+feature-matched transformer.}}
+\end{block}
+
+\begin{block}{Conclusion}
+\begin{posterbullets}
+  \item This study evaluated KT using pyKT's NAMS protocol, where models must
+        predict a student's future responses without receiving
+        per-interaction feedback. Under this setting, the results showed that
+        the choice of input features had a greater impact on performance than
+        the choice of model architecture.
+  \item Only 5{,}000 EdNet users were included to reduce training time, and
+        all models were evaluated on a single train-test split. Future work
+        should evaluate FeatKT on the full EdNet dataset and other KT
+        datasets, such as ASSISTments.
+\end{posterbullets}
+\end{block}
+
+\end{column}
+\separatorcolumn
+\end{columns}
+
+\end{frame}
+\end{document}
