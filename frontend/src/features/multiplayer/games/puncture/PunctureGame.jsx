@@ -1,6 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { getGameServerNow, sendGameMessage, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+    getGameServerNow,
+    requestGameResync,
+    sendGameMessage,
+    subscribeToGameActionResults,
+    subscribeToGameReconnect,
+    subscribeToGameSnapshot,
+} from '../../services/realtimeSocketService'
 import QuestionPane from '../sat-classic/components/QuestionPane'
+import MatchEndOverlay from '../sat-classic/components/MatchEndOverlay'
+import { buildMatchEndRounds, countAnsweredQuestions } from '../sat-classic/utils/matchEndUtils'
 import CalculatorWindow from '../../components/windows/CalculatorWindow'
 import LoadingState from '../../../../shared/components/ui/LoadingState'
 import ProgressBar from '../../../../shared/components/ui/ProgressBar'
@@ -14,12 +23,25 @@ import SatClassicSubmittedToast from '../sat-classic/components/toasts/SatClassi
 import { useToast } from '../../../../shared/contexts/ToastContext'
 import useScreenShake from '../../../../shared/utils/useScreenShake'
 import PunctureScene from './components/PunctureScene'
+import { predictShot, STUN_MS } from './puncturePrediction'
+import {
+    appendPendingShot,
+    applyShotOverlay,
+    getUnconfirmedShots,
+    mergeShotEvents,
+    predictionAngles,
+    pruneConfirmedShots,
+    recalculatePendingShots,
+    reconcileActionResult,
+} from './punctureShotLedger'
 
 const EMPTY_PLAYERS = []
+const EMPTY_SHOTS = []
 const MODE_ID = 'sat-puncture'
 const QUESTION_DURATION_MS = 120_000
 const PUNCTURE_ROUND_DURATION_MS = 30_000
 const QUESTION_REVEAL_DURATION_MS = 2_000
+const SHOT_RECEIPT_TIMEOUT_MS = 2_000
 
 const formatClock = (milliseconds = 0) => {
     const secondsTotal = Math.max(0, Math.ceil((Number(milliseconds) || 0) / 1000))
@@ -78,7 +100,7 @@ const PunctureHeader = ({ localPlayer, opponent, remainingMs }) => {
     )
 }
 
-const PunctureBoard = ({ player, gameState, isFaded = false, now, slowdownStartedAt = null, optimisticShot = null, serverNow }) => {
+const PunctureBoard = ({ player, gameState, shotEvents = [], playbackResetKey = 0, isFaded = false, now, slowdownStartedAt = null, serverNow }) => {
     const playerState = player?.state ?? {}
     const pinsRemaining = Math.max(0, Number(playerState.pinsRemaining) || 0)
     const stunnedMs = Math.max(0, Number(playerState.stunnedUntil || 0) - now)
@@ -93,13 +115,11 @@ const PunctureBoard = ({ player, gameState, isFaded = false, now, slowdownStarte
                 rotationTurnsPerSecond={gameState?.rotationTurnsPerSecond}
                 roundStartedAt={gameState?.punctureRoundStartedAt}
                 pinsRemaining={pinsRemaining}
-                shotCount={Number(playerState.punctureShotCount) || 0}
-                lastShotHit={Boolean(playerState.lastShotHit)}
-                shotImpactAt={playerState.shotImpactAt}
+                roundIndex={gameState?.punctureRoundIndex}
+                playbackResetKey={playbackResetKey}
+                shotEvents={shotEvents}
                 slowdownStartedAt={slowdownStartedAt}
                 playerColor={playerColor}
-                optimisticShot={optimisticShot}
-                lastClientActionId={playerState.lastClientActionId}
                 serverNow={serverNow}
             />
 
@@ -133,7 +153,7 @@ const TransitionOverlay = ({ remainingMs = 0, countdown = null, title, subtitle 
     )
 }
 
-const PunctureMatchEnd = ({ snapshot, userId, startedAt }) => {
+const LegacyPunctureMatchEnd = ({ snapshot, userId, startedAt }) => {
     const { userStats } = useUserStats()
     const state = snapshot?.room?.state ?? {}
     const players = snapshot?.players ?? EMPTY_PLAYERS
@@ -251,18 +271,57 @@ const PunctureMatchEnd = ({ snapshot, userId, startedAt }) => {
     )
 }
 
+const PunctureMatchEnd = ({ snapshot, userId, startedAt }) => {
+    const { userStats } = useUserStats()
+    const state = snapshot?.room?.state ?? {}
+    const players = snapshot?.players ?? EMPTY_PLAYERS
+    const localPlayer = players.find((player) => player.userId === userId) ?? null
+    const opponent = players.find((player) => player.userId !== userId) ?? null
+    const winnerUserId = state.winnerUserId ?? null
+    const isWin = winnerUserId === userId
+    const endedEvent = [...(snapshot?.events ?? [])].reverse().find((event) => event.type === 'GAME_ENDED')
+    const endReason = endedEvent?.data?.endReason ?? null
+    const reasonLabel = endReason === 'first_to_three'
+        ? (isWin ? 'You won the Puncture match.' : 'Your opponent won the Puncture match.')
+        : (endReason === 'max_questions' ? 'Reached max questions' : (endReason === 'player_left'
+            ? (isWin ? 'Your opponent left the match.' : 'You left the match.') : null))
+    const rounds = buildMatchEndRounds({
+        events: snapshot?.events,
+        modeId: MODE_ID,
+        userId,
+        opponentUserId: opponent?.userId,
+        reviewQuestionsById: state.reviewQuestionsById,
+    })
+    const endedAt = Number(endedEvent?.createdAt) || Date.now()
+    return <MatchEndOverlay
+        winnerUserId={winnerUserId}
+        userId={userId}
+        modeId={MODE_ID}
+        reasonLabel={reasonLabel}
+        localPlayer={localPlayer}
+        opponent={opponent}
+        matchDurationSeconds={Math.max(0, (endedAt - Number(startedAt || endedAt)) / 1000)}
+        questionsAnswered={countAnsweredQuestions(rounds)}
+        rankedProgression={snapshot?.room?.ranked ? buildMultiplayerUiState({ userStats, modeId: MODE_ID }) : null}
+        eloDelta={Number(endedEvent?.data?.eloDeltaByUserId?.[userId]) || 0}
+        players={players}
+        rounds={rounds}
+    />
+}
+
 const PunctureGame = ({ roomId, userId }) => {
     const [snapshot, setSnapshot] = useState(null)
     const [response, setResponse] = useState('')
     const [calculatorOpen, setCalculatorOpen] = useState(false)
     const [questionReveal, setQuestionReveal] = useState(null)
     const [now, setNow] = useState(() => getGameServerNow(roomId))
-    const [optimisticShot, setOptimisticShot] = useState(null)
+    const [shotLedger, setShotLedger] = useState([])
+    const [playbackResetKey, setPlaybackResetKey] = useState(0)
     const shownAnswerToastEventIdsRef = useRef(new Set())
     const lastProcessedAnswerSequenceRef = useRef(null)
-    const previousLocalShotCountRef = useRef(null)
-    const previousLocalStunnedUntilRef = useRef(null)
     const lastOptimisticShotAtRef = useRef(0)
+    const shotLedgerRef = useRef([])
+    const predictionInputsRef = useRef(null)
     const shownQuestionRevealEventIdsRef = useRef(new Set())
     const questionsByIdRef = useRef(new Map())
     const { screenShakeRef, shake } = useScreenShake()
@@ -270,6 +329,19 @@ const PunctureGame = ({ roomId, userId }) => {
     const serverNow = useCallback(() => getGameServerNow(roomId), [roomId])
 
     useEffect(() => subscribeToGameSnapshot(roomId, setSnapshot), [roomId])
+    useEffect(() => subscribeToGameActionResults(roomId, (result) => {
+        setShotLedger((current) => {
+            const reconciled = reconcileActionResult(current, result)
+            const next = recalculatePendingShots(reconciled, predictionInputsRef.current)
+            shotLedgerRef.current = next
+            return next.length === current.length && next.every((entry, index) => entry === current[index]) ? current : next
+        })
+    }), [roomId])
+    useEffect(() => subscribeToGameReconnect(roomId, () => {
+        shotLedgerRef.current = []
+        setShotLedger([])
+        setPlaybackResetKey((value) => value + 1)
+    }), [roomId])
     useEffect(() => {
         const timer = setInterval(() => setNow(getGameServerNow(roomId)), 50)
         return () => clearInterval(timer)
@@ -284,8 +356,22 @@ const PunctureGame = ({ roomId, userId }) => {
     const questionCountdownRemainingMs = Math.max(0, Number(state?.currentQuestionActiveAt || 0) - now)
     const questionCountdown = Math.max(0, Math.ceil(questionCountdownRemainingMs / 1000))
     const phase = state?.phase
-    const localShotCount = Number(localPlayer?.state?.punctureShotCount) || 0
-    const localStunnedUntil = Number(localPlayer?.state?.stunnedUntil) || 0
+    const localRecentShots = localPlayer?.state?.punctureRecentShots ?? EMPTY_SHOTS
+    const opponentRecentShots = opponent?.state?.punctureRecentShots ?? EMPTY_SHOTS
+    const unconfirmedLocalShots = useMemo(
+        () => getUnconfirmedShots(shotLedger, localRecentShots),
+        [localRecentShots, shotLedger],
+    )
+    const predictedLocalPlayer = useMemo(
+        () => applyShotOverlay(localPlayer, unconfirmedLocalShots),
+        [localPlayer, unconfirmedLocalShots],
+    )
+    const localShotEvents = useMemo(
+        () => mergeShotEvents(shotLedger.map((entry) => entry.shot), localRecentShots),
+        [localRecentShots, shotLedger],
+    )
+    const opponentShotEvents = useMemo(() => mergeShotEvents(opponentRecentShots), [opponentRecentShots])
+    const effectiveLocalStunnedUntil = Number(predictedLocalPlayer?.state?.stunnedUntil) || 0
     const questionRevealRemainingMs = questionReveal
         ? Math.max(0, questionReveal.durationMs - (now - questionReveal.startedAtMs))
         : 0
@@ -300,22 +386,29 @@ const PunctureGame = ({ roomId, userId }) => {
     }, [questionReveal, questionRevealRemainingMs])
 
     useEffect(() => {
-        if(previousLocalShotCountRef.current == null) {
-            previousLocalShotCountRef.current = localShotCount
-            return
-        }
-        if(localShotCount > previousLocalShotCountRef.current) shake('subtle')
-        previousLocalShotCountRef.current = localShotCount
-    }, [localShotCount, shake])
+        setShotLedger((current) => {
+            const pruned = pruneConfirmedShots(current, localRecentShots)
+            const next = recalculatePendingShots(pruned, predictionInputsRef.current)
+            if(next.length === current.length && next.every((entry, index) => entry === current[index])) return current
+            shotLedgerRef.current = next
+            return next
+        })
+    }, [localRecentShots])
 
     useEffect(() => {
-        if(previousLocalStunnedUntilRef.current == null) {
-            previousLocalStunnedUntilRef.current = localStunnedUntil
-            return
-        }
-        if(localStunnedUntil > previousLocalStunnedUntilRef.current) shake('impact')
-        previousLocalStunnedUntilRef.current = localStunnedUntil
-    }, [localStunnedUntil, shake])
+        if(!shotLedger.length) return () => {}
+        const timer = window.setInterval(() => {
+            const cutoff = Date.now() - SHOT_RECEIPT_TIMEOUT_MS
+            if(!shotLedgerRef.current.some((entry) => entry.createdAt <= cutoff)) return
+            requestGameResync(roomId)
+            setShotLedger((current) => {
+                const next = current.filter((entry) => entry.createdAt > cutoff)
+                shotLedgerRef.current = next
+                return next
+            })
+        }, 250)
+        return () => window.clearInterval(timer)
+    }, [roomId, shotLedger.length])
 
     useEffect(() => {
         const events = snapshot?.events ?? []
@@ -382,6 +475,18 @@ const PunctureGame = ({ roomId, userId }) => {
         })
     }, [snapshot?.events, state?.questionIndex, userId, players, roomId])
 
+    // Read from a ref inside the handler (rather than as effect deps) so the listener doesn't
+    // need to be torn down and re-added on every shot/state tick - only phase/room changes do.
+    predictionInputsRef.current = {
+        stunnedUntil: effectiveLocalStunnedUntil,
+        roundIndex: state?.punctureRoundIndex,
+        roundStartedAt: state?.punctureRoundStartedAt,
+        rotationTurnsPerSecond: state?.rotationTurnsPerSecond,
+        generatedPinAngles: state?.generatedPinAngles ?? [],
+        attachedPinAngles: localPlayer?.state?.puncturePinAngles ?? [],
+        recentShots: localRecentShots,
+    }
+
     useEffect(() => {
         if(phase !== 'puncture_active') return () => {}
         const onKeyDown = (event) => {
@@ -390,18 +495,46 @@ const PunctureGame = ({ roomId, userId }) => {
             if(key !== 'w' && key !== 'arrowup') return
             event.preventDefault()
             const shotAt = getGameServerNow(roomId)
-            if(shotAt < localStunnedUntil || shotAt - lastOptimisticShotAtRef.current < 50) return
+            const inputs = predictionInputsRef.current
+            const unresolved = getUnconfirmedShots(shotLedgerRef.current, inputs.recentShots)
+            const ledgerStunnedUntil = unresolved
+                .filter((shot) => shot.hit)
+                .reduce((latest, shot) => Math.max(latest, Number(shot.shotAt) + STUN_MS), 0)
+            if(shotAt < Math.max(inputs.stunnedUntil, ledgerStunnedUntil) || shotAt - lastOptimisticShotAtRef.current < 50) return
             lastOptimisticShotAtRef.current = shotAt
             const clientActionId = `shot_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-            setOptimisticShot({ id: clientActionId, startedAt: shotAt })
-            sendGameMessage(roomId, 'game.shoot', { clientActionId })
+            const prediction = predictShot({
+                shotAt,
+                roundStartedAt: inputs.roundStartedAt,
+                rotationTurnsPerSecond: inputs.rotationTurnsPerSecond,
+                generatedPinAngles: inputs.generatedPinAngles,
+                attachedPinAngles: predictionAngles(inputs.attachedPinAngles, unresolved),
+            })
+            const shot = {
+                sequence: null,
+                roundIndex: Number(inputs.roundIndex) || 0,
+                clientActionId,
+                shotAt,
+                impactAt: prediction.shotImpactAt,
+                hit: prediction.hit,
+                attachedAngle: prediction.attachedAngle,
+                targetAngle: prediction.targetAngle,
+            }
+            const nextLedger = appendPendingShot(shotLedgerRef.current, shot, Date.now())
+            shotLedgerRef.current = nextLedger
+            setShotLedger(nextLedger)
+            shake(prediction.hit ? 'impact' : 'subtle')
+            sendGameMessage(roomId, 'game.shoot', { clientActionId, shotAt })
         }
         window.addEventListener('keydown', onKeyDown)
         return () => window.removeEventListener('keydown', onKeyDown)
-    }, [localStunnedUntil, phase, roomId])
+    }, [phase, roomId, shake])
 
     useEffect(() => {
-        if(phase !== 'puncture_active') setOptimisticShot(null)
+        if(phase === 'puncture_active') return
+        lastOptimisticShotAtRef.current = 0
+        shotLedgerRef.current = []
+        setShotLedger([])
     }, [phase, state?.punctureRoundIndex])
 
     const questionRemaining = Math.max(0, Number(state?.currentQuestionDeadlineAt || 0) - now)
@@ -451,12 +584,13 @@ const PunctureGame = ({ roomId, userId }) => {
             ) : (
                 <div className='relative flex-1 min-h-0 flex flex-col md:flex-row justify-center gap-5'>
                     <PunctureBoard
-                        player={localPlayer}
+                        player={isRoundHold ? localPlayer : predictedLocalPlayer}
                         gameState={state}
                         isFaded={isRoundHold && Boolean(resolvedWinnerUserId) && resolvedWinnerUserId !== localPlayer.userId}
                         slowdownStartedAt={isRoundHold ? state.punctureRoundResolvedAt : null}
                         now={now}
-                        optimisticShot={optimisticShot}
+                        shotEvents={localShotEvents}
+                        playbackResetKey={playbackResetKey}
                         serverNow={serverNow}
                     />
                     <PunctureBoard
@@ -465,6 +599,8 @@ const PunctureGame = ({ roomId, userId }) => {
                         isFaded={isRoundHold && Boolean(resolvedWinnerUserId) && resolvedWinnerUserId !== opponent.userId}
                         slowdownStartedAt={isRoundHold ? state.punctureRoundResolvedAt : null}
                         now={now}
+                        shotEvents={opponentShotEvents}
+                        playbackResetKey={playbackResetKey}
                         serverNow={serverNow}
                     />
                     {phase === 'puncture_countdown' ? (

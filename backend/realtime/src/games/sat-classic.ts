@@ -1,5 +1,5 @@
 import { changedAction, unchangedAction, type GameEngine, type StoredGame } from "./contracts";
-import { isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
+import { buildReviewQuestionsById, isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
 
 const INITIAL_HEALTH = 3000;
 const MAX_QUESTIONS = 10;
@@ -136,7 +136,11 @@ export const createSatClassicGame = (): GameEngine => ({
     const currentId = game.state.currentQuestionId;
     const question = game.privateState.questionsById?.[currentId];
     const safeQuestion = sanitizeSatQuestion(question);
-    return { ...game.state, questionsById: currentId ? { [currentId]: safeQuestion } : {} };
+    return {
+      ...game.state,
+      questionsById: game.state.phase === "question_active" && currentId ? { [currentId]: safeQuestion } : {},
+      ...(game.state.phase === "finished" ? { reviewQuestionsById: buildReviewQuestionsById(game.privateState.questionsById, game.events) } : {}),
+    };
   },
   nextDeadline(game) {
     return game.status === "active" ? Number(game.state.currentRoundDeadlineAt || 0) || null : null;

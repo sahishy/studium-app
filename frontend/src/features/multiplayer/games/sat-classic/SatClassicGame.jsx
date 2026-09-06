@@ -11,6 +11,7 @@ import ResultOverlay from './components/ResultOverlay'
 import QuestionPane from './components/QuestionPane'
 import GameHeader from './components/GameHeader'
 import MatchEndOverlay from './components/MatchEndOverlay'
+import { buildMatchEndRounds, countAnsweredQuestions } from './utils/matchEndUtils'
 import CalculatorWindow from '../../components/windows/CalculatorWindow'
 import { buildMultiplayerUiState } from '../../utils/multiplayerUtils'
 import { getRankInfoFromElo } from '../../../profile/utils/statsUtils'
@@ -272,28 +273,22 @@ const SatClassicGame = ({ roomId, userId }) => {
         ? Math.max(0, Math.floor((matchEndedAt.getTime() - matchStartedAt.getTime()) / 1000))
         : 0
     const matchEloDelta = Number(latestGameEndedEvent?.data?.eloDeltaByUserId?.[userId]) || 0
-    const roundHistory = useMemo(() => {
-        return events
-            .filter((eventEntry) => eventEntry?.type === 'ROUND_RESOLVED')
-            .map((eventEntry, idx) => {
-                const roundResults = Array.isArray(eventEntry?.data?.roundResults) ? eventEntry.data.roundResults : []
-                const myRoundResult = roundResults.find((entry) => entry?.userId === userId)
-                const opponentRoundResult = roundResults.find((entry) => entry?.userId !== userId)
-                const correctPlayers = roundResults
-                    .filter((entry) => entry?.isCorrect)
-                    .map((entry) => players.find((player) => player.userId === entry.userId))
-                    .filter(Boolean)
-
-                return {
-                    id: eventEntry?.uid ?? `${eventEntry?.data?.questionId ?? 'q'}-${idx}`,
-                    roundNumber: idx + 1,
-                    correctAnswer: eventEntry?.data?.correctAnswer ?? null,
-                    myCorrect: Boolean(myRoundResult?.isCorrect),
-                    opponentCorrect: Boolean(opponentRoundResult?.isCorrect),
-                    correctPlayers,
-                }
-            })
-    }, [events, players, userId])
+    const opponent = players.find((player) => player?.userId !== userId) ?? null
+    const roundHistory = useMemo(() => buildMatchEndRounds({
+        events,
+        modeId: MODE_ID,
+        userId,
+        opponentUserId: opponent?.userId,
+        reviewQuestionsById: gameState?.reviewQuestionsById,
+    }), [events, gameState?.reviewQuestionsById, opponent?.userId, userId])
+    const questionsAnswered = useMemo(() => countAnsweredQuestions(roundHistory), [roundHistory])
+    const matchEndReasonLabel = matchEndReason === 'knockout'
+        ? (winnerUserId === userId ? 'You bested your opponent.' : 'You lost all of your health.')
+        : (matchEndReason === 'max_questions'
+            ? 'Reached max questions'
+            : (matchEndReason === 'player_left'
+                ? (winnerUserId === userId ? 'Your opponent left the match.' : 'You left the match.')
+                : null))
 
     const rankedProgression = useMemo(() => {
         const {
@@ -365,7 +360,7 @@ const SatClassicGame = ({ roomId, userId }) => {
         }
     }
 
-    if(isGameLoading) {
+    if(isGameLoading && !showMatchEndOverlay) {
         return <LoadingState className='min-h-[420px]' />
     }
 
@@ -374,10 +369,14 @@ const SatClassicGame = ({ roomId, userId }) => {
             <MatchEndOverlay
                 winnerUserId={winnerUserId}
                 userId={userId}
-                endReason={matchEndReason}
-                healthBoard={healthBoard}
+                modeId={MODE_ID}
+                reasonLabel={matchEndReasonLabel}
+                localPlayer={myPlayer}
+                opponent={opponent}
                 matchDurationSeconds={matchDurationSeconds}
+                questionsAnswered={questionsAnswered}
                 rankedProgression={room?.ranked ? rankedProgression : null}
+                players={players}
                 rounds={roundHistory}
             />
         )

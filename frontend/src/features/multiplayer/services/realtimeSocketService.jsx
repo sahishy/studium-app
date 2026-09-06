@@ -1,11 +1,15 @@
 import PartySocket from 'partysocket'
 import { auth } from '../../../lib/firebase'
 import { createServerClock, monotonicNow } from './serverClock'
+import { appendById, applyRoomPatch, applyStatePatch } from './gameViewPatch'
 
 const host = import.meta.env.VITE_REALTIME_HOST || 'localhost:8787'
-const PROTOCOL_VERSION = 2
+// v3: the server sends a generic room/players diff (game.update) instead of per-mode hand-rolled
+// delta messages, and coalesces broadcasts instead of sending one per mutation.
+const PROTOCOL_VERSION = 3
 const CHANNEL_CLOSE_GRACE_MS = 5_000
 const CLOCK_REFRESH_MS = 60_000
+const RESYNC_TIMEOUT_MS = 2_000
 let currentProfile = null
 let currentUserStats = null
 const gameChannels = new Map()
@@ -25,7 +29,7 @@ const buildQuery = async () => ({
     eloByMode: JSON.stringify(Object.fromEntries(Object.entries(currentUserStats?.play ?? {}).map(([modeId, stats]) => [modeId, Number(stats?.elo) || 0]))),
 })
 
-const createSocket = ({ party, room }) => new PartySocket({ host, party, room, query: buildQuery })
+const createSocket = ({ party, room }) => new PartySocket({ host, party, room, query: buildQuery, maxRetries: 20 })
 
 const message = (type, payload = {}) => JSON.stringify({
     id: `${type}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -35,61 +39,39 @@ const message = (type, payload = {}) => JSON.stringify({
 
 const notify = (channel) => channel.listeners.forEach((listener) => listener(channel.snapshot))
 
+// Debounced, never latched. The previous boolean was cleared ONLY on receiving a snapshot, so a
+// socket that dropped before the snapshot arrived left it stuck true forever - every later update
+// was then silently discarded and the game appeared frozen until the server happened to push an
+// unsolicited full snapshot, which snapped everything forward at once.
 const requestResync = (channel) => {
-    if(channel.resyncPending || channel.socket.readyState !== WebSocket.OPEN) return
-    channel.resyncPending = true
+    if(channel.socket.readyState !== WebSocket.OPEN) return
+    const now = Date.now()
+    if(channel.resyncRequestedAt && now - channel.resyncRequestedAt < RESYNC_TIMEOUT_MS) return
+    channel.resyncRequestedAt = now
     channel.socket.send(message('game.resync'))
 }
 
-const appendEvents = (existing = [], incoming = []) => {
-    if(!incoming.length) return existing
-    const ids = new Set(existing.map((event) => event.uid))
-    return [...existing, ...incoming.filter((event) => !ids.has(event.uid))]
-}
-
-const applyDelta = (channel, incoming) => {
+// Generic diff application (protocolVersion >= 3, see servers/game-view.ts). Every mode gets a
+// compact update through this single path now - no more per-mode message types.
+const applyUpdate = (channel, incoming) => {
     const revision = Number(incoming.revision)
     if(!channel.snapshot || !Number.isSafeInteger(revision) || revision !== channel.revision + 1) {
         requestResync(channel)
         return
     }
     const payload = incoming.payload ?? {}
-    const playerIndex = channel.snapshot.players?.findIndex((player) => player.userId === payload.userId) ?? -1
-    if(playerIndex < 0) return requestResync(channel)
-    const players = [...channel.snapshot.players]
-    const player = players[playerIndex]
-    let statePatch
-    if(incoming.type === 'game.flutterState') {
-        statePatch = {
-            flutterInputSequence: payload.sequence,
-            flutterInput: payload.flutterInput,
-            flutterX: payload.flutterX,
-            flutterY: payload.flutterY,
-            flutterVelocityX: payload.flutterVelocityX,
-            flutterVelocityY: payload.flutterVelocityY,
-            flutterLastUpdatedAt: payload.flutterLastUpdatedAt,
-        }
-    } else if(incoming.type === 'game.punctureShotResult') {
-        statePatch = {
-            punctureShotCount: payload.shotCount,
-            pinsRemaining: payload.pinsRemaining,
-            puncturePinAngles: payload.attachedPinAngles,
-            stunnedUntil: payload.stunnedUntil,
-            lastShotHit: payload.hit,
-            shotImpactAt: payload.shotImpactAt,
-            lastClientActionId: payload.clientActionId,
-        }
-    } else {
-        return requestResync(channel)
-    }
-    players[playerIndex] = { ...player, state: { ...player.state, ...statePatch } }
+    const players = (channel.snapshot.players ?? []).map((player) => (
+        payload.players?.[player.userId] ? { ...player, state: applyStatePatch(player.state, payload.players[player.userId]) } : player
+    ))
     channel.snapshot = {
         ...channel.snapshot,
         protocolVersion: PROTOCOL_VERSION,
         revision,
         serverNow: Number(incoming.serverNow) || channel.clock.now(),
+        room: applyRoomPatch(channel.snapshot.room, payload.room),
         players,
-        events: appendEvents(channel.snapshot.events, payload.events),
+        events: appendById(channel.snapshot.events, payload.events),
+        chat: appendById(channel.snapshot.chat, payload.chat),
     }
     channel.revision = revision
     notify(channel)
@@ -106,6 +88,13 @@ const synchronizeClock = (channel) => {
         }, delay)
         channel.clockTimers.add(timer)
     })
+    const rttTimer = window.setTimeout(() => {
+        channel.clockTimers.delete(rttTimer)
+        if(channel.socket.readyState !== WebSocket.OPEN) return
+        const rttMs = channel.clock.getBestRtt()
+        if(rttMs != null) channel.socket.send(message('system.rttReport', { rttMs: Math.round(rttMs) }))
+    }, 600)
+    channel.clockTimers.add(rttTimer)
 }
 
 const getGameChannel = (roomId) => {
@@ -116,8 +105,9 @@ const getGameChannel = (roomId) => {
         socket,
         snapshot: null,
         revision: -1,
-        resyncPending: false,
+        resyncRequestedAt: null,
         listeners: new Set(),
+        actionResultListeners: new Set(),
         reconnectListeners: new Set(),
         closeTimer: null,
         clock: createServerClock(),
@@ -133,15 +123,24 @@ const getGameChannel = (roomId) => {
                 channel.clock.recordPong(incoming.payload, receivedAt)
                 return
             }
-            if(Number.isFinite(Number(incoming.serverNow))) channel.clock.recordServerTime(Number(incoming.serverNow), receivedAt)
+            if(incoming.type === 'game.actionResult') {
+                channel.actionResultListeners.forEach((listener) => listener(incoming.payload ?? {}))
+                return
+            }
+            // Observe only - never anchor here. Anchoring off every message with no latency
+            // compensation overwrote the RTT-corrected anchor from recordPong milliseconds later,
+            // dragging the clock backwards by one-way latency on every single message.
+            if(Number.isFinite(Number(incoming.serverNow)) && channel.clock.observeServerTime(Number(incoming.serverNow), receivedAt)) {
+                synchronizeClock(channel)
+            }
             if(incoming.type === 'game.snapshot') {
                 channel.snapshot = incoming.payload
                 channel.revision = Number(incoming.payload?.revision ?? incoming.revision) || 0
-                channel.resyncPending = false
+                channel.resyncRequestedAt = null
                 notify(channel)
                 return
             }
-            if(incoming.type === 'game.flutterState' || incoming.type === 'game.punctureShotResult') applyDelta(channel, incoming)
+            if(incoming.type === 'game.update') applyUpdate(channel, incoming)
         } catch {
             requestResync(channel)
         }
@@ -149,11 +148,19 @@ const getGameChannel = (roomId) => {
     socket.addEventListener('open', () => {
         const reconnecting = channel.hasOpened
         channel.hasOpened = true
+        channel.resyncRequestedAt = null
         synchronizeClock(channel)
         if(reconnecting) {
             requestResync(channel)
             channel.reconnectListeners.forEach((listener) => listener())
         }
+    })
+    socket.addEventListener('close', () => {
+        // Reset the resync gate so a reconnect can always ask again, and drop the revision base:
+        // applying a post-reconnect delta on top of pre-disconnect state would corrupt it silently,
+        // which is worse than the freeze this replaces.
+        channel.resyncRequestedAt = null
+        channel.revision = -1
     })
     channel.clockInterval = window.setInterval(() => synchronizeClock(channel), CLOCK_REFRESH_MS)
     gameChannels.set(roomId, channel)
@@ -182,6 +189,17 @@ const subscribeToGameReconnect = (roomId, listener) => {
     return () => channel.reconnectListeners.delete(listener)
 }
 
+const subscribeToGameActionResults = (roomId, listener) => {
+    const channel = getGameChannel(roomId)
+    channel.actionResultListeners.add(listener)
+    return () => channel.actionResultListeners.delete(listener)
+}
+
+const requestGameResync = (roomId) => {
+    const channel = gameChannels.get(roomId)
+    if(channel) requestResync(channel)
+}
+
 const sendGameMessage = (roomId, type, payload = {}) => {
     const socket = getGameChannel(roomId).socket
     const sendNow = () => socket.send(message(type, payload))
@@ -202,13 +220,16 @@ const closeGameChannel = (roomId) => {
 }
 
 export {
+    applyUpdate,
     buildQuery,
     closeGameChannel,
     configureRealtimeProfile,
     createSocket,
     getGameServerNow,
     message,
+    requestGameResync,
     sendGameMessage,
+    subscribeToGameActionResults,
     subscribeToGameReconnect,
     subscribeToGameSnapshot,
 }

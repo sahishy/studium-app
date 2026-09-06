@@ -39,8 +39,9 @@ const makeGame = () => ({
 const setup = () => {
   let now = 1_000;
   const events = [];
-  const context = () => ({
+  const context = (nowCompensated = now) => ({
     now,
+    nowCompensated,
     addEvent: (type, data = {}, actorUserId = null) => events.push({ type, data, actorUserId }),
   });
   const game = makeGame();
@@ -164,18 +165,75 @@ test("collides with a player-attached pin and throttles shot bursts", () => {
   assert.equal(player.state.lastShotHit, true);
 });
 
-test("returns compact shot deltas and rejects duplicate client action ids", () => {
+test("accepts a shot once and rejects a duplicate client action id", () => {
   const fixture = setup();
   enterPuncture(fixture);
+  const player = fixture.game.players[0];
   const message = { id: "shot-delta", type: "game.shoot", payload: { clientActionId: "client-shot-1" } };
   const accepted = fixture.engine.handleAction(fixture.game, "p1", message, fixture.context());
   assert.equal(accepted.changed, true);
-  assert.equal(accepted.delivery, "delta");
-  assert.equal(accepted.delta.type, "game.punctureShotResult");
-  assert.equal(accepted.delta.payload.clientActionId, "client-shot-1");
+  assert.equal(accepted.reply?.type, "game.actionResult");
+  assert.equal(accepted.reply?.payload.accepted, true);
+  assert.equal(accepted.reply?.payload.shot.clientActionId, "client-shot-1");
+  // The client-facing confirmation (clientActionId, hit/pinsRemaining, etc.) now flows through the
+  // generic player.state diff (see servers/game-view.ts) rather than a hand-rolled delta payload.
+  assert.equal(player.state.lastClientActionId, "client-shot-1");
   fixture.setNow(fixture.context().now + 100);
   const duplicate = fixture.engine.handleAction(fixture.game, "p1", message, fixture.context());
   assert.equal(duplicate.changed, false);
+  assert.equal(duplicate.reply?.payload.accepted, true, "an idempotent retry returns the original accepted receipt");
+  assert.deepEqual(duplicate.reply?.payload.shot, accepted.reply?.payload.shot);
+});
+
+test("returns exact shot geometry and private rejection reasons", () => {
+  const fixture = setup();
+  enterPuncture(fixture);
+  const player = fixture.game.players[0];
+  const startedAt = Number(fixture.game.state.punctureRoundStartedAt);
+  fixture.game.state.rotationTurnsPerSecond = 0;
+  fixture.game.state.generatedPinAngles = [90];
+  fixture.setNow(startedAt + 100);
+
+  const collision = fixture.engine.handleAction(fixture.game, "p1", {
+    id: "collision", type: "game.shoot", payload: { clientActionId: "collision-client", shotAt: startedAt + 100 },
+  }, fixture.context());
+  assert.equal(collision.reply?.payload.accepted, true);
+  assert.equal(collision.reply?.payload.shot.hit, true);
+  assert.equal(collision.reply?.payload.shot.targetAngle, 90);
+  assert.equal(collision.reply?.payload.shot.attachedAngle, null);
+  assert.equal(collision.reply?.payload.shot.impactAt, startedAt + 175);
+
+  const stunned = fixture.engine.handleAction(fixture.game, "p1", {
+    id: "stunned", type: "game.shoot", payload: { clientActionId: "stunned-client", shotAt: startedAt + 200 },
+  }, fixture.context());
+  assert.equal(stunned.changed, false);
+  assert.equal(stunned.reply?.payload.accepted, false);
+  assert.equal(stunned.reply?.payload.reason, "stunned");
+  assert.equal(player.state.punctureRecentShots.length, 1, "rejections are not added to public history");
+});
+
+test("keeps only the latest sixteen authoritative shot receipts", () => {
+  const fixture = setup();
+  enterPuncture(fixture);
+  const player = fixture.game.players[0];
+  const startedAt = Number(fixture.game.state.punctureRoundStartedAt);
+  fixture.game.state.generatedPinAngles = [];
+  fixture.game.state.rotationTurnsPerSecond = 0.3;
+  player.state.pinsRemaining = 100;
+
+  for (let sequence = 1; sequence <= 20; sequence += 1) {
+    fixture.setNow(startedAt + (sequence * 100));
+    const result = fixture.engine.handleAction(fixture.game, "p1", {
+      id: `shot-${sequence}`,
+      type: "game.shoot",
+      payload: { clientActionId: `client-${sequence}` },
+    }, fixture.context());
+    assert.equal(result.changed, true, `shot ${sequence} should be accepted`);
+  }
+
+  assert.equal(player.state.punctureRecentShots.length, 16);
+  assert.equal(player.state.punctureRecentShots[0].sequence, 5);
+  assert.equal(player.state.punctureRecentShots.at(-1).sequence, 20);
 });
 
 test("resolves target wins, timeout leaders, and a tied tenth round", () => {
@@ -211,6 +269,31 @@ test("resolves target wins, timeout leaders, and a tied tenth round", () => {
   drawFixture.engine.handleDeadline(drawFixture.game, drawFixture.context());
   assert.equal(drawFixture.game.result?.winnerUserId, null);
   assert.equal(drawFixture.game.result?.endReason, "max_questions");
+});
+
+test("compensates shot timing for latency without weakening the rate limit", () => {
+  const fixture = setup();
+  enterPuncture(fixture);
+  const player = fixture.game.players[0];
+  const startedAt = Number(fixture.game.state.punctureRoundStartedAt);
+  fixture.game.state.generatedPinAngles = [];
+
+  // Place the pin where it was 125ms into the round (the shooter's true input time + 75ms travel).
+  const compensatedElapsedMs = 50 + 75;
+  const rotation = Number(fixture.game.state.rotationTurnsPerSecond) * 360 * (compensatedElapsedMs / 1000);
+  fixture.game.state.generatedPinAngles = [normalizeAngle(90 - rotation)];
+
+  // The message doesn't arrive until 300ms in (simulating high RTT), but the client's actual
+  // input happened around 50ms in, so the server compensates using nowCompensated.
+  fixture.setNow(startedAt + 300);
+  fixture.engine.handleAction(fixture.game, "p1", { id: "late-shot", type: "game.shoot", payload: {} }, fixture.context(startedAt + 50));
+  assert.equal(player.state.lastShotHit, true, "a compensated shot should hit the pin at the player's true input time");
+
+  // The per-shot rate limit must still key off raw receive time, not the compensated time,
+  // so a high-RTT connection can't be used to fire faster than MIN_SHOT_INTERVAL_MS.
+  fixture.setNow(startedAt + 320);
+  fixture.engine.handleAction(fixture.game, "p1", { id: "too-fast", type: "game.shoot", payload: {} }, fixture.context(startedAt + 60));
+  assert.equal(player.state.punctureShotCount, 1, "a second shot 20ms of raw time later must still be throttled");
 });
 
 test("handles ranked forfeits", () => {

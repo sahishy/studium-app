@@ -1,14 +1,32 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Stars, useAnimations, useGLTF } from '@react-three/drei'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { SkeletonUtils } from 'three-stdlib'
 import { AvatarSceneModel } from '../../../../../shared/components/avatar/AvatarModel'
 import wingsModelUrl from '../../../../../assets/models/wings.glb'
+import { EMPTY_FLUTTER_INPUT, extrapolateFlutterState } from '../flutterPrediction'
 
-const MAX_SPEED = 6.4
-const FLIGHT_ACCELERATION = 10
-const BOUNDS = { x: 5.2, y: 3.15 }
+const EMPTY_PENDING_INPUTS = []
+/**
+ * How fast a correction is absorbed, per second. This is deliberately NOT a lerp toward the
+ * target: a first-order lag filter chasing a moving target keeps a permanent error of
+ * speed/rate - 0.26 world units at full speed even at rate 25 - which is the same kind of
+ * silent positional bias this whole change exists to remove. Instead the drawn position tracks
+ * the target exactly and carries a decaying offset, so it is only ever displaced while a real
+ * correction is being smoothed out, and never merely because the avatar is moving.
+ *
+ * The opponent's rate is slower because their corrections are larger: their target is pure dead
+ * reckoning off the last input they sent, so it steps by whatever that mispredicted each time a
+ * fresh snapshot lands, and a slow absorption hides that better than a fast one.
+ */
+const LOCAL_CORRECTION_RATE = 18
+const OPPONENT_CORRECTION_RATE = 7
+/** Beyond this the change is a discontinuity (round reset, resync, reconnect), not a correction:
+ * take it immediately rather than sliding the avatar across the arena. */
+const SNAP_DISTANCE = 2.5
+/** Depth past the avatar plane at which a ring stops being drawn. */
+const RING_RETIRE_Z = 0.5
 
 const FlutterCamera = () => {
     const { camera } = useThree()
@@ -22,31 +40,52 @@ const FlutterCamera = () => {
     return null
 }
 
-const FlutterRing = ({ ring, now, slowdownStartedAt = null }) => {
+const ringZ = (ring, now, slowdownStartedAt) => {
     const speed = Number(ring.speed || 1)
-    let z
-    if(slowdownStartedAt) {
-        const stopDurationSeconds = 1.5
-        const elapsedSeconds = Math.max(0, (now - Number(slowdownStartedAt)) / 1000)
-        const decelerationTime = Math.min(stopDurationSeconds, elapsedSeconds)
-        const zAtSlowdown = -((Number(ring.passAt) - Number(slowdownStartedAt)) / 1000) * speed
-        const distanceDuringSlowdown = speed * (decelerationTime - ((decelerationTime * decelerationTime) / (2 * stopDurationSeconds)))
-        z = zAtSlowdown + distanceDuringSlowdown
-    } else {
-        const remainingSeconds = (Number(ring.passAt) - now) / 1000
-        z = -(remainingSeconds * speed)
-    }
-    const opacity = Math.max(0.12, Math.min(1, 1 - (Math.max(0, -z - 10) / 75)))
+    if(!slowdownStartedAt) return -(((Number(ring.passAt) - now) / 1000) * speed)
+    const stopDurationSeconds = 1.5
+    const elapsedSeconds = Math.max(0, (now - Number(slowdownStartedAt)) / 1000)
+    const decelerationTime = Math.min(stopDurationSeconds, elapsedSeconds)
+    const zAtSlowdown = -((Number(ring.passAt) - Number(slowdownStartedAt)) / 1000) * speed
+    return zAtSlowdown + (speed * (decelerationTime - ((decelerationTime * decelerationTime) / (2 * stopDurationSeconds))))
+}
+
+const ringOpacity = (z) => Math.max(0.12, Math.min(1, 1 - (Math.max(0, -z - 10) / 75)))
+
+/**
+ * Advanced every frame off the synced clock, not from a `now` prop refreshed on a 50ms React
+ * interval. At the fastest ring cadence a ring travels ~1.15 world units per 50ms, so the old
+ * 20Hz stepping both read as stutter and left the ring visibly short of (or already past) the
+ * avatar plane at the moment RingPassEffects - which has always run per frame - fired its
+ * completion burst. Both halves of the effect now read one clock at one rate.
+ */
+const FlutterRing = ({ ring, serverNow, slowdownStartedAt = null }) => {
+    const groupRef = useRef(null)
+    const materialRef = useRef(null)
     const color = ring.index % 2 === 0 ? '#7dd3fc' : '#c4b5fd'
+    const initialZ = ringZ(ring, serverNow(), slowdownStartedAt)
+
+    useFrame(() => {
+        if(!groupRef.current) return
+        const z = ringZ(ring, serverNow(), slowdownStartedAt)
+        groupRef.current.position.z = z
+        // Retire the ring the instant it is behind the player, where PassedRingEffect takes over.
+        // The server now holds a ring open for a short grace after its plane so late inputs still
+        // count (RING_RESOLVE_GRACE_MS), and it stays in the published window for that whole time;
+        // without this it would visibly drift on past the avatar while being scored.
+        groupRef.current.visible = z <= RING_RETIRE_Z
+        if(materialRef.current) materialRef.current.opacity = ringOpacity(z)
+    })
 
     return (
-        <group position={[Number(ring.x) || 0, Number(ring.y) || 0, z]}>
+        <group ref={groupRef} position={[Number(ring.x) || 0, Number(ring.y) || 0, initialZ]}>
             <mesh>
                 <torusGeometry args={[Number(ring.innerRadius) + 0.2, 0.2, 14, 48]} />
                 <meshStandardMaterial
+                    ref={materialRef}
                     color={color}
                     transparent
-                    opacity={opacity}
+                    opacity={ringOpacity(initialZ)}
                     roughness={0.9}
                     metalness={0}
                 />
@@ -100,11 +139,26 @@ const PassedRingEffect = ({ ring, startedAt }) => {
     )
 }
 
-const RingPassEffects = ({ rings, roundKey }) => {
+const RING_PASS_EFFECT_MS = 900
+
+/**
+ * How far past its pass time a ring may still fire its burst. At 60fps a pass is detected within
+ * a frame or two, so anything older than this means the loop was not running - a backgrounded tab
+ * or a large clock correction - and firing every ring the window has accumulated at once would
+ * just be a burst of confetti for passes the player never saw.
+ */
+const RING_PASS_STALE_MS = 250
+
+// Detects a ring pass from the ring's own `passAt` against the synced clock, every frame -
+// instead of waiting for the server's next snapshot to shift the visible-ring window out from
+// under it. Every ring in the window already carries the exact time it will be passed, so there
+// is no reason for this "juice" effect to wait on a round trip.
+const RingPassEffects = ({ rings, roundKey, serverNow = Date.now, slowdownStartedAt = null }) => {
     const [effects, setEffects] = useState([])
-    const previousRingsRef = useRef(new Map())
-    const previousRoundKeyRef = useRef(roundKey)
+    const ringsRef = useRef(rings)
+    const firedIndexesRef = useRef(new Set())
     const removalTimersRef = useRef(new Set())
+    ringsRef.current = rings
 
     useEffect(() => () => {
         removalTimersRef.current.forEach((timer) => clearTimeout(timer))
@@ -112,34 +166,33 @@ const RingPassEffects = ({ rings, roundKey }) => {
     }, [])
 
     useEffect(() => {
-        const nextRings = new Map(rings.map((ring) => [ring.index, ring]))
-        if(previousRoundKeyRef.current !== roundKey) {
-            previousRoundKeyRef.current = roundKey
-            previousRingsRef.current = nextRings
-            removalTimersRef.current.forEach((timer) => clearTimeout(timer))
-            removalTimersRef.current.clear()
-            setEffects([])
-            return
-        }
+        firedIndexesRef.current.clear()
+        removalTimersRef.current.forEach((timer) => clearTimeout(timer))
+        removalTimersRef.current.clear()
+        setEffects([])
+    }, [roundKey])
 
-        if(nextRings.size && previousRingsRef.current.size) {
-            const firstVisibleIndex = Math.min(...nextRings.keys())
-            const passed = [...previousRingsRef.current.entries()]
-                .filter(([index]) => index < firstVisibleIndex)
-                .map(([, ring]) => ({ ring, startedAt: Date.now(), id: `${roundKey}-${ring.index}-${Date.now()}` }))
-            if(passed.length) {
-                setEffects((current) => [...current, ...passed])
-                passed.forEach((effect) => {
-                    const timer = setTimeout(() => {
-                        removalTimersRef.current.delete(timer)
-                        setEffects((current) => current.filter((entry) => entry.id !== effect.id))
-                    }, 900)
-                    removalTimersRef.current.add(timer)
-                })
-            }
+    useFrame(() => {
+        // Once the round has resolved the rings decelerate to a halt on screen, but their passAt
+        // stamps are fixed points on the clock and keep elapsing in real time - and on a miss the
+        // engine leaves flutterRingIndex parked on the ring it scored, so the published window
+        // never moves either. Left alone, every remaining ring in that frozen window fires its
+        // completion burst during the result overlay, for passes that never happened.
+        if(slowdownStartedAt) return
+        const now = serverNow()
+        for(const ring of ringsRef.current) {
+            if(firedIndexesRef.current.has(ring.index) || Number(ring.passAt) > now) continue
+            firedIndexesRef.current.add(ring.index)
+            if(now - Number(ring.passAt) > RING_PASS_STALE_MS) continue
+            const id = `${roundKey}-${ring.index}`
+            setEffects((current) => [...current, { ring, startedAt: Date.now(), id }])
+            const timer = setTimeout(() => {
+                removalTimersRef.current.delete(timer)
+                setEffects((current) => current.filter((entry) => entry.id !== id))
+            }, RING_PASS_EFFECT_MS)
+            removalTimersRef.current.add(timer)
         }
-        previousRingsRef.current = nextRings
-    }, [rings, roundKey])
+    })
 
     return effects.map((effect) => (
         <PassedRingEffect key={effect.id} ring={effect.ring} startedAt={effect.startedAt} />
@@ -187,14 +240,14 @@ const FlutterWings = ({ opacity = 1, ...groupProps }) => {
     )
 }
 
-const FlightAvatar = ({ player, local = false, input, winner = false, falling = false, fallStartedAt = null, resultAnimationKey = 0, serverNow = Date.now }) => {
+const FlightAvatar = ({ player, local = false, pendingInputsRef = null, winner = false, falling = false, fallStartedAt = null, resultAnimationKey = 0, serverNow = Date.now }) => {
     const placementRef = useRef(null)
     const positionRef = useRef(new THREE.Vector2(Number(player?.state?.flutterX) || 0, Number(player?.state?.flutterY) || 0))
     const velocityRef = useRef(new THREE.Vector2(Number(player?.state?.flutterVelocityX) || 0, Number(player?.state?.flutterVelocityY) || 0))
-    const authoritativeRef = useRef(positionRef.current.clone())
+    const targetRef = useRef(positionRef.current.clone())
+    const offsetRef = useRef(new THREE.Vector2(0, 0))
+    const lastAnchorRef = useRef(null)
     const fallOriginRef = useRef(positionRef.current.clone())
-    const serverInput = player?.state?.flutterInput ?? {}
-    const activeInput = local ? input : serverInput
     const spin = useMemo(() => {
         const value = String(player?.userId ?? '')
         let hash = 0
@@ -206,14 +259,6 @@ const FlightAvatar = ({ player, local = false, input, winner = false, falling = 
             drift: (hash % 2 === 0 ? 1 : -1) * (0.55 + (Math.abs(hash % 5) / 10)),
         }
     }, [player?.userId])
-
-    useEffect(() => {
-        authoritativeRef.current.set(Number(player?.state?.flutterX) || 0, Number(player?.state?.flutterY) || 0)
-        const error = positionRef.current.distanceTo(authoritativeRef.current)
-        if(error > 2.5) positionRef.current.copy(authoritativeRef.current)
-        else positionRef.current.lerp(authoritativeRef.current, local ? 0.35 : 0.55)
-        velocityRef.current.set(Number(player?.state?.flutterVelocityX) || 0, Number(player?.state?.flutterVelocityY) || 0)
-    }, [local, player?.state?.flutterVelocityX, player?.state?.flutterVelocityY, player?.state?.flutterX, player?.state?.flutterY])
 
     useEffect(() => {
         if(!falling) return
@@ -237,16 +282,41 @@ const FlightAvatar = ({ player, local = false, input, winner = false, falling = 
             )
             return
         }
-        const horizontal = Number(Boolean(activeInput?.right)) - Number(Boolean(activeInput?.left))
-        const vertical = Number(Boolean(activeInput?.up)) - Number(Boolean(activeInput?.down))
-        const magnitude = Math.hypot(horizontal, vertical) || 1
-        const targetX = horizontal / magnitude * MAX_SPEED
-        const targetY = vertical / magnitude * MAX_SPEED
-        const blend = 1 - Math.exp(-FLIGHT_ACCELERATION * delta)
-        velocityRef.current.x += (targetX - velocityRef.current.x) * blend
-        velocityRef.current.y += (targetY - velocityRef.current.y) * blend
-        positionRef.current.x = THREE.MathUtils.clamp(positionRef.current.x + velocityRef.current.x * delta, -BOUNDS.x, BOUNDS.x)
-        positionRef.current.y = THREE.MathUtils.clamp(positionRef.current.y + velocityRef.current.y * delta, -BOUNDS.y, BOUNDS.y)
+        // Reconstruct where the server believes this avatar is *right now*, rather than lerping
+        // toward the position it published one round trip ago. flutterX/flutterY are only
+        // rewritten when the engine processes an input or resolves a ring, so a published
+        // position is a snapshot at flutterLastUpdatedAt, and the gap since then is however long
+        // the player has been holding their keys rather than one round trip - the old code
+        // dead-reckoned forward off the input while simultaneously dragging back toward that
+        // stale point. The resulting bias runs past the 1.65-unit ring tolerance after roughly
+        // 350ms of held input and reaches several units on an ordinary flight, which is what made
+        // cleanly-flown rings register as misses (see games/flutter-reconciliation.test.js, which
+        // measures both strategies against the engine's own verdict). Unacknowledged local inputs
+        // are replayed on top, so the local avatar still answers the keyboard on the next frame.
+        const now = serverNow()
+        const anchoredAt = Number(player?.state?.flutterLastUpdatedAt)
+        const target = extrapolateFlutterState({
+            x: Number(player?.state?.flutterX) || 0,
+            y: Number(player?.state?.flutterY) || 0,
+            velocityX: Number(player?.state?.flutterVelocityX) || 0,
+            velocityY: Number(player?.state?.flutterVelocityY) || 0,
+            input: player?.state?.flutterInput ?? EMPTY_FLUTTER_INPUT,
+        }, Number.isFinite(anchoredAt) ? anchoredAt : now, now, pendingInputsRef?.current ?? EMPTY_PENDING_INPUTS)
+
+        targetRef.current.set(target.x, target.y)
+        velocityRef.current.set(target.velocityX, target.velocityY)
+
+        // Between snapshots the target is a pure continuous function of the clock, so it needs no
+        // smoothing at all - it can only step when a new authoritative anchor arrives. Bank that
+        // step as an offset at the moment it happens and decay it to nothing, rather than chasing
+        // the target every frame and paying a permanent tracking error for the privilege.
+        if(anchoredAt !== lastAnchorRef.current) {
+            lastAnchorRef.current = anchoredAt
+            offsetRef.current.copy(positionRef.current).sub(targetRef.current)
+            if(offsetRef.current.length() > SNAP_DISTANCE) offsetRef.current.set(0, 0)
+        }
+        offsetRef.current.multiplyScalar(Math.exp(-(local ? LOCAL_CORRECTION_RATE : OPPONENT_CORRECTION_RATE) * delta))
+        positionRef.current.copy(targetRef.current).add(offsetRef.current)
         placementRef.current.position.set(positionRef.current.x, positionRef.current.y, local ? 0.25 : -0.2)
         const horizontalTilt = THREE.MathUtils.clamp(velocityRef.current.x * 0.09, -0.48, 0.48)
         const verticalTilt = THREE.MathUtils.clamp(velocityRef.current.y * 0.1, -0.55, 0.55)
@@ -293,18 +363,17 @@ const FlightAvatar = ({ player, local = false, input, winner = false, falling = 
     )
 }
 
-const FlutterWorld = ({ localPlayer, opponent, rings, now, localInput, resultWinnerUserId, fallingUserIds, slowdownStartedAt, animationKey, serverNow }) => {
+const FlutterWorld = ({ localPlayer, opponent, rings, pendingInputsRef, resultWinnerUserId, fallingUserIds, slowdownStartedAt, animationKey, serverNow }) => {
     return (
         <>
             <ambientLight intensity={1.4} />
             <directionalLight position={[-4, 7, 8]} intensity={2.4} />
             <directionalLight position={[5, -1, 3]} color='#93c5fd' intensity={1.1} />
             <Stars radius={90} depth={65} count={900} factor={2.2} saturation={0} fade speed={0.35} color='#4b5563' />
-            {rings.map((ring) => <FlutterRing key={ring.index} ring={ring} now={now} slowdownStartedAt={slowdownStartedAt} />)}
-            <RingPassEffects rings={rings} roundKey={animationKey} />
+            {rings.map((ring) => <FlutterRing key={ring.index} ring={ring} serverNow={serverNow} slowdownStartedAt={slowdownStartedAt} />)}
+            <RingPassEffects rings={rings} roundKey={animationKey} serverNow={serverNow} slowdownStartedAt={slowdownStartedAt} />
             <FlightAvatar
                 player={opponent}
-                input={opponent?.state?.flutterInput}
                 winner={Boolean(resultWinnerUserId) && resultWinnerUserId === opponent?.userId}
                 falling={fallingUserIds.includes(opponent?.userId)}
                 fallStartedAt={slowdownStartedAt}
@@ -314,7 +383,7 @@ const FlutterWorld = ({ localPlayer, opponent, rings, now, localInput, resultWin
             <FlightAvatar
                 player={localPlayer}
                 local
-                input={localInput}
+                pendingInputsRef={pendingInputsRef}
                 winner={Boolean(resultWinnerUserId) && resultWinnerUserId === localPlayer?.userId}
                 falling={fallingUserIds.includes(localPlayer?.userId)}
                 fallStartedAt={slowdownStartedAt}
@@ -325,7 +394,10 @@ const FlutterWorld = ({ localPlayer, opponent, rings, now, localInput, resultWin
     )
 }
 
-const FlutterScene = ({ localPlayer, opponent, rings = [], now, localInput, resultWinnerUserId = null, fallingUserIds = [], slowdownStartedAt = null, animationKey = 0, serverNow = Date.now }) => (
+// Memoised deliberately. Nothing in this subtree is driven by React state any more - rings and
+// avatars both advance in useFrame off the synced clock - so a HUD re-render (the game's 50ms
+// clock tick) must not walk the whole react-three-fiber tree 20 times a second alongside it.
+const FlutterScene = memo(({ localPlayer, opponent, rings = [], pendingInputsRef = null, resultWinnerUserId = null, fallingUserIds = [], slowdownStartedAt = null, animationKey = 0, serverNow = Date.now }) => (
     <Canvas
         className='absolute inset-0 h-full! w-full!'
         dpr={[1, 2]}
@@ -338,8 +410,7 @@ const FlutterScene = ({ localPlayer, opponent, rings = [], now, localInput, resu
                 localPlayer={localPlayer}
                 opponent={opponent}
                 rings={rings}
-                now={now}
-                localInput={localInput}
+                pendingInputsRef={pendingInputsRef}
                 resultWinnerUserId={resultWinnerUserId}
                 fallingUserIds={fallingUserIds}
                 slowdownStartedAt={slowdownStartedAt}
@@ -348,7 +419,7 @@ const FlutterScene = ({ localPlayer, opponent, rings = [], now, localInput, resu
             />
         </Suspense>
     </Canvas>
-)
+))
 
 export default FlutterScene
 

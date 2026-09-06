@@ -40,7 +40,7 @@ import FriendsIndexRedirect from './routes/FriendsIndexRedirect'
 import CircleOverviewIndexRedirect from './routes/CircleOverviewIndexRedirect'
 import CircleAgendaIndexRedirect from './routes/CircleAgendaIndexRedirect'
 import PartyJoinRedirect from './routes/PartyJoinRedirect'
-import Leaderboards from './features/profile/pages/Leaderboards'
+import Leaderboards from './features/socials/pages/Leaderboards'
 
 export default function App() {
 	return (

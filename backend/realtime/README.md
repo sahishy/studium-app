@@ -11,6 +11,7 @@ Install dependencies in both backend packages, then create the ignored `backend/
 ```dotenv
 BACKEND_API_BASE_URL=http://127.0.0.1:5001/YOUR_FIREBASE_PROJECT/us-central1/api
 OPENAI_API_KEY=optional-for-bot-chat
+REALTIME_ACTIVITY_SECRET=shared-local-development-secret
 ```
 
 Start the services in separate terminals from the repository root:
@@ -38,10 +39,13 @@ Authenticate and configure production values from `backend/realtime`:
 npx wrangler login
 npx wrangler secret put BACKEND_API_BASE_URL
 npx wrangler secret put OPENAI_API_KEY
+npx wrangler secret put REALTIME_ACTIVITY_SECRET
 npm run deploy
 ```
 
 `OPENAI_API_KEY` is optional; gameplay continues without AI chat replies. Deployment creates the `studium-realtime` Worker and the `USER`, `PARTY`, `MATCHMAKER`, `GAME`, and `BOTCHAT` Durable Object namespaces from `wrangler.jsonc`. The initial URL is `studium-realtime.<account-subdomain>.workers.dev`.
+
+Set the same `REALTIME_ACTIVITY_SECRET` value for the Firebase Functions runtime (with `firebase functions:secrets:set REALTIME_ACTIVITY_SECRET`) and the Worker. The secret is bound to the `api` function at deploy time and authorizes the Worker to update the public, non-sensitive player activity projection.
 
 For GitHub Actions deployment, add `CLOUDFLARE_API_TOKEN` and, when the token can access more than one account, `CLOUDFLARE_ACCOUNT_ID` as repository secrets. The main-branch workflow deploys the real-time Worker before deploying Firebase. Set `VITE_REALTIME_HOST` to the Worker hostname, without a scheme, before the frontend build runs.
 

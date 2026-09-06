@@ -1,6 +1,7 @@
 import { auth, db } from '../../lib/firebaseAdmin.js'
 import { getRandomQuestions } from '../games/questionsService.js'
 import { getRankedEloDelta } from '../games/satClassicUtils.js'
+import { computeTotalElo } from '../leaderboards/leaderboardService.js'
 import { sanitizeRealtimeResult } from './resultUtils.js'
 
 const verifyRealtimeUser = async (idToken) => {
@@ -82,11 +83,14 @@ const saveRealtimeResult = async (result = {}) => {
             }
 
             if(modeId === 'blitz' || result.ranked) {
-                transaction.set(statsRefs[index], {
+                const nextPlay = { ...play, [modeId]: nextModeStats }
+                const updatePayload = {
                     userId,
-                    play: { ...play, [modeId]: nextModeStats },
+                    play: nextPlay,
                     lastUpdated: new Date(),
-                }, { merge: true })
+                }
+                if(result.ranked) updatePayload.totalElo = computeTotalElo(nextPlay)
+                transaction.set(statsRefs[index], updatePayload, { merge: true })
             }
         })
 

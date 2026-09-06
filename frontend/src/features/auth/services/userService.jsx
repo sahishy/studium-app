@@ -1,4 +1,4 @@
-import { doc, updateDoc, collection, getAggregateFromServer, getCountFromServer, onSnapshot, query, sum, where, increment, documentId, getDocs, getDoc, setDoc, limit } from 'firebase/firestore'
+import { doc, updateDoc, collection, getAggregateFromServer, getCountFromServer, onSnapshot, query, sum, where, documentId, getDocs, getDoc, setDoc, limit } from 'firebase/firestore'
 import { useEffect, useState } from 'react';
 import { getRandomAvatarColor } from '../../profile/utils/avatarUtils';
 import { generateRandomDisplayName, isDisplayNameFormatValid } from '../utils/userUtils';
@@ -202,29 +202,6 @@ const userCompleteTask = async (profile) => {
 
 }
 
-const updateStatus = async (profile, status) => {
-
-    const userRef = doc(db, 'users', profile.uid);
-
-    await updateDoc(userRef, {
-        lastSeen: new Date(),
-        status: status
-    })
-
-}
-
-const updateStreak = async (profile, reset = false) => {
-
-    const docRef = doc(db, 'users', profile.uid);
-
-    if(reset) {
-        await updateDoc(docRef, { 'progress.streak': 0 });
-    } else {
-        await updateDoc(docRef, { 'progress.streak': increment(1) });
-    }
-
-}
-
 const getUsersByIds = (userIds, setUsers) => {
 
     const usersRef = collection(db, "users");
@@ -316,8 +293,6 @@ export {
     getTotalTasksCompleted,
     getActiveUserCount,
     userCompleteTask,
-    updateStreak,
-    updateStatus,
     getUsersByIds,
     useMembersList
 }

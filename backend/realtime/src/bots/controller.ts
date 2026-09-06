@@ -31,6 +31,12 @@ export const initializeBots = (game: StoredGame) => {
       actionsByStage: { open: 0, crowded: 0, precision: 0 },
       intervalMsByStage: { open: null, crowded: null, precision: null },
     };
+    // Migrate games persisted before events carried an explicit sequence field, where
+    // processedEventCount was an array index into the (then-untrimmed) events array - which
+    // numerically equals the old sequence-by-position scheme, so it carries over directly.
+    if (runtime.humanProfile.processedEventSequence == null) {
+      runtime.humanProfile.processedEventSequence = Number((runtime.humanProfile as any).processedEventCount) || 0;
+    }
     runtime.chat ??= createInitialBotChatState();
     runtime.rhythms ??= {};
   }
@@ -58,7 +64,11 @@ const recordQuestion = (game: StoredGame, bot: BotRuntime, questionId: string, c
 const ingestResolvedEvents = (game: StoredGame, bot: BotRuntime) => {
   const human = game.players.find((entry) => !entry.isBot);
   if (!human) return;
-  const events = game.events.slice(bot.humanProfile.processedEventCount);
+  // Filtered by sequence, not sliced by array index: the persisted event log is trimmed
+  // (see GameServer.save), so an array index recorded before a trim would silently point at the
+  // wrong events - or skip/reprocess them - after a hibernation wake reloads the trimmed array.
+  const processedSequence = Number(bot.humanProfile.processedEventSequence) || 0;
+  const events = game.events.filter((event) => Number(event.sequence) > processedSequence);
   for (const event of events) {
     if (event.type === "QUESTION_RESOLVED" || event.type === "ROUND_RESOLVED") {
       const result = (event.data?.roundResults ?? []).find((entry: any) => entry.userId === human.userId);
@@ -76,7 +86,7 @@ const ingestResolvedEvents = (game: StoredGame, bot: BotRuntime) => {
       minigame.accuracyEwma = updateEwma(minigame.accuracyEwma, success, 0.5);
     }
   }
-  bot.humanProfile.processedEventCount = game.events.length;
+  bot.humanProfile.processedEventSequence = Math.max(processedSequence, ...events.map((event) => Number(event.sequence) || 0));
 };
 
 const enqueue = (bot: BotRuntime, action: Omit<BotScheduledAction, "id">) => {
@@ -126,9 +136,32 @@ export const nextBotDeadline = (game: StoredGame) => {
   return deadlines.length ? Math.min(...deadlines) : null;
 };
 
-export const runNextBotAction = (game: StoredGame, engine: GameEngine, context: GameContext) => {
-  const candidates = Object.values(runtimes(game)).flatMap((bot) => bot.scheduled.map((action) => ({ bot, action }))).sort((a, b) => a.action.at - b.action.at);
-  const next = candidates[0];
+const earliestScheduled = (game: StoredGame) => Object.values(runtimes(game))
+  .flatMap((bot) => bot.scheduled.map((action) => ({ bot, action })))
+  .sort((first, second) => first.action.at - second.action.at)[0] ?? null;
+
+/**
+ * Discards the earliest pending gameplay action *without* executing it, then re-plans from
+ * `planFrom`. Used when a tick ran so late that executing the backlog would fast-forward
+ * player-visible gameplay (a bot appearing to gain 40 chops instantly). Returns false when the
+ * earliest action is a chat send - those are harmless to deliver late, so the caller runs them.
+ */
+export const dropNextBotGameAction = (game: StoredGame, planFrom: number) => {
+  const next = earliestScheduled(game);
+  if (!next || next.action.kind !== "game") return false;
+  next.bot.scheduled = next.bot.scheduled.filter((action) => action.id !== next.action.id);
+  ensureBotActions(game, planFrom);
+  return true;
+};
+
+/**
+ * `context.now` is when the action is simulated as happening (kept exact, because bot planners
+ * pick times whose world state is favourable - e.g. Puncture's wheel angle). `planFrom` is the
+ * clock the *next* action is scheduled from, and must be real "now" so a late tick cannot chain
+ * a backlog of already-due actions.
+ */
+export const runNextBotAction = (game: StoredGame, engine: GameEngine, context: GameContext, planFrom = context.now) => {
+  const next = earliestScheduled(game);
   if (!next || next.action.at > context.now) return false;
   next.bot.scheduled = next.bot.scheduled.filter((action) => action.id !== next.action.id);
   const identity = game.players.find((player) => player.userId === next.bot.userId);
@@ -136,7 +169,7 @@ export const runNextBotAction = (game: StoredGame, engine: GameEngine, context: 
   if (next.action.kind === "chat_send") {
     const pending = next.bot.chat.pending;
     if (game.status !== "active" || !pending || pending.id !== next.action.chatJobId || pending.status !== "typing") {
-      ensureBotActions(game, context.now);
+      ensureBotActions(game, planFrom);
       return true;
     }
     const beforeLastUid = (game.chat.at(-1) as ChatMessage | undefined)?.uid;
@@ -152,7 +185,7 @@ export const runNextBotAction = (game: StoredGame, engine: GameEngine, context: 
   } else if (next.action.message) {
     engine.handleAction(game, next.bot.userId, next.action.message, context);
   }
-  ensureBotActions(game, context.now);
+  ensureBotActions(game, planFrom);
   return true;
 };
 

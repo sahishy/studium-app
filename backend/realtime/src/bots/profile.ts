@@ -53,7 +53,7 @@ export const createHumanPerformanceProfile = (userId: string): HumanPerformanceP
       intervalMsByStage: { open: null, crowded: null, precision: null },
     },
   },
-  processedEventCount: 0,
+  processedEventSequence: 0,
 });
 
 export const createBotRuntime = (identity: PlayerIdentity, gameId: string, humanUserId = ""): BotRuntime => {

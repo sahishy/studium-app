@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getGameServerNow, sendGameMessage, subscribeToGameReconnect, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
 import QuestionPane from '../sat-classic/components/QuestionPane'
+import MatchEndOverlay from '../sat-classic/components/MatchEndOverlay'
+import { buildMatchEndRounds, countAnsweredQuestions } from '../sat-classic/utils/matchEndUtils'
 import CalculatorWindow from '../../components/windows/CalculatorWindow'
 import LoadingState from '../../../../shared/components/ui/LoadingState'
 import ProgressBar from '../../../../shared/components/ui/ProgressBar'
@@ -17,9 +19,15 @@ import FlutterScene from './components/FlutterScene'
 
 const MODE_ID = 'sat-flutter'
 const EMPTY_PLAYERS = []
+const EMPTY_RINGS = []
+const EMPTY_FALLING_USER_IDS = []
 const EMPTY_INPUT = { up: false, down: false, left: false, right: false }
 const QUESTION_DURATION_MS = 120_000
 const QUESTION_REVEAL_DURATION_MS = 2_000
+// An input the server never acknowledged (it only accepts them during flutter_active) would
+// otherwise be replayed by the scene's extrapolation forever. The buffer is also cleared outright
+// on every phase change, so this only catches strays inside a single flight.
+const MAX_PENDING_INPUT_AGE_MS = 2_000
 
 const formatClock = (milliseconds = 0) => {
     const secondsTotal = Math.max(0, Math.ceil((Number(milliseconds) || 0) / 1000))
@@ -110,7 +118,7 @@ const TransitionOverlay = ({ remainingMs = 0, countdown = null, title, subtitle 
     )
 }
 
-const FlutterMatchEnd = ({ snapshot, userId, startedAt }) => {
+const LegacyFlutterMatchEnd = ({ snapshot, userId, startedAt }) => {
     const { userStats } = useUserStats()
     const state = snapshot?.room?.state ?? {}
     const players = snapshot?.players ?? EMPTY_PLAYERS
@@ -175,7 +183,7 @@ const FlutterMatchEnd = ({ snapshot, userId, startedAt }) => {
                 </div>
             </> : null}
 
-            <h2 className='text-2xl font-bold mt-9 mb-6 underline underline-offset-12 decoration-neutral2'>Flight Rounds</h2>
+            <h2 className='text-2xl font-bold mt-9 mb-6 underline underline-offset-12 decoration-neutral2'>Game Rounds</h2>
             <div className='w-full max-w-4xl flex flex-col gap-3'>
                 {rounds.map((round, index) => {
                     const winnerUserIds = Array.isArray(round.data?.winnerUserIds)
@@ -206,6 +214,43 @@ const FlutterMatchEnd = ({ snapshot, userId, startedAt }) => {
     )
 }
 
+const FlutterMatchEnd = ({ snapshot, userId, startedAt }) => {
+    const { userStats } = useUserStats()
+    const state = snapshot?.room?.state ?? {}
+    const players = snapshot?.players ?? EMPTY_PLAYERS
+    const localPlayer = players.find((player) => player.userId === userId) ?? null
+    const opponent = players.find((player) => player.userId !== userId) ?? null
+    const winnerUserId = state.winnerUserId ?? null
+    const isWin = winnerUserId === userId
+    const endedEvent = [...(snapshot?.events ?? [])].reverse().find((event) => event.type === 'GAME_ENDED')
+    const endReason = endedEvent?.data?.endReason ?? null
+    const reasonLabel = endReason === 'player_left'
+        ? (isWin ? 'Your opponent left the match.' : 'You left the match.')
+        : (!winnerUserId ? 'The Flutter match ended in a draw.' : (isWin ? 'You won the Flutter match.' : 'Your opponent won the Flutter match.'))
+    const rounds = buildMatchEndRounds({
+        events: snapshot?.events,
+        modeId: MODE_ID,
+        userId,
+        opponentUserId: opponent?.userId,
+        reviewQuestionsById: state.reviewQuestionsById,
+    })
+    const endedAt = Number(endedEvent?.createdAt) || Date.now()
+    return <MatchEndOverlay
+        winnerUserId={winnerUserId}
+        userId={userId}
+        modeId={MODE_ID}
+        reasonLabel={reasonLabel}
+        localPlayer={localPlayer}
+        opponent={opponent}
+        matchDurationSeconds={Math.max(0, (endedAt - Number(startedAt || endedAt)) / 1000)}
+        questionsAnswered={countAnsweredQuestions(rounds)}
+        rankedProgression={snapshot?.room?.ranked ? buildMultiplayerUiState({ userStats, modeId: MODE_ID }) : null}
+        eloDelta={Number(endedEvent?.data?.eloDeltaByUserId?.[userId]) || 0}
+        players={players}
+        rounds={rounds}
+    />
+}
+
 const keyDirection = (key) => {
     const normalized = String(key).toLowerCase()
     if(normalized === 'w' || normalized === 'arrowup') return 'up'
@@ -220,10 +265,14 @@ const FlutterGame = ({ roomId, userId }) => {
     const [response, setResponse] = useState('')
     const [calculatorOpen, setCalculatorOpen] = useState(false)
     const [questionReveal, setQuestionReveal] = useState(null)
-    const [localInput, setLocalInput] = useState(EMPTY_INPUT)
     const [now, setNow] = useState(() => getGameServerNow(roomId))
     const inputRef = useRef(EMPTY_INPUT)
     const inputSequenceRef = useRef(0)
+    // Local inputs the server has not acknowledged yet, in send order and stamped on the synced
+    // clock (which is what the engine's latency compensation resolves them back to). A ref, not
+    // state: the scene reads it every frame in useFrame, and turning each keypress into a React
+    // render would reconcile the whole 3D tree for nothing.
+    const pendingInputsRef = useRef([])
     const shownAnswerEventsRef = useRef(new Set())
     const shownQuestionRevealEventsRef = useRef(new Set())
     const shownShieldEventsRef = useRef(new Set())
@@ -235,10 +284,6 @@ const FlutterGame = ({ roomId, userId }) => {
     const serverNow = useCallback(() => getGameServerNow(roomId), [roomId])
 
     useEffect(() => subscribeToGameSnapshot(roomId, setSnapshot), [roomId])
-    useEffect(() => {
-        const timer = setInterval(() => setNow(getGameServerNow(roomId)), 50)
-        return () => clearInterval(timer)
-    }, [roomId])
 
     const state = snapshot?.room?.state ?? null
     const players = snapshot?.players ?? EMPTY_PLAYERS
@@ -254,6 +299,16 @@ const FlutterGame = ({ roomId, userId }) => {
     const countdown = Math.max(0, Math.ceil(countdownRemainingMs / 1000))
     const questionRevealRemainingMs = questionReveal ? Math.max(0, questionReveal.durationMs - (now - questionReveal.startedAtMs)) : 0
     const isQuestionRevealActive = questionRevealRemainingMs > 0
+
+    // Paused during flight: nothing rendered in that phase is derived from this clock (the scene
+    // reads the synced clock directly, per frame), so ticking it there would only re-render this
+    // component 20 times a second for no visible change.
+    useEffect(() => {
+        if(phase === 'flutter_active') return () => {}
+        const timer = setInterval(() => setNow(getGameServerNow(roomId)), 50)
+        return () => clearInterval(timer)
+    }, [phase, roomId])
+
     useEffect(() => {
         if(currentQuestion?.id) questionsByIdRef.current.set(currentQuestion.id, currentQuestion)
     }, [currentQuestion])
@@ -306,25 +361,36 @@ const FlutterGame = ({ roomId, userId }) => {
 
     const sendInput = useCallback((next) => {
         inputSequenceRef.current += 1
-        sendGameMessage(roomId, 'game.flutterInput', { sequence: inputSequenceRef.current, ...next })
+        const sequence = inputSequenceRef.current
+        const at = getGameServerNow(roomId)
+        pendingInputsRef.current = [
+            ...pendingInputsRef.current.filter((entry) => at - entry.at <= MAX_PENDING_INPUT_AGE_MS),
+            { sequence, at, input: next },
+        ]
+        sendGameMessage(roomId, 'game.flutterInput', { sequence, ...next })
     }, [roomId])
 
+    // An acknowledged input is baked into the authoritative position the server just published,
+    // so replaying it on top of that position would double-apply it.
     useEffect(() => {
         const serverSequence = Number(localPlayer?.state?.flutterInputSequence)
-        if(Number.isSafeInteger(serverSequence)) inputSequenceRef.current = Math.max(inputSequenceRef.current, serverSequence)
+        if(!Number.isSafeInteger(serverSequence)) return
+        inputSequenceRef.current = Math.max(inputSequenceRef.current, serverSequence)
+        pendingInputsRef.current = pendingInputsRef.current.filter((entry) => entry.sequence > serverSequence)
     }, [localPlayer?.state?.flutterInputSequence])
 
     useEffect(() => {
         if(phase !== 'flutter_active') {
             inputRef.current = EMPTY_INPUT
-            setLocalInput(EMPTY_INPUT)
+            // The engine resets every player's flight state at each round boundary, so nothing
+            // queued against the previous round may be replayed into the next one.
+            pendingInputsRef.current = []
             return () => {}
         }
         const pressed = new Set()
         const update = () => {
             const next = { up: pressed.has('up'), down: pressed.has('down'), left: pressed.has('left'), right: pressed.has('right') }
             inputRef.current = next
-            setLocalInput(next)
             sendInput(next)
         }
         const onKeyDown = (event) => {
@@ -359,14 +425,16 @@ const FlutterGame = ({ roomId, userId }) => {
         if(phase === 'flutter_active') sendInput(inputRef.current)
     }), [phase, roomId, sendInput])
 
+    const isResult = phase === 'flutter_result' || phase === 'match_result'
+    const resultWinnerUserId = phase === 'match_result' ? state?.matchResultWinnerUserId : state?.lastFlutterResult?.winnerUserId
+    // Memoised, and derived above the early returns so it can be: a fresh array identity on every
+    // render would defeat FlutterScene's memo and reconcile the 3D tree on each HUD clock tick.
+    const fallingUserIds = useMemo(() => (isResult
+        ? players.filter((player) => !resultWinnerUserId || player.userId !== resultWinnerUserId).map((player) => player.userId)
+        : EMPTY_FALLING_USER_IDS), [isResult, players, resultWinnerUserId])
+
     if(!state || !localPlayer || !opponent) return <LoadingState className='min-h-[420px]' />
     if(phase === 'finished' || snapshot?.room?.status === 'finished') return <FlutterMatchEnd snapshot={snapshot} userId={userId} startedAt={state.startedAt} />
-
-    const isResult = phase === 'flutter_result' || phase === 'match_result'
-    const resultWinnerUserId = phase === 'match_result' ? state.matchResultWinnerUserId : state.lastFlutterResult?.winnerUserId
-    const fallingUserIds = isResult
-        ? players.filter((player) => !resultWinnerUserId || player.userId !== resultWinnerUserId).map((player) => player.userId)
-        : []
 
     return (
         <div ref={screenShakeRef} className={`w-full h-full min-h-[420px] flex flex-col will-change-transform ${phase === 'question_active' ? 'gap-12' : 'gap-4'}`}>
@@ -398,9 +466,8 @@ const FlutterGame = ({ roomId, userId }) => {
                     <FlutterScene
                         localPlayer={localPlayer}
                         opponent={opponent}
-                        rings={state.visibleFlutterRings ?? []}
-                        now={now}
-                        localInput={localInput}
+                        rings={state.visibleFlutterRings ?? EMPTY_RINGS}
+                        pendingInputsRef={pendingInputsRef}
                         resultWinnerUserId={isResult ? resultWinnerUserId : null}
                         fallingUserIds={fallingUserIds}
                         slowdownStartedAt={isResult ? state.flutterRoundResolvedAt : null}

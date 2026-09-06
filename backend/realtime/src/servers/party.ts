@@ -2,7 +2,7 @@ import { Server, type Connection, type ConnectionContext, type WSMessage } from 
 import { appendChatMessage, appendSystemChatMessage, type ChatMessage } from "../chat";
 import { getGameMode } from "../games/registry";
 import type { PlayerIdentity } from "../types";
-import { makeId, parseMessage, requestRoom, send, stateFromRequest } from "../utils";
+import { makeId, parseMessage, publishActivities, requestRoom, send, stateFromRequest } from "../utils";
 
 type PartyState = {
   id: string;
@@ -52,6 +52,7 @@ export class SocialPartyServer extends Server<Env> {
       if (message.type === "party.invite") await this.invite(identity, String((message.payload as any)?.userId));
       if (message.type === "chat.send") this.state.chat = appendChatMessage(this.state.chat, identity, message.payload as any);
       await this.saveAndBroadcast();
+      if (message.type === "party.selectMode") await this.publishMemberActivities();
       await this.scheduleNextAlarm();
     } catch (error) {
       send(connection, "error", { message: error instanceof Error ? error.message : "Party request failed." }, message.id);
@@ -62,6 +63,10 @@ export class SocialPartyServer extends Server<Env> {
     const body = await request.json<any>();
     if (body.type === "party.hasMember") {
       return Response.json({ exists: Boolean(this.state?.members.some((member) => member.userId === body.userId)) });
+    }
+    if (body.type === "party.activity") {
+      const member = this.state?.members.some((entry) => entry.userId === body.userId);
+      return Response.json(member && this.state ? { activity: { modeId: this.state.modeId, partyPlayerCount: this.state.members.length } } : {});
     }
     if (body.type === "party.presence") {
       const member = this.state?.members.find((entry) => entry.userId === body.userId);
@@ -95,6 +100,7 @@ export class SocialPartyServer extends Server<Env> {
     }
     await this.saveAndBroadcast();
     await this.scheduleNextAlarm();
+    if (["party.initialize", "party.join", "party.leave"].includes(body.type)) await this.publishMemberActivities();
     return Response.json(body.type === "party.join" ? { joined: true } : (this.state ?? { ok: true }));
   }
 
@@ -107,6 +113,10 @@ export class SocialPartyServer extends Server<Env> {
       this.state.pendingInvites = this.state.pendingInvites.filter((invite) => invite.expiresAt > Date.now());
       const invitationsExpired = this.state.pendingInvites.length !== pendingInviteCount;
       if (expired.length || invitationsExpired) await this.saveAndBroadcast();
+      if (expired.length) {
+        await this.publishMemberActivities();
+        await publishActivities(this.env, expired.map((member) => ({ userId: member.userId, activity: { state: "online" as const } })));
+      }
     }
     if (this.state?.members.length === 0 && this.state.expiresAt && Date.now() >= this.state.expiresAt) {
       await this.ctx.storage.deleteAll();
@@ -196,6 +206,13 @@ export class SocialPartyServer extends Server<Env> {
     if (!this.state) return;
     this.state.launching = false;
     this.state.members.forEach((member) => { member.ready = false; });
+  }
+  private async publishMemberActivities() {
+    if (!this.state?.members.length) return;
+    await publishActivities(this.env, this.state.members.map((member) => ({
+      userId: member.userId,
+      activity: { state: "in_party" as const, modeId: this.state!.modeId, partyPlayerCount: this.state!.members.length },
+    })));
   }
   private emit(connection: Connection) { send(connection, "party.snapshot", this.state); }
   private async saveAndBroadcast() {

@@ -15,3 +15,12 @@ export const sanitizeSatQuestion = (question: any) => question
   ].includes(key)))
   : null;
 
+export const buildReviewQuestionsById = (questionsById: Record<string, any> = {}, events: Array<Record<string, any>> = []) => {
+  const resolvedIds = new Set(events
+    .filter((event) => event?.type === "QUESTION_RESOLVED" || event?.type === "ROUND_RESOLVED")
+    .map((event) => String(event?.data?.questionId ?? ""))
+    .filter(Boolean));
+  return Object.fromEntries([...resolvedIds]
+    .map((questionId) => [questionId, sanitizeSatQuestion(questionsById[questionId])])
+    .filter(([, question]) => Boolean(question)));
+};

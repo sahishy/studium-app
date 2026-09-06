@@ -46,7 +46,7 @@ export type HumanPerformanceProfile = {
     roundsCompleted: number;
     puncture: PuncturePaceProfile;
   };
-  processedEventCount: number;
+  processedEventSequence: number;
 };
 
 export type BotScheduledAction = {

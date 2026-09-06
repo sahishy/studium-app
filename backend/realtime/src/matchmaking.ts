@@ -4,16 +4,34 @@ const BASE_ELO_RANGE = 60;
 const ELO_RANGE_STEP = 60;
 const ELO_RANGE_STEP_MS = 10_000;
 const UNRESTRICTED_AFTER_MS = 60_000;
-export const BOT_FILL_AFTER_MS = 15_000;
+export const BOT_FILL_MIN_AFTER_MS = 5_000;
+export const BOT_FILL_MAX_AFTER_MS = 10_000;
+
+export const createBotFillAt = (joinedAt: number, random = Math.random) => (
+  joinedAt + BOT_FILL_MIN_AFTER_MS
+  + Math.floor(random() * (BOT_FILL_MAX_AFTER_MS - BOT_FILL_MIN_AFTER_MS + 1))
+);
+
+export const botFillAt = (entry: QueueEntry) => (
+  entry.botFillAt ?? entry.joinedAt + BOT_FILL_MIN_AFTER_MS
+);
 
 export const findBotFillEntries = (queue: QueueEntry[], now = Date.now()) => [...queue]
-  .filter((entry) => entry.userIds.length === 1 && now - entry.joinedAt >= BOT_FILL_AFTER_MS)
+  .filter((entry) => entry.userIds.length === 1 && now >= botFillAt(entry))
   .sort((a, b) => a.joinedAt - b.joinedAt);
 
 export const allowedEloDifference = (joinedAt: number, now = Date.now()) => {
   const waited = Math.max(0, now - joinedAt);
   if (waited >= UNRESTRICTED_AFTER_MS) return Number.POSITIVE_INFINITY;
   return BASE_ELO_RANGE + Math.floor(waited / ELO_RANGE_STEP_MS) * ELO_RANGE_STEP;
+};
+
+/** Next timestamp at which `allowedEloDifference` widens for this entry, or null if it's already unrestricted. */
+export const nextEloWideningAt = (joinedAt: number, now = Date.now()): number | null => {
+  const waited = Math.max(0, now - joinedAt);
+  if (waited >= UNRESTRICTED_AFTER_MS) return null;
+  const nextStepIndex = Math.floor(waited / ELO_RANGE_STEP_MS) + 1;
+  return Math.min(joinedAt + nextStepIndex * ELO_RANGE_STEP_MS, joinedAt + UNRESTRICTED_AFTER_MS);
 };
 
 type Combination = { entries: QueueEntry[]; ratingDifference: number; joinedAtTotal: number };

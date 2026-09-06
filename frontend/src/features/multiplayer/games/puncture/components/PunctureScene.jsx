@@ -1,5 +1,6 @@
-import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import SvgBurstParticles from '../../../../../shared/components/svg/SvgBurstParticles'
+import { getPlaybackView, shotKey } from '../punctureShotLedger'
 
 const CENTER_X = 160
 const CENTER_Y = 145
@@ -23,31 +24,36 @@ const pointAt = (angle, distance) => {
     }
 }
 
+const rotationDegreesAt = ({ now, roundStartedAt, rotationTurnsPerSecond, slowdownStartedAt, reducedMotion }) => {
+    if(!roundStartedAt) return 0
+    const speedDegreesPerSecond = Number(rotationTurnsPerSecond) * 360
+    const roundStart = Number(roundStartedAt)
+    const stopStart = Number(slowdownStartedAt)
+    if(!stopStart || now <= stopStart) return speedDegreesPerSecond * (Math.max(0, now - roundStart) / 1000)
+    const elapsedBeforeStop = Math.max(0, stopStart - roundStart) / 1000
+    if(reducedMotion) return speedDegreesPerSecond * elapsedBeforeStop
+    const stopProgress = Math.min(1, Math.max(0, now - stopStart) / ROTATION_STOP_DURATION_MS)
+    const easedStopSeconds = (ROTATION_STOP_DURATION_MS / 1000) * (stopProgress - ((stopProgress * stopProgress) / 2))
+    return speedDegreesPerSecond * (elapsedBeforeStop + easedStopSeconds)
+}
+
 const Pin = ({ angle, color, generated = false }) => {
     const base = pointAt(angle, PIN_STEM_START)
     const stemEnd = pointAt(angle, PIN_STEM_END)
     const head = pointAt(angle, PIN_HEAD_DISTANCE)
     return (
         <g style={{ color: generated ? CIRCLE_COLOR : color }}>
-            <line
-                x1={base.x}
-                y1={base.y}
-                x2={stemEnd.x}
-                y2={stemEnd.y}
-                stroke='currentColor'
-                strokeWidth={PIN_LINE_WIDTH}
-                strokeLinecap='round'
-            />
+            <line x1={base.x} y1={base.y} x2={stemEnd.x} y2={stemEnd.y} stroke='currentColor' strokeWidth={PIN_LINE_WIDTH} strokeLinecap='round' />
             <circle cx={head.x} cy={head.y} r={PIN_BALL_RADIUS} fill='currentColor' stroke='none' />
         </g>
     )
 }
 
-const ShotPulse = ({ color, shotCount, target, isMoving, durationMs }) => {
+const ShotPulse = ({ color, target, isMoving, durationMs }) => {
     const translateX = isMoving ? target.x - CENTER_X : 0
     const translateY = isMoving ? target.y - 275 : 0
     return (
-        <g key={shotCount} style={{ color }}>
+        <g style={{ color }}>
             <circle
                 cx={CENTER_X}
                 cy='275'
@@ -64,28 +70,21 @@ const ShotPulse = ({ color, shotCount, target, isMoving, durationMs }) => {
     )
 }
 
-const UpcomingPinTower = ({ pinsRemaining, shotCount, isLaunching, isMoving, durationMs, color }) => {
+const UpcomingPinTower = ({ pinsRemaining, isLaunching, isMoving, durationMs, color }) => {
     const visiblePins = Math.min(MAX_VISIBLE_UPCOMING_PINS, Math.max(0, Number(pinsRemaining) || 0))
-    const targetY = 275
     const offset = isLaunching && !isMoving ? TOWER_BALL_SPACING : 0
     return (
         <g
-            key={`tower-${shotCount}`}
             style={{
                 color,
                 transform: `translateY(${offset}px)`,
-                transition: isLaunching && isMoving
-                    ? `transform ${durationMs}ms cubic-bezier(0.22, 1, 0.36, 1)`
-                    : 'none',
+                transition: isLaunching && isMoving ? `transform ${durationMs}ms cubic-bezier(0.22, 1, 0.36, 1)` : 'none',
                 willChange: 'transform',
             }}
         >
-            {Array.from({ length: visiblePins }, (_, index) => {
-                const y = targetY + (index * TOWER_BALL_SPACING)
-                return (
-                    <circle key={index} cx={CENTER_X} cy={y} r={PIN_BALL_RADIUS} fill='currentColor' stroke='none' />
-                )
-            })}
+            {Array.from({ length: visiblePins }, (_, index) => (
+                <circle key={index} cx={CENTER_X} cy={275 + (index * TOWER_BALL_SPACING)} r={PIN_BALL_RADIUS} fill='currentColor' stroke='none' />
+            ))}
         </g>
     )
 }
@@ -95,20 +94,23 @@ const PunctureScene = ({
     attachedPinAngles = [],
     rotationTurnsPerSecond = 0,
     roundStartedAt = null,
+    roundIndex = 0,
+    playbackResetKey = 0,
     pinsRemaining = 0,
-    shotCount = 0,
-    lastShotHit = false,
-    shotImpactAt = null,
+    shotEvents = [],
     slowdownStartedAt = null,
     playerColor = '#60a5fa',
-    optimisticShot = null,
-    lastClientActionId = null,
     serverNow = Date.now,
 }) => {
     const [reducedMotion, setReducedMotion] = useState(false)
-    const [animationNow, setAnimationNow] = useState(() => serverNow())
-    const [launch, setLaunch] = useState(null)
-    const previousShotCountRef = useRef(shotCount)
+    const [queue, setQueue] = useState([])
+    const [activeLaunch, setActiveLaunch] = useState(null)
+    const [lastImpact, setLastImpact] = useState(null)
+    const rotationGroupRef = useRef(null)
+    const seenShotKeysRef = useRef(new Set())
+    const playbackIdentityRef = useRef(null)
+    const timingRef = useRef(null)
+    timingRef.current = { roundStartedAt, rotationTurnsPerSecond, slowdownStartedAt, reducedMotion }
 
     useEffect(() => {
         const media = window.matchMedia?.('(prefers-reduced-motion: reduce)')
@@ -119,142 +121,133 @@ const PunctureScene = ({
         return () => media.removeEventListener?.('change', update)
     }, [])
 
+    // Rotation is the only continuously changing visual. Updating the SVG transform directly
+    // avoids rendering both React scene trees on every animation frame.
     useEffect(() => {
-        if(!roundStartedAt) return () => {}
         let frameId = null
         const animate = () => {
-            setAnimationNow(serverNow())
+            const degrees = rotationDegreesAt({ now: serverNow(), ...timingRef.current })
+            rotationGroupRef.current?.setAttribute('transform', `rotate(${degrees} ${CENTER_X} ${CENTER_Y})`)
             frameId = window.requestAnimationFrame(animate)
         }
         frameId = window.requestAnimationFrame(animate)
         return () => window.cancelAnimationFrame(frameId)
-    }, [roundStartedAt, serverNow])
+    }, [serverNow])
+
+    // Receipts append once. Existing receipts on mount/reconnect become the baseline; an ack can
+    // replace a queued prediction by key without restarting its animation.
+    useLayoutEffect(() => {
+        const playbackIdentity = `${roundIndex}:${playbackResetKey}`
+        const currentByKey = new Map(shotEvents.map((shot) => [shotKey(shot), shot]).filter(([key]) => key))
+        if(playbackIdentityRef.current !== playbackIdentity) {
+            playbackIdentityRef.current = playbackIdentity
+            seenShotKeysRef.current = new Set(currentByKey.keys())
+            setQueue([])
+            setActiveLaunch(null)
+            setLastImpact(null)
+            return
+        }
+        if(reducedMotion) {
+            currentByKey.forEach((_, key) => seenShotKeysRef.current.add(key))
+            setQueue([])
+            setActiveLaunch(null)
+            return
+        }
+        setQueue((current) => {
+            let changed = false
+            const retained = current
+                .filter((entry) => currentByKey.has(entry.key))
+                .map((entry) => {
+                    const updatedShot = currentByKey.get(entry.key)
+                    if(updatedShot === entry.shot) return entry
+                    changed = true
+                    return { ...entry, shot: updatedShot }
+                })
+            if(retained.length !== current.length) changed = true
+            const incoming = []
+            shotEvents.forEach((shot) => {
+                const key = shotKey(shot)
+                if(!key || seenShotKeysRef.current.has(key)) return
+                seenShotKeysRef.current.add(key)
+                incoming.push({ key, shot })
+            })
+            return incoming.length || changed ? [...retained, ...incoming] : current
+        })
+        setActiveLaunch((current) => {
+            if(!current) return current
+            const updatedShot = currentByKey.get(current.key)
+            if(!updatedShot) return null
+            return updatedShot === current.shot ? current : { ...current, shot: updatedShot }
+        })
+    }, [playbackResetKey, reducedMotion, roundIndex, shotEvents])
 
     useLayoutEffect(() => {
-        if(!optimisticShot?.id || reducedMotion) return
-        const impactAt = Number(optimisticShot.startedAt) + LAUNCH_DURATION_MS
-        const launchKey = optimisticShot.id
-        setLaunch({ shotCount: launchKey, successful: false, target: pointAt(90, PIN_HEAD_DISTANCE), impactAt, isMoving: false, durationMs: LAUNCH_DURATION_MS })
+        if(activeLaunch || reducedMotion || !queue.length) return
+        const [next, ...remaining] = queue
+        const visualImpactAt = serverNow() + LAUNCH_DURATION_MS
+        const rotationAtImpact = rotationDegreesAt({ now: visualImpactAt, ...timingRef.current })
+        const target = pointAt(Number(next.shot.targetAngle) + rotationAtImpact, PIN_HEAD_DISTANCE)
+        setQueue(remaining)
+        setActiveLaunch({ ...next, target, visualImpactAt, isMoving: false, durationMs: LAUNCH_DURATION_MS })
+    }, [activeLaunch, queue, reducedMotion, serverNow])
+
+    // Completion depends only on the launch key. Ack replacement cannot cancel this timer and
+    // strand a pin between the tower and wheel.
+    useLayoutEffect(() => {
+        const launchKey = activeLaunch?.key
+        if(!launchKey || reducedMotion) return () => {}
         let timeoutId = null
         const frameId = window.requestAnimationFrame(() => {
-            const durationMs = Math.max(1, impactAt - serverNow())
-            setLaunch((current) => current?.shotCount === launchKey ? { ...current, isMoving: true, durationMs } : current)
-            timeoutId = window.setTimeout(() => setLaunch((current) => current?.shotCount === launchKey ? null : current), durationMs)
+            setActiveLaunch((current) => current?.key === launchKey ? { ...current, isMoving: true } : current)
+            timeoutId = window.setTimeout(() => {
+                setActiveLaunch((current) => {
+                    if(current?.key !== launchKey) return current
+                    if(current.shot.hit) setLastImpact({ key: launchKey, startedAt: serverNow(), target: current.target })
+                    return null
+                })
+            }, LAUNCH_DURATION_MS)
         })
         return () => {
             window.cancelAnimationFrame(frameId)
             if(timeoutId != null) window.clearTimeout(timeoutId)
         }
-    }, [optimisticShot, reducedMotion, serverNow])
+    }, [activeLaunch?.key, reducedMotion, serverNow])
 
-    useLayoutEffect(() => {
-        if(previousShotCountRef.current === shotCount) return
-        previousShotCountRef.current = shotCount
-        if(lastClientActionId && lastClientActionId === optimisticShot?.id) return
-        if(reducedMotion) {
-            setLaunch(null)
-            return
-        }
-        const newlyAttachedAngle = lastShotHit ? null : attachedPinAngles.at(-1)
-        const impactAt = Number(shotImpactAt) || (serverNow() + LAUNCH_DURATION_MS)
-        setLaunch({ shotCount, successful: newlyAttachedAngle != null, target: pointAt(90, PIN_HEAD_DISTANCE), impactAt, isMoving: false, durationMs: LAUNCH_DURATION_MS })
-        let secondFrameId = null
-        let timeoutId = null
-        const firstFrameId = window.requestAnimationFrame(() => {
-            secondFrameId = window.requestAnimationFrame(() => {
-                const durationMs = Math.max(0, impactAt - serverNow())
-                if(durationMs <= 0) {
-                    setLaunch((current) => current?.shotCount === shotCount ? null : current)
-                    return
-                }
-                setLaunch((current) => current?.shotCount === shotCount
-                    ? { ...current, isMoving: true, durationMs }
-                    : current)
-                timeoutId = window.setTimeout(() => {
-                    setLaunch((current) => current?.shotCount === shotCount ? null : current)
-                }, durationMs)
-            })
-        })
-        return () => {
-            window.cancelAnimationFrame(firstFrameId)
-            if(secondFrameId != null) window.cancelAnimationFrame(secondFrameId)
-            if(timeoutId != null) window.clearTimeout(timeoutId)
-        }
-    }, [attachedPinAngles, lastClientActionId, lastShotHit, optimisticShot?.id, reducedMotion, serverNow, shotCount, shotImpactAt])
-
-    const isLaunching = Boolean(launch)
-    const visibleAttachedPinAngles = isLaunching && launch?.successful
-        ? attachedPinAngles.slice(0, -1)
-        : attachedPinAngles
-
-    const rotationDegrees = useMemo(() => {
-        if(!roundStartedAt) return 0
-        const speedDegreesPerSecond = Number(rotationTurnsPerSecond) * 360
-        const roundStart = Number(roundStartedAt)
-        const stopStart = Number(slowdownStartedAt)
-        if(!stopStart || animationNow <= stopStart) {
-            return speedDegreesPerSecond * (Math.max(0, animationNow - roundStart) / 1000)
-        }
-        const elapsedBeforeStop = Math.max(0, stopStart - roundStart) / 1000
-        if(reducedMotion) return speedDegreesPerSecond * elapsedBeforeStop
-        const stopProgress = Math.min(1, Math.max(0, animationNow - stopStart) / ROTATION_STOP_DURATION_MS)
-        const easedStopSeconds = (ROTATION_STOP_DURATION_MS / 1000) * (stopProgress - ((stopProgress * stopProgress) / 2))
-        return speedDegreesPerSecond * (elapsedBeforeStop + easedStopSeconds)
-    }, [animationNow, reducedMotion, rotationTurnsPerSecond, roundStartedAt, slowdownStartedAt])
+    const { displayPinsRemaining, visibleAttachedPinAngles } = getPlaybackView({
+        pinsRemaining,
+        attachedPinAngles,
+        queuedShots: queue.map((entry) => entry.shot),
+        activeShot: activeLaunch?.shot,
+    })
 
     return (
-        <svg
-            className='absolute inset-0 h-full w-full'
-            viewBox='0 0 320 320'
-            role='img'
-            aria-label='Rotating Puncture circle'
-            preserveAspectRatio='xMidYMid meet'
-        >
-            <g transform={`rotate(${rotationDegrees} ${CENTER_X} ${CENTER_Y})`}>
-                <circle
-                    cx={CENTER_X}
-                    cy={CENTER_Y}
-                    r={CIRCLE_RADIUS}
-                    fill={CIRCLE_COLOR}
-                    stroke='none'
-                />
-                {generatedPinAngles.map((angle, index) => (
-                    <Pin key={`generated-${index}-${angle}`} angle={angle} generated />
-                ))}
-                {visibleAttachedPinAngles.map((angle, index) => (
-                    <Pin key={`attached-${index}-${angle}`} angle={angle} color={playerColor} />
-                ))}
+        <svg className='absolute inset-0 h-full w-full' viewBox='0 0 320 320' role='img' aria-label='Rotating Puncture circle' preserveAspectRatio='xMidYMid meet'>
+            <g ref={rotationGroupRef} transform={`rotate(0 ${CENTER_X} ${CENTER_Y})`}>
+                <circle cx={CENTER_X} cy={CENTER_Y} r={CIRCLE_RADIUS} fill={CIRCLE_COLOR} stroke='none' />
+                {generatedPinAngles.map((angle, index) => <Pin key={`generated-${index}-${angle}`} angle={angle} generated />)}
+                {visibleAttachedPinAngles.map((angle, index) => <Pin key={`attached-${index}-${angle}`} angle={angle} color={playerColor} />)}
             </g>
 
-            <text x={CENTER_X} y={CENTER_Y + 9} fill='white' textAnchor='middle' fontSize='28' fontWeight='700'>
-                {Math.max(0, Number(pinsRemaining) || 0)}
-            </text>
+            <text x={CENTER_X} y={CENTER_Y + 9} fill='white' textAnchor='middle' fontSize='28' fontWeight='700'>{displayPinsRemaining}</text>
 
             <UpcomingPinTower
-                pinsRemaining={pinsRemaining}
-                shotCount={shotCount}
-                isLaunching={isLaunching}
-                isMoving={Boolean(launch?.isMoving)}
-                durationMs={launch?.durationMs ?? LAUNCH_DURATION_MS}
+                pinsRemaining={displayPinsRemaining}
+                isLaunching={Boolean(activeLaunch)}
+                isMoving={Boolean(activeLaunch?.isMoving)}
+                durationMs={activeLaunch?.durationMs ?? LAUNCH_DURATION_MS}
                 color={playerColor}
             />
-            {isLaunching && !reducedMotion ? (
-                <ShotPulse
-                    shotCount={shotCount}
-                    color={playerColor}
-                    target={launch.target}
-                    isMoving={Boolean(launch.isMoving)}
-                    durationMs={launch.durationMs}
-                />
+            {activeLaunch && !reducedMotion ? (
+                <ShotPulse color={playerColor} target={activeLaunch.target} isMoving={Boolean(activeLaunch.isMoving)} durationMs={activeLaunch.durationMs} />
             ) : null}
             <SvgBurstParticles
-                burstKey={lastShotHit ? shotCount : 0}
-                startAt={shotImpactAt}
+                burstKey={lastImpact?.key ?? 0}
+                startAt={lastImpact?.startedAt}
                 disabled={reducedMotion}
                 gravity={300}
                 lifetimeMs={760}
-                originX={CENTER_X}
-                originY={CENTER_Y + PIN_HEAD_DISTANCE}
+                originX={lastImpact?.target?.x ?? CENTER_X}
+                originY={lastImpact?.target?.y ?? (CENTER_Y + PIN_HEAD_DISTANCE)}
                 velocityX={[-42, 42]}
                 velocityY={[48, 88]}
                 now={serverNow}

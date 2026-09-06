@@ -9,6 +9,9 @@ export type StoredGame = {
   state: Record<string, any>;
   privateState: Record<string, any>;
   events: Array<Record<string, any>>;
+  /** Monotonic source for event.sequence - independent of events.length, which changes when the
+   * persisted event log is trimmed (see GameServer.save/snapshotEvents). */
+  eventSequence?: number;
   chat: Array<Record<string, any>>;
   startedAt: number;
   updatedAt: number;
@@ -18,21 +21,21 @@ export type StoredGame = {
 
 export type GameContext = {
   now: number;
+  /** Latency-compensated estimate of when the acting player's input actually occurred. Equals `now` when there is no single acting player (e.g. handleDeadline) or no RTT sample yet. */
+  nowCompensated: number;
   addEvent: (type: string, data?: Record<string, unknown>, actorUserId?: string | null) => void;
 };
 
-export type GameActionResult = {
-  changed: boolean;
-  delivery?: "snapshot" | "delta";
-  delta?: { type: string; payload: Record<string, unknown> };
-};
+// Engines used to hand-roll a per-mode delta payload here so at least some updates could skip a
+// full snapshot. GameServer now computes a generic diff for every mode automatically (see
+// servers/game-view.ts, derived from the same publicState()/player.state this result's `changed`
+// flag already gates), so engines only need to report whether anything changed.
+export type GameActionReply = { type: string; payload: Record<string, unknown> };
 
-export const unchangedAction = (): GameActionResult => ({ changed: false });
-export const changedAction = (delta?: GameActionResult["delta"]): GameActionResult => ({
-  changed: true,
-  delivery: delta ? "delta" : "snapshot",
-  delta,
-});
+export type GameActionResult = { changed: boolean; reply?: GameActionReply };
+
+export const unchangedAction = (reply?: GameActionReply): GameActionResult => ({ changed: false, ...(reply ? { reply } : {}) });
+export const changedAction = (reply?: GameActionReply): GameActionResult => ({ changed: true, ...(reply ? { reply } : {}) });
 
 export type GameEngine = {
   initialize: (game: StoredGame, questions: any[], context: GameContext) => void;

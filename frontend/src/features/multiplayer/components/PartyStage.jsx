@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { FaCrown, FaPlus, FaRightToBracket } from 'react-icons/fa6'
 import AvatarModel from '../../../shared/components/avatar/AvatarModel'
 import Podium from '../../../shared/components/avatar/Podium'
+import { getPlayerActivity } from '../../../shared/utils/playerActivity'
 import { getRankInfoFromElo } from '../../profile/utils/statsUtils'
 
 // Temporary visual-preview control. Change this to 1–7 to add that many
@@ -47,10 +48,10 @@ const PlayerLabel = ({ member, party, mode, compact = false }) => {
     )
 }
 
-const PlayerSpot = ({ member, party, mode, currentProfile, focus = false, back = false, roomy = false, soloPlayer = false, twoPlayerParty = false, showLabel = true, showPodiumShadow = false, className = '' }) => {
-    const memberProfile = member.userId === currentProfile?.uid
+const PlayerSpot = ({ member, party, mode, currentProfile, focus = false, back = false, roomy = false, soloPlayer = false, twoPlayerParty = false, showLabel = true, showAvatar = true, showPodiumShadow = false, className = '' }) => {
+    const memberProfile = member?.userId === currentProfile?.uid
         ? currentProfile
-        : { profile: { displayName: member.displayName, profilePicture: member.profilePicture, avatar: member.avatar } }
+        : { profile: { displayName: member?.displayName, profilePicture: member?.profilePicture, avatar: member?.avatar } }
 
     const dimensions = back
         ? 'w-[12rem]! h-[12rem]!'
@@ -86,10 +87,10 @@ const PlayerSpot = ({ member, party, mode, currentProfile, focus = false, back =
             {showLabel ? <PlayerLabel member={member} party={party} mode={mode} compact={back} /> : null}
             <Podium
                 fadeBottom={back}
-                glow={member.ready && !back}
+                glow={member?.ready && !back}
                 className={`absolute max-w-none! ${podiumSize} ${podiumBottom} ${podiumHorizontalPosition} -translate-x-1/2 ${podiumLift} ${showPodiumShadow ? 'drop-shadow-[0px_20px_14px_rgba(0,0,0,0.12)]' : ''}`}
             />
-            <AvatarModel profile={memberProfile} animation='Idle' className={`${dimensions} ${characterLift} ${characterHorizontalPosition} relative z-10`} />
+            {showAvatar ? <AvatarModel profile={memberProfile} animation='Idle' className={`${dimensions} ${characterLift} ${characterHorizontalPosition} relative z-10`} /> : null}
         </div>
     )
 }
@@ -163,13 +164,14 @@ const OnlineInviteHint = ({ friends }) => {
     if (!friends.length) return null
 
     const name = currentFriend?.profile?.displayName ?? 'Friend'
+    const activity = getPlayerActivity(currentFriend)
 
     return (
         <div className={`h-4 -mt-7 flex items-center gap-1.5 text-[11px] text-neutral1 transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}>
             {currentFriend ? (
                 <>
-                    <span className='w-1.5 h-1.5 rounded-full bg-sky-400 shrink-0' />
-                    <span className='max-w-28 truncate'>{name}</span>
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${activity.dotColorClass}`} />
+                    <span className='max-w-28 truncate'>{name} · {activity.label}</span>
                 </>
             ) : null}
         </div>
@@ -291,4 +293,5 @@ const PartyStage = ({ party, mode, currentProfile, friends = [], onInvite, onJoi
     )
 }
 
+export { PlayerSpot }
 export default PartyStage

@@ -5,6 +5,7 @@ import Button from '../../../shared/components/ui/Button'
 import Card from '../../../shared/components/ui/Card'
 import ProgressBar from '../../../shared/components/ui/ProgressBar'
 import { useUserStats } from '../../profile/contexts/UserStatsContext'
+import { getRankInfoFromElo } from '../../profile/utils/statsUtils'
 import { useMultiplayer } from '../contexts/MultiplayerContext'
 import { useToast } from '../../../shared/contexts/ToastContext'
 import { useModal } from '../../../shared/contexts/ModalContext'
@@ -18,7 +19,7 @@ import {
     getQueueState,
     MATCH_JOIN_DELAY_SECONDS,
 } from '../utils/multiplayerUtils'
-import GameModeModal from '../components/modals/GameModeModal'
+import GameModeTab from '../components/GameModeTab'
 import TextTooltip from '../../../shared/components/tooltips/TextTooltip'
 import PlayBackground from '../components/PlayBackground'
 import PartyStage from '../components/PartyStage'
@@ -28,6 +29,7 @@ import PartyInviteModal from '../components/modals/PartyInviteModal'
 import ChatBox from '../components/ChatBox'
 import JoinPartyModal from '../components/modals/JoinPartyModal'
 import LoadingState from '../../../shared/components/ui/LoadingState'
+import BottomFade from '../../../shared/components/ui/BottomFade'
 
 const SELECTED_MODE_STORAGE_KEY = 'play:lastSelectedModeId'
 
@@ -51,6 +53,8 @@ const Play = () => {
     const { openModal, closeModal } = useModal()
 
     const [selectedModeId, setSelectedModeId] = useState(getStoredSelectedModeId)
+    const scrollRef = useRef(null)
+    const [activePlayTab, setActivePlayTab] = useState('lobby')
     const [matchCountdownSeconds, setMatchCountdownSeconds] = useState(MATCH_JOIN_DELAY_SECONDS)
     const [isQueueingOptimistic, setIsQueueingOptimistic] = useState(false)
     const matchmakingToastIdRef = useRef(null)
@@ -79,6 +83,9 @@ const Play = () => {
     } = multiplayerUi
 
     const { singleplayerStats } = singleplayerUi
+    const nextTierIcon = nextTierThreshold
+        ? getRankInfoFromElo(nextTierThreshold.minElo).imageSrc
+        : null
 
     const queueState = getQueueState(session)
     const queueStateForMode = isSelectedModeMultiplayer ? queueState : 'idle'
@@ -191,23 +198,10 @@ const Play = () => {
         })
     }
 
-    const openGameModeModal = () => {
-        openModal(
-            {
-                content: (
-                    <GameModeModal
-                        modes={isInParty ? GAME_MODES.filter((mode) => mode.supportsPartyGames) : GAME_MODES}
-                        selectedModeId={activeModeId}
-                        onSelectMode={(modeId) => {
-                            if(isInParty) sendPartyMessage('party.selectMode', { modeId })
-                            else setSelectedModeId(modeId)
-                            closeModal()
-                        }}
-                    />
-                ),
-                maxWidthClass: 'max-w-3xl',
-            }
-        )
+    const selectGameMode = (modeId) => {
+        if(isInParty) sendPartyMessage('party.selectMode', { modeId })
+        else setSelectedModeId(modeId)
+        setActivePlayTab('lobby')
     }
 
     useEffect(() => {
@@ -370,7 +364,10 @@ const Play = () => {
     }, [isSelectedModeMultiplayer, queueStateForMode, matchCountdownSeconds, matchmaking?.queuedAt])
 
     return (
-        <div className='relative flex flex-col h-full overflow-hidden'>
+        <div
+            ref={scrollRef}
+            className={`flex flex-col h-full overflow-x-hidden ${activePlayTab === 'modes' ? 'overflow-y-auto' : 'overflow-hidden'}`}
+        >
             <Topbar
                 profile={profile}
                 party={isInParty ? party : null}
@@ -379,19 +376,27 @@ const Play = () => {
 
             <PlayBackground />
 
-            <div className='relative w-full flex-1 flex min-h-0 px-8 xl:px-16 pb-0 pt-2 gap-5 xl:gap-7'>
-
-                {isPartyLoading ? <LoadingState className='flex-1 min-h-0' /> : <>
-
-                <PartyStage
-                    party={stageParty}
-                    mode={selectedMode}
-                    currentProfile={profile}
-                    friends={friends}
-                    onInvite={openPartyInviteModal}
-                    onJoinParty={openJoinPartyModal}
-                    showJoinParty={!isInParty}
+            {activePlayTab === 'modes' ? (
+                <GameModeTab
+                    modes={isInParty ? GAME_MODES.filter((mode) => mode.supportsPartyGames) : GAME_MODES}
+                    selectedModeId={activeModeId}
+                    onSelectMode={selectGameMode}
+                    onBack={() => setActivePlayTab('lobby')}
                 />
+            ) : (
+                <div className='relative w-full flex-1 flex min-h-0 px-8 xl:px-16 pb-0 pt-2 gap-5 xl:gap-7'>
+
+                    {isPartyLoading ? <LoadingState className='flex-1 min-h-0' /> : <>
+
+                    <PartyStage
+                        party={stageParty}
+                        mode={selectedMode}
+                        currentProfile={profile}
+                        friends={friends}
+                        onInvite={openPartyInviteModal}
+                        onJoinParty={openJoinPartyModal}
+                        showJoinParty={!isInParty}
+                    />
 
                 <div className='w-full min-h-0 max-w-[19rem] gap-4 flex flex-col justify-center pb-8'>
 
@@ -432,7 +437,15 @@ const Play = () => {
                                     </p>
                                     <p className='text-sm text-neutral1 flex items-center gap-1'>
                                         <HiChevronDoubleUp />
-                                        {nextTierThreshold ? `${eloToNextTier} to ${nextTierLabel}` : nextTierLabel}
+                                        {nextTierThreshold ?
+                                            <span className='flex items-center gap-1'>
+                                                {eloToNextTier} to 
+                                                <div className='ml-1 mb-0.5 flex items-center justify-center w-4 h-4 opacity-60'><img src={nextTierIcon} alt={`${nextTierLabel} icon`} className='absolute w-7 h-7 object-cover'/></div>
+                                                {nextTierLabel}
+                                            </span>
+                                        :
+                                            <span>{nextTierLabel}</span>
+                                        }
                                     </p>
                                 </div>
                             </>
@@ -460,7 +473,7 @@ const Play = () => {
                         </Button>
                         <TextTooltip text={isInParty && !isPartyLeader ? 'Party Leader Only' : 'Change mode'} className='flex-1' placement='top'>
                             <button
-                                onClick={openGameModeModal}
+                                onClick={() => setActivePlayTab('modes')}
                                 disabled={isInParty && !isPartyLeader}
                                 className='block w-full h-full appearance-none bg-transparent border-0 p-0 m-0 text-inherit leading-none align-top disabled:opacity-50 disabled:cursor-not-allowed'
                             >
@@ -473,9 +486,10 @@ const Play = () => {
 
                     {realtimeError || partyError ? <p className='text-sm text-red-400 text-center'>{partyError || realtimeError.message}</p> : null}
 
+                    </div>
+                    </>}
                 </div>
-                </>}
-            </div>
+            )}
 
             {isInParty && party ? (
                 <ChatBox
@@ -486,6 +500,7 @@ const Play = () => {
                     className='z-[100]'
                 />
             ) : null}
+            {activePlayTab === 'modes' ? <BottomFade scrollRef={scrollRef} /> : null}
         </div>
     )
 

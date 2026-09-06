@@ -2,12 +2,14 @@ import { Server, type Connection, type ConnectionContext, type WSMessage } from 
 import { appendChatMessage, type ChatMessage } from "../chat";
 import type { GameContext, StoredGame } from "../games/contracts";
 import { getGameMode } from "../games/registry";
-import type { PlayerIdentity } from "../types";
+import type { ConnectionState, PlayerIdentity } from "../types";
 import { makeId, parseMessage, requestRoom, stateFromRequest } from "../utils";
 import { decodeQuestionChunks, encodeQuestionChunks } from "../question-storage";
+import { buildGameView, diffGameView, type GameView } from "./game-view";
 import {
   beginBotChatGeneration,
   completeBotChatGeneration,
+  dropNextBotGameAction,
   ensureBotActions,
   expireBotChatJobs,
   failBotChatGeneration,
@@ -21,41 +23,126 @@ import {
 import type { BotChatDispatch } from "../bots/chat";
 
 const DISCONNECT_GRACE_MS = 30_000;
-const PROTOCOL_VERSION = 2;
+// v3: game.update carries a generic room/players diff (see servers/game-view.ts) instead of the
+// old hand-rolled per-mode delta payloads, and broadcasts are coalesced (MIN_BROADCAST_INTERVAL_MS)
+// rather than sent once per mutation. Older connections still get full game.snapshot messages.
+const PROTOCOL_VERSION = 3;
 const MAX_RECENT_SNAPSHOT_EVENTS = 200;
+/** Coalescing window for game.update broadcasts - multiple mutations within this window collapse
+ * into a single broadcast instead of one per bot action. */
+const MIN_BROADCAST_INTERVAL_MS = 100;
+/** How often the persisted "game" value is actually written while nothing structurally
+ * significant has happened, as a time-based floor. Structural changes (phase/status/chat) always
+ * checkpoint immediately regardless of this floor - see shouldCheckpoint. */
+const CHECKPOINT_INTERVAL_ACTIVE_MS = 5_000;
+const CHECKPOINT_INTERVAL_IDLE_MS = 30_000;
+const MAX_RTT_MS = 400;
+const MAX_COMPENSATION_MS = 150;
+/** A bot action already this far past is discarded rather than executed - see runAlarm. */
+const STALE_BOT_ACTION_MS = 250;
+const MAX_BOT_ACTIONS_PER_TICK = 4;
+const MAX_DEADLINES_PER_TICK = 4;
+/** Fast-path in-memory tick, clamped to this range. Naturally lands near the lower bound during
+ * active minigame phases (bot actions are >=90ms apart) and near the upper bound during the idle
+ * 120s question phase. */
+const MIN_TICK_MS = 50;
+const MAX_TICK_MS = 1_000;
+// A tick intentionally idling out to MAX_TICK_MS between actions is normal, not a stall - this
+// must stay comfortably above MAX_TICK_MS or every idle tick logs a false-positive warning.
+const STALL_WARN_MS = MAX_TICK_MS * 3;
+/** Durable-alarm safety net. When someone is connected this is refreshed on every tick purely as
+ * a backstop in case the in-memory timer fails to fire (Durable Object timer reliability isn't
+ * documented, so this is what keeps the design correct even if that assumption is wrong - see
+ * armTick/scheduleNextAlarm). When no one is connected, the alarm instead targets the next
+ * genuinely meaningful deadline directly (see computeActiveDeadlines). */
+const BACKSTOP_ALARM_MS = 5_000;
+/** Log a breakdown well before ctx.storage's 128 KiB per-value ceiling, so growth is visible early. */
+const STORAGE_VALUE_WARN_BYTES = 96 * 1024;
 const SUMMARY_EVENT_TYPES = new Set([
   "GAME_STARTED", "GAME_ENDED", "QUESTION_RESOLVED", "ROUND_RESOLVED",
   "TIMBER_ROUND_RESOLVED", "PUNCTURE_ROUND_RESOLVED", "FLUTTER_ROUND_RESOLVED",
 ]);
 
 export class GameServer extends Server<Env> {
-  static options = { hibernate: true };
+  // Deliberately NOT hibernated, unlike UserServer/SocialPartyServer. Hibernation resets in-memory
+  // state between events and adds cold-wake latency - fine for those two (idle-heavy, minutes
+  // between messages), wrong for this one (a continuous sub-second simulation that needs
+  // authoritative state resident in memory). An active game typically lasts a few minutes; that
+  // in-memory time is cheap next to the alarm/storage-write volume the old per-action-alarm model
+  // required (see servers/matchmaker.ts and this file's history for the idle-cost side of that
+  // tradeoff, which is unaffected - UserServer/SocialPartyServer remain hibernated).
+  static options = { hibernate: false };
   game: StoredGame | null = null;
   scheduledAlarmAt: number | null = null;
+  questionsLoaded = false;
+  /** Monotonic simulation clock. Never moves backwards, even if Date.now() does. */
+  simNow = 0;
+  tickTimer: ReturnType<typeof setTimeout> | null = null;
+  timerTickCount = 0;
+  alarmTickCount = 0;
+  // Checkpoint throttling (A4): persistence decoupled from simulation.
+  lastCheckpointAt = 0;
+  lastCheckpointedPhase: string | null = null;
+  lastCheckpointedStatus: string | null = null;
+  lastCheckpointedChatLength = 0;
+  // Broadcast coalescing + generic diffing (B1/B3).
+  lastBroadcastView: GameView | null = null;
+  lastBroadcastEventSequence = 0;
+  lastBroadcastChatLength = 0;
+  broadcastDirty = false;
+  lastBroadcastAt = 0;
+  broadcastTimer: ReturnType<typeof setTimeout> | null = null;
 
   async onStart() {
     this.game = (await this.ctx.storage.get<StoredGame>("game")) ?? null;
     this.scheduledAlarmAt = await this.ctx.storage.getAlarm();
+    this.questionsLoaded = false;
     if (!this.game) return;
 
     const embeddedQuestions = this.embeddedQuestions();
+    if (embeddedQuestions.length && !this.game.privateState.questionStorageKeys) {
+      // Migrate games created before questions were split out of the main game value.
+      await this.storeQuestions(embeddedQuestions);
+      this.attachQuestions(embeddedQuestions);
+      this.questionsLoaded = true;
+      await this.save();
+    }
+    const botRuntimesBefore = JSON.stringify(this.game.privateState.botRuntimes ?? null);
+    initializeBots(this.game);
+    ensureBotActions(this.game, Date.now());
+    if (JSON.stringify(this.game.privateState.botRuntimes ?? null) !== botRuntimesBefore) await this.save();
+    await this.scheduleNextAlarm();
+    // Always a no-op in practice (onStart only ever runs on a cold instance, which by definition
+    // has no connections yet - see partyserver's #ensureInitialized), kept for defensiveness.
+    this.armTick();
+  }
+
+  /**
+   * Question payloads are decoded from chunked storage lazily, only when the current phase
+   * actually needs them, so a trivial reconnect/ping doesn't pay for a full decode on every
+   * hibernation wake. Deliberately swallows its own errors (logging instead) rather than
+   * throwing: this runs inside GameServer.onAlarm's loop and inside afterMutation, and an
+   * uncaught exception there propagates out of onAlarm uncaught (partyserver's alarm() wrapper
+   * has no try/catch), which triggers Cloudflare's platform-level alarm retry with exponential
+   * backoff (2s/4s/8s/16s/32s/64s, up to 6 attempts) - i.e. the whole game silently freezes for
+   * up to ~30s and then fast-forwards through the backlog in one burst once a retry succeeds.
+   */
+  private async ensureQuestionsLoaded() {
+    if (this.questionsLoaded || !this.game || (this.game.state.phase !== "question_active" && this.game.state.phase !== "finished")) return;
     const questionStorageKeys = this.game.privateState.questionStorageKeys as string[][] | undefined;
-    if (questionStorageKeys?.length) {
-      const questions = await Promise.all(questionStorageKeys.map(async (keys) => {
+    if (!questionStorageKeys?.length) return;
+    try {
+      const questions = await Promise.all(questionStorageKeys.map(async (keys, index) => {
         const chunks = await Promise.all(keys.map((key) => this.ctx.storage.get<Uint8Array>(key)));
-        if (chunks.some((chunk) => !chunk)) throw new Error("Stored game question is missing.");
+        const missingCount = chunks.filter((chunk) => !chunk).length;
+        if (missingCount) throw new Error(`Question ${index} is missing ${missingCount}/${chunks.length} chunk(s) (keys: ${keys.join(", ")}).`);
         return decodeQuestionChunks(chunks as Uint8Array[]);
       }));
       this.attachQuestions(questions);
-    } else if (embeddedQuestions.length) {
-      // Migrate games created before questions were split out of the main game value.
-      await this.storeQuestions(embeddedQuestions);
-      await this.save();
+      this.questionsLoaded = true;
+    } catch (error) {
+      console.error(`[GameServer:${this.game.gameId}] ensureQuestionsLoaded failed (modeId=${this.game.modeId}, phase=${this.game.state.phase}):`, error);
     }
-    initializeBots(this.game);
-    ensureBotActions(this.game, Date.now());
-    await this.save();
-    await this.scheduleNextAlarm();
   }
 
   async onConnect(connection: Connection, context: ConnectionContext) {
@@ -65,15 +152,21 @@ export class GameServer extends Server<Env> {
     if (!player) return connection.close(1008, "Not a player in this game");
     if (player.disconnectedAt != null) {
       player.disconnectedAt = null;
-      await this.save();
+      await this.checkpoint(true);
     }
+    await this.ensureQuestionsLoaded();
     this.emit(connection);
+    // A connection just appeared - shouldTick() may now be true. armTick() alone would leave the
+    // durable alarm on its old (possibly much-later) precise-deadline target, so also refresh it.
+    await this.scheduleNextAlarm();
+    this.armTick();
   }
 
   async onMessage(connection: Connection, raw: WSMessage) {
     const message = parseMessage(raw);
     const identity = connection.state as PlayerIdentity;
     if (!message || !this.game || !identity?.userId) return;
+    await this.ensureQuestionsLoaded();
     if (message.type === "game.subscribe" || message.type === "game.resync") return this.emit(connection, message.id);
     if (message.type === "system.clockPing") {
       const receivedAt = Date.now();
@@ -84,11 +177,13 @@ export class GameServer extends Server<Env> {
         serverSentAt: Date.now(),
       }, message.id);
     }
+    if (message.type === "system.rttReport") {
+      const rttMs = Math.max(0, Math.min(MAX_RTT_MS, Number((message.payload as any)?.rttMs) || 0));
+      connection.setState({ ...(connection.state as ConnectionState), rttMs });
+      return;
+    }
     let chatDispatches: BotChatDispatch[] = [];
     let changed = false;
-    let delivery: "snapshot" | "delta" = "snapshot";
-    let delta: { type: string; payload: Record<string, unknown> } | undefined;
-    const eventCountBefore = this.game.events.length;
     if (message.type === "chat.send" || message.type === "game.chat") {
       const appended = this.addChat(identity, message.payload as any);
       if (!identity.isBot && appended) chatDispatches = scheduleBotChatReply(this.game, appended, Date.now());
@@ -108,17 +203,17 @@ export class GameServer extends Server<Env> {
         changed = true;
       } else {
         const before = { ...(this.game.players.find((player) => player.userId === identity.userId)?.state ?? {}) };
-        const result = engine?.handleAction(this.game, identity.userId, message, this.context(now));
+        const rttMs = Number((connection.state as ConnectionState)?.rttMs) || 0;
+        const nowCompensated = now - Math.min(MAX_COMPENSATION_MS, rttMs / 2);
+        const result = engine?.handleAction(this.game, identity.userId, message, this.context(now, nowCompensated));
+        if (result?.reply) this.sendMessage(connection, result.reply.type, result.reply.payload, message.id);
         changed = Boolean(result?.changed);
-        delivery = result?.delivery ?? "snapshot";
-        delta = result?.delta;
         if (changed) observeHumanAction(this.game, identity.userId, message, now, before);
       }
     }
     if (!changed) return;
     ensureBotActions(this.game, Date.now());
-    if (delta) delta.payload = { ...delta.payload, events: this.game.events.slice(eventCountBefore) };
-    await this.afterMutation({ delivery, delta });
+    await this.afterMutation();
     if (chatDispatches.length) await Promise.all(chatDispatches.map((dispatch) => this.dispatchBotChatJob(dispatch)));
   }
 
@@ -128,7 +223,15 @@ export class GameServer extends Server<Env> {
     const stillConnected = [...this.getConnections<PlayerIdentity>()].some((candidate) => candidate.state?.userId === identity?.userId);
     if (!stillConnected && player && this.game?.status === "active") {
       player.disconnectedAt = Date.now();
-      await this.afterMutation();
+      // Forced: this must survive an eviction for the disconnect-grace timeout to fire correctly
+      // even if the DO becomes evictable (last connection closing) before the throttled floor
+      // would otherwise have saved it.
+      await this.afterMutation(true); // re-arms the tick/alarm internally
+    } else {
+      // No game-state change, but the connection count just dropped - shouldTick() may now be
+      // false (last connection overall just closed), so the fast timer must stop.
+      await this.scheduleNextAlarm();
+      this.armTick();
     }
   }
 
@@ -195,6 +298,7 @@ export class GameServer extends Server<Env> {
     }
     await this.storeQuestions(questions);
     mode.createGame().initialize(this.game, questions, this.context());
+    this.questionsLoaded = true;
     initializeBots(this.game);
     ensureBotActions(this.game, now);
     await this.afterMutation();
@@ -202,6 +306,90 @@ export class GameServer extends Server<Env> {
   }
 
   async onAlarm() {
+    await this.guardedTick("alarm");
+  }
+
+  /**
+   * Never rethrows. partyserver's alarm() wrapper has no try/catch (unlike its fetch/webSocket
+   * handlers), so an escaping error would hit Cloudflare's *silent* alarm retry backoff
+   * (2/4/8/16/32/64s, then abandoned entirely) - which is itself what makes ticks run late and
+   * strands games with nothing in the logs. We own rescheduling instead, and always reschedule.
+   * Shared by both tick sources (the durable alarm and the fast in-memory timer) so a caught
+   * failure in either is handled identically.
+   */
+  private async guardedTick(source: "alarm" | "timer") {
+    if (source === "timer") this.timerTickCount += 1; else this.alarmTickCount += 1;
+    console.debug(`[GameServer:${this.name}] tick`, { source, timerTicks: this.timerTickCount, alarmTicks: this.alarmTickCount, phase: this.game?.state?.phase });
+    try {
+      await this.runAlarm();
+    } catch (error) {
+      console.error(`[GameServer:${this.name}] tick failed`, {
+        source,
+        phase: this.game?.state?.phase,
+        status: this.game?.status,
+        revision: this.game?.revision,
+      }, error);
+    }
+    try {
+      await this.scheduleNextAlarm();
+    } catch (error) {
+      console.error(`[GameServer:${this.name}] failed to reschedule alarm`, error);
+    }
+    this.armTick();
+  }
+
+  /** Deadlines that could plausibly need attention next - shared by the fast timer (clamped, see
+   * armTick) and the backstop alarm (used verbatim when no one is connected to tick fast for). */
+  private computeActiveDeadlines(): number[] {
+    if (!this.game || this.game.status !== "active") return [];
+    return [
+      this.engine()?.nextDeadline(this.game) ?? null,
+      nextBotDeadline(this.game),
+      nextBotChatExpiry(this.game),
+      ...this.game.players.filter((player) => !player.isBot).map((player) => (player.disconnectedAt ? player.disconnectedAt + DISCONNECT_GRACE_MS : null)),
+    ].filter((value): value is number => value != null);
+  }
+
+  /** Only worth ticking fast while the game is active and at least one human is actually watching
+   * (bots never hold a real Connection, so any open connection is a human). */
+  private shouldTick(): boolean {
+    return Boolean(this.game) && this.game!.status === "active" && [...this.getConnections()].length > 0;
+  }
+
+  private clearTickTimer() {
+    if (this.tickTimer == null) return;
+    clearTimeout(this.tickTimer);
+    this.tickTimer = null;
+  }
+
+  /**
+   * The fast path: a plain in-memory timer, not a Durable Object alarm. Cheap (no storage write)
+   * and precise, but its reliability inside a DO isn't documented, so correctness never depends
+   * on it firing - scheduleNextAlarm's backstop alarm (BACKSTOP_ALARM_MS) recovers within a few
+   * seconds if it doesn't. If wrangler dev logging (see guardedTick) ever shows alarmTicks
+   * dominating timerTicks during active play, that assumption has failed and this should become a
+   * fixed ~200ms self-rescheduling alarm instead.
+   */
+  private armTick() {
+    this.clearTickTimer();
+    if (!this.shouldTick()) return;
+    const deadlines = this.computeActiveDeadlines();
+    if (!deadlines.length) return;
+    const dueAt = Math.min(...deadlines);
+    const delay = Math.max(MIN_TICK_MS, Math.min(MAX_TICK_MS, dueAt - Date.now()));
+    this.tickTimer = setTimeout(() => {
+      this.tickTimer = null;
+      this.guardedTick("timer").catch((error) => console.error(`[GameServer:${this.name}] timer tick failed`, error));
+    }, delay);
+  }
+
+  /**
+   * A real-time server may catch up its *clock*. It may never catch up its *simulation* by
+   * replaying player-visible actions faster than wall-clock. Lateness is paid for by DROPPING
+   * actions, never by replaying them - replaying is what turned a late tick into "the bot went
+   * from 0 to 49 chops and instantly won".
+   */
+  private async runAlarm() {
     if (!this.game) return;
     this.scheduledAlarmAt = null;
     if (this.game.status !== "active") {
@@ -211,39 +399,72 @@ export class GameServer extends Server<Env> {
         this.game = null;
         return;
       }
-      await this.scheduleNextAlarm();
       return;
     }
-    const now = Date.now();
-    expireBotChatJobs(this.game, now);
-    const disconnected = this.game.players.find((player) => player.disconnectedAt && now - player.disconnectedAt >= DISCONNECT_GRACE_MS);
-    if (disconnected) this.forfeit(disconnected.userId);
-    else {
-      const engine = this.engine();
-      if (engine) {
-        for (let count = 0; count < 64 && this.game.status === "active"; count += 1) {
-          ensureBotActions(this.game, Math.min(now, Number(this.game.updatedAt) || now));
-          const gameDeadline = engine.nextDeadline(this.game);
-          const botDeadline = nextBotDeadline(this.game);
-          const dueAt = [gameDeadline, botDeadline].filter((value): value is number => value != null).sort((a, b) => a - b)[0];
-          if (dueAt == null || dueAt > now) break;
-          if (gameDeadline != null && gameDeadline <= (botDeadline ?? Number.POSITIVE_INFINITY)) {
-            engine.handleDeadline(this.game, this.context(gameDeadline));
-            ensureBotActions(this.game, gameDeadline);
-          } else if (!runNextBotAction(this.game, engine, this.context(botDeadline!))) break;
+
+    const wall = Date.now();
+    const lateness = this.simNow ? wall - this.simNow : 0;
+    this.simNow = Math.max(this.simNow, wall);
+    if (lateness > STALL_WARN_MS) {
+      console.warn(`[GameServer:${this.name}] tick stalled ${lateness}ms (phase=${this.game.state.phase})`);
+    }
+
+    expireBotChatJobs(this.game, this.simNow);
+    const disconnected = this.game.players.find((player) => player.disconnectedAt && this.simNow - player.disconnectedAt >= DISCONNECT_GRACE_MS);
+    if (disconnected) {
+      this.forfeit(disconnected.userId);
+      await this.afterMutation();
+      return;
+    }
+
+    const engine = this.engine();
+    if (engine) {
+      await this.ensureQuestionsLoaded();
+
+      // Engine deadlines. The first uses its genuine deadline so remainingMs and friends reflect
+      // reality; any chained transition in the same tick uses simNow, otherwise a 3s result
+      // overlay would be started in the past and flash by in zero visible time.
+      for (let count = 0; count < MAX_DEADLINES_PER_TICK && this.game.status === "active"; count += 1) {
+        const gameDeadline = engine.nextDeadline(this.game);
+        if (gameDeadline == null || gameDeadline > this.simNow) break;
+        engine.handleDeadline(this.game, this.context(count === 0 ? gameDeadline : this.simNow));
+        ensureBotActions(this.game, this.simNow);
+        await this.ensureQuestionsLoaded();
+      }
+
+      // Bot actions. Executed at their exact planned time (planners choose times whose world
+      // state is favourable), but always re-planned from simNow so the next action lands in the
+      // future and the loop cannot chain a backlog.
+      let executed = 0;
+      let dropped = 0;
+      for (let guard = 0; guard < 32 && this.game.status === "active"; guard += 1) {
+        const botDeadline = nextBotDeadline(this.game);
+        if (botDeadline == null || botDeadline > this.simNow) break;
+        if (botDeadline < this.simNow - STALE_BOT_ACTION_MS && dropNextBotGameAction(this.game, this.simNow)) {
+          dropped += 1;
+          continue;
         }
+        if (executed >= MAX_BOT_ACTIONS_PER_TICK) break;
+        if (!runNextBotAction(this.game, engine, this.context(botDeadline), this.simNow)) break;
+        executed += 1;
+      }
+      if (dropped) {
+        console.warn(`[GameServer:${this.name}] dropped ${dropped} stale bot action(s) after a ${lateness}ms stall`);
       }
     }
+
     await this.afterMutation();
   }
 
   private engine() { return this.game ? getGameMode(this.game.modeId)?.createGame() ?? null : null; }
-  private context(now = Date.now()): GameContext {
+  private context(now = Date.now(), nowCompensated = now): GameContext {
     return {
       now,
+      nowCompensated,
       addEvent: (type, data = {}, actorUserId = null) => {
         if (!this.game) return;
-        this.game.events.push({ uid: makeId("event"), type, modeId: this.game.modeId, actorUserId, sequence: this.game.events.length + 1, data, createdAt: now });
+        this.game.eventSequence = (Number(this.game.eventSequence) || this.game.events.at(-1)?.sequence || 0) + 1;
+        this.game.events.push({ uid: makeId("event"), type, modeId: this.game.modeId, actorUserId, sequence: this.game.eventSequence, data, createdAt: now });
       },
     };
   }
@@ -281,7 +502,23 @@ export class GameServer extends Server<Env> {
     const privateState = { ...this.game.privateState };
     delete privateState.questions;
     delete privateState.questionsById;
-    await this.ctx.storage.put("game", { ...this.game, privateState });
+    // Persist only the bounded (summary + recent-200) event view, never the full in-memory log -
+    // ctx.storage caps a single value at 128 KiB, and events is otherwise unbounded for the life
+    // of the match. The full in-memory this.game.events is untouched, so nothing observed
+    // in-session (bot learning, the live event feed) is affected - only what a cold restart
+    // recovers is bounded, and everything needed to reconstruct the match end screen
+    // (SUMMARY_EVENT_TYPES) is exempt from the recency trim, so that screen is unaffected too.
+    const value = { ...this.game, privateState, events: this.snapshotEvents() };
+    const serializedLength = JSON.stringify(value).length;
+    if (serializedLength > STORAGE_VALUE_WARN_BYTES) {
+      console.error(`[GameServer:${this.name}] stored game is ${serializedLength}B, approaching the 131072B limit`, {
+        events: value.events.length,
+        chat: this.game.chat.length,
+        eventsBytes: JSON.stringify(value.events).length,
+        privateStateBytes: JSON.stringify(privateState).length,
+      });
+    }
+    await this.ctx.storage.put("game", value);
   }
 
   private embeddedQuestions(): any[] {
@@ -308,23 +545,103 @@ export class GameServer extends Server<Env> {
     this.game.privateState.questionStorageKeys = questionStorageKeys;
   }
 
-  private async afterMutation(options: { delivery?: "snapshot" | "delta"; delta?: { type: string; payload: Record<string, unknown> } } = {}) {
+  /**
+   * Called after every mutation (a human message, a tick's engine deadline or bot action). Does
+   * NOT write to storage or broadcast synchronously - persistence is throttled (checkpoint, A4)
+   * and broadcasts are coalesced to MIN_BROADCAST_INTERVAL_MS (scheduleBroadcast, B1), so this
+   * returning does not mean clients have been notified yet. Pass forceCheckpoint for state that
+   * must survive an eviction immediately (see onClose's disconnect branch).
+   */
+  private async afterMutation(forceCheckpoint = false) {
     if (!this.game) return;
     this.game.updatedAt = Date.now();
-    this.game.revision = (Number(this.game.revision) || 0) + 1;
     if (this.game.status !== "active" && !this.game.privateState.expiresAt) this.game.privateState.expiresAt = Date.now() + 15 * 60_000;
-    await this.releasePlayerSessions();
-    await this.save();
-    const snapshot = this.snapshot();
-    for (const connection of this.getConnections<PlayerIdentity & { protocolVersion?: number }>()) {
-      if (options.delivery === "delta" && options.delta && Number(connection.state?.protocolVersion) >= PROTOCOL_VERSION) {
-        this.sendMessage(connection, options.delta.type, options.delta.payload);
-      } else {
-        this.sendMessage(connection, "game.snapshot", snapshot);
+    // Outbound fetches are best-effort: a slow or failing backend must never abort the state
+    // write, the broadcast, or the alarm reschedule that follow.
+    try {
+      await this.releasePlayerSessions();
+    } catch (error) {
+      console.error(`[GameServer:${this.name}] releasePlayerSessions failed`, error);
+    }
+    await this.ensureQuestionsLoaded();
+    await this.checkpoint(forceCheckpoint);
+    this.scheduleBroadcast();
+    if (this.game.result) {
+      try {
+        await this.commitResult();
+      } catch (error) {
+        console.error(`[GameServer:${this.name}] commitResult failed`, error);
       }
     }
-    if (this.game.result) await this.commitResult();
     await this.scheduleNextAlarm();
+    this.armTick();
+  }
+
+  /** Phase/status/chat changes always checkpoint immediately (they're rare and must not be lost);
+   * everything else (mid-round position/score churn) is covered by the time floor. */
+  private shouldCheckpoint(now: number): boolean {
+    if (!this.game) return false;
+    if ((this.game.state.phase ?? null) !== this.lastCheckpointedPhase) return true;
+    if (this.game.status !== this.lastCheckpointedStatus) return true;
+    if (this.game.chat.length !== this.lastCheckpointedChatLength) return true;
+    const floor = String(this.game.state.phase ?? "").endsWith("_active") ? CHECKPOINT_INTERVAL_ACTIVE_MS : CHECKPOINT_INTERVAL_IDLE_MS;
+    return now - this.lastCheckpointAt >= floor;
+  }
+
+  private async checkpoint(force = false) {
+    if (!this.game) return;
+    const now = Date.now();
+    if (!force && !this.shouldCheckpoint(now)) return;
+    await this.save();
+    this.lastCheckpointAt = now;
+    this.lastCheckpointedPhase = this.game.state.phase ?? null;
+    this.lastCheckpointedStatus = this.game.status;
+    this.lastCheckpointedChatLength = this.game.chat.length;
+  }
+
+  private clearBroadcastTimer() {
+    if (this.broadcastTimer == null) return;
+    clearTimeout(this.broadcastTimer);
+    this.broadcastTimer = null;
+  }
+
+  private scheduleBroadcast() {
+    if (!this.game) return;
+    this.broadcastDirty = true;
+    if (this.broadcastTimer != null) return;
+    const delay = Math.max(0, MIN_BROADCAST_INTERVAL_MS - (Date.now() - this.lastBroadcastAt));
+    this.broadcastTimer = setTimeout(() => {
+      this.broadcastTimer = null;
+      this.flushBroadcast();
+    }, delay);
+  }
+
+  /** Increments revision and sends exactly once per published update (B2): every eligible
+   * connection gets this same revision, either as a diff (v3+) or a full snapshot (older, or a
+   * connection with no prior baseline). A no-op mutation (nothing visible actually changed) does
+   * not bump revision or send anything. */
+  private flushBroadcast() {
+    if (!this.game || !this.broadcastDirty) return;
+    this.broadcastDirty = false;
+    this.lastBroadcastAt = Date.now();
+    const view = buildGameView(this.game, this.engine());
+    const patch = diffGameView(this.lastBroadcastView, view);
+    const newEvents = this.game.events.filter((event) => Number(event.sequence) > this.lastBroadcastEventSequence);
+    const newChat = this.game.chat.slice(this.lastBroadcastChatLength);
+    if (!patch && !newEvents.length && !newChat.length) return;
+    this.lastBroadcastView = view;
+    if (this.game.events.length) this.lastBroadcastEventSequence = Math.max(this.lastBroadcastEventSequence, ...this.game.events.map((event) => Number(event.sequence) || 0));
+    this.lastBroadcastChatLength = this.game.chat.length;
+    this.game.revision = (Number(this.game.revision) || 0) + 1;
+    let cachedSnapshot: unknown;
+    for (const connection of this.getConnections<PlayerIdentity & { protocolVersion?: number }>()) {
+      if (Number(connection.state?.protocolVersion) >= PROTOCOL_VERSION) {
+        this.sendMessage(connection, "game.update", { room: patch?.room, players: patch?.players, events: newEvents, chat: newChat });
+      } else {
+        cachedSnapshot ??= this.snapshot();
+        this.sendMessage(connection, "game.snapshot", cachedSnapshot);
+      }
+    }
   }
 
   private async releasePlayerSessions() {
@@ -343,11 +660,20 @@ export class GameServer extends Server<Env> {
 
   private async scheduleNextAlarm() {
     if (!this.game) return;
-    const deadlines = this.game.status === "active"
-      ? [this.engine()?.nextDeadline(this.game) ?? null, nextBotDeadline(this.game), nextBotChatExpiry(this.game), ...this.game.players.filter((player) => !player.isBot).map((player) => player.disconnectedAt ? player.disconnectedAt + DISCONNECT_GRACE_MS : null)]
-      : [this.game.result && !this.game.privateState.resultCommitted ? Date.now() + 10_000 : null, this.game.privateState.expiresAt ?? null];
-    const concreteDeadlines = deadlines.filter((value): value is number => Boolean(value));
-    const next = concreteDeadlines.length ? Math.min(...concreteDeadlines) : null;
+    let next: number | null;
+    if (this.game.status === "active" && this.shouldTick()) {
+      // The fast timer (armTick) is doing the real scheduling; this alarm is purely a backstop.
+      next = Date.now() + BACKSTOP_ALARM_MS;
+    } else if (this.game.status === "active") {
+      // No one connected to tick fast for - wake exactly when something could matter instead
+      // (typically a disconnect-grace timeout).
+      const deadlines = this.computeActiveDeadlines();
+      next = deadlines.length ? Math.min(...deadlines) : null;
+    } else {
+      const deadlines = [this.game.result && !this.game.privateState.resultCommitted ? Date.now() + 10_000 : null, this.game.privateState.expiresAt ?? null]
+        .filter((value): value is number => Boolean(value));
+      next = deadlines.length ? Math.min(...deadlines) : null;
+    }
     if (next === this.scheduledAlarmAt) return;
     if (next == null) await this.ctx.storage.deleteAlarm();
     else await this.ctx.storage.setAlarm(next);

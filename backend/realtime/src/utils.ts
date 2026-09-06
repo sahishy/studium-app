@@ -94,3 +94,30 @@ export const requestRoom = <T extends Server<Env>>(
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(body),
 }));
+
+export type PublicActivity =
+  | { state: "online" }
+  | { state: "in_party"; modeId: string; partyPlayerCount: number }
+  | { state: "in_game"; modeId: string };
+
+let activitySecretWarningLogged = false;
+
+export const publishActivities = async (env: Env, updates: Array<{ userId: string; activity: PublicActivity }>) => {
+  if (!updates.length || !env.BACKEND_API_BASE_URL) return;
+  if (!env.REALTIME_ACTIVITY_SECRET) {
+    if (!activitySecretWarningLogged) {
+      console.warn("Player activity is disabled: REALTIME_ACTIVITY_SECRET is not configured.");
+      activitySecretWarningLogged = true;
+    }
+    return;
+  }
+  const response = await fetch(`${env.BACKEND_API_BASE_URL}/realtime/activity`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.REALTIME_ACTIVITY_SECRET}`,
+    },
+    body: JSON.stringify({ updates }),
+  });
+  if (!response.ok) console.warn("Unable to publish player activity.", { status: response.status, count: updates.length });
+};
