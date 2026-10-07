@@ -36,6 +36,12 @@ realtimeRoutes.post('/questions', (req, res) => {
 })
 
 realtimeRoutes.post('/results', async (req, res) => {
+    const expectedSecret = process.env.REALTIME_ACTIVITY_SECRET
+    const suppliedSecret = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '')
+    if(!expectedSecret || suppliedSecret !== expectedSecret) {
+        res.status(401).json({ error: 'Unauthorized.' })
+        return
+    }
     try {
         res.json(await saveRealtimeResult(req.body ?? {}))
     } catch(error) {

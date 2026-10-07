@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
     getGameServerNow,
+    recordGameVisualCorrection,
     requestGameResync,
     sendGameMessage,
     subscribeToGameActionResults,
@@ -271,7 +272,7 @@ const LegacyPunctureMatchEnd = ({ snapshot, userId, startedAt }) => {
     )
 }
 
-const PunctureMatchEnd = ({ snapshot, userId, startedAt }) => {
+const PunctureMatchEnd = ({ snapshot, userId, startedAt, spectatorName = null }) => {
     const { userStats } = useUserStats()
     const state = snapshot?.room?.state ?? {}
     const players = snapshot?.players ?? EMPTY_PLAYERS
@@ -281,7 +282,7 @@ const PunctureMatchEnd = ({ snapshot, userId, startedAt }) => {
     const isWin = winnerUserId === userId
     const endedEvent = [...(snapshot?.events ?? [])].reverse().find((event) => event.type === 'GAME_ENDED')
     const endReason = endedEvent?.data?.endReason ?? null
-    const reasonLabel = endReason === 'first_to_three'
+    const reasonLabel = spectatorName ? null : endReason === 'first_to_three'
         ? (isWin ? 'You won the Puncture match.' : 'Your opponent won the Puncture match.')
         : (endReason === 'max_questions' ? 'Reached max questions' : (endReason === 'player_left'
             ? (isWin ? 'Your opponent left the match.' : 'You left the match.') : null))
@@ -306,10 +307,11 @@ const PunctureMatchEnd = ({ snapshot, userId, startedAt }) => {
         eloDelta={Number(endedEvent?.data?.eloDeltaByUserId?.[userId]) || 0}
         players={players}
         rounds={rounds}
+        spectatorName={spectatorName}
     />
 }
 
-const PunctureGame = ({ roomId, userId }) => {
+const PunctureGame = ({ roomId, userId, readOnly = false, spectatorName = null }) => {
     const [snapshot, setSnapshot] = useState(null)
     const [response, setResponse] = useState('')
     const [calculatorOpen, setCalculatorOpen] = useState(false)
@@ -330,6 +332,12 @@ const PunctureGame = ({ roomId, userId }) => {
 
     useEffect(() => subscribeToGameSnapshot(roomId, setSnapshot), [roomId])
     useEffect(() => subscribeToGameActionResults(roomId, (result) => {
+        if(result?.action === 'game.shoot' && result?.clientActionId) {
+            const predicted = shotLedgerRef.current.find((entry) => entry.id === result.clientActionId)?.shot
+            if(predicted && (!result.accepted || result.shot && (predicted.hit !== result.shot.hit || Math.abs((Number(predicted.attachedAngle) || 0) - (Number(result.shot.attachedAngle) || 0)) > 1))) {
+                recordGameVisualCorrection(roomId)
+            }
+        }
         setShotLedger((current) => {
             const reconciled = reconcileActionResult(current, result)
             const next = recalculatePendingShots(reconciled, predictionInputsRef.current)
@@ -488,7 +496,7 @@ const PunctureGame = ({ roomId, userId }) => {
     }
 
     useEffect(() => {
-        if(phase !== 'puncture_active') return () => {}
+        if(phase !== 'puncture_active' || readOnly) return () => {}
         const onKeyDown = (event) => {
             if(event.repeat || ['INPUT', 'TEXTAREA'].includes(event.target?.tagName)) return
             const key = String(event.key).toLowerCase()
@@ -528,7 +536,7 @@ const PunctureGame = ({ roomId, userId }) => {
         }
         window.addEventListener('keydown', onKeyDown)
         return () => window.removeEventListener('keydown', onKeyDown)
-    }, [phase, roomId, shake])
+    }, [phase, readOnly, roomId, shake])
 
     useEffect(() => {
         if(phase === 'puncture_active') return
@@ -543,7 +551,7 @@ const PunctureGame = ({ roomId, userId }) => {
     const countdownRemaining = Math.max(0, Math.ceil(punctureCountdownRemainingMs / 1000))
     if(!state || !localPlayer || !opponent) return <LoadingState className='min-h-[420px]' />
     if(phase === 'finished' || snapshot?.room?.status === 'finished') {
-        return <PunctureMatchEnd snapshot={snapshot} userId={userId} startedAt={state.startedAt} />
+        return <PunctureMatchEnd snapshot={snapshot} userId={userId} startedAt={state.startedAt} spectatorName={readOnly ? (spectatorName || localPlayer.displayName) : null} />
     }
 
     const isRoundHold = phase === 'puncture_result' || phase === 'match_result'
@@ -566,16 +574,17 @@ const PunctureGame = ({ roomId, userId }) => {
                         submittedResponse={isQuestionRevealActive ? questionReveal.submittedResponse : response}
                         isSprQuestion={String((isQuestionRevealActive ? questionReveal.question : currentQuestion)?.questionType).toLowerCase() === 'spr'}
                         isCalculatorOpen={calculatorOpen}
-                        onToggleCalculator={() => setCalculatorOpen((value) => !value)}
-                        isBusy={isQuestionRevealActive || !currentQuestion || hasAnswered || questionCountdown > 0}
+                        onToggleCalculator={() => !readOnly && setCalculatorOpen((value) => !value)}
+                        isBusy={readOnly || isQuestionRevealActive || !currentQuestion || hasAnswered || questionCountdown > 0}
                         hasAnswered={isQuestionRevealActive || hasAnswered}
                         onChoiceSelect={(value) => setResponse(String(value))}
                         onResponseChange={setResponse}
                         onSubmit={() => {
                             const submittedResponse = response.trim()
-                            if(submittedResponse && !hasAnswered && questionCountdown <= 0) sendGameMessage(roomId, 'game.answer', { submittedResponse })
+                            if(!readOnly && submittedResponse && !hasAnswered && questionCountdown <= 0) sendGameMessage(roomId, 'game.answer', { submittedResponse })
                         }}
                         answerReveal={isQuestionRevealActive ? { correctAnswer: questionReveal.correctAnswer, isCorrect: questionReveal.isCorrect, responses: questionReveal.answerResponses } : null}
+                        readOnly={readOnly}
                     />
                     {questionCountdown > 0 && !isQuestionRevealActive ? (
                         <TransitionOverlay remainingMs={questionCountdownRemainingMs} countdown={questionCountdown} title='Get ready...' />
@@ -608,21 +617,21 @@ const PunctureGame = ({ roomId, userId }) => {
                             remainingMs={punctureCountdownRemainingMs}
                             countdown={countdownRemaining}
                             title={state.advantageOwnerUserId
-                                ? `${state.advantageOwnerUserId === userId ? 'You have' : `${opponent.displayName} has`} 20% fewer pins`
+                                ? `${state.advantageOwnerUserId === userId ? `${readOnly ? localPlayer.displayName : 'You'} ${readOnly ? 'has' : 'have'}` : `${opponent.displayName} has`} 20% fewer pins`
                                 : 'Get ready...'}
                         />
                     ) : null}
                 </div>
             )}
 
-            {phase === 'puncture_active' || isRoundHold ? (
+            {!readOnly && (phase === 'puncture_active' || isRoundHold) ? (
                 <div className='flex items-center justify-center gap-2 text-sm text-neutral1'>
                     <kbd className='min-w-8 rounded-lg bg-neutral5 px-2 py-1 text-center font-semibold text-neutral1'>W</kbd>
                     <span className='mx-1'>or</span>
                     <kbd className='min-w-8 rounded-lg bg-neutral5 px-2 py-1 text-center font-semibold text-neutral1'>↑</kbd>
                 </div>
             ) : null}
-            <CalculatorWindow isOpen={calculatorOpen && phase === 'question_active'} onClose={() => setCalculatorOpen(false)} />
+            <CalculatorWindow isOpen={!readOnly && calculatorOpen && phase === 'question_active'} onClose={() => setCalculatorOpen(false)} />
         </div>
     )
 }

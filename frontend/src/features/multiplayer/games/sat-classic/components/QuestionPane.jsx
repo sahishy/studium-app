@@ -5,7 +5,7 @@ import { FaCalculator } from 'react-icons/fa6'
 
 const DASHES = Array.from({ length: 12 }, (_, i) => i)
 
-const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQuestion, isCalculatorOpen, onToggleCalculator, isBusy, hasAnswered, onChoiceSelect, onResponseChange, onSubmit, answerReveal = null }) => {
+const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQuestion, isCalculatorOpen, onToggleCalculator, isBusy, hasAnswered, onChoiceSelect, onResponseChange, onSubmit, answerReveal = null, readOnly = false }) => {
 
     const normalizedResponse = String(submittedResponse ?? '').trim()
     const normalizedResponseUpper = normalizedResponse.toUpperCase()
@@ -39,7 +39,7 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
                     <div className='bg-neutral0 text-neutral6 px-2 py-1'>
                         {(gameState?.questionIndex ?? 0) + 1}
                     </div>
-                    {isMathQuestion ? (
+                    {isMathQuestion && !readOnly ? (
                         <button
                             type='button'
                             onClick={onToggleCalculator}
@@ -72,7 +72,7 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
                                 type='text'
                                 value={submittedResponse ?? ''}
                                 onChange={(event) => onResponseChange?.(event.target.value)}
-                                disabled={isBusy}
+                                disabled={isBusy || readOnly}
                                 className={`text-center w-full rounded-xl border bg-neutral6 p-3 text-neutral0 focus:outline-none focus:ring-2 focus:ring-sat0 disabled:opacity-60 transition-colors duration-300 ${isAnswerReveal ? (isRevealCorrect ? 'border-green-500 bg-green-50 dark:bg-green-500/15' : 'border-red-500 bg-red-50 dark:bg-red-500/15') : 'border-neutral0'}`}
                             />   
                             <hr className='absolute bottom-2 w-18 border-neutral0'/>                         
@@ -101,7 +101,7 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
                                         key={choice.id}
                                         choice={choice}
                                         isSelected={normalizedResponseUpper === choice.id}
-                                        isDisabled={isBusy}
+                                        isDisabled={isBusy || readOnly}
                                         isCorrectAnswer={isAnswerReveal && normalizedCorrectAnswer === String(choice.id).toUpperCase()}
                                         isIncorrectSelected={isAnswerReveal && normalizedResponseUpper === String(choice.id).toUpperCase() && normalizedCorrectAnswer !== String(choice.id).toUpperCase()}
                                         answeringPlayers={answeringPlayers}
@@ -120,10 +120,10 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
             <button
                 type='button'
                 onClick={onSubmit}
-                disabled={!hasValidResponse || isBusy}
+                disabled={!hasValidResponse || isBusy || readOnly}
                 className='w-full rounded-full bg-sat0 text-white p-3 font-semibold cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed hover:not-disabled:bg-sat1'
             >
-                {hasAnswered ? 'Waiting for opponent...' : 'Submit'}
+                {readOnly ? 'Spectating' : (hasAnswered ? 'Waiting for opponent...' : 'Submit')}
             </button>
         </div >
     )

@@ -131,8 +131,11 @@ export class UserServer extends Server<Env> {
   }
 
   private async publishOwnActivity() {
-    if (this.state.status === "in_room" && this.state.modeId) {
-      await publishActivities(this.env, [{ userId: this.name, activity: { state: "in_game", modeId: this.state.modeId } }]);
+    if (this.state.status === "in_room" && this.state.modeId && this.state.currentRoomId) {
+      await publishActivities(this.env, [{
+        userId: this.name,
+        activity: { state: "in_game", modeId: this.state.modeId, roomId: this.state.currentRoomId },
+      }]);
       return;
     }
     if (this.state.partyId) {

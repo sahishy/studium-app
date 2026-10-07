@@ -11,7 +11,12 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (request.method === "GET" && url.pathname === "/health") {
-      return Response.json({ ok: true, service: "studium-realtime" });
+      const activityPublishingConfigured = Boolean(env.BACKEND_API_BASE_URL && env.REALTIME_ACTIVITY_SECRET);
+      return Response.json({
+        ok: activityPublishingConfigured,
+        service: "studium-realtime",
+        activityPublishingConfigured,
+      }, { status: activityPublishingConfigured ? 200 : 503 });
     }
 
     const response = await routePartykitRequest(request, env, {

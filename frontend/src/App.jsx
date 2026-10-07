@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import PrivateRoute from './routes/PrivateRoute'
 import MainScreen from './features/main/pages/MainScreen'
 import Agenda from './features/agenda/pages/Agenda'
@@ -23,7 +23,8 @@ import AllCoursesTab from './features/courses/pages/AllCoursesTab'
 import CourseOverview from './features/courses/pages/CourseOverview'
 import CoursesIndexRedirect from './routes/CoursesIndexRedirect'
 import MultiplayerSessionRedirect from './routes/MultiplayerSessionRedirect'
-import Avatar from './features/profile/pages/Avatar'
+import Locker from './features/profile/pages/Locker'
+import Progress from './features/progress/pages/Progress'
 import Settings from './features/profile/pages/Settings'
 import ProfileOverview from './features/profile/pages/ProfileOverview'
 import Landing from './features/main/pages/Landing'
@@ -99,7 +100,9 @@ export default function App() {
 							<Route path="/play/party/:partyId" element={<PartyJoinRedirect />} />
 							<Route path="/play/game/:roomId" element={<MatchRoom />} />
 							<Route path="/join/:inviteCode" element={<JoinCircle />} />
-							<Route path="/avatar" element={<Avatar />} />
+							<Route path="/locker" element={<Locker />} />
+							<Route path="/avatar" element={<Navigate to="/locker" replace />} />
+							<Route path="/progress" element={<Progress />} />
 							<Route path="/settings" element={<Settings />} />
 							<Route path="/profile/:username" element={<ProfileOverview />} />
 						</Route>

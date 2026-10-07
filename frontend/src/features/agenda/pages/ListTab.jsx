@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
-import { FaArrowsUpDown, FaChevronDown } from 'react-icons/fa6'
+import { FaChevronDown } from 'react-icons/fa6'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import BottomPadding from '../../../shared/components/ui/BottomPadding'
@@ -10,14 +10,14 @@ import TaskParsingInput from '../components/TaskParsingInput'
 import { useTasks } from '../contexts/TasksContext'
 import { useCircles } from '../../socials/contexts/CirclesContext'
 import { useCourses } from '../../courses/contexts/CoursesContext'
-import { updateTaskGroupingPreference } from '../services/taskService'
 import { enqueueTaskPatch } from '../services/taskCacheService'
-import { buildChildCounts, buildDepthMap, buildGroupedTaskSections, buildInheritedGroupTitleFromSourceTask, buildListReindexUpdates, buildShiftedListIndexUpdates, deriveStatusByTaskId, getTaskGroupKey, hasConflictingGroupWidget, injectGroupWidgetIfNeeded, LIST_GROUP_OPTIONS, sortTasksByListIndex } from '../utils/taskListUtils'
+import { buildChildCounts, buildDepthMap, buildGroupedTaskSections, buildListReindexUpdates, buildShiftedListIndexUpdates, deriveStatusByTaskId, hasConflictingGroupWidget, injectGroupWidgetIfNeeded, LIST_GROUP_OPTIONS, sortTasksByListIndex } from '../utils/taskListUtils'
 import { buildListIndexPatchUpdates, buildReorderPlanForSection, buildSortableIds } from '../utils/taskDragDropUtils'
-import Select from '../../../shared/components/popovers/Select'
 import { MAX_USER_TASKS } from '../utils/taskUtils'
 import TextTooltip from '../../../shared/components/tooltips/TextTooltip'
 import { extractTaskTitleMetadata, flattenTaskTitle } from '../utils/naturalLanguage'
+import ViewOptionsButton from '../components/ViewOptionsButton'
+import TaskTable from '../components/TaskTable'
 
 const isDescendantOf = (task, ancestorId, tasksById) => {
     let parentId = task?.parentTaskId ?? null
@@ -85,16 +85,14 @@ const ListTab = () => {
         isCircleView = false,
         hideCircleWidgetControl = false,
         forceCircleWidget,
+        agendaPreferences,
+        saveAgendaPreferences,
     } = useOutletContext()
     const { user: userTasks, circle: circleTasks, applyTaskPatch, commitTaskPatch, createTaskOptimistic, deleteTaskOptimistic } = useTasks()
     const circles = useCircles()
     const { courses } = useCourses()
 
     const isTaskLimitReached = userTasks.length >= MAX_USER_TASKS
-
-    const defaultGroupBy = 'dueDate'
-    const profileGroupBy = profile?.preferences?.groupTasksBy
-    const [groupByPreference, setGroupByPreference] = useState(profileGroupBy || defaultGroupBy)
 
     const [pendingFocusTaskId, setPendingFocusTaskId] = useState(null)
     const [tabEligibleSubtask, setTabEligibleSubtask] = useState(null)
@@ -104,12 +102,9 @@ const ListTab = () => {
     const addTaskInputRef = useRef(null)
     const selectedGroupBy = useMemo(() => {
         const available = new Set(LIST_GROUP_OPTIONS.map((option) => option.id))
-        return available.has(groupByPreference) ? groupByPreference : defaultGroupBy
-    }, [groupByPreference])
-
-    useEffect(() => {
-        setGroupByPreference(profileGroupBy || defaultGroupBy)
-    }, [profileGroupBy])
+        const configured = agendaPreferences?.list?.groupBy || 'dueDate'
+        return available.has(configured) ? configured : 'dueDate'
+    }, [agendaPreferences?.list?.groupBy])
 
     const pendingOutdentRef = useRef(new Map())
     const taskFocusHandlersRef = useRef(new Map())
@@ -201,15 +196,6 @@ const ListTab = () => {
         taskFocusHandlersRef.current.delete(taskId)
     }, [pendingFocusTaskId])
 
-    const syncParentStatuses = useCallback(async (overrides = new Map()) => {
-        const statusById = deriveStatusByTaskId(sortedTasks, overrides)
-        await Promise.all(
-            sortedTasks
-                .filter((t) => statusById.has(t.uid) && t.status !== statusById.get(t.uid))
-                .map((t) => enqueueTaskPatch(t.uid, { status: statusById.get(t.uid) }))
-        )
-    }, [sortedTasks])
-
     const reindexListTasks = useCallback(async (tasks) => {
         await Promise.all(
             buildListReindexUpdates(tasks).map(({ taskId, listIndex }) => enqueueTaskPatch(taskId, { listIndex }))
@@ -231,7 +217,7 @@ const ListTab = () => {
         const fallback = sortedTasks[0] || null
         createTaskOptimistic({
             title: normalizedTitle,
-            userId: fallback?.userId || profile.uid,
+            userId: profile.uid,
             status: 'Incomplete',
             listIndex: nextIndex,
             parentTaskId: null,
@@ -242,10 +228,7 @@ const ListTab = () => {
 
     const handleUpdateTask = useCallback(async (taskId, updates) => {
         await commitTaskPatch(taskId, updates)
-        if (Object.hasOwn(updates, 'status')) {
-            await syncParentStatuses(new Map([[taskId, updates.status]]))
-        }
-    }, [commitTaskPatch, syncParentStatuses])
+    }, [commitTaskPatch])
 
     const handleBeforeTaskCommit = useCallback((payload, meta = {}) => {
         // Apply circle widget override first (existing behaviour)
@@ -333,9 +316,8 @@ const ListTab = () => {
 
         await deleteTaskOptimistic(taskId)
         await reindexListTasks(sortedTasks.filter((t) => t.uid !== taskId))
-        await syncParentStatuses()
 
-    }, [deleteTaskOptimistic, depthMap, groupedTaskSections, handleOutdentTask, reindexListTasks, sortedTasks, syncParentStatuses, tasksById])
+    }, [deleteTaskOptimistic, depthMap, groupedTaskSections, handleOutdentTask, reindexListTasks, sortedTasks, tasksById])
 
     const handleCreateTaskAfter = useCallback(async (sourceTask, draftPayload = null) => {
 
@@ -383,8 +365,8 @@ const ListTab = () => {
 
         // new tasks always start blank, group widget is injected at commit time
         const { taskId: newTaskId } = createTaskOptimistic({
-            title: '',
-            userId: effectiveSource.userId || profile.uid,
+            title: isCircleView ? forceCircleWidget?.('') || '' : '',
+            userId: profile.uid,
             status: 'Incomplete',
             listIndex: insertIndex,
             parentTaskId,
@@ -413,7 +395,7 @@ const ListTab = () => {
         setPendingFocusTaskId(newTaskId)
         setTabEligibleSubtask({ taskId: newTaskId, parentTaskId: effectiveSource.uid })
 
-    }, [commitTaskPatch, createTaskOptimistic, groupedTaskSections, profile.uid, selectedGroupBy, sortedTasks, tasksById])
+    }, [commitTaskPatch, createTaskOptimistic, forceCircleWidget, groupedTaskSections, isCircleView, profile.uid, selectedGroupBy, sortedTasks, tasksById])
 
     const handleTaskBlur = useCallback((taskId) => {
 
@@ -443,31 +425,12 @@ const ListTab = () => {
         if (tabEligibleSubtask?.taskId !== taskId) return
 
         const parentTaskId = tabEligibleSubtask.parentTaskId
-        const parentTask = tasksById.get(parentTaskId)
         const siblingIndex = getNextSiblingIndex(sortedTasks, parentTaskId)
-
-        if (parentTask?.status === 'Completed') {
-            await commitTaskPatch(parentTaskId, { status: 'Incomplete' })
-        }
 
         await commitTaskPatch(taskId, { parentTaskId, siblingIndex })
         setTabEligibleSubtask(null)
 
     }, [commitTaskPatch, sortedTasks, tabEligibleSubtask, tasksById])
-
-    const handleChangeGroupBy = useCallback(async (option) => {
-
-        const nextGroupBy = option?.id
-        if (!nextGroupBy || nextGroupBy === selectedGroupBy) return
-
-        setGroupByPreference(nextGroupBy)
-        try {
-            await updateTaskGroupingPreference(profile.uid, nextGroupBy)
-        } catch {
-            setGroupByPreference(selectedGroupBy)
-        }
-
-    }, [profile.uid, selectedGroupBy])
 
     const handleToggleSectionCollapsed = useCallback((sectionKey) => {
 
@@ -509,7 +472,7 @@ const ListTab = () => {
             <div className='w-full h-full flex flex-col items-center gap-6'>
 
                 <div className='relative flex w-full h-11 items-center justify-end'>
-                    <div
+                    {agendaPreferences?.list?.layout !== 'table' && <div
                         className={`absolute left-1/2 top-1/2 -translate-1/2
                                 bg-neutral5 rounded-full flex gap-3 items-center w-96 transition-all
                                 ${isTaskLimitReached ? 'opacity-60 cursor-not-allowed' : 'cursor-text hover:w-104 focus-within:w-104'}
@@ -534,22 +497,9 @@ const ListTab = () => {
                             invertedWidgets
                             hideCircleWidgets={hideCircleWidgetControl}
                         />
-                    </div>
+                    </div>}
 
-                    <Select
-                        options={LIST_GROUP_OPTIONS}
-                        isOptionSelected={(option) => option.id === selectedGroupBy}
-                        onSelect={handleChangeGroupBy}
-                    >
-                        {(isOpen) => (
-                            <div className='px-4 py-2.5 rounded-full border border-neutral4 text-neutral0 font-semibold text-sm 
-                                hover:bg-neutral5 transition-all flex items-center gap-1'
-                            >
-                                <FaArrowsUpDown className='text-xs'/>
-                                {LIST_GROUP_OPTIONS.find((x) => x.id === selectedGroupBy)?.label}
-                            </div>
-                        )}
-                    </Select>
+                    <ViewOptionsButton preferences={agendaPreferences} onSave={saveAgendaPreferences} />
                 </div>
 
 
@@ -576,6 +526,7 @@ const ListTab = () => {
                                     </div>
                                 )}
                                 <div className={collapsedSectionByKey[section.key] && 'hidden'}>
+                                    {agendaPreferences?.list?.layout === 'table' ? <TaskTable tasks={section.tasks} depthMap={depthMap} childCounts={childCounts} courses={courses} onUpdate={handleUpdateTask} onDelete={handleDeleteTask} onAdd={handleAddTask} disabled={isTaskLimitReached} /> :
                                     <SortableContext
                                         items={buildSortableIds(section.tasks)}
                                         strategy={verticalListSortingStrategy}
@@ -599,6 +550,7 @@ const ListTab = () => {
                                             />
                                         ))}
                                     </SortableContext>
+                                    }
                                 </div>
                             </div>
                         ))}

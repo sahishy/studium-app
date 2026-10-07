@@ -1,11 +1,9 @@
 import { doc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, query, getDoc, getDocs, writeBatch, where } from 'firebase/firestore'
-import { updateCircleXP, updateUserXP } from '../../profile/services/xpService';
-import confetti from 'canvas-confetti';
-import { updateUserPreference, userCompleteTask } from '../../auth/services/userService';
+import { updateUserPreference } from '../../auth/services/userService';
 import { useEffect, useState } from 'react';
 import { extractTaskTitleMetadata, normalizeTaskTitle } from '../utils/naturalLanguage';
 import { LIST_GROUP_OPTIONS } from '../utils/taskListUtils';
-import { calculateTaskCompletionXp } from '../utils/taskUtils';
+import { VALID_BOARD_GROUPS, VALID_CALENDAR_SORTS, VALID_LIST_GROUPS } from '../utils/agendaPreferences';
 import { db } from '../../../lib/firebase';
 
 const createTask = async ({ title, status, listIndex, boardIndex, userId, taskId, parentTaskId, siblingIndex, type }) => {
@@ -16,6 +14,7 @@ const createTask = async ({ title, status, listIndex, boardIndex, userId, taskId
     const normalizedTitle = normalizeTaskTitle(title)
     const task = {
         title: normalizedTitle,
+        circleId: extractTaskTitleMetadata(normalizedTitle).circleId || null,
         type: (type || 'assignment'),
         status: (status ? status : 'Incomplete'),
         listIndex: (listIndex ?? -1),
@@ -35,56 +34,6 @@ const createTask = async ({ title, status, listIndex, boardIndex, userId, taskId
 
 }
 
-const applyTaskCompletionRewards = async (taskData) => {
-
-    const metadata = extractTaskTitleMetadata(taskData.title)
-    const resolvedOwnerType = metadata.circleId ? 'circle' : 'user'
-    const resolvedOwnerId = metadata.circleId || taskData.userId || null
-    const xpReward = calculateTaskCompletionXp(taskData.createdAt, new Date())
-
-    if (xpReward > 0) {
-        completeTaskAnimation(resolvedOwnerType === 'circle')
-    }
-
-    if (resolvedOwnerType === 'user' && resolvedOwnerId) {
-        const userRef = doc(db, 'users', resolvedOwnerId)
-        const userSnap = await getDoc(userRef)
-        const userProfile = { uid: resolvedOwnerId, ...userSnap.data() }
-
-        await updateUserXP(userProfile, xpReward)
-        await userCompleteTask(userProfile)
-        return
-    }
-
-    if (resolvedOwnerType === 'circle' && resolvedOwnerId) {
-        const circleRef = doc(db, 'circles', resolvedOwnerId)
-        const circleSnap = await getDoc(circleRef)
-
-        await updateCircleXP(circleSnap.data(), xpReward)
-    }
-
-}
-
-const triggerTaskCompletionEffects = async (taskId) => {
-
-    const taskRef = doc(db, 'tasks', taskId)
-    const taskSnap = await getDoc(taskRef)
-    if (!taskSnap.exists()) {
-        return
-    }
-
-    const taskData = taskSnap.data()
-    const alreadyCompleted = Boolean(taskData.alreadyCompleted)
-    if (alreadyCompleted) {
-        return
-    }
-
-    await applyTaskCompletionRewards(taskData)
-
-    await updateDoc(taskRef, { alreadyCompleted: true, updatedAt: new Date() })
-
-}
-
 const updateTask = async (taskId, taskData) => {
 
     const taskRef = doc(db, 'tasks', taskId)
@@ -93,10 +42,10 @@ const updateTask = async (taskId, taskData) => {
         return
     }
 
-    const existingTask = taskSnap.data()
     const normalizedTaskData = {
         ...taskData,
         ...(Object.hasOwn(taskData, 'title') ? { title: normalizeTaskTitle(taskData.title) } : {}),
+        ...(Object.hasOwn(taskData, 'title') ? { circleId: extractTaskTitleMetadata(normalizeTaskTitle(taskData.title)).circleId || null } : {}),
     }
 
     await updateDoc(taskRef, { ...normalizedTaskData, updatedAt: new Date() })
@@ -106,18 +55,6 @@ const updateTask = async (taskId, taskData) => {
 const deleteTask = async (taskId) => {
     const taskRef = doc(db, 'tasks', taskId)
     await deleteDoc(taskRef);
-}
-
-const completeTask = async (taskId) => {
-
-    const taskRef = doc(db, 'tasks', taskId)
-    const taskSnap = await getDoc(taskRef);
-    const taskData = taskSnap.data();
-
-    await applyTaskCompletionRewards(taskData)
-
-    await deleteDoc(taskRef);
-
 }
 
 const deleteCircleTasks = async (circleId) => {
@@ -164,14 +101,16 @@ const updateTaskGroupingPreference = async (uid, groupTasksBy) => {
     await updateUserPreference(uid, 'groupTasksBy', groupTasksBy)
 }
 
-const completeTaskAnimation = (isCircle) => {
-    confetti({
-        origin: { y: -0.2 },
-        angle: 270,
-        spread: 180,
-        startVelocity: 30,
-        colors: (isCircle ? ['#38bdf8'] : ['#facc15'])
-    });
+const updateAgendaPreferences = async (uid, preferences) => {
+    const groupBy = preferences?.list?.groupBy
+    if (!uid || !VALID_LIST_GROUPS.has(groupBy) || !['smart', 'table'].includes(preferences?.list?.layout) || !['keep', 'delete'].includes(preferences?.list?.completionBehavior) || !VALID_BOARD_GROUPS.has(preferences?.board?.groupBy) || !VALID_CALENDAR_SORTS.has(preferences?.calendar?.sortBy)) {
+        throw new Error('Invalid agenda preferences')
+    }
+    const userRef = doc(db, 'users', uid)
+    await updateDoc(userRef, {
+        'preferences.agenda': preferences,
+        'preferences.groupTasksBy': groupBy,
+    })
 }
 
 const useUserTasks = (userId) => {
@@ -212,13 +151,31 @@ const useUserTasks = (userId) => {
 
 }
 
+const useCircleTasks = (circleIds = []) => {
+    const [tasks, setTasks] = useState([])
+    const idsKey = circleIds.join('|')
+    useEffect(() => {
+        if(!idsKey) { setTasks([]); return undefined }
+        const ids = idsKey.split('|')
+        const chunks = []
+        for(let index = 0; index < ids.length; index += 30) chunks.push(ids.slice(index, index + 30))
+        const byChunk = new Map()
+        const unsubscribers = chunks.map((chunk, index) => onSnapshot(query(collection(db, 'tasks'), where('circleId', 'in', chunk)), (snapshot) => {
+            byChunk.set(index, snapshot.docs.map((entry) => ({ uid: entry.id, ...entry.data(), title: normalizeTaskTitle(entry.data().title) })))
+            setTasks([...new Map([...byChunk.values()].flat().map((task) => [task.uid, task])).values()])
+        }))
+        return () => unsubscribers.forEach((unsubscribe) => unsubscribe())
+    }, [idsKey])
+    return tasks
+}
+
 export {
     createTask,
-    triggerTaskCompletionEffects,
     updateTask,
     deleteTask,
     deleteCircleTasks,
     updateTaskGroupingPreference,
-    completeTask,
-    useUserTasks
+    updateAgendaPreferences,
+    useUserTasks,
+    useCircleTasks,
 }

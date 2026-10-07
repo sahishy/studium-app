@@ -159,7 +159,35 @@ const formatRelativeTaskDate = (value, options = {}) => {
     return formatMonthDayOrdinal(target);
 }
 
+const RELATIVE_UNITS = [
+    { limit: 60, divisor: 1, suffix: 's' },
+    { limit: 3600, divisor: 60, suffix: 'm' },
+    { limit: 86400, divisor: 3600, suffix: 'h' },
+    { limit: 604800, divisor: 86400, suffix: 'd' },
+    { limit: 2629800, divisor: 604800, suffix: 'w' },
+    { limit: 31557600, divisor: 2629800, suffix: 'mo' },
+]
+
+// Compact "3h", "2d", "5mo" style stamps for cards, where space is tight.
+const formatRelativeTime = (value, now = Date.now()) => {
+
+    const date = toDateFromFirestoreLike(value)
+
+    if(!date) return ''
+
+    const seconds = Math.max(0, Math.floor((now - date.getTime()) / 1000))
+
+    if(seconds < 45) return 'just now'
+
+    const unit = RELATIVE_UNITS.find((entry) => seconds < entry.limit)
+
+    if(!unit) return `${Math.floor(seconds / 31557600)}y ago`
+
+    return `${Math.floor(seconds / unit.divisor)}${unit.suffix} ago`
+}
+
 export {
+    formatRelativeTime,
     toDateFromSeconds,
     toDateKeyFromSeconds,
     formatDateFromSeconds,

@@ -2,12 +2,16 @@ const TextTabSelector = ({ tabs = [], currentIndex = 0, onSelect, notificationTa
 
     if (!tabs.length) return null
 
-    const safeIndex = currentIndex >= 0 ? currentIndex : 0
+    // A negative index means nothing in this selector is active, which lets a
+    // sibling control (such as Crates) own the selection instead.
+    const hasSelection = currentIndex >= 0
+    const safeIndex = hasSelection ? currentIndex : 0
 
     return (
         <div className={`relative p-1 bg-neutral5 rounded-full ${className}`}>
             <div
-                className='absolute top-1 bottom-1 rounded-full bg-neutral6 transition-all duration-300 ease-out'
+                className={`absolute top-1 bottom-1 rounded-full bg-neutral6 transition-all duration-300 ease-out
+                    ${hasSelection ? 'opacity-100' : 'opacity-0'}`}
                 style={{
                     left: '0.25rem',
                     width: `calc((100% - 0.5rem) / ${tabs.length})`,
@@ -21,7 +25,7 @@ const TextTabSelector = ({ tabs = [], currentIndex = 0, onSelect, notificationTa
             >
                 {tabs.map((tab, index) => {
 
-                    const isCurrent = safeIndex === index
+                    const isCurrent = hasSelection && safeIndex === index
                     const hasNotification = notificationTabs?.some(x => x === tab.name);
 
                     return (

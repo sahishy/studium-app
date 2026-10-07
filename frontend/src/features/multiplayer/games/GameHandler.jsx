@@ -5,31 +5,33 @@ import TimberGame from './timber/TimberGame'
 import PunctureGame from './puncture/PunctureGame'
 import FlutterGame from './flutter/FlutterGame'
 
-const GameHandler = ({ modeId, roomId, userId }) => {
+const GameHandler = ({ modeId, roomId, userId, readOnly = false, spectatorName = null }) => {
 
     if(modeId === 'sat-classic') {
         return (
             <SatClassicGame
                 roomId={roomId}
                 userId={userId}
+                readOnly={readOnly}
+                spectatorName={spectatorName}
             />
         )
     }
 
     if(modeId === 'blitz') {
-        return <BlitzGame roomId={roomId} userId={userId} />
+        return <BlitzGame roomId={roomId} userId={userId} readOnly={readOnly} />
     }
 
     if(modeId === 'sat-timber') {
-        return <TimberGame roomId={roomId} userId={userId} />
+        return <TimberGame roomId={roomId} userId={userId} readOnly={readOnly} spectatorName={spectatorName} />
     }
 
     if(modeId === 'sat-puncture') {
-        return <PunctureGame roomId={roomId} userId={userId} />
+        return <PunctureGame roomId={roomId} userId={userId} readOnly={readOnly} spectatorName={spectatorName} />
     }
 
     if(modeId === 'sat-flutter') {
-        return <FlutterGame roomId={roomId} userId={userId} />
+        return <FlutterGame roomId={roomId} userId={userId} readOnly={readOnly} spectatorName={spectatorName} />
     }
 
     return (

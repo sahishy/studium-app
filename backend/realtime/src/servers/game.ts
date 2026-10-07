@@ -1,5 +1,5 @@
 import { Server, type Connection, type ConnectionContext, type WSMessage } from "partyserver";
-import { appendChatMessage, type ChatMessage } from "../chat";
+import { appendChatMessage, appendSystemChatMessage, type ChatMessage } from "../chat";
 import type { GameContext, StoredGame } from "../games/contracts";
 import { getGameMode } from "../games/registry";
 import type { ConnectionState, PlayerIdentity } from "../types";
@@ -21,6 +21,7 @@ import {
   scheduleBotChatReply,
 } from "../bots/controller";
 import type { BotChatDispatch } from "../bots/chat";
+import { canSpectatorSendMessage, getGameConnectionRole } from "../connection-role";
 
 const DISCONNECT_GRACE_MS = 30_000;
 // v3: game.update carries a generic room/players diff (see servers/game-view.ts) instead of the
@@ -147,15 +148,30 @@ export class GameServer extends Server<Env> {
 
   async onConnect(connection: Connection, context: ConnectionContext) {
     const state = stateFromRequest(context.request);
-    connection.setState(state);
+    if (!this.game) return connection.close(1008, "Game not found");
     const player = this.game?.players.find((entry) => entry.userId === state.userId);
-    if (!player) return connection.close(1008, "Not a player in this game");
-    if (player.disconnectedAt != null) {
+    const connectionRole = getGameConnectionRole(this.game, state.userId);
+    if (!connectionRole) return connection.close(1008, "This game cannot be spectated");
+    connection.setState({ ...state, connectionRole });
+    let spectatorStarted = false;
+    if (connectionRole === "spectator") {
+      const wasAlreadySpectating = [...this.getConnections<ConnectionState>()].some((candidate) => (
+        candidate.id !== connection.id
+        && candidate.state?.userId === state.userId
+        && candidate.state?.connectionRole === "spectator"
+      ));
+      if (!wasAlreadySpectating) {
+        this.game.chat = appendSystemChatMessage(this.game.chat as ChatMessage[], `${state.displayName} started spectating.`);
+        spectatorStarted = true;
+      }
+    }
+    if (player?.disconnectedAt != null) {
       player.disconnectedAt = null;
       await this.checkpoint(true);
     }
     await this.ensureQuestionsLoaded();
     this.emit(connection);
+    if (spectatorStarted) await this.afterMutation(true);
     // A connection just appeared - shouldTick() may now be true. armTick() alone would leave the
     // durable alarm on its old (possibly much-later) precise-deadline target, so also refresh it.
     await this.scheduleNextAlarm();
@@ -164,9 +180,12 @@ export class GameServer extends Server<Env> {
 
   async onMessage(connection: Connection, raw: WSMessage) {
     const message = parseMessage(raw);
-    const identity = connection.state as PlayerIdentity;
+    const identity = connection.state as ConnectionState;
     if (!message || !this.game || !identity?.userId) return;
     await this.ensureQuestionsLoaded();
+    if (identity.connectionRole === "spectator" && !canSpectatorSendMessage(message.type)) {
+      return this.sendMessage(connection, "error", { message: "Spectators cannot perform game actions." }, message.id);
+    }
     if (message.type === "game.subscribe" || message.type === "game.resync") return this.emit(connection, message.id);
     if (message.type === "system.clockPing") {
       const receivedAt = Date.now();
@@ -186,7 +205,9 @@ export class GameServer extends Server<Env> {
     let changed = false;
     if (message.type === "chat.send" || message.type === "game.chat") {
       const appended = this.addChat(identity, message.payload as any);
-      if (!identity.isBot && appended) chatDispatches = scheduleBotChatReply(this.game, appended, Date.now());
+      if (identity.connectionRole === "player" && !identity.isBot && appended) {
+        chatDispatches = scheduleBotChatReply(this.game, appended, Date.now());
+      }
       changed = Boolean(appended);
     }
     else if (message.type === "game.leave") {
@@ -200,6 +221,7 @@ export class GameServer extends Server<Env> {
       const deadline = engine?.nextDeadline(this.game) ?? null;
       if (engine && deadline && now >= deadline) {
         engine.handleDeadline(this.game, this.context(now));
+        this.sendMessage(connection, "game.ack", { accepted: false, reason: "deadline" }, message.id);
         changed = true;
       } else {
         const before = { ...(this.game.players.find((player) => player.userId === identity.userId)?.state ?? {}) };
@@ -207,8 +229,14 @@ export class GameServer extends Server<Env> {
         const nowCompensated = now - Math.min(MAX_COMPENSATION_MS, rttMs / 2);
         const result = engine?.handleAction(this.game, identity.userId, message, this.context(now, nowCompensated));
         if (result?.reply) this.sendMessage(connection, result.reply.type, result.reply.payload, message.id);
+        else this.sendMessage(connection, "game.ack", { accepted: Boolean(result?.changed) }, message.id);
         changed = Boolean(result?.changed);
-        if (changed) observeHumanAction(this.game, identity.userId, message, now, before);
+        if (changed) {
+          const counts = (this.game.privateState.participationByUserId ?? {}) as Record<string, number>;
+          counts[identity.userId] = (Number(counts[identity.userId]) || 0) + 1;
+          this.game.privateState.participationByUserId = counts;
+          observeHumanAction(this.game, identity.userId, message, now, before);
+        }
       }
     }
     if (!changed) return;
@@ -218,7 +246,21 @@ export class GameServer extends Server<Env> {
   }
 
   async onClose(connection: Connection) {
-    const identity = connection.state as PlayerIdentity;
+    const identity = connection.state as ConnectionState;
+    if (identity?.connectionRole === "spectator") {
+      const isStillSpectating = [...this.getConnections<ConnectionState>()].some((candidate) => (
+        candidate.state?.userId === identity.userId
+        && candidate.state?.connectionRole === "spectator"
+      ));
+      if (!isStillSpectating && this.game) {
+        this.game.chat = appendSystemChatMessage(this.game.chat as ChatMessage[], `${identity.displayName} stopped spectating.`);
+        await this.afterMutation(true);
+      } else {
+        await this.scheduleNextAlarm();
+        this.armTick();
+      }
+      return;
+    }
     const player = this.game?.players.find((entry) => entry.userId === identity?.userId);
     const stillConnected = [...this.getConnections<PlayerIdentity>()].some((candidate) => candidate.state?.userId === identity?.userId);
     if (!stillConnected && player && this.game?.status === "active") {
@@ -680,7 +722,7 @@ export class GameServer extends Server<Env> {
     this.scheduledAlarmAt = next;
   }
 
-  private addChat(identity: PlayerIdentity, payload: { text?: string; clientMessageId?: string }): ChatMessage | null {
+  private addChat(identity: ConnectionState, payload: { text?: string; clientMessageId?: string }): ChatMessage | null {
     if (!this.game) return null;
     const beforeUid = (this.game.chat.at(-1) as ChatMessage | undefined)?.uid;
     this.game.chat = appendChatMessage(this.game.chat as ChatMessage[], identity, payload);
@@ -730,14 +772,25 @@ export class GameServer extends Server<Env> {
     if (!this.env.BACKEND_API_BASE_URL) return;
     const response = await fetch(`${this.env.BACKEND_API_BASE_URL}/realtime/results`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...this.game.result, botPlayerIds: this.game.players.filter((player) => player.isBot).map((player) => player.userId) }),
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${this.env.REALTIME_ACTIVITY_SECRET ?? ""}` },
+      body: JSON.stringify({ ...this.game.result, participationByUserId: this.game.privateState.participationByUserId ?? {}, botPlayerIds: this.game.players.filter((player) => player.isBot).map((player) => player.userId) }),
     });
     if (!response.ok) return;
-    const saved = await response.json() as { eloDeltaByUserId?: Record<string, number> };
+    const saved = await response.json() as {
+      eloDeltaByUserId?: Record<string, number>;
+      rewardsByUserId?: Record<string, { xp: number; lumen: number }>;
+      questsByUserId?: Record<string, unknown>;
+    };
     const endedEvent = [...this.game.events].reverse().find((event) => event.type === "GAME_ENDED");
-    if (endedEvent && saved.eloDeltaByUserId) {
-      endedEvent.data = { ...endedEvent.data, eloDeltaByUserId: saved.eloDeltaByUserId };
+    if (endedEvent) {
+      // The rewards the backend actually granted ride along on the end event so
+      // the client can animate exactly what was awarded.
+      endedEvent.data = {
+        ...endedEvent.data,
+        ...(saved.eloDeltaByUserId ? { eloDeltaByUserId: saved.eloDeltaByUserId } : {}),
+        ...(saved.rewardsByUserId ? { rewardsByUserId: saved.rewardsByUserId } : {}),
+        ...(saved.questsByUserId ? { questsByUserId: saved.questsByUserId } : {}),
+      };
     }
     this.game.privateState.resultCommitted = true;
     await this.save();

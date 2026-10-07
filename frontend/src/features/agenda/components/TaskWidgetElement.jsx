@@ -55,7 +55,7 @@ const TaskWidgetElement = ({
                                 ...element.segment,
                                 rawText: '',
                                 displayText: '',
-                                value: { ...(element.segment?.value || {}), dueDate: '' },
+                                value: { dueDate: '' },
                             })
                             return
                         }

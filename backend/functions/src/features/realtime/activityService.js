@@ -16,6 +16,7 @@ const normalizeActivityUpdates = (payload) => {
         const userId = String(update?.userId ?? '').trim()
         const state = String(update?.activity?.state ?? '')
         const modeId = update?.activity?.modeId == null ? null : String(update.activity.modeId)
+        const roomId = update?.activity?.roomId == null ? null : String(update.activity.roomId).trim()
         const partyPlayerCount = update?.activity?.partyPlayerCount == null ? null : Number(update.activity.partyPlayerCount)
 
         if(!userId || userId.length > 256 || userIds.has(userId)) throw new Error('Each update must have a unique userId.')
@@ -23,10 +24,13 @@ const normalizeActivityUpdates = (payload) => {
         if((state === 'in_party' || state === 'in_game') && (!modeId || !MODE_ID_PATTERN.test(modeId))) {
             throw new Error('Party and game activity requires a valid modeId.')
         }
-        if(state === 'online' && (modeId != null || partyPlayerCount != null)) {
+        if(state === 'online' && (modeId != null || roomId != null || partyPlayerCount != null)) {
             throw new Error('Online activity cannot include metadata.')
         }
-        if(state === 'in_game' && partyPlayerCount != null) throw new Error('Game activity cannot include partyPlayerCount.')
+        if(state === 'in_game' && (!roomId || roomId.length > 256 || partyPlayerCount != null)) {
+            throw new Error('Game activity requires a valid roomId and cannot include partyPlayerCount.')
+        }
+        if(state === 'in_party' && roomId != null) throw new Error('Party activity cannot include roomId.')
         if(state === 'in_party' && (!Number.isInteger(partyPlayerCount) || partyPlayerCount < 1 || partyPlayerCount > 8)) {
             throw new Error('Party activity requires a partyPlayerCount between 1 and 8.')
         }
@@ -34,6 +38,7 @@ const normalizeActivityUpdates = (payload) => {
         userIds.add(userId)
         const activity = { state }
         if(modeId) activity.modeId = modeId
+        if(state === 'in_game') activity.roomId = roomId
         if(state === 'in_party') activity.partyPlayerCount = partyPlayerCount
         return { userId, activity }
     })

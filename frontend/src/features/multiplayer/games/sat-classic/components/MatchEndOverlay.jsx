@@ -91,7 +91,7 @@ const RankSection = ({ progression, winnerUserId, eloDelta }) => {
     </>
 }
 
-const QuestionReviewModal = ({ round }) => {
+const QuestionReviewModal = ({ round, perspectiveName = null }) => {
     const question = round.question
     const isSpr = String(question?.questionType ?? '').toLowerCase() === 'spr'
     const isEnglish = String(question?.module ?? '').toLowerCase() !== 'math'
@@ -113,7 +113,7 @@ const QuestionReviewModal = ({ round }) => {
                         {question?.body ? <HtmlContent html={question.body} /> : null}
                         <HtmlContent html={question?.prompt || 'Question content is unavailable.'} />
                         {isSpr ? <div className='grid gap-3 sm:grid-cols-2'>
-                            <Card className={`gap-1! ${submitted && !round.isCorrect ? 'border-red-500!' : ''}`}><p className='text-xs text-neutral1'>Your answer</p><p className='text-lg font-semibold'>{submitted || 'Unanswered'}</p></Card>
+                            <Card className={`gap-1! ${submitted && !round.isCorrect ? 'border-red-500!' : ''}`}><p className='text-xs text-neutral1'>{perspectiveName ? `${perspectiveName}'s answer` : 'Your answer'}</p><p className='text-lg font-semibold'>{submitted || 'Unanswered'}</p></Card>
                             <Card className='gap-1! border-green-500!'><p className='text-xs text-neutral1'>Correct answer</p><p className='text-lg font-semibold text-green-500'>{round.correctAnswer ?? '—'}</p></Card>
                         </div> : <div className='flex flex-col gap-3'>
                             {(question?.choices ?? []).map((choice) => {
@@ -128,12 +128,12 @@ const QuestionReviewModal = ({ round }) => {
     )
 }
 
-const MatchEndOverlay = ({ winnerUserId, userId, modeId, reasonLabel = null, localPlayer, opponent, matchDurationSeconds = 0, questionsAnswered = 0, rankedProgression = null, eloDelta = null, players = [], rounds = [] }) => {
+const MatchEndOverlay = ({ winnerUserId, userId, modeId, reasonLabel = null, localPlayer, opponent, matchDurationSeconds = 0, questionsAnswered = 0, rankedProgression = null, eloDelta = null, players = [], rounds = [], spectatorName = null }) => {
     const { openModal } = useModal()
     const isDraw = !winnerUserId
     const isMyWin = winnerUserId === userId
-    const title = isDraw ? 'Draw' : (isMyWin ? 'Victory' : 'Defeat')
-    const openReview = (round) => round.question && openModal({ content: <QuestionReviewModal round={round} />, maxWidthClass: 'max-w-6xl mx-4' })
+    const title = isDraw ? 'Draw' : (spectatorName ? `${spectatorName} ${isMyWin ? 'won' : 'lost'}` : (isMyWin ? 'Victory' : 'Defeat'))
+    const openReview = (round) => round.question && openModal({ content: <QuestionReviewModal round={round} perspectiveName={spectatorName} />, maxWidthClass: 'max-w-6xl mx-4' })
     return (
         <div className='w-full h-full min-h-[420px] flex flex-col items-center px-4 sm:px-6 py-10 overflow-y-auto'>
             <div className='text-center mb-4'>
@@ -141,7 +141,7 @@ const MatchEndOverlay = ({ winnerUserId, userId, modeId, reasonLabel = null, loc
                 {reasonLabel ? <p className='text-sm text-neutral1'>{reasonLabel}</p> : null}
             </div>
             <MatchResultStage localPlayer={localPlayer} opponent={opponent} winnerUserId={winnerUserId} modeId={modeId} />
-            <RankSection progression={rankedProgression} winnerUserId={winnerUserId} eloDelta={eloDelta} />
+            {!spectatorName ? <RankSection progression={rankedProgression} winnerUserId={winnerUserId} eloDelta={eloDelta} /> : null}
             <h2 className='text-2xl font-bold mt-9 mb-6 underline underline-offset-12 decoration-neutral2'>Match Overview</h2>
             <div className='w-full max-w-xl grid grid-cols-2 gap-4'>
                 <Card className='items-center gap-1! text-center'><p className='text-2xl font-semibold tabular-nums'>{formatDurationMmSs(Math.max(0, Number(matchDurationSeconds) || 0))}</p><p className='text-sm text-neutral1'>Match Duration</p></Card>
@@ -158,7 +158,7 @@ const MatchEndOverlay = ({ winnerUserId, userId, modeId, reasonLabel = null, loc
                     const status = round.isCorrect ? 'Correct' : (submitted ? 'Incorrect' : 'Unanswered')
                     const roundCard = <Card className={`w-full min-w-0 gap-1! items-center text-center ${isQuestion && round.question ? 'hover:bg-neutral5 transition-colors' : ''}`}>
                         <div className='flex items-center justify-center gap-2'><p className='text-sm font-semibold'>{round.title}</p>{isQuestion && round.question ? <FaChevronRight className='text-xs text-neutral1' /> : null}</div>
-                        {isQuestion ? <p className='text-xs text-neutral1'><span className={round.isCorrect ? 'text-green-500' : (submitted ? 'text-red-400' : '')}>{status}</span>{' · '}Your answer: {submitted || '—'}{' · '}Correct answer: {round.correctAnswer ?? '—'}{!round.question ? ' · Review unavailable' : ''}</p> : <p className='text-xs text-neutral1'>{round.summary}</p>}
+                        {isQuestion ? <p className='text-xs text-neutral1'><span className={round.isCorrect ? 'text-green-500' : (submitted ? 'text-red-400' : '')}>{status}</span>{' · '}{spectatorName ? `${spectatorName}'s answer` : 'Your answer'}: {submitted || '—'}{' · '}Correct answer: {round.correctAnswer ?? '—'}{!round.question ? ' · Review unavailable' : ''}</p> : <p className='text-xs text-neutral1'>{round.summary}</p>}
                     </Card>
                     return <div key={round.id} className='w-full flex items-center gap-2 sm:gap-4'>
                         <div className='w-12 sm:w-32 shrink-0 flex justify-end'><AvatarStack users={localWinners} maxVisible={4} sizeClassName='w-10 h-10' /></div>

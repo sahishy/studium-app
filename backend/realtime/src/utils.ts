@@ -98,26 +98,42 @@ export const requestRoom = <T extends Server<Env>>(
 export type PublicActivity =
   | { state: "online" }
   | { state: "in_party"; modeId: string; partyPlayerCount: number }
-  | { state: "in_game"; modeId: string };
+  | { state: "in_game"; modeId: string; roomId: string };
 
 let activitySecretWarningLogged = false;
 
 export const publishActivities = async (env: Env, updates: Array<{ userId: string; activity: PublicActivity }>) => {
-  if (!updates.length || !env.BACKEND_API_BASE_URL) return;
+  if (!updates.length) return true;
+  if (!env.BACKEND_API_BASE_URL) {
+    console.error("Unable to publish player activity: BACKEND_API_BASE_URL is not configured.", { count: updates.length });
+    return false;
+  }
   if (!env.REALTIME_ACTIVITY_SECRET) {
     if (!activitySecretWarningLogged) {
-      console.warn("Player activity is disabled: REALTIME_ACTIVITY_SECRET is not configured.");
+      console.error("Unable to publish player activity: REALTIME_ACTIVITY_SECRET is not configured.");
       activitySecretWarningLogged = true;
     }
-    return;
+    return false;
   }
-  const response = await fetch(`${env.BACKEND_API_BASE_URL}/realtime/activity`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${env.REALTIME_ACTIVITY_SECRET}`,
-    },
-    body: JSON.stringify({ updates }),
-  });
-  if (!response.ok) console.warn("Unable to publish player activity.", { status: response.status, count: updates.length });
+  try {
+    const response = await fetch(`${env.BACKEND_API_BASE_URL.replace(/\/$/, "")}/realtime/activity`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${env.REALTIME_ACTIVITY_SECRET}`,
+      },
+      body: JSON.stringify({ updates }),
+    });
+    if (response.ok) return true;
+
+    const detail = (await response.text()).slice(0, 500);
+    console.error("Unable to publish player activity.", { status: response.status, count: updates.length, detail });
+    return false;
+  } catch (error) {
+    console.error("Unable to publish player activity.", {
+      count: updates.length,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
 };

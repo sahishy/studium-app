@@ -29,6 +29,7 @@ export type GameResult = {
   winnerUserId: string | null;
   scoreByUserId?: Record<string, number>;
   roundsPlayed?: number;
+  participationByUserId?: Record<string, number>;
   endReason: string;
   startedAt: number;
   endedAt: number;
@@ -36,7 +37,15 @@ export type GameResult = {
   botPlayerIds?: string[];
 };
 
-export type ConnectionState = PlayerIdentity & { connectedAt: number; protocolVersion: number; rttMs?: number };
+export type ConnectionRole = "player" | "spectator";
+
+export type ConnectionState = PlayerIdentity & {
+  connectedAt: number;
+  protocolVersion: number;
+  rttMs?: number;
+  /** Assigned by the room server after it checks whether this user is a participant. */
+  connectionRole?: ConnectionRole;
+};
 
 declare global {
   interface Env {

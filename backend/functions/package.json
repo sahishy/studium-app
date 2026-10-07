@@ -4,7 +4,8 @@
 	"main": "src/index.js",
 	"type": "module",
 	"scripts": {
-		"test": "node --test src/features/realtime/activityService.test.js src/features/realtime/resultUtils.test.js"
+		"test": "node --test src/features/realtime/activityService.test.js src/features/realtime/resultUtils.test.js src/features/economy/progression.test.js src/features/economy/crateRolls.test.js src/features/resources/contentService.test.js src/features/quests/questService.test.js",
+		"test:emulator": "USE_FIREBASE_EMULATORS=true node --test src/features/economy/emulator.integration.test.js src/features/economy/crateRolls.emulator.test.js"
 	},
 	"dependencies": {
 		"cors": "^2.8.6",

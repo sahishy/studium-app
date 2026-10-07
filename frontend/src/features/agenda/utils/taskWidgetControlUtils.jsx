@@ -57,9 +57,18 @@ const buildDateWidgetSegment = ({ currentSegment, date, toLabel = (label) => lab
         widgetType: 'date',
         rawText: relativeLabel,
         displayText: relativeLabel,
-        value: { ...(currentSegment?.value || {}), dueDate: iso },
+        value: { dueDate: iso },
     }
 }
+
+const buildScheduleWidgetSegment = ({ currentSegment, dueDate, label }) => ({
+    id: currentSegment?.id || makeSegmentId(),
+    type: 'widget',
+    widgetType: 'date',
+    rawText: label || dueDate,
+    displayText: label || dueDate,
+    value: { dueDate },
+})
 
 const buildCircleOptions = (circles = [], { truncate = false } = {}) => {
     const truncateOption = (s) => (s.length <= 25 ? s : `${s.substring(0, 25)}...`)
@@ -130,6 +139,7 @@ export {
     removeWidget,
     getDateControlState,
     buildDateWidgetSegment,
+    buildScheduleWidgetSegment,
     buildCircleOptions,
     getCircleControlState,
     buildCircleWidgetSegment,

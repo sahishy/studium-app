@@ -1,9 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { triggerTaskCompletionEffects, useUserTasks } from '../services/taskService'
-import { enqueueTaskCreate, enqueueTaskDelete, enqueueTaskPatch } from '../services/taskCacheService'
+import { useCircleTasks, useUserTasks } from '../services/taskService'
+import { enqueueTaskCreate, enqueueTaskDelete, enqueueTaskPatch, flushPendingTaskPatches, waitForTaskPendingFlush } from '../services/taskCacheService'
 import { useCircles } from '../../socials/contexts/CirclesContext'
 import { MAX_USER_TASKS } from '../utils/taskUtils'
 import { extractTaskTitleMetadata } from '../utils/naturalLanguage'
+import { post } from '../../../shared/services/apiService'
+import { deriveTreeStatuses } from '../utils/taskViewUtils'
+import { useRewardFx } from '../../economy/RewardFxContext'
+import { useQuests } from '../../quests/QuestContext'
 
 const TasksContext = createContext({ user: [], circle: [] })
 
@@ -12,14 +16,16 @@ const TasksProvider = ({ profile, children }) => {
     const circleIds = useMemo(() => circles.map((c) => c.uid), [circles])
 
     const { tasks: allTasks, isReady: tasksReady } = useUserTasks(profile.uid)
+    const sharedTasks = useCircleTasks(circleIds)
+    const combinedTasks = useMemo(() => [...new Map([...allTasks, ...sharedTasks].map((task) => [task.uid, task])).values()], [allTasks, sharedTasks])
 
     const user = useMemo(
-        () => allTasks.filter((task) => !extractTaskTitleMetadata(task.title).circleId),
-        [allTasks]
+        () => combinedTasks.filter((task) => !(task.circleId || extractTaskTitleMetadata(task.title).circleId)),
+        [combinedTasks]
     )
     const circle = useMemo(
-        () => allTasks.filter((task) => circleIds.includes(extractTaskTitleMetadata(task.title).circleId)),
-        [allTasks, circleIds]
+        () => combinedTasks.filter((task) => circleIds.includes(task.circleId || extractTaskTitleMetadata(task.title).circleId)),
+        [combinedTasks, circleIds]
     )
 
     // creates are stored as full objects
@@ -27,6 +33,8 @@ const TasksProvider = ({ profile, children }) => {
     const [localTasks, setLocalTasks] = useState({})
     const pendingCreateIdsRef = useRef(new Set())
     const [locallyDeletedTaskIds, setLocallyDeletedTaskIds] = useState(() => new Set())
+    const { celebrateReward } = useRewardFx()
+    const { reportQuestProgress } = useQuests()
 
     const patchLocal = useCallback((taskId, patch) => {
         if (!taskId || !patch) return
@@ -70,21 +78,47 @@ const TasksProvider = ({ profile, children }) => {
     const commitTaskPatch = useCallback(async (taskId, patch) => {
 
         if (!taskId || !patch || !Object.keys(patch).length) return
-        patchLocal(taskId, patch)
-
-        if (patch.status === 'Completed') {
-            triggerTaskCompletionEffects(taskId).catch(() => {
-                //
-            })
+        const { status, ...otherFields } = patch
+        const currentTasks = [...user, ...circle]
+        const previousParentId = currentTasks.find((task) => task.uid === taskId)?.parentTaskId
+        if(Object.keys(otherFields).length) {
+            patchLocal(taskId, otherFields)
+            await enqueueTaskPatch(taskId, otherFields)
+            if(Object.hasOwn(otherFields, 'parentTaskId')) {
+                const rootsToReconcile = [...new Set([taskId, previousParentId].filter(Boolean))]
+                await Promise.all(rootsToReconcile.map(async (id) => {
+                    const result = await post(`/v1/tasks/${encodeURIComponent(id)}/reconcile`)
+                    Object.entries(result.statuses || {}).forEach(([nodeId, nextStatus]) => patchLocal(nodeId, { status: nextStatus }))
+                    if(result.deleted) setLocallyDeletedTaskIds((prev) => new Set([...prev, ...result.deletedIds]))
+                }))
+            }
         }
+        if(status === undefined) return
+
+        const derived = deriveTreeStatuses(currentTasks, new Map([[taskId, status]]))
+        patchLocal(taskId, { status })
+        currentTasks.filter((task) => task.uid !== taskId && derived.get(task.uid) !== task.status).forEach((task) => patchLocal(task.uid, { status: derived.get(task.uid) }))
 
         try {
-            await enqueueTaskPatch(taskId, patch)
-        } catch {
-            // keep local optimistic patch if write fails
+            await flushPendingTaskPatches()
+            await waitForTaskPendingFlush(taskId)
+            const result = await post(`/v1/tasks/${encodeURIComponent(taskId)}/status`, {
+                status,
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+            })
+            Object.entries(result.statuses || {}).forEach(([id, nextStatus]) => patchLocal(id, { status: nextStatus }))
+            if(result.deleted) setLocallyDeletedTaskIds((prev) => new Set([...prev, ...(result.deletedIds || [taskId])]))
+            if(result.changed && status === 'Completed') {
+                if(result.xp) celebrateReward({ xp: result.xp })
+                reportQuestProgress(result)
+            }
+            return result
+        } catch(error) {
+            currentTasks.forEach((task) => clearLocal(task.uid))
+            throw error
         }
 
-    }, [patchLocal, clearLocal])
+    }, [patchLocal, clearLocal, user, circle, celebrateReward, reportQuestProgress])
 
     const createTaskOptimistic = useCallback((draftTask = {}) => {
 
@@ -111,6 +145,14 @@ const TasksProvider = ({ profile, children }) => {
         })
 
         enqueueTaskCreate(taskId, draftTask)
+            .then(async () => {
+                if(!draftTask.parentTaskId) return
+                try {
+                    const result = await post(`/v1/tasks/${encodeURIComponent(draftTask.parentTaskId)}/reconcile`)
+                    Object.entries(result.statuses || {}).forEach(([id, status]) => patchLocal(id, { status }))
+                    if(result.deleted) setLocallyDeletedTaskIds((prev) => new Set([...prev, ...result.deletedIds]))
+                } catch(error) { console.error('Could not reconcile parent status', error) }
+            })
             .catch(() => {
                 pendingCreateIdsRef.current.delete(taskId)
                 clearLocal(taskId)
@@ -122,24 +164,36 @@ const TasksProvider = ({ profile, children }) => {
 
     const deleteTaskOptimistic = useCallback(async (taskId) => {
         if(!taskId) return
+        const tasks = [...user, ...circle]
+        const byParent = new Map()
+        tasks.forEach((task) => byParent.set(task.parentTaskId, [...(byParent.get(task.parentTaskId) || []), task.uid]))
+        const ids = []
+        const collect = (id) => { (byParent.get(id) || []).forEach(collect); ids.push(id) }
+        collect(taskId)
+        const parentId = tasks.find((task) => task.uid === taskId)?.parentTaskId
 
         setLocallyDeletedTaskIds((prev) => {
             const next = new Set(prev)
-            next.add(taskId)
+            ids.forEach((id) => next.add(id))
             return next
         })
 
         try {
-            await enqueueTaskDelete(taskId)
+            await Promise.all(ids.map((id) => enqueueTaskDelete(id)))
+            if(parentId) {
+                const result = await post(`/v1/tasks/${encodeURIComponent(parentId)}/reconcile`)
+                Object.entries(result.statuses || {}).forEach(([id, status]) => patchLocal(id, { status }))
+                if(result.deleted) setLocallyDeletedTaskIds((prev) => new Set([...prev, ...result.deletedIds]))
+            }
         } catch(error) {
             setLocallyDeletedTaskIds((prev) => {
                 const next = new Set(prev)
-                next.delete(taskId)
+                ids.forEach((id) => next.delete(id))
                 return next
             })
             throw error
         }
-    }, [])
+    }, [user, circle, patchLocal])
 
     useEffect(() => {
 
@@ -204,8 +258,8 @@ const TasksProvider = ({ profile, children }) => {
 
     return (
         <TasksContext.Provider value={{
-            user: mergedTasks.filter((t) => !extractTaskTitleMetadata(t.title).circleId),
-            circle: mergedTasks.filter((t) => circleIds.includes(extractTaskTitleMetadata(t.title).circleId)),
+            user: mergedTasks.filter((t) => !(t.circleId || extractTaskTitleMetadata(t.title).circleId)),
+            circle: mergedTasks.filter((t) => circleIds.includes(t.circleId || extractTaskTitleMetadata(t.title).circleId)),
             isReady: tasksReady,
             applyTaskPatch,
             commitTaskPatch,

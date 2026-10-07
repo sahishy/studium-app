@@ -17,7 +17,7 @@ import { buildMultiplayerUiState } from '../../utils/multiplayerUtils'
 import { getRankInfoFromElo } from '../../../profile/utils/statsUtils'
 import { getGameServerNow } from '../../services/realtimeSocketService'
 
-const SatClassicGame = ({ roomId, userId }) => {
+const SatClassicGame = ({ roomId, userId, readOnly = false, spectatorName = null }) => {
     const [room, setRoom] = useState(null)
     const [players, setPlayers] = useState([])
     const [events, setEvents] = useState([])
@@ -51,7 +51,7 @@ const SatClassicGame = ({ roomId, userId }) => {
         }
     }, [roomId])
 
-    const gameState = room?.state ?? {}
+    const gameState = useMemo(() => room?.state ?? {}, [room?.state])
 
     const { questionId: currentQuestionId, question: currentQuestion } = useMemo(
         () => getCurrentQuestion(gameState),
@@ -107,6 +107,7 @@ const SatClassicGame = ({ roomId, userId }) => {
     const isResultOverlayActive = resultOverlayRemainingMs > 0
 
     const isBusy = isGameLoading
+        || readOnly
         || hasAnswered
         || isLocked
         || Boolean(submittingChoiceId)
@@ -282,7 +283,7 @@ const SatClassicGame = ({ roomId, userId }) => {
         reviewQuestionsById: gameState?.reviewQuestionsById,
     }), [events, gameState?.reviewQuestionsById, opponent?.userId, userId])
     const questionsAnswered = useMemo(() => countAnsweredQuestions(roundHistory), [roundHistory])
-    const matchEndReasonLabel = matchEndReason === 'knockout'
+    const matchEndReasonLabel = readOnly ? null : matchEndReason === 'knockout'
         ? (winnerUserId === userId ? 'You bested your opponent.' : 'You lost all of your health.')
         : (matchEndReason === 'max_questions'
             ? 'Reached max questions'
@@ -335,20 +336,20 @@ const SatClassicGame = ({ roomId, userId }) => {
     }, [isResultOverlayActive, showMatchEndOverlay, isCalculatorOpen])
 
     const handleChoiceSelect = (choiceId) => {
-        if(!isBusy) {
+        if(!isBusy && !readOnly) {
             setSubmittedResponse(String(choiceId ?? ''))
         }
     }
 
     const handleResponseChange = (value) => {
-        if(!isBusy) {
+        if(!isBusy && !readOnly) {
             setSubmittedResponse(value)
         }
     }
 
     const handleSubmitAnswer = async () => {
         const trimmedResponse = String(submittedResponse ?? '').trim()
-        if(!roomId || !userId || !trimmedResponse || isBusy) return
+        if(!roomId || !userId || !trimmedResponse || isBusy || readOnly) return
 
         setLockedQuestionId(currentQuestionId)
         setSubmittingChoiceId(trimmedResponse)
@@ -378,6 +379,7 @@ const SatClassicGame = ({ roomId, userId }) => {
                 rankedProgression={room?.ranked ? rankedProgression : null}
                 players={players}
                 rounds={roundHistory}
+                spectatorName={readOnly ? (spectatorName || myPlayer?.displayName) : null}
             />
         )
     }
@@ -400,12 +402,13 @@ const SatClassicGame = ({ roomId, userId }) => {
                     submittedResponse={submittedResponse}
                     isSprQuestion={isSprQuestion}
                     isCalculatorOpen={isCalculatorOpen}
-                    onToggleCalculator={() => setIsCalculatorOpen((previous) => !previous)}
+                    onToggleCalculator={() => !readOnly && setIsCalculatorOpen((previous) => !previous)}
                     isBusy={isBusy}
                     hasAnswered={hasAnswered}
                     onChoiceSelect={handleChoiceSelect}
                     onResponseChange={handleResponseChange}
                     onSubmit={() => void handleSubmitAnswer()}
+                    readOnly={readOnly}
                 />
 
                 <ResultOverlay
@@ -422,7 +425,7 @@ const SatClassicGame = ({ roomId, userId }) => {
             </div>
 
             <CalculatorWindow
-                isOpen={isCalculatorOpen}
+                isOpen={!readOnly && isCalculatorOpen}
                 onClose={() => setIsCalculatorOpen(false)}
             />
 

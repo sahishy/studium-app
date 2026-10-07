@@ -340,6 +340,8 @@ const flushTaskOpsOnPageLifecycle = () => {
     }
 }
 
+const waitForTaskPendingFlush = (taskId) => pendingTaskFlushPromises.get(taskId)?.promise || Promise.resolve()
+
 export {
     enqueueTaskCreate,
     enqueueTaskPatch,
@@ -347,4 +349,5 @@ export {
     flushPendingTaskPatches,
     initializeTaskPendingOpsFlush,
     flushTaskOpsOnPageLifecycle,
+    waitForTaskPendingFlush,
 }

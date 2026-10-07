@@ -109,9 +109,7 @@ function makeWidgetSegment(match) {
 		return {
 			...base,
 			widgetType: "date",
-			value: {
-				dueDate: match?.data?.date || "",
-			},
+			value: { dueDate: match?.data?.date || "" },
 		};
 	}
 

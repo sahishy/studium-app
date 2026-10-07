@@ -9,6 +9,7 @@ const sanitizeRealtimeResult = (result = {}) => {
     const humanScoreByUserId = result.scoreByUserId
         ? Object.fromEntries(humanPlayerIds.map((userId) => [userId, Number(result.scoreByUserId?.[userId]) || 0]))
         : undefined
+    const humanParticipationByUserId = Object.fromEntries(humanPlayerIds.map((userId) => [userId, Math.max(0, Number(result.participationByUserId?.[userId]) || 0)]))
     const safeResult = { ...result }
     delete safeResult.botPlayerIds
     return {
@@ -19,6 +20,7 @@ const sanitizeRealtimeResult = (result = {}) => {
             playerIds: humanPlayerIds,
             winnerUserId: humanPlayerIds.includes(result.winnerUserId) ? result.winnerUserId : null,
             ...(humanScoreByUserId ? { scoreByUserId: humanScoreByUserId } : {}),
+            participationByUserId: humanParticipationByUserId,
             outcomeByUserId,
         },
     }

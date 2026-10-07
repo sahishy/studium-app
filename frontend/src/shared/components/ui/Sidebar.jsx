@@ -1,19 +1,21 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { FaArrowRight, FaBookOpen, FaBoxArchive, FaChild, FaChevronDown, FaGraduationCap, FaTrophy, FaUserGroup, FaHouse } from 'react-icons/fa6'
+import { FaArrowRight, FaBookOpen, FaBoxArchive, FaArrowTrendUp, FaChevronDown, FaChild, FaGraduationCap, FaTrophy, FaUserGroup, FaHouse } from 'react-icons/fa6'
 import { RiSwordFill } from 'react-icons/ri';
 import AvatarPicture from '../avatar/AvatarPicture.jsx';
 import { useMultiplayer } from '../../../features/multiplayer/contexts/MultiplayerContext.jsx'
 import { useFriends } from '../../../features/socials/contexts/FriendsContext.jsx'
 import { useUserStats } from '../../../features/profile/contexts/UserStatsContext.jsx'
+import { useEconomy } from '../../../features/economy/EconomyContext.jsx'
 import { getCombinedRankedElo } from '../../../features/multiplayer/utils/multiplayerUtils.jsx'
 import Logo from '../misc/Logo.jsx';
 
 const PLAY_ITEMS = [
     { title: 'Lobby', path: '/play', icon: <FaHouse /> },
-    { title: 'Leaderboards', path: '/leaderboards', icon: <FaTrophy /> },
+    { title: 'Progress', path: '/progress', icon: <FaArrowTrendUp /> },
+    { title: 'Locker', path: '/locker', icon: <FaChild /> },
     { title: 'Socials', path: '/socials', icon: <FaUserGroup /> },
-    { title: 'Avatar', path: '/avatar', icon: <FaChild /> },
+    { title: 'Leaderboards', path: '/leaderboards', icon: <FaTrophy /> },
 ]
 
 const STUDY_ITEMS = [
@@ -31,7 +33,7 @@ const getStoredGroupState = (key, defaultValue) => {
     }
 }
 
-const Sidebar = ({ profile }) => {
+const Sidebar = ({ profile, mobile = false, onNavigate }) => {
 
     const navigate = useNavigate();
     const location = useLocation()
@@ -39,7 +41,15 @@ const Sidebar = ({ profile }) => {
     const { incomingRequests } = useFriends()
     const { session } = useMultiplayer()
     const { userStats } = useUserStats()
+    const { snapshot: economy } = useEconomy()
     const inRoom = session?.status === 'in_room' && Boolean(session?.currentRoomId)
+
+    // Paths that should show a dot in the sidebar, each owned by whatever
+    // actually needs the student's attention.
+    const notifications = useMemo(() => ({
+        '/socials': incomingRequests.length > 0,
+        '/progress': (economy?.claimable?.length ?? 0) > 0,
+    }), [economy?.claimable?.length, incomingRequests.length])
 
     const displayName = profile?.profile?.displayName || ''
     const combinedRankedElo = getCombinedRankedElo(userStats)
@@ -59,14 +69,14 @@ const Sidebar = ({ profile }) => {
     }
 
     return (
-        <aside className={`bg-neutral5 p-4 flex flex-col justify-between shrink-0 w-56 border-r border-neutral4`}>
+        <aside className={`bg-neutral5 p-4 ${mobile ? 'flex h-full' : 'hidden lg:flex'} flex-col justify-between shrink-0 w-56 border-r border-neutral4`}>
 
             <div className='flex flex-col gap-6'>
 
                 <Logo className={'p-2'} large />
 
                 <div className='py-6 flex flex-col gap-3 items-center'>
-                    <button onClick={() => navigate(`/profile/${encodeURIComponent(profile?.profile?.displayName ?? '')}`)}>
+                    <button onClick={() => { navigate(`/profile/${encodeURIComponent(profile?.profile?.displayName ?? '')}`); onNavigate?.() }}>
                         <AvatarPicture profile={profile} className='relative w-16 h-16 group/avatar cursor-pointer'>
                             <div className={`absolute -bottom-1 -right-1 bg-neutral3/60 backdrop-blur-xs rounded-full p-2
                                 opacity-0 group-hover/avatar:opacity-100 transition
@@ -92,7 +102,8 @@ const Sidebar = ({ profile }) => {
                         items={PLAY_ITEMS}
                         location={location}
                         disabled={inRoom}
-                        incomingRequests={incomingRequests}
+                        notifications={notifications}
+                        onNavigate={onNavigate}
                     />
                     <SidebarGroup
                         title='Study'
@@ -101,7 +112,8 @@ const Sidebar = ({ profile }) => {
                         items={STUDY_ITEMS}
                         location={location}
                         disabled={inRoom}
-                        incomingRequests={incomingRequests}
+                        notifications={notifications}
+                        onNavigate={onNavigate}
                     />
                 </div>
 
@@ -112,14 +124,14 @@ const Sidebar = ({ profile }) => {
                 <div className={`flex justify-center gap-6 mb-6 text-xs ${inRoom && 'opacity-40'}`}>
                     <Link
                         to={`/profile/${encodeURIComponent(profile?.profile?.displayName ?? '')}`}
-                        onClick={inRoom ? (event) => event.preventDefault() : undefined}
+                        onClick={inRoom ? (event) => event.preventDefault() : onNavigate}
                         className={`transition text-neutral1 ${inRoom ? 'cursor-not-allowed' : 'hover:text-neutral0'}`}
                     >
                         Profile
                     </Link>
                     <Link
                         to='/settings'
-                        onClick={inRoom ? (event) => event.preventDefault() : undefined}
+                        onClick={inRoom ? (event) => event.preventDefault() : onNavigate}
                         className={`transition text-neutral1 ${inRoom ? 'cursor-not-allowed' : 'hover:text-neutral0'}`}
                     >
                         Settings
@@ -133,7 +145,7 @@ const Sidebar = ({ profile }) => {
     )
 }
 
-const SidebarGroup = ({ title, expanded, onToggle, items, location, disabled, incomingRequests }) => {
+const SidebarGroup = ({ title, expanded, onToggle, items, location, disabled, notifications, onNavigate }) => {
     return (
         <div className='flex flex-col'>
             <button
@@ -155,14 +167,15 @@ const SidebarGroup = ({ title, expanded, onToggle, items, location, disabled, in
                     item={item}
                     isActive={location.pathname.startsWith(item.path)}
                     disabled={disabled}
-                    showNotification={item.path === '/socials' && incomingRequests.length > 0}
+                    showNotification={Boolean(notifications?.[item.path])}
+                    onNavigate={onNavigate}
                 />
             ))}
         </div>
     )
 }
 
-const SidebarNavLink = ({ item, isActive, disabled = false, showNotification = false }) => {
+const SidebarNavLink = ({ item, isActive, disabled = false, showNotification = false, onNavigate }) => {
 
     if (disabled) {
         return (
@@ -181,6 +194,7 @@ const SidebarNavLink = ({ item, isActive, disabled = false, showNotification = f
         <NavLink
             key={item.title}
             to={item.path}
+            onClick={onNavigate}
             end
             className={
                 `flex items-center px-3 py-2 gap-2 rounded-xl transition-all group

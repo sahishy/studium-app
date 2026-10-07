@@ -9,13 +9,14 @@ export type ChatMessage = {
   text: string;
   createdAt: number;
   system?: boolean;
+  senderRole?: "player" | "spectator";
 };
 
 export const sanitizeChatText = (value: unknown) => String(value ?? "").trim().slice(0, 300);
 
 export const appendChatMessage = (
   messages: ChatMessage[],
-  identity: PlayerIdentity,
+  identity: PlayerIdentity & { connectionRole?: "player" | "spectator" },
   payload: { text?: string; clientMessageId?: string },
 ) => {
   const text = sanitizeChatText(payload?.text);
@@ -28,6 +29,7 @@ export const appendChatMessage = (
     senderName: identity.displayName,
     text,
     createdAt: Date.now(),
+    ...(identity.connectionRole === "spectator" ? { senderRole: "spectator" as const } : {}),
   }].slice(-100);
 };
 

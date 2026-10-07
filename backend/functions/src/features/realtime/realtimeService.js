@@ -3,6 +3,9 @@ import { getRandomQuestions } from '../games/questionsService.js'
 import { getRankedEloDelta } from '../games/satClassicUtils.js'
 import { computeTotalElo } from '../leaderboards/leaderboardService.js'
 import { sanitizeRealtimeResult } from './resultUtils.js'
+import { eligibleMatchReward } from '../economy/progression.js'
+import { readAccount, writeAccount } from '../economy/economyService.js'
+import { applyQuestProgress, questDayRef, resolveDayKey } from '../quests/questService.js'
 
 const verifyRealtimeUser = async (idToken) => {
     const decoded = await auth.verifyIdToken(idToken)
@@ -44,11 +47,17 @@ const saveRealtimeResult = async (result = {}) => {
             ok: true,
             duplicate: true,
             eloDeltaByUserId: existing.data()?.eloDeltaByUserId ?? {},
+            rewardsByUserId: existing.data()?.rewardsByUserId ?? {},
         }
 
         const statsRefs = humanPlayerIds.map((userId) => db.collection('userStats').doc(userId))
         const statsSnaps = await Promise.all(statsRefs.map((ref) => transaction.get(ref)))
+        const accounts = await Promise.all(humanPlayerIds.map((userId) => readAccount(transaction, userId)))
+        const questDayKeys = accounts.map((account) => resolveDayKey(account))
+        const questSnaps = await Promise.all(humanPlayerIds.map((userId, index) => transaction.get(questDayRef(userId, questDayKeys[index]))))
         const eloDeltaByUserId = {}
+        const rewardsByUserId = {}
+        const questsByUserId = {}
 
         humanPlayerIds.forEach((userId, index) => {
             const statsData = statsSnaps[index].exists ? statsSnaps[index].data() : {}
@@ -92,14 +101,42 @@ const saveRealtimeResult = async (result = {}) => {
                 if(result.ranked) updatePayload.totalElo = computeTotalElo(nextPlay)
                 transaction.set(statsRefs[index], updatePayload, { merge: true })
             }
+            const reward = eligibleMatchReward(result, userId)
+            rewardsByUserId[userId] = reward
+
+            // Only a reward-eligible match counts toward play quests, so a forfeit
+            // or a match nobody engaged with cannot farm them.
+            const questResult = reward.xp
+                ? applyQuestProgress(transaction, {
+                    userId,
+                    dayKey: questDayKeys[index],
+                    daySnap: questSnaps[index],
+                    events: [
+                        { metric: 'match_played', amount: 1 },
+                        { metric: `mode:${modeId}`, amount: 1 },
+                        ...(result.winnerUserId === userId ? [{ metric: 'match_won', amount: 1 }] : []),
+                    ],
+                })
+                : { reward: { xp: 0, lumen: 0 }, completed: [], quests: [] }
+            questsByUserId[userId] = { quests: questResult.quests, completed: questResult.completed, reward: questResult.reward }
+
+            writeAccount(transaction, accounts[index], {
+                xp: reward.xp + questResult.reward.xp,
+                lumen: reward.lumen + questResult.reward.lumen,
+                counter: reward.xp ? 'rankedMatches' : null,
+            })
+            transaction.create(db.collection('rewardEvents').doc(`match_${gameId}_${userId}`), {
+                type: 'ranked_match', gameId, userId, ...reward, createdAt: new Date(),
+            })
         })
 
         transaction.create(resultRef, {
             ...persistedResult,
             eloDeltaByUserId,
+            rewardsByUserId,
             createdAt: new Date(),
         })
-        return { ok: true, duplicate: false, eloDeltaByUserId }
+        return { ok: true, duplicate: false, eloDeltaByUserId, rewardsByUserId, questsByUserId }
     })
 }
 

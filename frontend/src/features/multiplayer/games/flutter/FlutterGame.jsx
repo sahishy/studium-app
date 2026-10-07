@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getGameServerNow, sendGameMessage, subscribeToGameReconnect, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
+import { getGameServerNow, recordGameVisualCorrection, sendGameMessage, subscribeToGameReconnect, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
 import QuestionPane from '../sat-classic/components/QuestionPane'
 import MatchEndOverlay from '../sat-classic/components/MatchEndOverlay'
 import { buildMatchEndRounds, countAnsweredQuestions } from '../sat-classic/utils/matchEndUtils'
@@ -214,7 +214,7 @@ const LegacyFlutterMatchEnd = ({ snapshot, userId, startedAt }) => {
     )
 }
 
-const FlutterMatchEnd = ({ snapshot, userId, startedAt }) => {
+const FlutterMatchEnd = ({ snapshot, userId, startedAt, spectatorName = null }) => {
     const { userStats } = useUserStats()
     const state = snapshot?.room?.state ?? {}
     const players = snapshot?.players ?? EMPTY_PLAYERS
@@ -224,7 +224,7 @@ const FlutterMatchEnd = ({ snapshot, userId, startedAt }) => {
     const isWin = winnerUserId === userId
     const endedEvent = [...(snapshot?.events ?? [])].reverse().find((event) => event.type === 'GAME_ENDED')
     const endReason = endedEvent?.data?.endReason ?? null
-    const reasonLabel = endReason === 'player_left'
+    const reasonLabel = spectatorName ? null : endReason === 'player_left'
         ? (isWin ? 'Your opponent left the match.' : 'You left the match.')
         : (!winnerUserId ? 'The Flutter match ended in a draw.' : (isWin ? 'You won the Flutter match.' : 'Your opponent won the Flutter match.'))
     const rounds = buildMatchEndRounds({
@@ -248,6 +248,7 @@ const FlutterMatchEnd = ({ snapshot, userId, startedAt }) => {
         eloDelta={Number(endedEvent?.data?.eloDeltaByUserId?.[userId]) || 0}
         players={players}
         rounds={rounds}
+        spectatorName={spectatorName}
     />
 }
 
@@ -260,7 +261,7 @@ const keyDirection = (key) => {
     return null
 }
 
-const FlutterGame = ({ roomId, userId }) => {
+const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null }) => {
     const [snapshot, setSnapshot] = useState(null)
     const [response, setResponse] = useState('')
     const [calculatorOpen, setCalculatorOpen] = useState(false)
@@ -282,6 +283,7 @@ const FlutterGame = ({ roomId, userId }) => {
     const { screenShakeRef, shake } = useScreenShake()
     const { showToast } = useToast()
     const serverNow = useCallback(() => getGameServerNow(roomId), [roomId])
+    const onVisualCorrection = useCallback((distance) => recordGameVisualCorrection(roomId, distance), [roomId])
 
     useEffect(() => subscribeToGameSnapshot(roomId, setSnapshot), [roomId])
 
@@ -380,7 +382,7 @@ const FlutterGame = ({ roomId, userId }) => {
     }, [localPlayer?.state?.flutterInputSequence])
 
     useEffect(() => {
-        if(phase !== 'flutter_active') {
+        if(phase !== 'flutter_active' || readOnly) {
             inputRef.current = EMPTY_INPUT
             // The engine resets every player's flight state at each round boundary, so nothing
             // queued against the previous round may be replayed into the next one.
@@ -419,11 +421,11 @@ const FlutterGame = ({ roomId, userId }) => {
             window.removeEventListener('blur', onBlur)
             document.removeEventListener('visibilitychange', onVisibilityChange)
         }
-    }, [phase, sendInput])
+    }, [phase, readOnly, sendInput])
 
     useEffect(() => subscribeToGameReconnect(roomId, () => {
-        if(phase === 'flutter_active') sendInput(inputRef.current)
-    }), [phase, roomId, sendInput])
+        if(!readOnly && phase === 'flutter_active') sendInput(inputRef.current)
+    }), [phase, readOnly, roomId, sendInput])
 
     const isResult = phase === 'flutter_result' || phase === 'match_result'
     const resultWinnerUserId = phase === 'match_result' ? state?.matchResultWinnerUserId : state?.lastFlutterResult?.winnerUserId
@@ -434,7 +436,7 @@ const FlutterGame = ({ roomId, userId }) => {
         : EMPTY_FALLING_USER_IDS), [isResult, players, resultWinnerUserId])
 
     if(!state || !localPlayer || !opponent) return <LoadingState className='min-h-[420px]' />
-    if(phase === 'finished' || snapshot?.room?.status === 'finished') return <FlutterMatchEnd snapshot={snapshot} userId={userId} startedAt={state.startedAt} />
+    if(phase === 'finished' || snapshot?.room?.status === 'finished') return <FlutterMatchEnd snapshot={snapshot} userId={userId} startedAt={state.startedAt} spectatorName={readOnly ? (spectatorName || localPlayer.displayName) : null} />
 
     return (
         <div ref={screenShakeRef} className={`w-full h-full min-h-[420px] flex flex-col will-change-transform ${phase === 'question_active' ? 'gap-12' : 'gap-4'}`}>
@@ -448,16 +450,17 @@ const FlutterGame = ({ roomId, userId }) => {
                         submittedResponse={isQuestionRevealActive ? questionReveal.submittedResponse : response}
                         isSprQuestion={String((isQuestionRevealActive ? questionReveal.question : currentQuestion)?.questionType).toLowerCase() === 'spr'}
                         isCalculatorOpen={calculatorOpen}
-                        onToggleCalculator={() => setCalculatorOpen((value) => !value)}
-                        isBusy={isQuestionRevealActive || !currentQuestion || hasAnswered || questionCountdown > 0}
+                        onToggleCalculator={() => !readOnly && setCalculatorOpen((value) => !value)}
+                        isBusy={readOnly || isQuestionRevealActive || !currentQuestion || hasAnswered || questionCountdown > 0}
                         hasAnswered={isQuestionRevealActive || hasAnswered}
                         onChoiceSelect={(value) => setResponse(String(value))}
                         onResponseChange={setResponse}
                         onSubmit={() => {
                             const submittedResponse = response.trim()
-                            if(submittedResponse && !hasAnswered && questionCountdown <= 0) sendGameMessage(roomId, 'game.answer', { submittedResponse })
+                            if(!readOnly && submittedResponse && !hasAnswered && questionCountdown <= 0) sendGameMessage(roomId, 'game.answer', { submittedResponse })
                         }}
                         answerReveal={isQuestionRevealActive ? { correctAnswer: questionReveal.correctAnswer, isCorrect: questionReveal.isCorrect, responses: questionReveal.answerResponses } : null}
+                        readOnly={readOnly}
                     />
                     {questionCountdown > 0 && !isQuestionRevealActive ? <TransitionOverlay remainingMs={questionCountdownRemainingMs} countdown={questionCountdown} title='Get ready...' /> : null}
                 </div>
@@ -473,25 +476,26 @@ const FlutterGame = ({ roomId, userId }) => {
                         slowdownStartedAt={isResult ? state.flutterRoundResolvedAt : null}
                         animationKey={`${state.flutterRoundIndex}-${state.flutterAttempt}`}
                         serverNow={serverNow}
+                        onVisualCorrection={onVisualCorrection}
                     />
                     {phase === 'flutter_countdown' ? (
                         <TransitionOverlay
                             remainingMs={countdownRemainingMs}
                             countdown={countdown}
-                            title={state.advantageOwnerUserId ? `${state.advantageOwnerUserId === userId ? 'You have' : `${opponent.displayName} has`} a one-use shield` : 'Get ready...'}
+                            title={state.advantageOwnerUserId ? `${state.advantageOwnerUserId === userId ? `${readOnly ? localPlayer.displayName : 'You'} ${readOnly ? 'has' : 'have'}` : `${opponent.displayName} has`} a one-use shield` : 'Get ready...'}
                         />
                     ) : null}
                 </Card>
             )}
 
-            {phase === 'flutter_active' || isResult ? (
+            {!readOnly && (phase === 'flutter_active' || isResult) ? (
                 <div className='flex items-center justify-center gap-2 text-sm text-neutral1'>
                     {['W', 'A', 'S', 'D'].map((key) => <kbd key={key} className='min-w-8 rounded-lg bg-neutral5 px-2 py-1 text-center font-semibold text-neutral1'>{key}</kbd>)}
                     <span className='mx-1'>or</span>
                     {['↑', '←', '↓', '→'].map((key) => <kbd key={key} className='min-w-8 rounded-lg bg-neutral5 px-2 py-1 text-center font-semibold text-neutral1'>{key}</kbd>)}
                 </div>
             ) : null}
-            <CalculatorWindow isOpen={calculatorOpen && phase === 'question_active'} onClose={() => setCalculatorOpen(false)} />
+            <CalculatorWindow isOpen={!readOnly && calculatorOpen && phase === 'question_active'} onClose={() => setCalculatorOpen(false)} />
         </div>
     )
 }

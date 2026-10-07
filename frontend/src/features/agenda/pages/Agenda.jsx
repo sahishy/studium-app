@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useOutletContext, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
 import { FaCalendar, FaList, FaTh } from 'react-icons/fa'
@@ -10,6 +10,8 @@ import { FaBookOpen, FaCircleExclamation } from 'react-icons/fa6'
 import { MAX_USER_TASKS } from '../utils/taskUtils'
 import { flushTaskOpsOnPageLifecycle, initializeTaskPendingOpsFlush } from '../services/taskCacheService'
 import PageHeader from '../../../shared/components/ui/PageHeader'
+import { resolveAgendaPreferences } from '../utils/agendaPreferences'
+import { updateAgendaPreferences } from '../services/taskService'
 
 const Agenda = () => {
 
@@ -19,6 +21,14 @@ const Agenda = () => {
     const location = useLocation()
     const navigate = useNavigate()
     const scrollRef = useRef(null)
+    const [agendaPreferences, setAgendaPreferences] = useState(() => resolveAgendaPreferences(profile))
+
+    useEffect(() => setAgendaPreferences(resolveAgendaPreferences(profile)), [profile])
+
+    const saveAgendaPreferences = async (nextPreferences) => {
+        await updateAgendaPreferences(profile.uid, nextPreferences)
+        setAgendaPreferences(nextPreferences)
+    }
 
     const tabs = [
         { name: 'list', label: 'List', icon: <FaList /> },
@@ -57,11 +67,13 @@ const Agenda = () => {
         localStorage.setItem('agenda:lastTab', tab)
     }
 
+    const isCalendar = location.pathname.includes('/calendar')
+
     return (
 
-        <div ref={scrollRef} className="flex flex-col h-full overflow-scroll">
+        <div ref={scrollRef} className={`flex h-full min-h-0 flex-col ${isCalendar ? 'overflow-hidden' : 'overflow-y-auto'}`}>
             <Topbar profile={profile} />
-            <div className='w-full flex flex-col items-start gap-4 px-24 pb-8 pt-2 mx-auto'>
+            <div className={`w-full min-h-0 flex-1 flex flex-col items-start gap-4 px-4 sm:px-8 lg:px-16 xl:px-24 pt-2 mx-auto ${isCalendar ? 'pb-4' : 'pb-8'}`}>
 
                 <div className='flex justify-between items-start w-full'>
 
@@ -83,7 +95,7 @@ const Agenda = () => {
 
                 {!tasksReady
                     ? <LoadingState />
-                    : <Outlet context={{ profile, scrollRef }} />}
+                    : isCalendar ? <div className='min-h-0 w-full flex-1'><Outlet context={{ profile, scrollRef, agendaPreferences, saveAgendaPreferences }} /></div> : <Outlet context={{ profile, scrollRef, agendaPreferences, saveAgendaPreferences }} />}
 
 
             </div>

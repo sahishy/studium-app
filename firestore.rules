@@ -1,8 +1,91 @@
-rules_version = '2'
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    function signedIn() { return request.auth != null; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    function circleMember(circleId) {
+      return signedIn() && exists(/databases/$(database)/documents/circles/$(circleId)/members/$(request.auth.uid));
     }
+    function validTaskParent(taskId, data) {
+      let parentId = data.get('parentTaskId', null);
+      return parentId == null || (parentId != taskId
+        && exists(/databases/$(database)/documents/tasks/$(parentId))
+        && get(/databases/$(database)/documents/tasks/$(parentId)).data.get('circleId', null) == data.get('circleId', null)
+        && (data.get('circleId', null) != null
+          || get(/databases/$(database)/documents/tasks/$(parentId)).data.userId == data.userId));
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create: if isSelf(uid) && request.resource.data.progress.level == 1 && request.resource.data.progress.xp == 0;
+      allow update: if isSelf(uid)
+        && request.resource.data.progress == resource.data.progress
+        && request.resource.data.get('badges', []) == resource.data.get('badges', [])
+        && request.resource.data.profile.avatar == resource.data.profile.avatar;
+      allow delete: if false;
+      match /friends/{friendId} {
+        allow read: if signedIn();
+        allow write: if isSelf(uid);
+      }
+    }
+
+    match /userStats/{uid} {
+      allow read: if signedIn();
+      allow create: if isSelf(uid) && request.resource.data.play == {} && request.resource.data.get('totalElo', 0) == 0;
+      allow update: if isSelf(uid)
+        && request.resource.data.play == resource.data.play
+        && request.resource.data.get('totalElo', 0) == resource.data.get('totalElo', 0);
+      allow delete: if false;
+    }
+
+    match /tasks/{taskId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid
+        && request.resource.data.alreadyCompleted == false
+        && request.resource.data.status == 'Incomplete'
+        && (request.resource.data.get('circleId', null) == null || circleMember(request.resource.data.circleId))
+        && validTaskParent(taskId, request.resource.data);
+      allow update: if signedIn() && (resource.data.userId == request.auth.uid || (resource.data.get('circleId', null) != null && circleMember(resource.data.circleId)))
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.alreadyCompleted == resource.data.alreadyCompleted
+        && request.resource.data.userId == resource.data.userId
+        && (request.resource.data.get('circleId', null) == null || circleMember(request.resource.data.circleId))
+        && validTaskParent(taskId, request.resource.data);
+      allow delete: if signedIn() && (resource.data.userId == request.auth.uid || (resource.data.get('circleId', null) != null && circleMember(resource.data.circleId)));
+    }
+
+    match /circles/{circleId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.createdByUserId == request.auth.uid
+        && request.resource.data.xp == 0 && request.resource.data.level == 1;
+      allow update: if circleMember(circleId)
+        && request.resource.data.xp == resource.data.xp
+        && request.resource.data.level == resource.data.level;
+      allow delete: if signedIn() && resource.data.createdByUserId == request.auth.uid;
+      match /members/{uid} {
+        allow read: if signedIn();
+        allow create: if isSelf(uid);
+        allow update, delete: if isSelf(uid) || (signedIn() && get(/databases/$(database)/documents/circles/$(circleId)).data.createdByUserId == request.auth.uid);
+      }
+    }
+
+    match /courses/{id} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && request.resource.data.studentId == request.auth.uid;
+      allow delete: if signedIn() && resource.data.studentId == request.auth.uid;
+    }
+    match /courseReviews/{id} { allow read: if signedIn(); allow write: if signedIn(); }
+    match /schoolTeachers/{id} { allow read: if signedIn(); allow write: if signedIn(); }
+    match /friendRequests/{id} { allow read, write: if signedIn(); }
+    match /config/{id} { allow read: if signedIn(); allow write: if false; }
+
+    // Rewards and publications are written through authenticated Functions.
+    match /wallets/{id} { allow read, write: if false; }
+    match /economyOps/{id} { allow read, write: if false; }
+    match /rewardEvents/{id} { allow read, write: if false; }
+    match /taskRewardDays/{id} { allow read, write: if false; }
+    match /gameResults/{id} { allow read, write: if false; }
+    match /resources/{id} { allow read, write: if false; match /{sub=**} { allow read, write: if false; } }
+    match /collegePosts/{id} { allow read, write: if false; match /{sub=**} { allow read, write: if false; } }
   }
 }

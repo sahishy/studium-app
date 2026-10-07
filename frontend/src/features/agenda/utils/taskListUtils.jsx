@@ -1,6 +1,7 @@
 import { extractTaskTitleMetadata, normalizeTaskTitle } from './naturalLanguage'
 import { formatRelativeTaskDate } from '../../../shared/utils/formatters'
 import { isTitleMostlyLowercase } from './taskParsingSlateUtils'
+import { deriveTreeStatuses } from './taskViewUtils'
 
 const LIST_GROUP_OPTIONS = [
     { id: 'none', label: 'None' },
@@ -204,28 +205,7 @@ const buildDepthMap = (tasks = []) => {
 
 // parent task completion based on children tasks, recursive
 const deriveStatusByTaskId = (tasks = [], overrides = new Map()) => {
-
-    const byId = new Map(tasks.map((t) => [t.uid, t]))
-    const childrenByParent = new Map()
-
-    tasks.forEach((task) => {
-        const parentId = task.parentTaskId ?? null
-        if (!parentId) return
-        if (!childrenByParent.has(parentId)) childrenByParent.set(parentId, [])
-        childrenByParent.get(parentId).push(task.uid)
-    })
-
-    const resolveStatus = (taskId) => {
-        const children = childrenByParent.get(taskId) || []
-        if (children.length === 0) {
-            if (overrides.has(taskId)) return overrides.get(taskId)
-            return byId.get(taskId)?.status === 'Completed' ? 'Completed' : 'Incomplete'
-        }
-        return children.every((id) => resolveStatus(id) === 'Completed') ? 'Completed' : 'Incomplete'
-    }
-
-    return new Map(tasks.map((t) => [t.uid, resolveStatus(t.uid)]))
-
+    return deriveTreeStatuses(tasks, overrides)
 }
 
 const buildListReindexUpdates = (tasks = []) => {
