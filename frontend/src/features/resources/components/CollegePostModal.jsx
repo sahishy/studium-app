@@ -170,11 +170,11 @@ const CollegePostModal = ({ initial = null, onSaved, onClose }) => {
                 </p>
             ) : null}
 
-            <div className='flex justify-end'>
+            <div className='flex gap-3 mt-2'>
                 {step === totalSteps ? (
-                    <Button type='primary' onClick={save} loading={saving} disabled={saving}>Post</Button>
+                    <Button type='primary' onClick={save} className='w-full py-4' loading={saving} disabled={saving}>Post</Button>
                 ) : (
-                    <Button type='primary' onClick={() => setStep((previous) => previous + 1)} disabled={!canContinue()}>Continue</Button>
+                    <Button type='primary' onClick={() => setStep((previous) => previous + 1)} className='w-full py-4' disabled={!canContinue()}>Continue</Button>
                 )}
             </div>
 

@@ -45,6 +45,32 @@ export class UserServer extends Server<Env> {
     this.emit(connection);
   }
 
+  /**
+   * The connection state is captured once, at connect time, from the query string - but a student
+   * can change their avatar (or display name, or elo) mid-session, and every game's player list is
+   * built from this identity. Without this the game would keep rendering the cosmetics the socket
+   * was opened with, so the client pushes the new identity instead of reconnecting.
+   */
+  private async updateIdentity(connection: Connection, payload: Partial<PlayerIdentity> | null) {
+    const identity = connection.state as PlayerIdentity | null;
+    if (!identity?.userId || !payload) return;
+    connection.setState({
+      ...identity,
+      displayName: payload.displayName || identity.displayName,
+      profilePicture: payload.profilePicture ?? null,
+      avatar: payload.avatar ?? null,
+      title: payload.title ?? null,
+      level: Math.max(1, Number(payload.level ?? identity.level) || 1),
+      eloByMode: payload.eloByMode ?? identity.eloByMode ?? {},
+    });
+    if (this.state.partyId) {
+      await requestRoom(this.env.PARTY, this.state.partyId, {
+        type: "party.identity",
+        player: connection.state as PlayerIdentity,
+      });
+    }
+  }
+
   async onClose(connection: Connection) {
     const identity = connection.state as PlayerIdentity;
     if (!identity?.userId || !this.state.partyId) return;
@@ -60,6 +86,7 @@ export class UserServer extends Server<Env> {
     const identity = connection.state as PlayerIdentity;
     try {
       if (message.type === "session.subscribe") return this.emit(connection, message.id);
+      if (message.type === "identity.update") return this.updateIdentity(connection, message.payload as any);
       if (message.type === "queue.join") await this.joinQueue(identity, message.payload as any);
       if (message.type === "queue.leave") await this.leaveQueue();
       if (message.type === "game.startSolo") await this.startSolo(identity, message.payload as any);

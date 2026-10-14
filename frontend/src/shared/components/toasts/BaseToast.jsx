@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import Card from '../ui/Card'
 import CloseButton from '../ui/CloseButton'
 
-const BaseToast = ({ children, isVisible, canHide = false, duration = null, onRequestClose }) => {
+const BaseToast = ({ children, isVisible, canHide = false, duration = null, background = null, onRequestClose }) => {
 
     const [animate, setAnimate] = useState(false)
     const [progressActive, setProgressActive] = useState(false)
@@ -45,7 +45,13 @@ const BaseToast = ({ children, isVisible, canHide = false, duration = null, onRe
             `}
         >
             <Card className='relative overflow-hidden w-fit min-w-xs max-w-[42rem] shadow-2xl! shadow-neutral0/10! dark:shadow-none! group'>
-                <div className='flex items-start gap-3'>
+                {/* Laid over the card rather than set as its background, so the card keeps its own
+                    surface colour underneath and still reads correctly in dark mode. */}
+                {background ? (
+                    <div aria-hidden='true' className='pointer-events-none absolute inset-0 rounded-xl' style={{ background }} />
+                ) : null}
+
+                <div className='relative flex items-start gap-3'>
                     <div className='flex-1 min-w-0'>
                         {children}
                     </div>

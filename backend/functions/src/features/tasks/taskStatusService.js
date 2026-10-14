@@ -1,3 +1,4 @@
+import { readCircleContexts } from '../socials/circleGoals.js'
 import { db } from '../../lib/firebaseAdmin.js'
 import { FieldValue } from 'firebase-admin/firestore'
 import { readAccount, writeAccount } from '../economy/economyService.js'
@@ -77,8 +78,9 @@ const setTaskStatus = async ({ userId, taskId, status, timeZone = 'UTC' }) => {
             transaction.get(eventRef),
             transaction.get(questRef),
         ])
+        const circleContexts = await readCircleContexts(transaction, [userId])
         const previousStatus = tree.target.status || 'Incomplete'
-        const firstCompletion = status === 'Completed' && previousStatus !== 'Completed' && !eventSnap.exists && !tree.target.alreadyCompleted
+        const firstCompletion = status === 'Completed' && previousStatus !== 'Completed' && !eventSnap.exists && !tree.target.alreadyCompleted && !tree.target.tutorialRunId
         const used = Math.min(TASK_DAILY_LIMIT, Number(daySnap.data()?.count) || 0)
         const xp = firstCompletion && used < TASK_DAILY_LIMIT ? TASK_XP : 0
         const nextCount = used + (xp > 0 ? 1 : 0)
@@ -102,15 +104,24 @@ const setTaskStatus = async ({ userId, taskId, status, timeZone = 'UTC' }) => {
         }
         if(firstCompletion) {
             transaction.create(eventRef, { userId, taskId, type: 'task', xp, dayKey, createdAt: new Date() })
+            if (circleId && xp > 0) {
+                const title = tree.target.title
+                const description = typeof title === 'string' ? title : (title?.segments || []).map(segment => segment.rawText || segment.text || '').join('')
+                for (const context of circleContexts.filter(context => context.ref.id === circleId)) {
+                    transaction.set(context.ref.collection('activity').doc(`reward_task_${taskId}`), {
+                        type: 'task', userId, taskId, circleId, text: 'Completed a task', description, xp, createdAt: new Date(),
+                    })
+                }
+            }
         }
         // Quests count every genuine first completion, even past the five daily XP slots.
         const quests = firstCompletion
-            ? applyQuestProgress(transaction, { userId, dayKey, daySnap: questSnap, metric: 'task_completed' })
-            : { reward: { xp: 0, lumen: 0 }, completed: [], quests: [] }
+            ? applyQuestProgress(transaction, { userId, dayKey, daySnap: questSnap, metric: 'task_completed', circleContexts })
+            : { reward: { xp: 0, lumen: 0, crates: 0 }, completed: [], quests: [] }
         const { progress, wallet } = writeAccount(transaction, {
             ...account,
             progress: { ...account.progress, timeZone: savedZone, tasksCompleted: (Number(account.progress.tasksCompleted) || 0) + (firstCompletion ? 1 : 0) },
-        }, { xp: xp + quests.reward.xp, lumen: quests.reward.lumen, counter: xp ? 'rewardedTasks' : null })
+        }, { xp: xp + quests.reward.xp, lumen: quests.reward.lumen, crates: quests.reward.crates ?? 0, counter: xp ? 'rewardedTasks' : null })
         if(xp) transaction.set(dayRef, { userId, dayKey, count: nextCount, updatedAt: new Date() }, { merge: true })
         if(circleId && xp) {
             const circleRef = db.collection('circles').doc(circleId)

@@ -1,3 +1,4 @@
+import { getMatchCountdown } from '../../utils/matchIntroTiming'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { getGameServerNow, recordGameVisualCorrection, sendGameMessage, subscribeToGameActionResults, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
 import QuestionPane from '../sat-classic/components/QuestionPane'
@@ -308,6 +309,8 @@ const TimberMatchEnd = ({ snapshot, userId, startedAt, spectatorName = null }) =
     })
     const endedAt = Number(endedEvent?.createdAt) || Date.now()
     return <MatchEndOverlay
+        gameId={snapshot?.room?.uid}
+        matchSettled={Boolean(endedEvent?.data?.rewardsByUserId?.[userId])}
         winnerUserId={winnerUserId}
         userId={userId}
         modeId='sat-timber'
@@ -324,7 +327,7 @@ const TimberMatchEnd = ({ snapshot, userId, startedAt, spectatorName = null }) =
     />
 }
 
-const TimberGame = ({ roomId, userId, readOnly = false, spectatorName = null }) => {
+const TimberGame = ({ roomId, userId, readOnly = false, spectatorName = null, matchIntro = null }) => {
     const [snapshot, setSnapshot] = useState(null)
     const [response, setResponse] = useState('')
     const [calculatorOpen, setCalculatorOpen] = useState(false)
@@ -351,8 +354,7 @@ const TimberGame = ({ roomId, userId, readOnly = false, spectatorName = null }) 
     const opponent = players.find((player) => player.userId !== userId) ?? null
     const currentQuestion = state?.questionsById?.[state?.currentQuestionId] ?? null
     const hasAnswered = Boolean(localPlayer?.state?.answeredQuestionIds?.includes(state?.currentQuestionId))
-    const questionCountdownRemainingMs = Math.max(0, Number(state?.currentQuestionActiveAt || 0) - now)
-    const questionCountdown = Math.max(0, Math.ceil(questionCountdownRemainingMs / 1000))
+    const { remainingMs: questionCountdownRemainingMs, seconds: questionCountdown } = getMatchCountdown(state?.currentQuestionActiveAt, now)
     const phase = state?.phase
     const localActualChops = Number(localPlayer?.state?.timberActualChops) || 0
     const localStunnedUntil = Number(localPlayer?.state?.stunnedUntil) || 0
@@ -596,6 +598,7 @@ const TimberGame = ({ roomId, userId, readOnly = false, spectatorName = null }) 
 
             {phase === 'question_active' || isQuestionRevealActive ? (
                 <div className='relative flex-1 flex min-h-0'>
+                    {matchIntro}
                     <QuestionPane
                         gameState={isQuestionRevealActive ? { ...state, questionIndex: questionReveal.questionIndex } : state}
                         currentQuestion={isQuestionRevealActive ? questionReveal.question : currentQuestion}

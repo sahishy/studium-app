@@ -1,23 +1,23 @@
 import { useMemo, useState } from 'react';
-import { createCircle, useUserCircles } from '../../services/circleService';
+import { createCircle } from '../../services/circleService';
 import Button from '../../../../shared/components/ui/Button';
 import { hasFlaggedWords } from '../../../../shared/services/censorService';
 import { FaArrowRight, FaCircleExclamation } from 'react-icons/fa6';
 import BooleanSelect from '../../../../shared/components/ui/BooleanSelect';
 import { useModal } from '../../../../shared/contexts/ModalContext';
 import EditCircleBannerModal from './EditCircleBannerModal';
-import { DEFAULT_CIRCLE_BANNER, getCompetitiveCircle } from '../../utils/circleUtils';
+import { DEFAULT_CIRCLE_BANNER } from '../../utils/circleUtils';
 import CircleBanner from '../CircleBanner';
 import { CIRCLE_TITLE_MAX, CIRCLE_TITLE_MIN } from '../../utils/circleUtils';
 
 const CreateCircleModal = ( { profile, closeModal } ) => {
 
     const [title, setTitle] = useState(profile ? `${profile.profile.displayName}'s Circle` : 'My Circle');
-    const [circleType, setCircleType] = useState('study');
+
     const [banner, setBanner] = useState(DEFAULT_CIRCLE_BANNER);
     const [isCreating, setIsCreating] = useState(false);
+    const [submitError, setSubmitError] = useState('');
     const { openModal, closeModal: closeTopModal } = useModal();
-    const { circles: userCircles = [] } = useUserCircles(profile?.uid);
 
     const validation = useMemo(() => {
         const trimmedTitle = String(title ?? '').trim();
@@ -43,16 +43,8 @@ const CreateCircleModal = ( { profile, closeModal } ) => {
             };
         }
 
-        const competitiveCircle = getCompetitiveCircle(userCircles);
-        if (circleType === 'competitive' && competitiveCircle) {
-            return {
-                isValid: false,
-                error: 'You can only be in one competitive circle at a time.',
-            };
-        }
-
         return { isValid: true, error: '' };
-    }, [title, circleType, userCircles]);
+    }, [title]);
 
     const handleCreate = async (e) => {
 
@@ -67,17 +59,15 @@ const CreateCircleModal = ( { profile, closeModal } ) => {
         const trimmedTitle = String(title).trim()
 
         const circleData = {
-            type: circleType,
             profile: {
                 title: trimmedTitle,
-                flair: circleType === 'study' ? null : '',
+                flair: '',
                 banner,
             },
         }
 
-        await createCircle(profile.uid, circleData);
-
-        closeModal();
+        try { await createCircle(profile.uid, circleData); closeModal(); }
+        catch(error) { setSubmitError(error.message) } finally {setIsCreating(false)}
 
     }
 
@@ -88,6 +78,7 @@ const CreateCircleModal = ( { profile, closeModal } ) => {
                 Create Circle
             </h1>
 
+            {submitError && <p role="alert">{submitError}</p>}
             <form onSubmit={handleCreate} className="flex flex-col gap-4">
 
                 <div className='w-full flex justify-center mb-1'>
@@ -132,18 +123,6 @@ const CreateCircleModal = ( { profile, closeModal } ) => {
                         onChange={(e) => setTitle(e.target.value)}
                         className="w-full p-4 border-2 border-neutral4 rounded-xl focus:outline-gray-400"
                         required={true}
-                    />
-
-                </div>
-
-                <div className='flex flex-col gap-2'>
-
-                    <p className='text-sm text-neutral1'>Circle Type</p>
-                    <BooleanSelect
-                        leftOption={{ value: 'study', label: 'Study' }}
-                        rightOption={{ value: 'competitive', label: 'Competitive' }}
-                        value={circleType}
-                        onChange={setCircleType}
                     />
 
                 </div>

@@ -1,3 +1,4 @@
+import { prepareTutorialRecord, tutorialSignal } from '../../onboarding/onboardingBridge'
 import { doc, setDoc, updateDoc, deleteDoc, collection, onSnapshot, query, getDoc, getDocs, writeBatch, where } from 'firebase/firestore'
 import { updateUserPreference } from '../../auth/services/userService';
 import { useEffect, useState } from 'react';
@@ -28,7 +29,9 @@ const createTask = async ({ title, status, listIndex, boardIndex, userId, taskId
     }
 
     const taskRef = taskId ? doc(db, 'tasks', taskId) : doc(collectionRef)
-    await setDoc(taskRef, task)
+    const tutorial = await prepareTutorialRecord('task',taskRef.id,normalizedTitle)
+    await setDoc(taskRef, { ...task, ...tutorial })
+    if(tutorial.tutorialRunId) tutorialSignal(tutorial.tutorialKind)
 
     return taskRef
 
@@ -55,6 +58,7 @@ const updateTask = async (taskId, taskData) => {
 const deleteTask = async (taskId) => {
     const taskRef = doc(db, 'tasks', taskId)
     await deleteDoc(taskRef);
+    tutorialSignal('task-deleted',{recordId:taskId})
 }
 
 const deleteCircleTasks = async (circleId) => {

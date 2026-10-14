@@ -9,7 +9,7 @@ const COURSE_SCORE_CACHE_NAMESPACE = CACHE_NAMESPACES.COURSE_SCORE
 
 const buildReviewId = (courseId, userId) => `${String(courseId)}_${String(userId)}`
 
-const upsertCourseReview = async ({ courseId, userId, schoolId = null, teacherId = null, review = '', score = 0.5 }) => {
+const upsertCourseReview = async ({ courseId, userId, schoolId = null, review = '', score = 0.5 }) => {
 
     const reviewId = buildReviewId(courseId, userId)
     const reviewRef = doc(db, 'courseReviews', reviewId)
@@ -20,7 +20,6 @@ const upsertCourseReview = async ({ courseId, userId, schoolId = null, teacherId
         courseId: String(courseId),
         userId: String(userId),
         schoolId: schoolId ? String(schoolId) : null,
-        teacherId: teacherId ? String(teacherId) : null,
         review: String(review ?? '').trim(),
         score: clampReviewScore(score),
         lastUpdated: now,

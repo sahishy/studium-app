@@ -8,11 +8,13 @@
 		"dev": "vite",
 		"build": "vite build",
 		"lint": "eslint .",
-		"test:multiplayer": "node --test src/features/multiplayer/services/serverClock.test.js src/features/multiplayer/services/gameViewPatch.test.js src/features/multiplayer/services/replayBuffer.test.js src/features/multiplayer/services/realtimeMetrics.test.js src/features/multiplayer/games/puncture/punctureShotLedger.test.js src/features/multiplayer/games/timber/timberPrediction.test.js src/features/multiplayer/games/sat-classic/utils/satClassicGameUtils.test.js src/features/multiplayer/games/sat-classic/utils/matchEndUtils.test.js src/features/multiplayer/utils/chatPresentation.test.js src/features/multiplayer/utils/multiplayerUtils.test.js src/shared/utils/playerActivity.test.js",
-		"test:agenda": "node --test src/features/agenda/utils/taskScheduleUtils.test.js src/features/agenda/utils/taskViewUtils.test.js",
+		"test:multiplayer": "node --test src/features/progress/utils/masteryUtils.test.js src/features/progress/components/SkillWeb.test.js src/features/profile/utils/statsUtils.test.js src/features/multiplayer/services/serverClock.test.js src/features/multiplayer/services/gameViewPatch.test.js src/features/multiplayer/services/replayBuffer.test.js src/features/multiplayer/services/realtimeMetrics.test.js src/features/multiplayer/games/puncture/punctureShotLedger.test.js src/features/multiplayer/games/timber/timberPrediction.test.js src/features/multiplayer/games/sat-classic/utils/satClassicGameUtils.test.js src/features/multiplayer/games/sat-classic/utils/matchEndUtils.test.js src/features/multiplayer/utils/matchIntroTiming.test.js src/features/multiplayer/utils/chatPresentation.test.js src/features/multiplayer/utils/multiplayerUtils.test.js src/shared/utils/playerActivity.test.js",
+		"test:agenda": "node --test src/features/agenda/utils/taskScheduleUtils.test.js src/features/agenda/utils/taskViewUtils.test.js src/features/agenda/utils/boardPresentationUtils.test.js src/features/agenda/utils/taskDragDropUtils.test.js src/features/agenda/utils/taskCircleUtils.test.js",
+		"test:resources": "node --test src/features/resources/utils/elementExpr.test.js src/features/resources/utils/elementDefaults.test.js src/features/resources/utils/editHistory.test.js",
 		"preview": "vite preview",
 		"predeploy": "npm run build",
-		"deploy": "gh-pages -d dist"
+		"deploy": "gh-pages -d dist",
+		"test:onboarding": "node --test src/features/courses/utils/featuredCourses.test.js src/features/onboarding/onboardingBridge.test.js"
 	},
 	"dependencies": {
 		"@dnd-kit/core": "^6.3.1",
@@ -26,6 +28,7 @@
 		"canvas-confetti": "^1.9.4",
 		"firebase": "^12.0.0",
 		"gh-pages": "^6.3.0",
+		"html2canvas-pro": "^2.5.0",
 		"obscenity": "^0.4.6",
 		"partysocket": "^1.3.0",
 		"postprocessing": "^6.39.5",

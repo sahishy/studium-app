@@ -5,7 +5,7 @@ import { FaCalculator } from 'react-icons/fa6'
 
 const DASHES = Array.from({ length: 12 }, (_, i) => i)
 
-const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQuestion, isCalculatorOpen, onToggleCalculator, isBusy, hasAnswered, onChoiceSelect, onResponseChange, onSubmit, answerReveal = null, readOnly = false }) => {
+const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQuestion, isCalculatorOpen, onToggleCalculator, isBusy, hasAnswered, onChoiceSelect, onResponseChange, onSubmit, answerReveal = null, readOnly = false, submitDisabled = false }) => {
 
     const normalizedResponse = String(submittedResponse ?? '').trim()
     const normalizedResponseUpper = normalizedResponse.toUpperCase()
@@ -33,7 +33,7 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
     }, new Map())
 
     const contentSection = (
-        <div className='flex-1 flex flex-col min-h-0 pl-6'>
+        <div className={`flex-1 flex flex-col min-h-0 ${isSprQuestion || currentQuestion?.paragraph ? 'pl-6' : ''}`}>
             <div className={`flex flex-col ${isMathMcq && !isCalculatorOpen ? 'items-center text-center' : 'items-start'} bg-neutral5`}>
                 <div className='w-full h-full flex justify-between'>
                     <div className='bg-neutral0 text-neutral6 px-2 py-1'>
@@ -42,6 +42,8 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
                     {isMathQuestion && !readOnly ? (
                         <button
                             type='button'
+                            aria-label='Open calculator'
+                            data-onboarding='practice:calculator'
                             onClick={onToggleCalculator}
                             className={`p-2 cursor-pointer ${isCalculatorOpen ? 'text-neutral0' : 'text-neutral1 hover:text-neutral0'} transition`}
                         >
@@ -70,6 +72,7 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
                         <div className='relative max-w-24 flex items-center justify-center'>
                             <input
                                 type='text'
+                                aria-label='Your answer'
                                 value={submittedResponse ?? ''}
                                 onChange={(event) => onResponseChange?.(event.target.value)}
                                 disabled={isBusy || readOnly}
@@ -120,7 +123,7 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
             <button
                 type='button'
                 onClick={onSubmit}
-                disabled={!hasValidResponse || isBusy || readOnly}
+                disabled={!hasValidResponse || isBusy || readOnly || submitDisabled}
                 className='w-full rounded-full bg-sat0 text-white p-3 font-semibold cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed hover:not-disabled:bg-sat1'
             >
                 {readOnly ? 'Spectating' : (hasAnswered ? 'Waiting for opponent...' : 'Submit')}
@@ -132,11 +135,11 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
         <>
             {isSprQuestion ? (
                 <>
-                    <div className='relative flex-1 min-h-0 h-full overflow-y-auto pr-3'>
+                    <div className={`relative flex-1 min-h-0 h-full overflow-y-auto pr-3 `}>
                         <FreeResponseDirections />
                     </div>
 
-                    <hr className='border-2 border-neutral1 h-full rounded-full' />
+                    <hr className={`border-2 border-neutral1 h-full rounded-full `} />
 
                     {contentSection}
                 </>
@@ -151,17 +154,17 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
                         {contentSection}
                     </div>
                 )
-            ) : (
+            ) : currentQuestion?.paragraph ? (
                 <>
-                    <div className='relative flex-1 min-h-0 h-full overflow-y-auto pr-3'>
+                    <div className={`relative flex-1 min-h-0 h-full overflow-y-auto pr-3 `}>
                         <HtmlContent html={currentQuestion?.paragraph} />
                     </div>
 
-                    <hr className='border-2 border-neutral1 h-full rounded-full' />
+                    <hr className={`border-2 border-neutral1 h-full rounded-full `} />
 
                     {contentSection}
                 </>
-            )}
+            ) : <div className='w-full max-w-xl mx-auto flex min-h-0'>{contentSection}</div>}
 
         </>
 

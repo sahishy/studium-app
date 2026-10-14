@@ -1,3 +1,4 @@
+import { getMatchCountdown } from '../../utils/matchIntroTiming'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { subscribeToRoomById, subscribeToRoomEvents, subscribeToRoomPlayers } from '../../services/roomService'
 import { submitSatClassicAnswer } from './services/satClassicGameService'
@@ -17,7 +18,7 @@ import { buildMultiplayerUiState } from '../../utils/multiplayerUtils'
 import { getRankInfoFromElo } from '../../../profile/utils/statsUtils'
 import { getGameServerNow } from '../../services/realtimeSocketService'
 
-const SatClassicGame = ({ roomId, userId, readOnly = false, spectatorName = null }) => {
+const SatClassicGame = ({ roomId, userId, readOnly = false, spectatorName = null, matchIntro = null }) => {
     const [room, setRoom] = useState(null)
     const [players, setPlayers] = useState([])
     const [events, setEvents] = useState([])
@@ -73,20 +74,15 @@ const SatClassicGame = ({ roomId, userId, readOnly = false, spectatorName = null
         ?? (roundStartedAt ? new Date(roundStartedAt.getTime() + ROUND_DURATION_MS) : null)
     const matchStartedAt = toDateFromFirestoreLike(gameState?.startedAt)
 
-    const elapsedRoundSeconds = roundStartedAt
-        ? Math.max(0, Math.floor((nowMs - roundStartedAt.getTime()) / 1000))
-        : 999
-
     const remainingRoundSeconds = roundDeadlineAt
         ? Math.max(0, Math.floor((roundDeadlineAt.getTime() - nowMs) / 1000))
         : 0
     const displayRoundSeconds = Math.min(Math.floor((ROUND_DURATION_MS - OVERLAY_DURATION_MS) / 1000), remainingRoundSeconds)
 
-    const roundCountdown = Math.max(0, 3 - elapsedRoundSeconds)
-
-    const roundOverlayRemainingMs = roundStartedAt
-        ? Math.max(0, OVERLAY_DURATION_MS - (nowMs - roundStartedAt.getTime()))
-        : 0
+    const { remainingMs: roundOverlayRemainingMs, seconds: roundCountdown } = getMatchCountdown(
+        roundStartedAt ? roundStartedAt.getTime() + OVERLAY_DURATION_MS : 0,
+        nowMs,
+    )
 
     const isGameLoading = !currentQuestionId
         || !currentQuestion
@@ -295,6 +291,7 @@ const SatClassicGame = ({ roomId, userId, readOnly = false, spectatorName = null
         const {
             rankedStats,
             rankInfo,
+            placement,
             currentTierMinElo,
             currentTierSpan,
             currentTierProgress,
@@ -310,6 +307,7 @@ const SatClassicGame = ({ roomId, userId, readOnly = false, spectatorName = null
 
         return {
             rankInfo,
+            placement,
             rankLabel,
             nextRankInfo,
             nextTierLabel,
@@ -368,6 +366,8 @@ const SatClassicGame = ({ roomId, userId, readOnly = false, spectatorName = null
     if(showMatchEndOverlay) {
         return (
             <MatchEndOverlay
+                gameId={roomId}
+                matchSettled={Boolean(latestGameEndedEvent?.data?.rewardsByUserId?.[userId])}
                 winnerUserId={winnerUserId}
                 userId={userId}
                 modeId={MODE_ID}
@@ -396,6 +396,7 @@ const SatClassicGame = ({ roomId, userId, readOnly = false, spectatorName = null
             />
 
             <div className='relative flex-1 flex min-h-0'>
+                {matchIntro}
                 <QuestionPane
                     gameState={gameState}
                     currentQuestion={currentQuestion}

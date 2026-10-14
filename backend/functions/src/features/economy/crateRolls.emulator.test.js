@@ -3,7 +3,7 @@ import test from 'node:test'
 import { randomUUID } from 'node:crypto'
 import { CRATE_RARITIES } from './crateRolls.js'
 
-test('local emulator: four-roll purchase is charged once and retries return the same trace and reward', {
+test('local emulator: purchase grants the reward once before its four stepwise reveals', {
     skip: process.env.USE_FIREBASE_EMULATORS !== 'true',
 }, async () => {
     const { db } = await import('../../lib/firebaseAdmin.js')
@@ -23,7 +23,9 @@ test('local emulator: four-roll purchase is charged once and retries return the 
         assert.equal(first.rarityPath.at(-1), first.color.rarity)
         first.rarityPath.forEach((rarity, index) => {
             assert.ok(CRATE_RARITIES.includes(rarity))
-            if(index) assert.ok(CRATE_RARITIES.indexOf(rarity) >= CRATE_RARITIES.indexOf(first.rarityPath[index - 1]))
+            const before = index === 0 ? 0 : CRATE_RARITIES.indexOf(first.rarityPath[index - 1])
+            const change = CRATE_RARITIES.indexOf(rarity) - before
+            assert.ok(change === 0 || change === 1)
         })
         assert.ok(COSMETIC_CATALOG.some((item) => item.id === first.color.id))
         assert.equal(first.wallet.crateTokens, 0)

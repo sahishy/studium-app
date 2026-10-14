@@ -5,7 +5,7 @@ import LumenIcon from './LumenIcon'
 // Sits above the drops card, not inside it.
 const CrateHeader = ({ crate }) => {
 
-    const { canOpen, assetReady, isBusy, hasToken, cratePrice, open, error } = crate
+    const { canOpen, assetReady, isBusy, free, hasToken, cratePrice, open, error } = crate
 
     return (
         <div className='flex flex-col gap-3'>
@@ -18,7 +18,9 @@ const CrateHeader = ({ crate }) => {
             >
                 {!assetReady
                     ? 'LOADING'
-                    : hasToken
+                    : free
+                        ? 'FREE'
+                        : hasToken
                         ? <span className='flex items-center gap-2'>1 <FaBoxOpen /></span>
                         : <span className='flex items-center gap-2'>{cratePrice} <LumenIcon className='size-5' /></span>}
             </Button>

@@ -10,7 +10,7 @@ import useScreenShake from '../../../shared/utils/useScreenShake'
 // actually animate.
 const CrateView = ({ crate, lockerRef }) => {
 
-    const { phase, rarity, rarityTransition, motion, reducedMotion, markReady, isFlashing, isRevealed, showReward, result, beginDismiss, dismiss } = crate
+    const { phase, rarity, rarityTransition, motion, markReady, isFlashing, isRevealed, showReward, result, beginDismiss, dismiss } = crate
 
     const anchorRef = useRef(null)
     const stageRef = useRef(null)
@@ -97,7 +97,6 @@ const CrateView = ({ crate, lockerRef }) => {
                         rarity={rarity}
                         rarityTransition={isIdle ? null : rarityTransition}
                         motion={isIdle ? null : motion}
-                        reducedMotion={reducedMotion}
                         onReady={markReady}
                     />
                 </div>

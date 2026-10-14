@@ -1,3 +1,4 @@
+import { useOnboarding } from '../../onboarding/OnboardingContext'
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { useAuth } from '../../auth/contexts/AuthContext'
@@ -38,6 +39,7 @@ const DetailRow = ({ label, value, action, onAction }) => {
 }
 
 const Settings = () => {
+    const { start: startTutorial, active: tutorialActive } = useOnboarding()
 
     const { profile } = useOutletContext()
     const { logout } = useAuth()
@@ -141,6 +143,7 @@ const Settings = () => {
 
                 </section>
 
+                <section className="flex flex-col gap-4"><h2 className="text-xl font-semibold">Tutorials</h2><div className="divide-y divide-neutral4"><DetailRow label="Play tutorial" value="Learn the games, progress, and cosmetics." action={tutorialActive ? null : 'Start'} onAction={() => startTutorial('play')} /><DetailRow label="Study tutorial" value="Learn smart tasks, courses, and resources." action={tutorialActive ? null : 'Start'} onAction={() => startTutorial('study')} /></div></section>
                 <section className='flex flex-col gap-6'>
                     <h2 className='text-xl font-semibold text-neutral0'>Manage Account</h2>
 

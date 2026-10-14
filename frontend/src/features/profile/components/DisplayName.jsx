@@ -1,3 +1,4 @@
+import { useCircle } from '../../socials/services/circleService'
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useIsFriend } from "../../socials/services/friendService";
@@ -50,7 +51,8 @@ const DisplayName = ({ targetProfile, className }) => {
     const actScore = userStats?.academic?.scores?.act;
     const weightedGpa = userStats?.academic?.gpa?.weighted;
     const unweightedGpa = userStats?.academic?.gpa?.unweighted;
-    const circleFlair = null;
+    const { circle: primaryCircle } = useCircle(targetProfile?.primaryCircleId)
+    const circleFlair = primaryCircle?.profile?.flair || null;
 
     const flairLabel = (() => {
         switch(flair) {

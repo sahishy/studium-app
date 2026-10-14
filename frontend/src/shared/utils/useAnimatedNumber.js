@@ -15,15 +15,6 @@ const useAnimatedNumber = (value, { durationMs = 650 } = {}) => {
 
         if(from === safeValue) return undefined
 
-        const prefersReducedMotion = typeof window !== 'undefined'
-            && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-
-        if(prefersReducedMotion) {
-            fromRef.current = safeValue
-            setDisplayValue(safeValue)
-            return undefined
-        }
-
         const startedAt = performance.now()
 
         const step = (now) => {

@@ -15,13 +15,30 @@ service cloud.firestore {
           || get(/databases/$(database)/documents/tasks/$(parentId)).data.userId == data.userId));
     }
 
+    function validTutorialRecord(data, recordId) {
+      let runId = data.get('tutorialRunId', null);
+      let kind = data.get('tutorialKind', '');
+      return runId == null || (exists(/databases/$(database)/documents/onboarding/$(request.auth.uid))
+        && get(/databases/$(database)/documents/onboarding/$(request.auth.uid)).data.active.id == runId
+        && get(/databases/$(database)/documents/onboarding/$(request.auth.uid)).data.active.artifacts.get(kind, null) == recordId);
+    }
+    function preservesRetiredCourseFields(before, after) {
+      return before.get('teacherId', null) == after.get('teacherId', null)
+        && before.get('day', null) == after.get('day', null);
+    }
+    function sameTutorialOwner(before, after) {
+      return before.get('tutorialRunId', null) == after.get('tutorialRunId', null)
+        && before.get('tutorialKind', null) == after.get('tutorialKind', null);
+    }
+
     match /users/{uid} {
       allow read: if signedIn();
-      allow create: if isSelf(uid) && request.resource.data.progress.level == 1 && request.resource.data.progress.xp == 0;
+      allow create: if isSelf(uid) && request.resource.data.progress.level == 1 && request.resource.data.progress.xp == 0 && request.resource.data.get('primaryCircleId', null) == null;
       allow update: if isSelf(uid)
         && request.resource.data.progress == resource.data.progress
         && request.resource.data.get('badges', []) == resource.data.get('badges', [])
-        && request.resource.data.profile.avatar == resource.data.profile.avatar;
+        && request.resource.data.profile.avatar == resource.data.profile.avatar
+        && request.resource.data.get('primaryCircleId', null) == resource.data.get('primaryCircleId', null);
       allow delete: if false;
       match /friends/{friendId} {
         allow read: if signedIn();
@@ -44,38 +61,43 @@ service cloud.firestore {
         && request.resource.data.alreadyCompleted == false
         && request.resource.data.status == 'Incomplete'
         && (request.resource.data.get('circleId', null) == null || circleMember(request.resource.data.circleId))
-        && validTaskParent(taskId, request.resource.data);
+        && validTaskParent(taskId, request.resource.data)
+        && validTutorialRecord(request.resource.data, taskId);
       allow update: if signedIn() && (resource.data.userId == request.auth.uid || (resource.data.get('circleId', null) != null && circleMember(resource.data.circleId)))
         && request.resource.data.status == resource.data.status
         && request.resource.data.alreadyCompleted == resource.data.alreadyCompleted
         && request.resource.data.userId == resource.data.userId
         && (request.resource.data.get('circleId', null) == null || circleMember(request.resource.data.circleId))
-        && validTaskParent(taskId, request.resource.data);
+        && validTaskParent(taskId, request.resource.data)
+        && sameTutorialOwner(resource.data, request.resource.data);
       allow delete: if signedIn() && (resource.data.userId == request.auth.uid || (resource.data.get('circleId', null) != null && circleMember(resource.data.circleId)));
     }
 
     match /circles/{circleId} {
       allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.createdByUserId == request.auth.uid
-        && request.resource.data.xp == 0 && request.resource.data.level == 1;
-      allow update: if circleMember(circleId)
-        && request.resource.data.xp == resource.data.xp
-        && request.resource.data.level == resource.data.level;
+      allow create, update: if false;
       allow delete: if signedIn() && resource.data.createdByUserId == request.auth.uid;
       match /members/{uid} {
         allow read: if signedIn();
-        allow create: if isSelf(uid);
-        allow update, delete: if isSelf(uid) || (signedIn() && get(/databases/$(database)/documents/circles/$(circleId)).data.createdByUserId == request.auth.uid);
+        allow create, update: if false;
+        allow delete: if signedIn() && get(/databases/$(database)/documents/circles/$(circleId)).data.createdByUserId == request.auth.uid
+          && !existsAfter(/databases/$(database)/documents/circles/$(circleId));
       }
     }
 
     match /courses/{id} {
       allow read: if signedIn();
-      allow create, update: if signedIn() && request.resource.data.studentId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.studentId == request.auth.uid && validTutorialRecord(request.resource.data,id)
+        && !request.resource.data.keys().hasAny(['teacherId','day']);
+      allow update: if signedIn() && resource.data.studentId == request.auth.uid && request.resource.data.studentId == request.auth.uid && sameTutorialOwner(resource.data,request.resource.data) && preservesRetiredCourseFields(resource.data,request.resource.data);
       allow delete: if signedIn() && resource.data.studentId == request.auth.uid;
     }
-    match /courseReviews/{id} { allow read: if signedIn(); allow write: if signedIn(); }
-    match /schoolTeachers/{id} { allow read: if signedIn(); allow write: if signedIn(); }
+    match /courseReviews/{id} {
+      allow read, delete: if signedIn();
+      allow create: if signedIn() && !request.resource.data.keys().hasAny(['teacherId','day']);
+      allow update: if signedIn() && preservesRetiredCourseFields(resource.data,request.resource.data);
+    }
+    match /schoolTeachers/{id} { allow read: if signedIn(); allow write: if false; }
     match /friendRequests/{id} { allow read, write: if signedIn(); }
     match /config/{id} { allow read: if signedIn(); allow write: if false; }
 

@@ -16,10 +16,10 @@ const EMPTY_REQUESTS = []
 const FriendsProvider = ({ profile, children }) => {
 
     const { showToast, hideToast } = useToast()
-    const friendIds = useFriendIds(profile?.uid)
+    const { friendIds, loading: friendIdsLoading } = useFriendIds(profile?.uid)
     const friends = useMembersList(friendIds)
     const incomingRequests = useIncomingFriendRequests(profile?.uid)
-    const friendsLoading = profile?.uid != null && friendIds.length > 0 && friends.length !== friendIds.length
+    const friendsLoading = profile?.uid != null && (friendIdsLoading || (friendIds.length > 0 && friends.length !== friendIds.length))
     const incomingRequestsLoading = profile?.uid != null && incomingRequests == null
     const hasIncomingLoaded = incomingRequests != null
     const safeIncomingRequests = incomingRequests ?? EMPTY_REQUESTS

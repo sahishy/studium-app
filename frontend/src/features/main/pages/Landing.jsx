@@ -1,7 +1,7 @@
 import { createElement, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FaArrowRight, FaBook, FaBookOpen, FaBolt, FaCalendarDays, FaCheck, FaClock, FaGraduationCap, FaList, FaMagnifyingGlass, FaPlus, FaThumbsUp, FaTiktok, FaUserGroup } from 'react-icons/fa6'
-import { RiInstagramFill } from 'react-icons/ri'
+import { RiInstagramFill, RiSwordFill } from 'react-icons/ri'
 import { useAuth } from '../../auth/contexts/AuthContext'
 import { useModal } from '../../../shared/contexts/ModalContext'
 import logoLarge from '../../../assets/images/logo_lg.png'
@@ -68,9 +68,8 @@ const Landing = () => {
 const useGentleScroll = () => {
 
     useEffect(() => {
-        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
         const desktopPointer = window.matchMedia('(pointer: fine)')
-        if (reducedMotion.matches || !desktopPointer.matches) return
+        if (!desktopPointer.matches) return
 
         let target = window.scrollY
         let current = window.scrollY
@@ -246,7 +245,7 @@ const HeroSection = ({ onOpenLogIn, onOpenSignUp, scrollY }) => {
             <div ref={stageRef} className='relative mt-12 md:h-[135vh]'>
                 <div className='flex w-full items-start justify-center md:sticky md:top-20 md:h-[calc(100vh-5rem)] md:items-center'>
                     <div
-                        className='relative w-full max-w-[68rem] transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none'
+                        className='relative w-full max-w-[68rem] transition-transform duration-200 ease-out will-change-transform '
                         style={{
                             transform: `perspective(1400px) rotateX(${tilt}deg) scale(${scale})`,
                             transformOrigin: 'center top'
@@ -328,7 +327,7 @@ const UniversityMarquee = () => {
 
     useEffect(() => {
         const track = trackRef.current
-        if (!track || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+        if (!track) return
 
         let frame
         let offset = 0
@@ -444,7 +443,7 @@ const FeatureStory = ({ scrollY }) => {
             icon: FaBook,
             label: 'courses',
             title: 'Pick classes with better info.',
-            body: 'See the workload, teacher, and student rating before you add a class.',
+            body: 'Explore course descriptions and student reviews before you add a class.',
             preview: <CoursePreview />
         },
         {
@@ -458,7 +457,7 @@ const FeatureStory = ({ scrollY }) => {
             icon: FaUserGroup,
             label: 'circles',
             title: 'Study with your friends.',
-            body: 'Share tasks, build a circle streak, and see who is putting in the work.',
+            body: 'Share tasks and work together toward weekly quest rewards.',
             preview: <CirclePreview />
         }
     ]
@@ -486,7 +485,7 @@ const FeatureStory = ({ scrollY }) => {
                 <div className='relative'>
                     <div className='absolute bottom-[33vh] left-0 top-[33vh] hidden w-1 -translate-x-1/2 rounded-full bg-neutral4 lg:block'>
                         <span
-                            className='absolute left-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-neutral6 bg-neutral0 shadow-sm transition-[top] duration-500 ease-out will-change-[top] motion-reduce:transition-none'
+                            className='absolute left-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-neutral6 bg-neutral0 shadow-sm transition-[top] duration-500 ease-out will-change-[top] '
                             style={{ top: `${activeIndex * 50}%` }}
                         />
                     </div>
@@ -512,7 +511,7 @@ const FeatureStory = ({ scrollY }) => {
                     <div className='relative h-[min(36rem,70vh)] w-full overflow-hidden rounded-[1.75rem] border border-neutral4 bg-neutral5 p-8'>
                         <div className='absolute left-8 top-7 text-sm text-neutral1'>{features[activeIndex].label}</div>
                         {features.map(({ label, preview }, index) => (
-                            <div key={label} className={`pointer-events-none absolute inset-0 flex items-center justify-center p-10 pt-16 transition-[opacity,transform] duration-700 ease-out motion-reduce:transition-none ${activeIndex === index ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-[0.985] opacity-0'}`}>
+                            <div key={label} className={`pointer-events-none absolute inset-0 flex items-center justify-center p-10 pt-16 transition-[opacity,transform] duration-700 ease-out ${activeIndex === index ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-[0.985] opacity-0'}`}>
                                 <div className='w-full max-w-xl'>{preview}</div>
                             </div>
                         ))}
@@ -562,9 +561,8 @@ const CirclePreview = () => (
         <div className='rounded-xl border border-neutral4 p-3 shadow-sm'>
             <div className='flex items-center gap-3'>
                 <div className='flex h-14 w-14 items-center justify-center rounded-xl bg-neutral5'><FaBookOpen className='text-neutral1' /></div>
-                <div className='min-w-0 flex-1'><div className='flex items-center gap-2'><p className='truncate text-xs font-semibold'>Finals focus</p><span className='rounded-lg bg-neutral5 px-2 py-1 text-[7px] text-neutral1'>study</span></div><p className='mt-1 flex items-center gap-1 text-[9px] text-neutral1'><FaBookOpen size={8} /> 12 tasks</p><p className='mt-1 flex items-center gap-1 text-[9px] text-neutral1'><FaUserGroup size={8} /> 6 members</p></div>
+                <div className='min-w-0 flex-1'><div className='flex items-center gap-2'><p className='truncate text-xs font-semibold'>Finals focus</p><span className='rounded-lg bg-neutral5 px-2 py-1 text-[7px] text-neutral1'>Learning crew</span></div><p className='mt-1 flex items-center gap-1 text-[9px] text-neutral1'><RiSwordFill size={8} /> 840 ELO</p><p className='mt-1 flex items-center gap-1 text-[9px] text-neutral1'><FaUserGroup size={8} /> 6 members</p></div>
             </div>
-            <div className='mt-3 flex items-center gap-3'><span className='text-[8px] font-semibold text-neutral1'>Lv. 4</span><div className='h-2 flex-1 overflow-hidden rounded-full bg-neutral5'><div className='h-full w-3/5 rounded-full bg-neutral1' /></div><span className='text-[8px] text-neutral1'>200 xp left</span></div>
             <div className='mt-3 flex -space-x-2'>{['M', 'S', 'Y'].map((letter) => <span key={letter} className='flex h-7 w-7 items-center justify-center rounded-full border-2 border-neutral6 bg-neutral4 text-[8px] font-semibold'>{letter}</span>)}</div>
         </div>
     </div>
@@ -587,7 +585,7 @@ const MultiplayerSection = ({ scrollY }) => {
 
                 <div className='relative flex justify-center min-h-[460px] overflow-hidden rounded-[1.75rem] border border-neutral3 bg-neutral5 p-5 md:p-8'>
                     <div
-                        className='min-h-[390px] flex items-center gap-5 transition-[opacity,transform] duration-700 ease-out motion-reduce:transition-none sm:grid-cols-[1fr_0.8fr]'
+                        className='min-h-[390px] flex items-center gap-5 transition-[opacity,transform] duration-700 ease-out sm:grid-cols-[1fr_0.8fr]'
                         style={{ transform: `translate3d(0, ${(1 - enter) * 38}px, 0)`, opacity: enter }}
                     >
                         <div className='flex flex-col gap-3 w-64'>

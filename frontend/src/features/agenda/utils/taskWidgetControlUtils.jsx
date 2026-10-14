@@ -1,4 +1,5 @@
 import { formatRelativeTaskDate, toDateFromRelativeInput } from '../../../shared/utils/formatters'
+import { buildCircleOptions, getCircleTitle } from './taskCircleUtils'
 
 const EMPTY_TEXT_SEGMENT = { type: 'text', rawText: '', displayText: '' }
 
@@ -57,7 +58,7 @@ const buildDateWidgetSegment = ({ currentSegment, date, toLabel = (label) => lab
         widgetType: 'date',
         rawText: relativeLabel,
         displayText: relativeLabel,
-        value: { dueDate: iso },
+        value: { ...(currentSegment?.value || {}), dueDate: iso },
     }
 }
 
@@ -70,27 +71,16 @@ const buildScheduleWidgetSegment = ({ currentSegment, dueDate, label }) => ({
     value: { dueDate },
 })
 
-const buildCircleOptions = (circles = [], { truncate = false } = {}) => {
-    const truncateOption = (s) => (s.length <= 25 ? s : `${s.substring(0, 25)}...`)
-    return [
-        { uid: null, label: 'None', icon: null },
-        ...circles.map((circle) => ({
-            uid: circle.uid,
-            label: truncate ? truncateOption(circle.title) : circle.title,
-            icon: null,
-        })),
-    ]
-}
-
 const getCircleControlState = ({ title, circles = [], ownerType, ownerId }) => {
     const circleWidget = getWidgetSegment(title, 'circle')
     const selectedCircleId = circleWidget?.value?.circleId || (ownerType === 'circle' ? ownerId : '')
-    const selectedCircle = circles.find((x) => String(x.uid) === String(selectedCircleId)) ?? { title: 'Unknown' }
+    const circle = circles.find((x) => String(x.uid) === String(selectedCircleId))
+    const selectedCircle = { ...circle, title: getCircleTitle(circle, 'Unknown') }
     return { selectedCircleId, selectedCircle }
 }
 
 const buildCircleWidgetSegment = ({ currentSegment, circleId, circles = [], fallbackLabel = '' }) => {
-    const resolvedTitle = circles.find((x) => String(x.uid) === String(circleId))?.title || String(fallbackLabel || '')
+    const resolvedTitle = getCircleTitle(circles.find((x) => String(x.uid) === String(circleId)), String(fallbackLabel || ''))
     return {
         id: currentSegment?.id || makeSegmentId(),
         type: 'widget',

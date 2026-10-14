@@ -68,7 +68,7 @@ const CircleAgenda = () => {
     }
 
     return (
-        <div className='w-full flex flex-col gap-4'>
+        <div className={`w-full flex flex-col gap-4 ${activeTabName === 'list' ? '' : 'h-[calc(100dvh-260px)] min-h-[420px]'}`}>
 
             <div className='w-full flex justify-end'>
                 <IconTabSelector
@@ -78,16 +78,18 @@ const CircleAgenda = () => {
                 />
             </div>
 
-            <Outlet context={{
-                profile,
-                circleId,
-                circle,
-                isCircleView: true,
-                hideCircleWidgetControl: true,
-                forceCircleWidget: injectCircleWidget,
-                agendaPreferences,
-                saveAgendaPreferences,
-            }} />
+            <div className={activeTabName === 'list' ? 'w-full' : 'min-h-0 w-full flex-1'}>
+                <Outlet context={{
+                    profile,
+                    circleId,
+                    circle,
+                    isCircleView: true,
+                    hideCircleWidgetControl: true,
+                    forceCircleWidget: injectCircleWidget,
+                    agendaPreferences,
+                    saveAgendaPreferences,
+                }} />
+            </div>
             
         </div>
     )

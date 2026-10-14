@@ -1,6 +1,5 @@
+import MatchResultStage from './MatchResultStage'
 import { FaChevronRight } from 'react-icons/fa6'
-import AvatarModel from '../../../../../shared/components/avatar/AvatarModel'
-import Podium from '../../../../../shared/components/avatar/Podium'
 import AvatarStack from '../../../../../shared/components/avatar/AvatarStack'
 import Card from '../../../../../shared/components/ui/Card'
 import HtmlContent from '../../../../../shared/components/ui/HtmlContent'
@@ -11,53 +10,22 @@ import { getRankInfoFromElo } from '../../../../profile/utils/statsUtils'
 import { areGameTeammates } from '../../../utils/multiplayerUtils'
 import ChoiceButton from './ChoiceButton'
 import { FreeResponseDirections } from './QuestionPane'
-
-const playerProfile = (player) => ({ profile: {
-    displayName: player?.displayName,
-    profilePicture: player?.profilePicture,
-    avatar: player?.avatar,
-} })
-
-const ResultPodium = ({ player, outcome, modeId }) => {
-    const isWinner = outcome === 'winner'
-    const animation = isWinner ? 'Victory' : (outcome === 'loser' ? 'Defeat' : 'Idle')
-    const elo = Number(player?.eloByMode?.[modeId]) || 0
-    const rank = getRankInfoFromElo(elo)
-    return (
-        <div className='relative h-full min-w-0'>
-            <div className='absolute top-3 left-1/2 z-40 w-[90%] -translate-x-1/2 text-center'>
-                <p className='truncate text-sm font-semibold'>{player?.displayName || 'Player'}</p>
-                <div className='mt-1 flex items-center justify-center gap-1.5'>
-                    <img src={rank.imageSrc} alt={`${rank.name ?? 'Rank'} icon`} className='h-6 w-6 object-cover' />
-                    <p className='text-xs font-semibold tabular-nums'>{elo} <span className='text-[10px] font-medium text-neutral1'>SAT</span></p>
-                </div>
-            </div>
-            <AvatarModel
-                profile={playerProfile(player)}
-                animation={animation}
-                className={`absolute left-1/2 z-20 h-[12rem]! w-[12rem]! sm:h-[18rem]! sm:w-[18rem]! max-w-none! -translate-x-1/2 ${isWinner ? '-top-3 sm:top-10' : 'top-1 sm:top-18'}`}
-            />
-            <Podium
-                glow={isWinner}
-                className={`absolute left-1/2 z-10 w-36 sm:w-56 max-w-none! -translate-x-1/2 drop-shadow-[0px_20px_14px_rgba(0,0,0,0.12)] ${isWinner ? 'top-22 sm:top-54' : 'top-26 sm:top-62'}`}
-            />
-        </div>
-    )
-}
-
-const MatchResultStage = ({ localPlayer, opponent, winnerUserId, modeId }) => {
-    const outcomeFor = (player) => !winnerUserId ? 'draw' : (player?.userId === winnerUserId ? 'winner' : 'loser')
-    return (
-        <div className='relative w-full max-w-3xl h-[20rem] sm:h-[30rem] shrink-0 overflow-hidden grid grid-cols-2 gap-2 sm:gap-8' aria-label='Match result podium'>
-            <ResultPodium player={localPlayer} outcome={outcomeFor(localPlayer)} modeId={modeId} />
-            <ResultPodium player={opponent} outcome={outcomeFor(opponent)} modeId={modeId} />
-            <div className='pointer-events-none absolute inset-x-0 bottom-0 z-30 h-16 sm:h-20 bg-gradient-to-b from-transparent via-neutral6/70 to-neutral6' />
-        </div>
-    )
-}
+import SkillWeb from '../../../../progress/components/SkillWeb'
+import useMatchMastery from '../../../../progress/useMatchMastery'
 
 const RankSection = ({ progression, winnerUserId, eloDelta }) => {
     if(!progression) return <p className='text-sm text-neutral1 mt-6 mb-8'>Private match · ELO unchanged</p>
+    if(progression.placement && !progression.placement.placed) {
+        const { gamesPlayed, required } = progression.placement
+        return <div className='w-full max-w-xl mt-9 mb-8 flex flex-col gap-4'>
+            <div className='flex items-center justify-center gap-4'>
+                <img src={progression.rankInfo.imageSrc} alt='Unranked icon' className='w-20 h-20 object-cover' />
+                <div className='text-center'><h2 className='text-2xl font-semibold'>Unranked</h2><p className='text-sm text-neutral1'>Finding your starting rank</p></div>
+            </div>
+            <p className='text-center text-sm text-neutral1'>{Math.min(gamesPlayed, required)}/{required} placements completed</p>
+            <ProgressBar value={gamesPlayed} max={required} />
+        </div>
+    }
     const delta = Number(eloDelta ?? progression?.eloDelta) || 0
     const hasNextRank = Boolean(progression?.nextTierThreshold)
     const nextRankInfo = progression?.nextRankInfo ?? (hasNextRank ? getRankInfoFromElo(progression.nextTierThreshold.minElo) : null)
@@ -128,8 +96,9 @@ const QuestionReviewModal = ({ round, perspectiveName = null }) => {
     )
 }
 
-const MatchEndOverlay = ({ winnerUserId, userId, modeId, reasonLabel = null, localPlayer, opponent, matchDurationSeconds = 0, questionsAnswered = 0, rankedProgression = null, eloDelta = null, players = [], rounds = [], spectatorName = null }) => {
+const MatchEndOverlay = ({ winnerUserId, userId, modeId, gameId, matchSettled = false, reasonLabel = null, localPlayer, opponent, matchDurationSeconds = 0, questionsAnswered = 0, rankedProgression = null, eloDelta = null, players = [], rounds = [], spectatorName = null, showSkillComparison = true, showRankSection = true }) => {
     const { openModal } = useModal()
+    const mastery = useMatchMastery({ userId: spectatorName || !showSkillComparison ? null : userId, gameId, settled: matchSettled })
     const isDraw = !winnerUserId
     const isMyWin = winnerUserId === userId
     const title = isDraw ? 'Draw' : (spectatorName ? `${spectatorName} ${isMyWin ? 'won' : 'lost'}` : (isMyWin ? 'Victory' : 'Defeat'))
@@ -141,12 +110,18 @@ const MatchEndOverlay = ({ winnerUserId, userId, modeId, reasonLabel = null, loc
                 {reasonLabel ? <p className='text-sm text-neutral1'>{reasonLabel}</p> : null}
             </div>
             <MatchResultStage localPlayer={localPlayer} opponent={opponent} winnerUserId={winnerUserId} modeId={modeId} />
-            {!spectatorName ? <RankSection progression={rankedProgression} winnerUserId={winnerUserId} eloDelta={eloDelta} /> : null}
+            {!spectatorName && showRankSection ? <RankSection progression={rankedProgression} winnerUserId={winnerUserId} eloDelta={eloDelta} /> : null}
             <h2 className='text-2xl font-bold mt-9 mb-6 underline underline-offset-12 decoration-neutral2'>Match Overview</h2>
             <div className='w-full max-w-xl grid grid-cols-2 gap-4'>
                 <Card className='items-center gap-1! text-center'><p className='text-2xl font-semibold tabular-nums'>{formatDurationMmSs(Math.max(0, Number(matchDurationSeconds) || 0))}</p><p className='text-sm text-neutral1'>Match Duration</p></Card>
                 <Card className='items-center gap-1! text-center'><p className='text-2xl font-semibold tabular-nums'>{Math.max(0, Number(questionsAnswered) || 0)}</p><p className='text-sm text-neutral1'>Questions Answered</p></Card>
             </div>
+            {!spectatorName && showSkillComparison ? <div className='w-full max-w-xl mt-8'>
+                {mastery.comparison ? <SkillWeb board={mastery.comparison.after} comparisonBoard={mastery.comparison.before} className='w-full' /> :
+                    <p className='w-full text-center text-sm text-neutral1' role='status'>
+                        {mastery.loading ? 'Updating your skills…' : mastery.error ? 'Skills could not be loaded.' : 'Skill comparison unavailable for this match.'}
+                    </p>}
+            </div> : null}
             <h2 className='text-2xl font-bold mt-12 mb-6 underline underline-offset-12 decoration-neutral2'>Game Rounds</h2>
             <div className='w-full max-w-4xl flex flex-col gap-3'>
                 {rounds.map((round) => {

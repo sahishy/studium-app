@@ -24,6 +24,8 @@ import { useUserStats } from '../contexts/UserStatsContext'
 import Podium from '../../../shared/components/avatar/Podium'
 import { removeFriend, sendFriendRequestByUserId, useHasOutgoingFriendRequest, useIsFriend } from '../../socials/services/friendService'
 import DisplayName from '../components/DisplayName'
+import Title from '../components/Title'
+import PlayerLevel from '../components/PlayerLevel'
 import { useMultiplayer } from '../../multiplayer/contexts/MultiplayerContext'
 import { getSpectateAvailability } from '../../multiplayer/utils/spectateAvailability'
 import { getPlayerActivity } from '../../../shared/utils/playerActivity'
@@ -329,7 +331,7 @@ const ProfileOverview = () => {
                                     className='w-full h-full'
                                 >
                                     <div
-                                        title={profileActivity.label}
+                                        aria-description={profileActivity.label}
                                         className={`absolute bottom-1 right-1 w-8 h-8 border-6 border-neutral6 rounded-full ${profileActivity.dotColorClass}`}
                                     />
                                 </AvatarPicture>
@@ -359,7 +361,7 @@ const ProfileOverview = () => {
                                         <Button
                                             type='primary'
                                             disabled={spectateAvailability.disabled}
-                                            title={spectateAvailability.disabled ? 'Leave matchmaking before spectating.' : `Spectate ${displayedProfile?.profile?.displayName ?? 'this player'}`}
+                                            aria-description={spectateAvailability.disabled ? 'Leave matchmaking before spectating.' : `Spectate ${displayedProfile?.profile?.displayName ?? 'this player'}`}
                                             onClick={() => navigate(`/play/game/${encodeURIComponent(spectateAvailability.roomId)}?spectate=${encodeURIComponent(targetUserId)}`)}
                                         >
                                             Spectate
@@ -401,9 +403,15 @@ const ProfileOverview = () => {
                                     </button>
                                 )}
                             </div>
-                            <p className='text-sm font-semibold text-neutral1 mt-1'>
-                                {combinedRankedElo} <span className='text-[0.625rem] font-medium'>SAT</span>
-                            </p>
+
+                            {/* Sits directly under the name, which is also where it appears on the
+                                match intro banner, so a title reads the same in both places. */}
+                            <Title titleId={displayedProfile?.profile?.title} size='md' className='mt-0.5' />
+
+                            <div className='flex items-center gap-3 text-sm font-semibold text-neutral1 mt-1'>
+                                <p>{combinedRankedElo} <span className='text-[0.625rem] font-medium'>SAT</span></p>
+                                <PlayerLevel level={displayedProfile?.progress?.level} />
+                            </div>
                         </div>
 
                         {saveError ? (

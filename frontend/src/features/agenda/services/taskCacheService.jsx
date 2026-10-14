@@ -1,3 +1,4 @@
+import { tutorialTaskQueued, tutorialDeletionQueued } from '../../onboarding/onboardingBridge'
 import { createCacheKey, deleteCacheEntry, getCacheValue, setCacheEntry } from '../../../shared/services/cacheService'
 import { CACHE_DEBOUNCE_MS, CACHE_NAMESPACES, CACHE_STORAGE_KEYS } from '../../../shared/utils/cacheUtils'
 import { createTask, deleteTask, updateTask } from './taskService'
@@ -215,7 +216,9 @@ const enqueueTaskCreate = (taskId, task = {}) => {
     })
 
     scheduleFlush()
-    return ensurePendingTaskPromise(taskId)
+    const ready=ensurePendingTaskPromise(taskId)
+    tutorialTaskQueued(taskId,task,ready)
+    return ready
 }
 
 const enqueueTaskPatch = (taskId, patch = {}) => {
@@ -265,7 +268,9 @@ const enqueueTaskDelete = (taskId) => {
 
     scheduleFlush()
 
-    return ensurePendingTaskPromise(taskId)
+    const ready=ensurePendingTaskPromise(taskId)
+    tutorialDeletionQueued(taskId,ready)
+    return ready
 }
 
 const flushPendingTaskPatches = async () => {

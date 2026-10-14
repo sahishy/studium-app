@@ -3,7 +3,22 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { db } from '../../lib/firebaseAdmin.js'
 
 const dayNumber = (dateString) => Math.floor(new Date(`${dateString}T00:00:00Z`).getTime() / 86400000)
-const utcDateString = (date) => date.toISOString().slice(0, 10)
+
+// The streak now has claimable rewards hanging off it, so its day boundary has to be the student's
+// own midnight - the same one the quest board uses. On UTC boundaries a student on the US west
+// coast lost streaks they had every reason to believe they had kept, because their evening was
+// already the next UTC day.
+const localDateString = (date, timeZone) => {
+    try {
+        return new Intl.DateTimeFormat('en-CA', {
+            timeZone: timeZone || 'UTC', year: 'numeric', month: '2-digit', day: '2-digit',
+        }).format(date)
+    } catch {
+        return new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'UTC', year: 'numeric', month: '2-digit', day: '2-digit',
+        }).format(date)
+    }
+}
 
 const handlePresenceChange = onValueWritten({ ref: '/status/{uid}' }, async (event) => {
 
@@ -30,9 +45,12 @@ const handlePresenceChange = onValueWritten({ ref: '/status/{uid}' }, async (eve
 
         const userSnap = await transaction.get(userRef)
         const lastSeen = userSnap.data()?.lastSeen?.toDate?.() ?? null
+        const timeZone = userSnap.data()?.preferences?.timeZone
+            || userSnap.data()?.progress?.timeZone
+            || 'UTC'
 
-        const todayUtc = utcDateString(new Date())
-        const daysDiff = lastSeen ? dayNumber(todayUtc) - dayNumber(utcDateString(lastSeen)) : null
+        const today = localDateString(new Date(), timeZone)
+        const daysDiff = lastSeen ? dayNumber(today) - dayNumber(localDateString(lastSeen, timeZone)) : null
 
         const update = { status: 'active', lastSeen: FieldValue.serverTimestamp() }
         if(!userSnap.data()?.activity) update.activity = { state: 'online', updatedAt: FieldValue.serverTimestamp() }

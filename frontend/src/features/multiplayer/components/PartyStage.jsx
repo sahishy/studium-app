@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { FaCrown, FaPlus, FaRightToBracket } from 'react-icons/fa6'
 import AvatarModel from '../../../shared/components/avatar/AvatarModel'
 import Podium from '../../../shared/components/avatar/Podium'
+import Title from '../../profile/components/Title'
+import PlayerLevel from '../../profile/components/PlayerLevel'
 import { getPlayerActivity } from '../../../shared/utils/playerActivity'
 import { getRankInfoFromElo } from '../../profile/utils/statsUtils'
 
@@ -36,12 +38,14 @@ const PlayerLabel = ({ member, party, mode, compact = false }) => {
                 {party?.id && member.userId === party.leaderUserId ? <FaCrown className='shrink-0 text-amber-400 text-xs' /> : null}
                 <p className={`${compact ? 'text-xs' : 'text-md'} font-semibold truncate`}>{member.displayName}</p>
             </div>
+            <div className='flex justify-center mt-0.5'><Title titleId={member.title} size={compact ? 'xs' : 'sm'} /></div>
             {mode?.ranked ? (
-                <div className='mt-1 flex items-center justify-center gap-1.5'>
-                    <img src={rank.imageSrc} alt='' className={`${compact ? 'w-5 h-5' : 'w-8 h-8'} absolute object-cover mr-8`} />
-                    <p className={`${compact ? 'text-xs' : 'text-sm'} font-semibold tabular-nums ml-8`}>
+                <div className='pr-2 mt-1 flex items-center justify-center gap-1.5'>
+                    <img src={rank.imageSrc} alt='' className={`${compact ? 'w-5 h-5' : 'w-8 h-8'} object-cover shrink-0`} />
+                    <p className={`${compact ? 'text-xs' : 'text-sm'} font-semibold tabular-nums`}>
                         {elo} <span className='text-[10px] font-medium text-neutral1'>SAT</span>
                     </p>
+                    <PlayerLevel level={member.level} className={compact ? 'ml-2 text-[10px]' : 'ml-3'} hasOutline={true} />
                 </div>
             ) : null}
         </div>
@@ -84,7 +88,7 @@ const PlayerSpot = ({ member, party, mode, currentProfile, focus = false, back =
     const characterHorizontalPosition = !roomy && !back && focus ? 'translate-x-[0.625rem]' : ''
     return (
         <div className={`relative flex items-end justify-center ${spotHeight} min-w-0 ${className}`}>
-            {showLabel ? <PlayerLabel member={member} party={party} mode={mode} compact={back} /> : null}
+            {showLabel ? <PlayerLabel member={member?.userId === currentProfile?.uid ? { ...member, title: currentProfile?.profile?.title, level: currentProfile?.progress?.level } : member} party={party} mode={mode} compact={back} /> : null}
             <Podium
                 fadeBottom={back}
                 glow={member?.ready && !back}
@@ -219,14 +223,13 @@ const PartyStage = ({ party, mode, currentProfile, friends = [], onInvite, onJoi
 
     useLayoutEffect(() => {
         const currentRects = new Map()
-        const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
         playerNodesRef.current.forEach((node, userId) => {
             const rect = node.getBoundingClientRect()
             currentRects.set(userId, rect)
             const previousRect = previousPlayerRectsRef.current.get(userId)
 
-            if (!hasMeasuredStageRef.current || reduceMotion) return
+            if (!hasMeasuredStageRef.current) return
 
             if (!previousRect) {
                 node.animate(

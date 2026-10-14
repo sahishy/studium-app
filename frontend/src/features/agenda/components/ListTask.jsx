@@ -63,6 +63,7 @@ const ListTask = ({ task, depth = 0, hasChildren = false, circles = [], courses 
         <div
             ref={setNodeRef}
             data-task-completed={isCompleted ? 'true' : 'false'}
+            data-record-id={task.uid}
             className={`group relative flex items-center gap-2 text-sm px-3 rounded-xl
                 hover:bg-neutral5/40 focus-within:bg-neutral5/40 cursor-text transition-all ease-out 
                 ${isDragging && 'opacity-80 z-20 bg-neutral6/80'}

@@ -4,6 +4,19 @@ import { levelUpAnimation } from '../profile/services/xpService'
 
 const EconomyContext = createContext({ snapshot: null, refresh: async () => {} })
 
+// One snapshot drives the level roadmap, the locker and the crate's drop table,
+// and every one of them reads an absent field as "nothing here" rather than
+// "not loaded". So a response that arrived without the parts they depend on must
+// never replace one that has them: that is what made every level look
+// claimable, the locker look like nothing was owned and the drop table lose its
+// percentages, all at once. Holding the last good snapshot leaves those screens
+// showing something slightly stale instead, which they recover from on the next
+// refresh.
+const isUsableSnapshot = (value) => Boolean(value)
+    && Boolean(value.wallet)
+    && Boolean(value.progress)
+    && Array.isArray(value.catalog)
+
 const EconomyProvider = ({ userId, progressVersion, children }) => {
     const [snapshot, setSnapshot] = useState(null)
     const [error, setError] = useState('')
@@ -35,6 +48,10 @@ const EconomyProvider = ({ userId, progressVersion, children }) => {
             // Several refreshes can be in flight at once, so a slower earlier
             // response must never overwrite a newer one.
             if(sequence !== requestSequenceRef.current) return value
+            if(!isUsableSnapshot(value)) {
+                setError('The economy snapshot came back incomplete.')
+                return value
+            }
             setSnapshot(value)
             setError('')
             return value

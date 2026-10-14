@@ -25,7 +25,6 @@ const useScreenShake = () => {
     const shake = useCallback((preset = 'subtle') => {
         const element = screenShakeRef.current
         if(!element || typeof element.animate !== 'function') return
-        if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return
 
         const settings = typeof preset === 'string'
             ? SCREEN_SHAKE_PRESETS[preset] ?? SCREEN_SHAKE_PRESETS.subtle

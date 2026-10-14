@@ -1,17 +1,17 @@
+import { useOnboarding } from '../../onboarding/OnboardingContext'
 import { useEffect, useMemo, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import MyCoursesCard from '../components/MyCoursesCard'
 import CourseCommandPalette from '../components/commandPalettes/CourseCommandPalette'
 import { useCourses } from '../contexts/CoursesContext'
-import { getCourseSubjects, leaveCourse, searchCourses } from '../services/courseService'
+import { getCourseSubjects, searchCourses } from '../services/courseService'
 import { FaArrowUp, FaMagnifyingGlass } from 'react-icons/fa6'
 import { useModal } from '../../../shared/contexts/ModalContext'
 import AddCourseModal from '../components/modals/AddCourseModal'
 import { useUserStats } from '../../profile/contexts/UserStatsContext'
 import { getAverageScoreByCourseIds } from '../services/reviewService'
-import { getTeachersByIdsMap } from '../services/teacherService'
 import LoadingState from '../../../shared/components/ui/LoadingState'
-import { CACHE_STATUS, createCacheKey, getCacheStatus, getCacheValue, resolveCachedRecordsByIds, setCacheEntry, setCachedRecordsById } from '../../../shared/services/cacheService'
+import { createCacheKey, resolveCachedRecordsByIds, setCachedRecordsById } from '../../../shared/services/cacheService'
 import { CACHE_NAMESPACES, CACHE_TTLS_MS } from '../../../shared/utils/cacheUtils'
 import study0 from '../../../assets/images/illustrations/study0.png'
 import { MAX_USER_COURSES } from '../utils/courseUtils'
@@ -19,39 +19,31 @@ import { MAX_USER_COURSES } from '../utils/courseUtils'
 const RESULTS_PAGE_SIZE = 10
 const SCORE_CACHE_TTL_MS = CACHE_TTLS_MS.COURSE_SCORE
 const SCORE_CACHE_NAMESPACE = CACHE_NAMESPACES.COURSE_SCORE
-const TEACHERS_MAP_CACHE_TTL_MS = CACHE_TTLS_MS.COURSE_TEACHERS_MAP
-const TEACHERS_MAP_CACHE_NAMESPACE = CACHE_NAMESPACES.COURSE_TEACHERS_MAP
 
 const getScoreCacheKey = (courseId) => {
     return createCacheKey(SCORE_CACHE_NAMESPACE, courseId)
 }
 
-const getTeachersMapCacheKey = (teacherIds = []) => {
-    const normalized = Array.from(new Set((teacherIds ?? []).map((teacherId) => String(teacherId)).filter(Boolean))).sort()
-    return createCacheKey(TEACHERS_MAP_CACHE_NAMESPACE, normalized.join(','))
-}
-
 const MyCoursesTab = () => {
 
     const { profile } = useOutletContext()
+    const { step: tutorial } = useOnboarding()
     const { userStats } = useUserStats()
     const { openModal, closeModal } = useModal()
     const { enrollments = [], selectedCourses = [], courseIds = [], loading: coursesLoading = false } = useCourses()
-    const [loadingCourseId, setLoadingCourseId] = useState(null)
-    const [teachersLoading, setTeachersLoading] = useState(false)
+    const loadingCourseId = null
     const [isPaletteOpen, setIsPaletteOpen] = useState(false)
     const [query, setQuery] = useState('')
     const [searchVisibleCount, setSearchVisibleCount] = useState(RESULTS_PAGE_SIZE)
     const [subjectVisibleCount, setSubjectVisibleCount] = useState(RESULTS_PAGE_SIZE)
     const [scoreMap, setScoreMap] = useState({})
     const [loadingScoreIds, setLoadingScoreIds] = useState({})
-    const [teachersMap, setTeachersMap] = useState({})
 
     const subjects = useMemo(() => getCourseSubjects(), [])
     const [activeSubject, setActiveSubject] = useState(subjects[0] ?? null)
 
     const normalizedQuery = query.trim()
-    const isCourseLimitReached = selectedCourses.length >= MAX_USER_COURSES
+    const isCourseLimitReached = selectedCourses.length >= MAX_USER_COURSES && tutorial?.event !== 'course-added'
 
     const selectedCourseIds = useMemo(() => {
         return new Set(courseIds.map((courseId) => String(courseId)))
@@ -111,7 +103,7 @@ const MyCoursesTab = () => {
     const canLoadMoreSearch = searchResults.length > visibleSearchResults.length
     const canLoadMoreSubject = subjectCourses.length > visibleSubjectCourses.length
     const isScoreLoading = Object.keys(loadingScoreIds).length > 0
-    const isPageLoading = coursesLoading || teachersLoading || Boolean(loadingCourseId)
+    const isPageLoading = coursesLoading || Boolean(loadingCourseId)
     const isPaletteLoading = isScoreLoading || coursesLoading || Boolean(loadingCourseId)
 
     useEffect(() => {
@@ -213,54 +205,6 @@ const MyCoursesTab = () => {
     }, [normalizedQuery, visibleSearchResults, visibleSubjectCourses])
 
     useEffect(() => {
-        let cancelled = false
-
-        const teacherIds = Array.from(
-            new Set(
-                enrollments
-                    .map((enrollment) => String(enrollment.teacherId ?? ''))
-                    .filter(Boolean)
-            )
-        )
-
-        if (teacherIds.length === 0) {
-            if (!cancelled) {
-                setTeachersMap({})
-                setTeachersLoading(false)
-            }
-            return
-        }
-
-        const cacheKey = getTeachersMapCacheKey(teacherIds)
-        const cacheStatus = getCacheStatus(cacheKey)
-        const cachedTeachersMap = getCacheValue(cacheKey)
-        if ((cacheStatus === CACHE_STATUS.FRESH || cacheStatus === CACHE_STATUS.STALE) && cachedTeachersMap && typeof cachedTeachersMap === 'object') {
-            setTeachersMap(cachedTeachersMap)
-        }
-
-        const loadTeachers = async () => {
-            setTeachersLoading(true)
-            try {
-                const nextMap = await getTeachersByIdsMap(teacherIds)
-                if (!cancelled) {
-                    setTeachersMap(nextMap)
-                    setCacheEntry(cacheKey, nextMap, { ttlMs: TEACHERS_MAP_CACHE_TTL_MS })
-                }
-            } finally {
-                if (!cancelled) {
-                    setTeachersLoading(false)
-                }
-            }
-        }
-
-        loadTeachers()
-
-        return () => {
-            cancelled = true
-        }
-    }, [enrollments])
-
-    useEffect(() => {
         setSearchVisibleCount(RESULTS_PAGE_SIZE)
     }, [normalizedQuery])
 
@@ -292,8 +236,10 @@ const MyCoursesTab = () => {
                 <div className='flex-1 flex flex-col items-start pb-16'>
 
                     <div className='w-full flex justify-center py-8'>
-                        {/* <Button type='secondary' onClick={openPalette}>Add Course</Button> */}
+                        {/* <Button type='secondary' data-onboarding="courses:add"
+                            onClick={openPalette}>Add Course</Button> */}
                         <button
+                            data-onboarding="courses:add"
                             onClick={openPalette}
                             disabled={isCourseLimitReached}
                             className={`px-6 py-3 text-sm bg-neutral5 rounded-full text-neutral1
@@ -326,9 +272,7 @@ const MyCoursesTab = () => {
                                             key={course.courseId}
                                             course={course}
                                             customization={enrollment?.customization}
-                                            teacherName={teachersMap[String(enrollment?.teacherId)]?.name}
                                             loading={loadingCourseId === String(course.courseId)}
-                                            onRemove={() => handleLeaveCourse(course.courseId)}
                                         />
                                     )
                                 })}

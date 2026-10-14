@@ -8,6 +8,7 @@ import { post } from '../../../shared/services/apiService'
 import { deriveTreeStatuses } from '../utils/taskViewUtils'
 import { useRewardFx } from '../../economy/RewardFxContext'
 import { useQuests } from '../../quests/QuestContext'
+import { tutorialTaskCreationError, tutorialSignal } from '../../onboarding/onboardingBridge'
 
 const TasksContext = createContext({ user: [], circle: [] })
 
@@ -121,6 +122,11 @@ const TasksProvider = ({ profile, children }) => {
     }, [patchLocal, clearLocal, user, circle, celebrateReward, reportQuestProgress])
 
     const createTaskOptimistic = useCallback((draftTask = {}) => {
+        const tutorialError=tutorialTaskCreationError(draftTask.title)
+        if(tutorialError){
+            tutorialSignal('task-input-rejected',{message:tutorialError})
+            return {taskId:null,blockedReason:'tutorial_task'}
+        }
 
         if (user.length >= MAX_USER_TASKS) {
             return { taskId: null, blockedReason: 'max_user_tasks' }

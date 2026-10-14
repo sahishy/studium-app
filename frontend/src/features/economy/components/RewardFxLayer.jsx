@@ -56,7 +56,9 @@ const RewardFxLayer = ({ flights = [] }) => {
     }
 
     return createPortal(
-        <div className='fixed inset-0 z-[4000] pointer-events-none overflow-hidden'>
+        // Above tooltips (z-9999) and toasts: the flown icons read as coming from whatever
+        // surface granted them, so nothing should ever cover them mid-flight.
+        <div className='fixed inset-0 z-[10000] pointer-events-none overflow-hidden'>
             {flights.map((flight) => (
                 <RewardFlight key={flight.id} flight={flight} />
             ))}

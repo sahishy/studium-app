@@ -1,0 +1,283 @@
+{
+  "STARTER_COLORS": [
+    "#fcd34d",
+    "#22c55e",
+    "#60a5fa",
+    "#f87171"
+  ],
+  "STARTER_FACES": [
+    0,
+    1,
+    2
+  ],
+  "COLOR_CATALOG": [
+    {
+      "id": "orange",
+      "value": "#fb923c",
+      "rarity": "Common"
+    },
+    {
+      "id": "violet",
+      "value": "#a78bfa",
+      "rarity": "Common"
+    },
+    {
+      "id": "teal",
+      "value": "#22c3b8",
+      "rarity": "Common"
+    },
+    {
+      "id": "rose",
+      "value": "#f472b6",
+      "rarity": "Common"
+    },
+    {
+      "id": "cyan",
+      "value": "#22d3ee",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "indigo",
+      "value": "#6366f1",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "mint",
+      "value": "#6ee7b7",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "lilac",
+      "value": "#d8b4fe",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "emerald",
+      "value": "#059669",
+      "rarity": "Rare"
+    },
+    {
+      "id": "sapphire",
+      "value": "#2563eb",
+      "rarity": "Rare"
+    },
+    {
+      "id": "ruby",
+      "value": "#e11d48",
+      "rarity": "Rare"
+    },
+    {
+      "id": "pearl",
+      "value": "#e2e8f0",
+      "rarity": "Epic"
+    },
+    {
+      "id": "amethyst",
+      "value": "#a855f7",
+      "rarity": "Epic"
+    },
+    {
+      "id": "obsidian",
+      "value": "#334155",
+      "rarity": "Legendary"
+    }
+  ],
+  "FACE_CATALOG": [
+    {
+      "id": "face-5",
+      "value": 5,
+      "name": "Smile",
+      "rarity": "Common"
+    },
+    {
+      "id": "face-4",
+      "value": 4,
+      "name": "Meh",
+      "rarity": "Common"
+    },
+    {
+      "id": "face-6",
+      "value": 6,
+      "name": "Wink",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "face-13",
+      "value": 13,
+      "name": "Chill",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "face-7",
+      "value": 7,
+      "name": "Joyful",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "face-8",
+      "value": 8,
+      "name": "Flustered",
+      "rarity": "Rare"
+    },
+    {
+      "id": "face-9",
+      "value": 9,
+      "name": "Shocked",
+      "rarity": "Rare"
+    },
+    {
+      "id": "face-12",
+      "value": 12,
+      "name": "Dreadful",
+      "rarity": "Rare"
+    },
+    {
+      "id": "face-11",
+      "value": 11,
+      "name": "Confused",
+      "rarity": "Epic"
+    },
+    {
+      "id": "face-3",
+      "value": 3,
+      "name": "Goofy",
+      "rarity": "Epic"
+    },
+    {
+      "id": "face-10",
+      "value": 10,
+      "name": "Alien",
+      "rarity": "Legendary"
+    }
+  ],
+  "TITLE_CATALOG": [
+    {
+      "id": "title-novice",
+      "name": "The Novice",
+      "rarity": "Common"
+    },
+    {
+      "id": "title-student",
+      "name": "The Student",
+      "rarity": "Common"
+    },
+    {
+      "id": "title-freshman",
+      "name": "The Freshman",
+      "rarity": "Common"
+    },
+    {
+      "id": "title-note-taker",
+      "name": "The Note Taker",
+      "rarity": "Common"
+    },
+    {
+      "id": "title-early-bird",
+      "name": "The Early Bird",
+      "rarity": "Common"
+    },
+    {
+      "id": "title-doodler",
+      "name": "The Doodler",
+      "rarity": "Common"
+    },
+    {
+      "id": "title-bookworm",
+      "name": "The Bookworm",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "title-overachiever",
+      "name": "The Overachiever",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "title-caffeinated",
+      "name": "The Caffeinated",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "title-night-owl",
+      "name": "The Night Owl",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "title-quick-thinker",
+      "name": "The Quick Thinker",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "title-study-buddy",
+      "name": "The Study Buddy",
+      "rarity": "Uncommon"
+    },
+    {
+      "id": "title-scholar",
+      "name": "The Scholar",
+      "rarity": "Rare"
+    },
+    {
+      "id": "title-mathlete",
+      "name": "The Mathlete",
+      "rarity": "Rare"
+    },
+    {
+      "id": "title-wordsmith",
+      "name": "The Wordsmith",
+      "rarity": "Rare"
+    },
+    {
+      "id": "title-curve-breaker",
+      "name": "The Curve Breaker",
+      "rarity": "Rare"
+    },
+    {
+      "id": "title-unshakeable",
+      "name": "The Unshakeable",
+      "rarity": "Rare"
+    },
+    {
+      "id": "title-tutor",
+      "name": "The Tutor",
+      "rarity": "Rare"
+    },
+    {
+      "id": "title-prodigy",
+      "name": "The Prodigy",
+      "rarity": "Epic"
+    },
+    {
+      "id": "title-valedictorian",
+      "name": "The Valedictorian",
+      "rarity": "Epic"
+    },
+    {
+      "id": "title-mastermind",
+      "name": "The Mastermind",
+      "rarity": "Epic"
+    },
+    {
+      "id": "title-human-calculator",
+      "name": "The Human Calculator",
+      "rarity": "Epic"
+    },
+    {
+      "id": "title-1601-scorer",
+      "name": "1601 Scorer",
+      "rarity": "Legendary",
+      "earned": true
+    },
+    {
+      "id": "title-undefeated",
+      "name": "The Undefeated",
+      "rarity": "Legendary",
+      "earned": true
+    },
+    {
+      "id": "title-immortal",
+      "name": "The Immortal",
+      "rarity": "Legendary",
+      "earned": true
+    }
+  ]
+}

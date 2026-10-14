@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { useOutletContext, useSearchParams } from 'react-router-dom'
 import { FaTrophy } from 'react-icons/fa6'
 import Topbar from '../../../shared/components/ui/Topbar'
 import PageHeader from '../../../shared/components/ui/PageHeader'
@@ -52,8 +52,10 @@ const TAB_SWITCH_DEBOUNCE_MS = 200
 const Leaderboards = () => {
     const { profile } = useOutletContext()
 
-    const [selectedTab, setSelectedTab] = useState('total')
-    const [leaderboardId, setLeaderboardId] = useState('total')
+    const [searchParams] = useSearchParams()
+    const initialMode = TABS.some((tab) => tab.name === searchParams.get('mode')) ? searchParams.get('mode') : 'total'
+    const [selectedTab, setSelectedTab] = useState(initialMode)
+    const [leaderboardId, setLeaderboardId] = useState(initialMode)
     const [entries, setEntries] = useState([])
     const [cursor, setCursor] = useState(null)
     const [hasMore, setHasMore] = useState(false)

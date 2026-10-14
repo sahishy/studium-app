@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom'
 import shineUrl from '../../../assets/images/shine.png'
 import shine2Url from '../../../assets/images/shine2.png'
 import ColorSwatch from './ColorSwatch'
+import Title from '../../profile/components/Title'
+import { describeTitle } from '../../profile/utils/titleUtils'
 import { AVATAR_FACES } from '../../profile/utils/avatarUtils'
-import { describeFace, formatColorName, getRarityStyle } from '../utils/rarityUtils'
+import { RARITY_SURFACE_INK, describeFace, formatColorName, getRarityStyle, getRaritySurface } from '../utils/rarityUtils'
 import { RARITY_EFFECT_COLORS } from '../utils/crateInteraction'
 import { getWindowRoot } from '../../../shared/utils/windowLayerUtils'
 
@@ -26,9 +28,10 @@ const CrateRevealOverlay = ({ result, onExitStart, onClose }) => {
 
     const item = result?.color
     const isFace = item?.type === 'face'
+    const isTitle = item?.type === 'title'
     const rarityStyle = getRarityStyle(item?.rarity)
     const rarityColor = RARITY_EFFECT_COLORS[item?.rarity] ?? RARITY_EFFECT_COLORS.Common
-    const label = isFace ? describeFace(item.value, item).name : formatColorName(item?.id ?? '')
+    const label = isTitle ? describeTitle(item.id).name : (isFace ? describeFace(item.value, item).name : formatColorName(item?.id ?? ''))
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -111,7 +114,7 @@ const CrateRevealOverlay = ({ result, onExitStart, onClose }) => {
                 src={shineUrl}
                 alt=''
                 aria-hidden='true'
-                className='motion-safe:animate-[spin_35s_linear_infinite] pointer-events-none absolute w-[min(160vw,760px)] max-w-none select-none opacity-[0.12]'
+                className='animate-[spin_35s_linear_infinite] pointer-events-none absolute w-[min(160vw,760px)] max-w-none select-none opacity-[0.12]'
             />
 
             <div
@@ -119,7 +122,23 @@ const CrateRevealOverlay = ({ result, onExitStart, onClose }) => {
                 className={`relative flex flex-col items-center gap-6 p-8 transition-all ease-out
                     ${animate ? 'opacity-100 scale-100 duration-250' : 'opacity-0 scale-90 duration-[400ms]'}`}
             >
-                {isFace ? (
+                {isTitle ? (
+                    // A filled plate, not an outlined one: the border read as a stray white
+                    // edge against the blurred backdrop, and a 10% tint let the backdrop show
+                    // through where a card should be. The surface carries the rarity instead,
+                    // and the ink is pinned because that surface stays light in both themes -
+                    // a Common title's own text-neutral1 would vanish into it otherwise.
+                    <div
+                        className='relative flex size-36 items-center justify-center overflow-hidden rounded-xl p-3 shadow-xl shadow-shadow'
+                        style={{ backgroundColor: getRaritySurface(item.rarity), '--rarity-ink': RARITY_SURFACE_INK }}
+                    >
+                        <Title
+                            titleId={item.id}
+                            size='md'
+                            className='relative text-center leading-tight [&.text-neutral1]:text-[color:var(--rarity-ink)]'
+                        />
+                    </div>
+                ) : isFace ? (
                     <div className='size-36 overflow-hidden rounded-3xl border border-neutral4 bg-white shadow-xl shadow-shadow'>
                         <img src={AVATAR_FACES[item.value]} alt={label} className='w-full h-full object-cover' />
                     </div>

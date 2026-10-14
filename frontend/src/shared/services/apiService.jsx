@@ -45,7 +45,20 @@ const request = async ({ path, method = 'GET', body = null, headers = {} }) => {
         ...(body ? { body: JSON.stringify(body) } : {}),
     })
 
-    const data = await response.json().catch(() => ({}))
+    // A body that is present but not JSON means the response was cut short or
+    // never came from the API at all. Reading that as `{}` handed callers an
+    // object that looked like a valid, empty payload - and a screen that reads
+    // an absent field as "nothing here" rather than "unknown" then renders
+    // confidently wrong rather than failing.
+    const text = await response.text()
+    let data = {}
+
+    if(text) {
+        try { data = JSON.parse(text) }
+        catch {
+            if(response.ok) throw new Error(`Malformed response from ${path}.`)
+        }
+    }
 
     if(!response.ok) {
         throw new Error(data?.error || `Request failed: ${response.status}`)

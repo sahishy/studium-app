@@ -1,4 +1,5 @@
 import PartySocket from 'partysocket'
+import { getModeStats } from '../../profile/utils/statsUtils'
 import { auth } from '../../../lib/firebase'
 import { createServerClock, monotonicNow } from './serverClock'
 import { appendById, applyRoomPatch, applyStatePatch } from './gameViewPatch'
@@ -20,15 +21,40 @@ const configureRealtimeProfile = (profile, userStats = null) => {
     currentUserStats = userStats
 }
 
-const buildQuery = async () => ({
-    protocolVersion: PROTOCOL_VERSION,
-    userId: auth.currentUser?.uid || currentProfile?.uid || '',
-    token: auth.currentUser ? await auth.currentUser.getIdToken() : '',
+// The realtime identity, in the shape both the connect query and `identity.update` want. The
+// server captures it once per connection, so anything that can change mid-session (avatar,
+// display name, elo) has to be pushed again when it does.
+const realtimeIdentity = () => ({
     displayName: currentProfile?.profile?.displayName || 'Player',
-    profilePicture: JSON.stringify(currentProfile?.profile?.profilePicture ?? null),
-    avatar: JSON.stringify(currentProfile?.profile?.avatar ?? null),
-    eloByMode: JSON.stringify(Object.fromEntries(Object.entries(currentUserStats?.play ?? {}).map(([modeId, stats]) => [modeId, Number(stats?.elo) || 0]))),
+    profilePicture: currentProfile?.profile?.profilePicture ?? null,
+    avatar: currentProfile?.profile?.avatar ?? null,
+    title: currentProfile?.profile?.title ?? null,
+    level: currentProfile?.progress?.level ?? 1,
+    eloByMode: Object.fromEntries(Object.keys(currentUserStats?.play ?? {}).map((modeId) => [modeId, getModeStats(currentUserStats, { id: modeId }).elo ?? 0])),
+    // Only read when the worker runs without a backend to verify against, which is the local
+    // development setup. In production the verify endpoint supplies the authoritative copy, so a
+    // client cannot claim to be unplaced to draw an easier placement opponent.
+    placementByMode: Object.fromEntries(Object.entries(currentUserStats?.play ?? {}).map(([modeId, stats]) => [modeId, {
+        placed: Boolean(stats?.placed),
+        gamesPlayed: Math.max(0, Number(stats?.placementGamesPlayed) || 0),
+    }])),
 })
+
+const buildQuery = async () => {
+    const identity = realtimeIdentity()
+    return {
+        protocolVersion: PROTOCOL_VERSION,
+        userId: auth.currentUser?.uid || currentProfile?.uid || '',
+        token: auth.currentUser ? await auth.currentUser.getIdToken() : '',
+        displayName: identity.displayName,
+        profilePicture: JSON.stringify(identity.profilePicture),
+        avatar: JSON.stringify(identity.avatar),
+        title: identity.title ?? '',
+        level: String(identity.level),
+        eloByMode: JSON.stringify(identity.eloByMode),
+        placementByMode: JSON.stringify(identity.placementByMode),
+    }
+}
 
 const createSocket = ({ party, room }) => new PartySocket({ host, party, room, query: buildQuery, maxRetries: 20 })
 
@@ -261,6 +287,7 @@ export {
     buildQuery,
     closeGameChannel,
     configureRealtimeProfile,
+    realtimeIdentity,
     createSocket,
     getGameServerNow,
     getGameLatencyMetrics,

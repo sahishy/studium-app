@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useOutletContext } from 'react-router-dom'
-import { FaBookOpen, FaHeart, FaLayerGroup, FaLink, FaPlus, FaWandMagicSparkles } from 'react-icons/fa6'
+import { FaBookOpen, FaHeart, FaLink, FaPlus, FaWandMagicSparkles } from 'react-icons/fa6'
 import { HiSelector } from 'react-icons/hi'
 import Topbar from '../../../shared/components/ui/Topbar'
 import PageHeader from '../../../shared/components/ui/PageHeader'
@@ -14,13 +15,12 @@ import Select from '../../../shared/components/popovers/Select'
 import AvatarPicture from '../../../shared/components/avatar/AvatarPicture'
 import { formatRelativeTime } from '../../../shared/utils/formatters'
 import Modal from '../../../shared/components/modals/Modal'
-import BooleanSelect from '../../../shared/components/ui/BooleanSelect'
-import { useEconomy } from '../../economy/EconomyContext'
 import { useQuests } from '../../quests/QuestContext'
 import CollegePanel from '../components/CollegePanel'
-import ResourceDetail from '../components/ResourceDetail'
 import ResourceCreateModal from '../components/ResourceCreateModal'
-import { deleteResource, listResources, toggleHeart } from '../services/resourceService'
+import LinkPreview from '../components/LinkPreview'
+import Dropdown from '../../../shared/components/popovers/Dropdown'
+import { listResources, toggleHeart } from '../services/resourceService'
 
 const TABS = [
     { name: 'learn', label: 'Learn' },
@@ -31,28 +31,24 @@ const TYPE_OPTIONS = [
     { value: 'all', label: 'All types' },
     { value: 'link', label: 'Links', icon: <FaLink /> },
     { value: 'lesson', label: 'Lessons', icon: <FaWandMagicSparkles /> },
-    { value: 'course', label: 'Courses', icon: <FaLayerGroup /> },
 ]
 
 const TYPE_ICONS = {
     link: <FaLink />,
     lesson: <FaWandMagicSparkles />,
-    course: <FaLayerGroup />,
 }
 
 const Resources = () => {
 
     const { profile } = useOutletContext()
-    const { tip } = useEconomy()
+    const navigate = useNavigate()
     const { reportQuestProgress } = useQuests()
 
     const [tabIndex, setTabIndex] = useState(0)
     const [resources, setResources] = useState([])
-    const [selected, setSelected] = useState(null)
     const [editor, setEditor] = useState(null)
     const [type, setType] = useState('all')
     const [query, setQuery] = useState('')
-    const [mine, setMine] = useState(false)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
 
@@ -73,16 +69,25 @@ const Resources = () => {
 
     useEffect(() => { load() }, [])
 
+    // Your own work comes first — including your drafts, which nobody else can see — and
+    // everything else follows, newest first. No filter to set, because the useful order is
+    // the same every time.
     const shown = useMemo(() => resources.filter((resource) => {
 
-        if(mine && resource.ownerId !== profile.uid) return false
-        if(!mine && resource.status !== 'published') return false
+        const isMine = resource.ownerId === profile.uid
+
+        if(!isMine && resource.status !== 'published') return false
         if(type !== 'all' && resource.type !== type) return false
 
         const search = `${resource.title} ${resource.description || ''} ${resource.subject || ''}`.toLowerCase()
         return search.includes(query.trim().toLowerCase())
 
-    }), [resources, mine, type, query, profile.uid])
+    }).sort((left, right) => {
+
+        const mineFirst = Number(right.ownerId === profile.uid) - Number(left.ownerId === profile.uid)
+        return mineFirst || new Date(right.createdAt || 0) - new Date(left.createdAt || 0)
+
+    }), [resources, type, query, profile.uid])
 
     const heart = async (id) => {
 
@@ -94,24 +99,8 @@ const Resources = () => {
                 ? { ...resource, hearted: result.active, heartsCount: result.count }
                 : resource))
 
-            setSelected((current) => current?.id === id
-                ? { ...current, hearted: result.active, heartsCount: result.count }
-                : current)
-
         } catch(heartError) {
             setError(heartError.message)
-        }
-
-    }
-
-    const remove = async (resource) => {
-
-        try {
-            await deleteResource(resource.id)
-            setSelected(null)
-            await load()
-        } catch(removeError) {
-            setError(removeError.message)
         }
 
     }
@@ -119,14 +108,13 @@ const Resources = () => {
     const closeEditor = async (saved) => {
         reportQuestProgress(saved)
         setEditor(null)
-        setSelected(null)
         await load()
     }
 
     const tab = TABS[tabIndex]?.name ?? 'learn'
 
     return (
-        <div className='flex flex-col h-full overflow-y-auto'>
+        <div data-onboarding="resources:content" className='flex flex-col h-full overflow-y-auto'>
 
             <Topbar profile={profile} />
 
@@ -171,16 +159,21 @@ const Resources = () => {
                                 )}
                             </Select>
 
-                            <BooleanSelect
-                                value={mine}
-                                onChange={setMine}
-                                leftOption={{ value: false, label: 'All' }}
-                                rightOption={{ value: true, label: 'Mine' }}
-                            />
-
-                            <Button type='primary' onClick={() => setEditor({})}>
-                                <FaPlus /> Create
-                            </Button>
+                            <Dropdown
+                                options={[
+                                    { label: 'Lesson', icon: <FaWandMagicSparkles className='text-sm' /> },
+                                    { label: 'Link', icon: <FaLink className='text-sm' /> },
+                                ]}
+                                // A lesson goes straight to the builder; only a link needs a form.
+                                onSelect={(option) => (option.label === 'Lesson' ? navigate('/resources/build') : setEditor({ type: 'link' }))}
+                                align='end'
+                            >
+                                {() => (
+                                    <Button type='primary'>
+                                        <FaPlus /> Create
+                                    </Button>
+                                )}
+                            </Dropdown>
 
                         </div>
 
@@ -194,9 +187,16 @@ const Resources = () => {
                                     <Card
                                         key={resource.id}
                                         hoverable
-                                        onClick={() => setSelected(resource)}
+                                        onClick={() => {
+                                            // A link is its destination, so it opens rather than
+                                            // explaining itself in a modal first.
+                                            if(resource.type === 'link' && resource.url) return window.open(resource.url, '_blank', 'noopener,noreferrer')
+                                            // A lesson is something you do, so it opens on its own screen.
+                                            navigate(`/resources/lesson/${resource.id}`)
+                                        }}
                                         className='gap-3'
                                     >
+                                        {resource.type === 'link' && resource.url ? <LinkPreview resource={resource} /> : null}
                                         <div className='flex items-start justify-between gap-3'>
 
                                             <div className='flex items-center gap-2 text-xs font-semibold text-neutral1'>
@@ -247,7 +247,7 @@ const Resources = () => {
                         ) : (
                             <ErrorState
                                 title='Nothing here yet'
-                                description={mine ? 'Create your first resource to see it here.' : 'Be the first to share something with your school.'}
+                                description='Be the first to share something with other students.'
                             />
                         )}
                     </>
@@ -263,30 +263,12 @@ const Resources = () => {
                     <ResourceCreateModal
                         key={editor.id || 'new'}
                         initial={editor.id ? editor : null}
-                        resources={resources}
-                        userId={profile.uid}
                         onSaved={closeEditor}
                         onClose={() => setEditor(null)}
                     />
                 )}
             /> : null}
 
-            {selected ? <Modal
-                isOpen
-                closeModal={() => setSelected(null)}
-                maxWidthClass='max-w-3xl'
-                modalContent={(
-                    <ResourceDetail
-                        resource={selected}
-                        userId={profile.uid}
-                        onClose={() => setSelected(null)}
-                        onEdit={(resource) => { setSelected(null); setEditor(resource) }}
-                        onDelete={remove}
-                        onHeart={heart}
-                        onTip={tip}
-                    />
-                )}
-            /> : null}
 
         </div>
     )

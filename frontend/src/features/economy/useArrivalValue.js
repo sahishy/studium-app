@@ -1,37 +1,31 @@
-import { useEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useRewardFx } from './RewardFxContext'
+import { createArrivalState, nextArrivalState } from './utils/arrivalValue'
 
 // Shows a counter value that only climbs as reward icons land on it. While
 // nothing is in flight it tracks the server value directly, so changes that did
-// not come with an animation still show up straight away.
+// not come with an animation still show up straight away. See
+// utils/arrivalValue.js for how the two are reconciled.
 const useArrivalValue = (kind, serverValue, { startFrom = null, followServer = true } = {}) => {
 
     const { credits, inFlight } = useRewardFx()
 
-    const [display, setDisplay] = useState(startFrom ?? serverValue ?? 0)
-    const seenCreditsRef = useRef(credits?.[kind] ?? 0)
-
     const credited = credits?.[kind] ?? 0
     const pending = inFlight?.[kind] ?? 0
 
-    useEffect(() => {
+    const [display, setDisplay] = useState(startFrom ?? serverValue ?? 0)
+    const stateRef = useRef(null)
 
-        const delta = credited - seenCreditsRef.current
-        seenCreditsRef.current = credited
+    if(!stateRef.current) {
+        stateRef.current = createArrivalState({ display, credited, serverValue })
+    }
 
-        if(delta > 0) {
-            setDisplay((current) => current + delta)
-        }
+    useLayoutEffect(() => {
 
-    }, [credited])
+        stateRef.current = nextArrivalState(stateRef.current, { serverValue, pending, credited, followServer })
+        setDisplay(stateRef.current.display)
 
-    useEffect(() => {
-
-        if(!followServer || pending > 0 || serverValue == null) return
-
-        setDisplay(serverValue)
-
-    }, [followServer, pending, serverValue])
+    }, [credited, followServer, pending, serverValue])
 
     return display
 }

@@ -39,7 +39,7 @@ const RewardCounter = ({ kind, className = '', children }) => {
     return (
         <div
             ref={elementRef}
-            className={`${armed ? 'motion-safe:animate-punch-scale' : ''} ${className}`}
+            className={`${armed ? 'animate-punch-scale' : ''} ${className}`}
         >
             {children}
         </div>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { FaBoxOpen, FaFlagCheckered } from 'react-icons/fa6'
 import AvatarModel from '../../../shared/components/avatar/AvatarModel'
 import RadialProgress from '../../../shared/components/ui/RadialProgress'
@@ -34,17 +34,17 @@ const RoadmapDot = ({ node, onClaim, claiming }) => {
     return (
         <>
             {isClaimable ? (
-                <span className={`absolute ${size} rounded-full border-2 border-sky-400 motion-safe:animate-ping opacity-60`} />
+                <span className={`absolute ${size} rounded-full border-2 border-sky-400 animate-ping opacity-60`} />
             ) : null}
 
             <button
                 type='button'
                 disabled={!isClaimable || claiming}
                 onClick={() => onClaim(node.level)}
-                title={isStart ? 'Where it begins' : isCrate ? 'Crate' : 'Lumen'}
+                aria-label={isStart ? 'Where it begins' : isCrate ? 'Crate' : 'Lumen'}
                 className={`relative ${size} rounded-full flex items-center justify-center transition-all
                     ${isClaimable
-                        ? 'bg-sky-500 text-white cursor-pointer hover:scale-105'
+                        ? 'bg-sky-500 text-white cursor-pointer hover:scale-105 active:scale-95'
                         : isClaimed
                             ? 'bg-sky-400/25 text-sky-500/70 cursor-default'
                             : 'bg-neutral5 text-neutral2 cursor-default'}`}
@@ -68,8 +68,10 @@ const LevelRoadmap = ({ level = 1, xp = 0, profile }) => {
 
     const [claiming, setClaiming] = useState(false)
     const [error, setError] = useState('')
+    const [characterBounds, setCharacterBounds] = useState(null)
 
     const scrollRef = useRef(null)
+    const characterRef = useRef(null)
     const lastInteractionRef = useRef(0)
     const hasAnchoredRef = useRef(false)
     const frameRef = useRef(null)
@@ -81,6 +83,49 @@ const LevelRoadmap = ({ level = 1, xp = 0, profile }) => {
     const contentHeight = ((MAX_PATH_LEVEL - 1) * NODE_SPACING) + (PATH_PADDING * 2)
 
     const currentNode = nodes.find((node) => node.level === level) ?? nodes[0]
+
+    // Prefer the left of the dot, but keep the full avatar inside the viewport.
+    // Measure both elements so this also adapts to resizing and font-size changes.
+    let characterOffset = (currentNode?.offset ?? 0) - CHARACTER_OFFSET
+
+    if(characterBounds) {
+        const { pathWidth, characterWidth } = characterBounds
+        const halfWidth = characterWidth / 2
+        const nodeCenter = (pathWidth / 2) + (currentNode?.offset ?? 0)
+        const leftCenter = nodeCenter - CHARACTER_OFFSET
+        const rightCenter = nodeCenter + CHARACTER_OFFSET
+        const fits = (center) => center >= halfWidth && center <= pathWidth - halfWidth
+        const preferredCenter = fits(leftCenter) ? leftCenter : rightCenter
+        // On very narrow paths, neither side may fit at the usual distance.
+        const center = pathWidth < characterWidth
+            ? pathWidth / 2
+            : Math.max(halfWidth, Math.min(pathWidth - halfWidth, preferredCenter))
+
+        characterOffset = center - (pathWidth / 2)
+    }
+
+    useLayoutEffect(() => {
+        const container = scrollRef.current
+        const character = characterRef.current
+
+        if(!container || !character) return undefined
+
+        const measure = () => {
+            const pathWidth = container.clientWidth
+            const characterWidth = character.offsetWidth
+
+            setCharacterBounds((previous) => previous?.pathWidth === pathWidth && previous?.characterWidth === characterWidth
+                ? previous
+                : { pathWidth, characterWidth })
+        }
+
+        measure()
+        const observer = new ResizeObserver(measure)
+        observer.observe(container)
+        observer.observe(character)
+
+        return () => observer.disconnect()
+    }, [])
 
     // Distance from the top of the path. Level 1 sits at the bottom and the
     // origin never moves, so a node's position depends only on its level.
@@ -247,10 +292,11 @@ const LevelRoadmap = ({ level = 1, xp = 0, profile }) => {
 
                     {/* Rendered once, outside the nodes, so it can travel the path. */}
                     <div
-                        className='absolute left-1/2 pointer-events-none transition-[top,transform] duration-[900ms] ease-[cubic-bezier(0.65,0,0.35,1)] motion-reduce:transition-none'
+                        ref={characterRef}
+                        className='absolute left-1/2 pointer-events-none transition-[top,transform] duration-[900ms] ease-[cubic-bezier(0.65,0,0.35,1)] '
                         style={{
                             top: centerFromTop(level),
-                            transform: `translate(calc(-50% + ${(currentNode?.offset ?? 0) - CHARACTER_OFFSET}px), -50%)`,
+                            transform: `translate(calc(-50% + ${characterOffset}px), -50%)`,
                         }}
                     >
                         <AvatarModel

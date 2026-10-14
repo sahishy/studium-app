@@ -3,17 +3,17 @@ import { getCircleIcon } from '../utils/circleUtils'
 const CircleBanner = ({ banner, className, iconClassName, onClick }) => {
 
     const BannerIcon = getCircleIcon(banner?.iconIndex)
+    const BannerElement = onClick ? 'button' : 'div'
+    const interactiveProps = onClick ? { type: 'button', onClick } : {}
 
     return (
-        <button
-            type='button'
-            onClick={onClick}
-            disabled={!onClick}
-            className={`${className} flex items-center justify-center ${onClick ? 'cursor-pointer' : 'cursor-default'}`}
+        <BannerElement
+            {...interactiveProps}
+            className={`${className} flex items-center justify-center ${onClick ? 'cursor-pointer' : ''}`}
             style={{ backgroundColor: banner?.bgColor, color: banner?.iconColor }}
         >
             <BannerIcon className={iconClassName} />
-        </button>
+        </BannerElement>
     )
 }
 

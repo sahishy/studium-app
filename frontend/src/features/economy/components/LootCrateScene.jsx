@@ -8,11 +8,14 @@ import crateUrl from '../../../assets/models/loot-crate.glb'
 import { RARITY_GLOW_COLORS } from '../utils/crateSequence'
 import { createCrateCoreGlowMaterial, createCrateSurfaceMaterial, updateCrateCoreGlow } from '../utils/crateMaterials'
 import { getCrateAnimationName } from '../utils/crateAnimation'
+import { configureCrateBloom, createCrateBloomCoverage } from '../utils/crateBloom'
 
-const CrateModel = ({ interactive, rarity, rarityTransition, motion, reducedMotion, idleEnabled, onReady }) => {
+const CrateModel = ({ interactive, rarity, rarityTransition, motion, idleEnabled, onReady }) => {
     const { scene, animations } = useGLTF(crateUrl)
     const light = useRef()
     const previousAction = useRef(null)
+    const bloomCoverage = useMemo(createCrateBloomCoverage, [])
+    useEffect(() => () => bloomCoverage.dispose(), [bloomCoverage])
     const rig = useMemo(() => {
         const clone = scene.clone(true)
         // The interior core emits light; remove all top-only glow geometry.
@@ -41,7 +44,7 @@ const CrateModel = ({ interactive, rarity, rarityTransition, motion, reducedMoti
     useLayoutEffect(() => {
         const name = getCrateAnimationName(interactive, motion)
         const clip = animations.find((clip) => clip.name === name)
-        if(reducedMotion || (!interactive && !idleEnabled)) {
+        if(!interactive && !idleEnabled) {
             rig.mixer.stopAllAction()
             previousAction.current = null
             return
@@ -72,7 +75,7 @@ const CrateModel = ({ interactive, rarity, rarityTransition, motion, reducedMoti
             // Apply the neutral idle pose before the canvas can fade back into view.
             if(!interactive) rig.mixer.update(0)
         }
-    }, [rig, animations, interactive, motion, idleEnabled, reducedMotion])
+    }, [rig, animations, interactive, motion, idleEnabled])
 
     useEffect(() => {
         return () => {
@@ -83,10 +86,10 @@ const CrateModel = ({ interactive, rarity, rarityTransition, motion, reducedMoti
     }, [rig])
 
     useFrame((_, delta) => {
-        if(!reducedMotion && (interactive || idleEnabled)) rig.mixer.update(Math.min(delta, 0.1))
+        if(interactive || idleEnabled) rig.mixer.update(Math.min(delta, 0.1))
         const target = rig.targetColor.set(interactive ? RARITY_GLOW_COLORS[rarity] ?? RARITY_GLOW_COLORS.Common : '#ffffff')
         const color = rig.glowColor
-        if(interactive && rarityTransition && !reducedMotion) {
+        if(interactive && rarityTransition) {
             if(rig.transitionId !== rarityTransition.startedAt) {
                 rig.transitionFromColor.copy(color)
                 rig.transitionId = rarityTransition.startedAt
@@ -107,10 +110,11 @@ const CrateModel = ({ interactive, rarity, rarityTransition, motion, reducedMoti
         <primitive object={rig.clone} />
         <pointLight ref={light} position={[0, 1.7, 0]} distance={4} decay={2} />
         <EffectComposer multisampling={2}>
-            <SelectiveBloom selection={[rig.core]} lights={[light]} ignoreBackground mipmapBlur
-                luminanceThreshold={0.1} luminanceSmoothing={0.1} intensity={10} radius={0.55} levels={6} />
+            <SelectiveBloom ref={configureCrateBloom} selection={[rig.core]} lights={[light]} ignoreBackground mipmapBlur
+                luminanceThreshold={0.1} luminanceSmoothing={0.1} intensity={8} radius={0.55} levels={6} />
             {/* Reinhard preserves saturated glow channels instead of ACES whitening them. */}
             <ToneMapping mode={ToneMappingMode.REINHARD} />
+            <primitive object={bloomCoverage} />
         </EffectComposer>
     </group>
 }
@@ -130,15 +134,15 @@ const CrateFallback = ({ onReady }) => {
     </div>
 }
 
-const LootCrateScene = ({ interactive = false, rarity = 'Common', rarityTransition = null, motion = null, reducedMotion = false, idleEnabled = true, onReady, viewportScale = 1 }) => (
+const LootCrateScene = ({ interactive = false, rarity = 'Common', rarityTransition = null, motion = null, idleEnabled = true, onReady, viewportScale = 1 }) => (
     <CrateErrorBoundary fallback={<CrateFallback onReady={onReady} />}>
-        <Canvas style={{ pointerEvents: 'none' }} frameloop={interactive || (idleEnabled && !reducedMotion) ? 'always' : 'demand'} camera={{ position: [1.9, 3.0, 11.5], fov: THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(30) / 2) * viewportScale)) }} dpr={[1, 1.5]} gl={{ alpha: true, antialias: true }} fallback={<CrateFallback onReady={onReady} />}>
+        <Canvas style={{ pointerEvents: 'none' }} frameloop={interactive || idleEnabled ? 'always' : 'demand'} camera={{ position: [1.9, 3.0, 11.5], fov: THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(30) / 2) * viewportScale)) }} dpr={[1, 1.5]} gl={{ alpha: true, antialias: true }} fallback={<CrateFallback onReady={onReady} />}>
             <ambientLight intensity={1.05} />
             <directionalLight position={[4, 7, 5]} intensity={2.2} />
             <directionalLight position={[-5, 2, 3]} intensity={0.95} />
             <directionalLight position={[-1, 3, -6]} intensity={0.7} />
             <Suspense fallback={null}>
-                <CrateModel interactive={interactive} rarity={rarity} rarityTransition={rarityTransition} motion={motion} reducedMotion={reducedMotion} idleEnabled={idleEnabled} onReady={onReady} />
+                <CrateModel interactive={interactive} rarity={rarity} rarityTransition={rarityTransition} motion={motion} idleEnabled={idleEnabled} onReady={onReady} />
             </Suspense>
         </Canvas>
     </CrateErrorBoundary>

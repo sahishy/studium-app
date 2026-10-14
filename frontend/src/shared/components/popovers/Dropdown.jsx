@@ -1,7 +1,7 @@
 import React from 'react';
 import BasePopover from './BasePopover';
 
-const Dropdown = ({ children, options, onSelect, className = '', onOpen, isOptionSelected }) => {
+const Dropdown = ({ children, options, onSelect, className = '', onOpen, isOptionSelected, align = 'start' }) => {
 
     const dropdownContent = (closePopover) => (
         <ul className="flex flex-col">
@@ -35,7 +35,7 @@ const Dropdown = ({ children, options, onSelect, className = '', onOpen, isOptio
   );
 
     return (
-        <BasePopover content={dropdownContent} className={className} onOpen={onOpen}>
+        <BasePopover content={dropdownContent} className={className} onOpen={onOpen} align={align}>
             {(isOpen) => children(isOpen)}
         </BasePopover>
     );

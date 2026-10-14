@@ -17,14 +17,16 @@ const EditCircleBannerModal = ({ banner, onSave, closeModal }) => {
 
     const currentTabIndex = useMemo(() => tabs.findIndex((x) => x.name === tab), [tab])
 
-    const handleSave = () => {
-        onSave?.(draftBanner)
-        closeModal?.()
+    const [error, setError] = useState('')
+    const [busy, setBusy] = useState(false)
+    const handleSave = async () => {
+        setBusy(true); try { await onSave?.(draftBanner); closeModal?.() } catch(err) {setError(err.message)} finally {setBusy(false)}
     }
 
     return (
         <div className='flex flex-col gap-6'>
 
+            {error && <p role="alert">{error}</p>}
             <h1 className='text-2xl font-semibold text-center'>Edit Circle Banner</h1>
 
             <CircleBanner
@@ -93,7 +95,7 @@ const EditCircleBannerModal = ({ banner, onSave, closeModal }) => {
                                 key={`icon_${index}`}
                                 type='button'
                                 onClick={() => setDraftBanner((prev) => ({ ...prev, iconIndex: index }))}
-                                className={`relative w-20 h-20 rounded-xl border bg-white/4 transition-all cursor-pointer
+                                className={`relative w-full aspect-square rounded-xl border bg-white/4 transition-all cursor-pointer
                                     ${selected ? 'border-neutral0 border-2 scale-105' : 'border-neutral4 hover:scale-105'}
                                 `}
                             >
@@ -117,10 +119,10 @@ const EditCircleBannerModal = ({ banner, onSave, closeModal }) => {
             )}
 
             <div className='flex gap-4 mt-2'>
-                <Button onClick={closeModal} type='secondary' className='w-full py-4'>
+                <Button onClick={closeModal} disabled={busy} type='secondary' className='w-full py-4'>
                     Cancel
                 </Button>
-                <Button onClick={handleSave} type='primary' className='w-full py-4'>
+                <Button onClick={handleSave} disabled={busy} type='primary' className='w-full py-4'>
                     Save
                 </Button>
             </div>

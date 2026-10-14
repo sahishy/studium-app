@@ -1,5 +1,5 @@
 import { FaBoltLightning, FaFeatherPointed, FaMapPin, FaTree } from 'react-icons/fa6'
-import { RANK_TIERS, getRankInfoFromElo, getModeStats } from '../../profile/utils/statsUtils'
+import { RANK_TIERS, getPlacementState, getRankInfoFromElo, getModeStats } from '../../profile/utils/statsUtils'
 import { RiSwordFill } from 'react-icons/ri'
 
 const DEFAULT_MODE_ID = 'sat-classic'
@@ -114,7 +114,9 @@ const areGameTeammates = (firstPlayer, secondPlayer) => {
 const buildMultiplayerUiState = ({ userStats, modeId = DEFAULT_MODE_ID }) => {
     const mode = getModeById(modeId)
     const rankedStats = getModeStats(userStats, mode)
-    const rankInfo = getRankInfoFromElo(rankedStats.elo)
+    // The participation floor does not grant a rank before placements finish.
+    const placement = getPlacementState(userStats, modeId)
+    const rankInfo = getRankInfoFromElo(rankedStats.elo, { placed: placement.placed })
 
     const currentTierThreshold = RANK_TIERS.find((entry) => (
         entry.tierName === rankInfo.tierName
@@ -131,15 +133,20 @@ const buildMultiplayerUiState = ({ userStats, modeId = DEFAULT_MODE_ID }) => {
     const eloToNextTier = Math.max(0, nextTierMinElo - rankedStats.elo)
 
     const isFinalRank = rankInfo.tierName === 'Grandmaster';
-    const rankLabel = isFinalRank ? rankInfo.tierName : `${rankInfo.tierName} ${rankInfo.tier}`;
-    const nextTierLabel = nextTierThreshold
-        ? `${nextTierThreshold.tierName} ${nextTierThreshold.tier}`
-        : 'Global Ranking: #?'
+    const rankLabel = !placement.placed
+        ? 'Unranked'
+        : (isFinalRank ? rankInfo.tierName : `${rankInfo.tierName} ${rankInfo.tier}`);
+    const nextTierLabel = !placement.placed
+        ? `${placement.remaining} placement match${placement.remaining === 1 ? '' : 'es'} left`
+        : (nextTierThreshold
+            ? `${nextTierThreshold.tierName} ${nextTierThreshold.tier}`
+            : 'Global Ranking: #?')
 
     return {
         mode,
         rankedStats,
         rankInfo,
+        placement,
         currentTierMinElo,
         currentTierSpan,
         currentTierProgress,

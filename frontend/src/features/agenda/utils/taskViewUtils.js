@@ -68,4 +68,10 @@ const deriveTreeStatuses = (tasks = [], overrides = new Map()) => {
     return result
 }
 
-export { buildTaskTree, deriveTreeStatuses, filterVisibleTasks, getDescendants, sortBoardTasks }
+const hasTasksDueOnDate = (tasks = [], dateKey) => tasks.some((task) =>
+    task.status !== 'Completed' && (task.title?.segments || []).some((segment) =>
+        segment.type === 'widget' && segment.widgetType === 'date' && segment.value?.dueDate === dateKey
+    )
+)
+
+export { hasTasksDueOnDate, buildTaskTree, deriveTreeStatuses, filterVisibleTasks, getDescendants, sortBoardTasks }

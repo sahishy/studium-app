@@ -12,6 +12,7 @@ const app = express()
 const realtimeActivitySecret = defineSecret('REALTIME_ACTIVITY_SECRET')
 
 app.use(cors({ origin: true }))
+app.use('/v1/feedback', express.json({ limit: '7mb' }))
 app.use(express.json())
 
 app.use('/realtime', realtimeRoutes)
@@ -22,3 +23,4 @@ app.get('/test', (req, res) => {
 })
 
 export const api = onRequest({ cors: true, secrets: [realtimeActivitySecret] }, app)
+export { clearDeletedCirclePrimary } from './features/socials/circleEvents.js'

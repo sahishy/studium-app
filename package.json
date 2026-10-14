@@ -8,7 +8,8 @@
 		"realtime:deploy": "npm --prefix backend/realtime run deploy",
 		"matchmaking:simulate": "npm --prefix backend/realtime run simulate",
 		"emulators:stop": "npx kill-port 8080 9000",
-   		"emulators:start": "firebase emulators:start --only functions,auth,firestore,storage,database --import=./emulator-data --export-on-exit"
+		"emulators:start": "firebase emulators:start --config firebase.emulator.json --only functions,auth,firestore,storage,database --import=./emulator-data --export-on-exit",
+		"rules:deploy": "firebase deploy --only firestore,storage,database"
 	},
 	"repository": {
 		"type": "git",
@@ -22,4 +23,4 @@
 	},
 	"homepage": "https://github.com/sahishy/studium-app#readme",
 	"description": ""
-	}
+}

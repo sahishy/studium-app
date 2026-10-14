@@ -47,6 +47,7 @@ const createNewUserObject = async ({ email }) => {
 
     return {
         email: email,
+        primaryCircleId: null,
         profile: {
             displayName,
             avatar: {

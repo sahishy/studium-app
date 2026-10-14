@@ -24,9 +24,6 @@ const particleCountFor = (amount) => {
     return Math.max(1, Math.min(MAX_PARTICLES, Math.min(amount, Math.max(3, scaled))))
 }
 
-const prefersReducedMotion = () => typeof window !== 'undefined'
-    && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-
 const RewardFxProvider = ({ children }) => {
 
     const targetsRef = useRef(new Map())
@@ -76,11 +73,6 @@ const RewardFxProvider = ({ children }) => {
             .filter(([, amount]) => amount > 0)
 
         if(!entries.length) return
-
-        if(prefersReducedMotion()) {
-            entries.forEach(([kind, amount]) => land(kind, amount))
-            return
-        }
 
         const startPoint = origin ?? lastPointerRef.current ?? {
             x: window.innerWidth / 2,

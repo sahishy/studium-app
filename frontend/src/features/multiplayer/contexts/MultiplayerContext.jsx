@@ -89,6 +89,27 @@ const MultiplayerProvider = ({ userId, profile = null, children }) => {
         else socket.addEventListener('open', sendNow, { once: true })
     }, [])
 
+    // The UserServer snapshots the identity from the connect query, and every game's player list is
+    // built from that snapshot - so equipping a new colour or face in the Locker has to be pushed to
+    // the open socket, or the match would render the cosmetics the socket was opened with.
+    // Derived from the props rather than from realtimeIdentity(), because configureRealtimeProfile
+    // only runs in an effect - reading the service's copy here would send the previous profile.
+    const identitySignature = JSON.stringify({
+        displayName: profile?.profile?.displayName || 'Player',
+        profilePicture: profile?.profile?.profilePicture ?? null,
+        avatar: profile?.profile?.avatar ?? null,
+        title: profile?.profile?.title ?? null,
+        level: profile?.progress?.level ?? 1,
+        eloByMode: Object.fromEntries(Object.entries(userStats?.play ?? {}).map(([modeId, stats]) => [modeId, Number(stats?.elo) || 0])),
+    })
+
+    useEffect(() => {
+        if(!userId) return
+        const socket = socketRef.current
+        if(socket?.readyState !== WebSocket.OPEN) return
+        socket.send(message('identity.update', JSON.parse(identitySignature)))
+    }, [userId, identitySignature])
+
     useEffect(() => {
         const invitations = session?.partyId ? [] : (session?.invitations ?? [])
         const activeKeys = new Set(invitations.map((invitation) => `${invitation.partyId}:${invitation.fromUserId}`))

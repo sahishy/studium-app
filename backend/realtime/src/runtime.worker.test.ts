@@ -123,6 +123,9 @@ describe("Durable realtime state", () => {
         if(initialized.status !== 200) throw new Error(`${gameId}: ${initialized.status} ${await initialized.text()}`);
         await runInDurableObject(stub, async (instance: GameServer) => {
           instance.game!.state.currentQuestionActiveAt = Date.now() - 1_000;
+          // This measures action-to-ack latency, not the intro gate, so the pre-roll is expired
+          // the same way the question clock is backdated above.
+          instance.game!.state.introEndsAt = Date.now() - 1_000;
         });
         const connected = await exports.default.fetch(new Request(
           `https://realtime.test/parties/game/${gameId}?token=valid&protocolVersion=3`,

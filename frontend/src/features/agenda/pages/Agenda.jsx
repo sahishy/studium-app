@@ -1,3 +1,4 @@
+import { useOnboarding } from '../../onboarding/OnboardingContext'
 import { useEffect, useRef, useState } from 'react'
 import { useOutletContext, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
@@ -16,6 +17,7 @@ import { updateAgendaPreferences } from '../services/taskService'
 const Agenda = () => {
 
     const { profile } = useOutletContext()
+    const { active: tutorialActive } = useOnboarding()
     const { user: userTasks, isReady: tasksReady } = useTasks()
 
     const location = useLocation()
@@ -67,19 +69,19 @@ const Agenda = () => {
         localStorage.setItem('agenda:lastTab', tab)
     }
 
-    const isCalendar = location.pathname.includes('/calendar')
+    const isCanvasView = location.pathname.includes('/calendar') || location.pathname.includes('/board')
 
     return (
 
-        <div ref={scrollRef} className={`flex h-full min-h-0 flex-col ${isCalendar ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+        <div ref={scrollRef} data-onboarding="agenda:scroll" className={`flex h-full min-h-0 flex-col ${isCanvasView ? 'overflow-hidden' : 'overflow-y-auto'}`}>
             <Topbar profile={profile} />
-            <div className={`w-full min-h-0 flex-1 flex flex-col items-start gap-4 px-4 sm:px-8 lg:px-16 xl:px-24 pt-2 mx-auto ${isCalendar ? 'pb-4' : 'pb-8'}`}>
+            <div data-onboarding="agenda:content" className={`w-full min-h-0 flex-1 flex flex-col items-start gap-4 px-4 sm:px-8 lg:px-16 xl:px-24 pt-2 mx-auto ${isCanvasView ? 'pb-4' : 'pb-8'}`}>
 
                 <div className='flex justify-between items-start w-full'>
 
                     <PageHeader text={'Agenda'} icon={FaBookOpen} />
 
-                    <IconTabSelector
+                    <IconTabSelector onboardingPrefix="agenda"
                         tabs={tabs}
                         currentIndex={currentTab}
                         onSelect={(tab) => handleClick(tab.name)}
@@ -95,7 +97,7 @@ const Agenda = () => {
 
                 {!tasksReady
                     ? <LoadingState />
-                    : isCalendar ? <div className='min-h-0 w-full flex-1'><Outlet context={{ profile, scrollRef, agendaPreferences, saveAgendaPreferences }} /></div> : <Outlet context={{ profile, scrollRef, agendaPreferences, saveAgendaPreferences }} />}
+                    : isCanvasView ? <div className='min-h-0 w-full flex-1'><Outlet context={{ profile, scrollRef, agendaPreferences: tutorialActive ? {...agendaPreferences,list:{...agendaPreferences.list,layout:'smart'}} : agendaPreferences, saveAgendaPreferences }} /></div> : <Outlet context={{ profile, scrollRef, agendaPreferences: tutorialActive ? {...agendaPreferences,list:{...agendaPreferences.list,layout:'smart'}} : agendaPreferences, saveAgendaPreferences }} />}
 
 
             </div>

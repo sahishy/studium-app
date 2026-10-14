@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto'
 test('local emulators: nested task rewards, cap, deletion, crates, tips, hearts, anonymous posts, and bot results', { skip: process.env.USE_FIREBASE_EMULATORS !== 'true' }, async () => {
     const { db } = await import('../../lib/firebaseAdmin.js')
     const { localDayKey } = await import('./progression.js')
-    const { COLOR_CATALOG, openCrate } = await import('./economyService.js')
+    const { COSMETIC_CATALOG, openCrate } = await import('./economyService.js')
     const { reconcileTaskTree, setTaskStatus } = await import('../tasks/taskStatusService.js')
     const { saveRealtimeResult } = await import('../realtime/realtimeService.js')
     const { listCollegePosts, saveCollegePost, saveResource, toggleHeart } = await import('../resources/contentService.js')
@@ -75,7 +75,7 @@ test('local emulators: nested task rewards, cap, deletion, crates, tips, hearts,
         assert.equal((await db.collection('rewardEvents').doc(`task_${reconcileDoneId}`).get()).exists, true)
         await db.collection('users').doc(first).update({ 'preferences.agenda.list.completionBehavior': 'keep' })
 
-        await db.collection('wallets').doc(first).set({ balance: 100, crateTokens: 0, milestonesGranted: 0, inventory: COLOR_CATALOG.map((item) => item.id) })
+        await db.collection('wallets').doc(first).set({ balance: 100, crateTokens: 0, milestonesGranted: 0, inventory: COSMETIC_CATALOG.map((item) => item.id) })
         const crate = await openCrate(first, `${prefix}_crate`)
         assert.equal(crate.duplicate, true)
         assert.equal(crate.refund, 50)
@@ -84,8 +84,12 @@ test('local emulators: nested task rewards, cap, deletion, crates, tips, hearts,
 
         const resource = await saveResource(second, { type: 'link', title: 'Reference', description: '', subject: '', status: 'published', linkType: 'website', url: 'https://example.org' })
         refs.push(db.collection('resources').doc(resource.id))
-        assert.deepEqual(await toggleHeart(first, resource.id), { active: true, count: 1 })
-        assert.deepEqual(await toggleHeart(first, resource.id), { active: false, count: 0 })
+        const heartAdded = await toggleHeart(first, resource.id)
+        assert.equal(heartAdded.active, true)
+        assert.equal(heartAdded.count, 1)
+        const heartRemoved = await toggleHeart(first, resource.id)
+        assert.equal(heartRemoved.active, false)
+        assert.equal(heartRemoved.count, 0)
         const { tipResource } = await import('./economyService.js')
         const tip = await tipResource(first, resource.id, 10, `${prefix}_tip`)
         assert.equal(tip.balance, 40)

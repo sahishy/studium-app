@@ -68,3 +68,64 @@ test('color crate rarity thresholds match published odds', () => {
     assert.equal(colorAt(96).rarity, 'Epic')
     assert.equal(colorAt(99).rarity, 'Legendary')
 })
+
+const rankedResult = (overrides = {}) => ({
+    ranked: true, modeId: 'sat-classic', endReason: 'max_questions', roundsPlayed: 10,
+    participationByUserId: { me: 10, rival: 10 }, winnerUserId: 'me', ...overrides,
+})
+
+const perf = (overrides = {}) => ({
+    faced: 10, answered: 10, correct: 5, roundsWon: 5, avgAnswerMs: 25_000,
+    byDomain: {}, byDifficulty: {}, ...overrides,
+})
+
+test('a match with no telemetry still pays the flat rate', () => {
+    const reward = eligibleMatchReward(rankedResult({ winnerUserId: null }), 'me')
+    assert.deepEqual(reward, { xp: 25, lumen: 10 })
+})
+
+test('answering well out-earns winning badly', () => {
+    const strongLoss = eligibleMatchReward(rankedResult({ winnerUserId: 'rival' }), 'me', {
+        performance: perf({ correct: 9, roundsWon: 4 }),
+    })
+    const weakWin = eligibleMatchReward(rankedResult(), 'me', {
+        performance: perf({ correct: 2, roundsWon: 6, avgAnswerMs: 85_000 }),
+    })
+    assert.ok(
+        strongLoss.xp > weakWin.xp,
+        `a 9/10 loss (${strongLoss.xp} xp) should beat a 2/10 win (${weakWin.xp} xp)`,
+    )
+})
+
+test('unanswered questions count against accuracy, so stalling cannot farm a ratio', () => {
+    const answeredEverything = eligibleMatchReward(rankedResult(), 'me', { performance: perf({ correct: 8 }) })
+    const answeredOnlyTheEasyOnes = eligibleMatchReward(rankedResult(), 'me', {
+        performance: perf({ answered: 2, correct: 2 }),
+    })
+    assert.ok(answeredEverything.xp > answeredOnlyTheEasyOnes.xp)
+})
+
+test('beating a higher-rated opponent pays a premium, losing to one costs nothing extra', () => {
+    const evenWin = eligibleMatchReward(rankedResult(), 'me', { performance: perf(), selfElo: 500, opponentElo: 500 })
+    const underdogWin = eligibleMatchReward(rankedResult(), 'me', { performance: perf(), selfElo: 500, opponentElo: 900 })
+    assert.ok(underdogWin.xp > evenWin.xp)
+
+    const evenLoss = eligibleMatchReward(rankedResult({ winnerUserId: 'rival' }), 'me', { performance: perf(), selfElo: 500, opponentElo: 500 })
+    const underdogLoss = eligibleMatchReward(rankedResult({ winnerUserId: 'rival' }), 'me', { performance: perf(), selfElo: 500, opponentElo: 900 })
+    assert.deepEqual(underdogLoss, evenLoss)
+})
+
+test('rewards taper after a long session but never reach zero', () => {
+    const context = { performance: perf() }
+    const fresh = eligibleMatchReward(rankedResult(), 'me', { ...context, priorRewardedMatchesToday: 0 })
+    const eighth = eligibleMatchReward(rankedResult(), 'me', { ...context, priorRewardedMatchesToday: 8 })
+    const twentieth = eligibleMatchReward(rankedResult(), 'me', { ...context, priorRewardedMatchesToday: 20 })
+
+    assert.ok(fresh.xp > eighth.xp && eighth.xp > twentieth.xp)
+    assert.ok(twentieth.xp >= 1 && twentieth.lumen >= 1, 'an eligible match always counts')
+})
+
+test('an ineligible match pays nothing however well it was played', () => {
+    const forfeit = eligibleMatchReward(rankedResult({ endReason: 'player_left' }), 'me', { performance: perf({ correct: 10 }) })
+    assert.deepEqual(forfeit, { xp: 0, lumen: 0 })
+})

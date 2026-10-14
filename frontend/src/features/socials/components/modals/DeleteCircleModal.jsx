@@ -36,6 +36,7 @@ const DeleteCircleModal = ( { circle, closeModal } ) => {
 
         batch.delete(doc(db, 'circles', circle.uid));
         await batch.commit();
+        window.dispatchEvent(new Event('socials:circles-updated'));
     
         closeModal();
         navigate('/socials')

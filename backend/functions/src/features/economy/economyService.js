@@ -1,3 +1,4 @@
+import cosmeticCatalog from './cosmeticCatalog.json' with { type: 'json' }
 import { randomInt } from 'node:crypto'
 import { rollCrateRarityPath } from './crateRolls.js'
 import { db } from '../../lib/firebaseAdmin.js'
@@ -5,45 +6,40 @@ import {
     CRATE_PRICE, DUPLICATE_REFUND, claimableLevels, grantXp, levelReward, normalizeProgress,
 } from './progression.js'
 
-const STARTER_COLORS = ['#fcd34d', '#22c55e', '#60a5fa', '#f87171']
-const STARTER_FACES = Object.freeze([0, 1, 2])
-const COLOR_CATALOG = Object.freeze([
-    { id: 'orange', value: '#fb923c', rarity: 'Common' },
-    { id: 'violet', value: '#a78bfa', rarity: 'Common' },
-    { id: 'teal', value: '#2dd4bf', rarity: 'Common' },
-    { id: 'rose', value: '#f472b6', rarity: 'Common' },
-    { id: 'cyan', value: '#22d3ee', rarity: 'Uncommon' },
-    { id: 'lime', value: '#a3e635', rarity: 'Uncommon' },
-    { id: 'indigo', value: '#818cf8', rarity: 'Uncommon' },
-    { id: 'peach', value: '#fdba74', rarity: 'Uncommon' },
-    { id: 'gold', value: '#eab308', rarity: 'Rare' },
-    { id: 'crimson', value: '#dc2626', rarity: 'Rare' },
-    { id: 'emerald', value: '#059669', rarity: 'Rare' },
-    { id: 'obsidian', value: '#334155', rarity: 'Epic' },
-    { id: 'pearl', value: '#e2e8f0', rarity: 'Epic' },
-    { id: 'black', value: '#0b0b0e', rarity: 'Legendary' },
-])
+const STARTER_COLORS = Object.freeze(cosmeticCatalog.STARTER_COLORS)
+const STARTER_FACES = Object.freeze(cosmeticCatalog.STARTER_FACES)
+const COLOR_CATALOG = Object.freeze(cosmeticCatalog.COLOR_CATALOG)
 
 // Faces drop from the same crate as colours. Their ids are prefixed so one
 // inventory can hold both without collisions.
-const FACE_CATALOG = Object.freeze([
-    { id: 'face-5', value: 5, name: 'Smile', rarity: 'Common' },
-    { id: 'face-4', value: 4, name: 'Meh', rarity: 'Common' },
-    { id: 'face-6', value: 6, name: 'Wink', rarity: 'Uncommon' },
-    { id: 'face-13', value: 13, name: 'Chill', rarity: 'Uncommon' },
-    { id: 'face-7', value: 7, name: 'Joyful', rarity: 'Uncommon' },
-    { id: 'face-8', value: 8, name: 'Flustered', rarity: 'Rare' },
-    { id: 'face-9', value: 9, name: 'Shocked', rarity: 'Rare' },
-    { id: 'face-12', value: 12, name: 'Dreadful', rarity: 'Rare' },
-    { id: 'face-11', value: 11, name: 'Confused', rarity: 'Epic' },
-    { id: 'face-3', value: 3, name: 'Goofy', rarity: 'Epic' },
-    { id: 'face-10', value: 10, name: 'Alien', rarity: 'Legendary' },
+const FACE_CATALOG = Object.freeze(cosmeticCatalog.FACE_CATALOG)
+
+// Titles sit under a student's display name on their profile and on the match intro banner.
+// Everything up to Epic drops from crates; the Legendary three are earned instead, which keeps
+// the Legendary crate pool at its original two items so obsidian and the Alien face stay as rare
+// as they were, and makes a Legendary title something nobody can simply buy their way to.
+const TITLE_CATALOG = Object.freeze(cosmeticCatalog.TITLE_CATALOG)
+
+const DEFAULT_TITLE_ID = 'title-novice'
+
+// How the three earned titles are unlocked. Checked on every account write, so a student who
+// qualified before a condition existed picks it up the next time anything touches their account.
+const EARNED_TITLE_DEFINITIONS = Object.freeze([
+    { id: 'title-1601-scorer', requirement: 'Answer every question in a ranked match correctly.', test: (progress) => (Number(progress.perfectMatches) || 0) >= 1 },
+    { id: 'title-undefeated', requirement: 'Win ten ranked matches in a row.', test: (progress) => (Number(progress.bestWinStreak) || 0) >= 10 },
+    { id: 'title-immortal', requirement: 'Reach level 25.', test: (progress) => (Number(progress.level) || 1) >= 25 },
 ])
+
+const EARNED_TITLE_IDS = Object.freeze(EARNED_TITLE_DEFINITIONS.map((entry) => entry.id))
 
 const COSMETIC_CATALOG = Object.freeze([
     ...COLOR_CATALOG.map((item) => ({ ...item, type: 'color' })),
     ...FACE_CATALOG.map((item) => ({ ...item, type: 'face' })),
+    ...TITLE_CATALOG.map((item) => ({ ...item, type: 'title' })),
 ])
+
+// Only ever drawn from for crates. Earned titles are deliberately absent.
+const CRATE_CATALOG = Object.freeze(COSMETIC_CATALOG.filter((item) => !item.earned))
 const RARITY_ODDS = Object.freeze({ Common: 60, Uncommon: 25, Rare: 11, Epic: 3, Legendary: 1 })
 const TIP_AMOUNTS = new Set([10, 25, 50])
 const BADGE_DEFINITIONS = Object.freeze([
@@ -76,21 +72,52 @@ const readAccount = async (transaction, userId) => {
         crateTokens: Math.max(0, Number(stored.crateTokens) || 0),
         claimedLevels: Array.isArray(stored.claimedLevels) ? stored.claimedLevels.map(Number) : [],
         inventory: Array.isArray(stored.inventory) ? stored.inventory : [],
+        // Only the most recent claim is kept: there is one streak reward per local day, so the
+        // day key alone decides whether today's is still available. Storing every claimed day
+        // would grow without bound for no added behaviour.
+        lastStreakClaim: stored.lastStreakClaim ?? null,
     }
     return { userRef, walletRef, user, progress, wallet }
 }
 
 const badgesForProgress = (progress) => BADGE_DEFINITIONS.filter((badge) => (Number(progress[badge.counter]) || 0) >= badge.target).map((badge) => badge.id)
 
-const writeAccount = (transaction, account, { xp = 0, lumen = 0, crates = 0, counter = null, claimedLevels = null } = {}) => {
+// Which earned titles a student qualifies for. Recomputed on every account write rather than
+// granted at the moment of the achievement, so somebody who already met a condition before it
+// existed picks the title up the next time anything touches their account.
+const earnedTitlesForProgress = (progress = {}) => EARNED_TITLE_DEFINITIONS
+    .filter((entry) => entry.test(progress))
+    .map((entry) => entry.id)
+
+// Everyone owns The Novice, so a brand new profile has something to show rather than a blank line
+// under their name.
+const grantedTitles = (progress, inventory = []) => [...new Set([
+    DEFAULT_TITLE_ID,
+    ...inventory,
+    ...earnedTitlesForProgress(progress),
+])]
+
+const writeAccount = (transaction, account, {
+    xp = 0,
+    lumen = 0,
+    crates = 0,
+    counter = null,
+    counters = [],
+    progressPatch = null,
+    claimedLevels = null,
+} = {}) => {
+    const incremented = [counter, ...counters].filter(Boolean)
     const progress = grantXp({
         ...account.progress,
-        ...(counter ? { [counter]: (Number(account.progress[counter]) || 0) + 1 } : {}),
+        ...Object.fromEntries(incremented.map((name) => [name, (Number(account.progress[name]) || 0) + 1])),
+        ...(progressPatch ?? {}),
     }, xp)
+    const inventory = grantedTitles(progress, account.wallet.inventory)
     const wallet = {
         ...account.wallet,
         balance: account.wallet.balance + lumen,
         crateTokens: account.wallet.crateTokens + crates,
+        inventory,
         ...(claimedLevels ? { claimedLevels } : {}),
     }
     transaction.set(account.userRef, { progress, badges: badgesForProgress(progress) }, { merge: true })
@@ -108,13 +135,15 @@ const RARITY_THRESHOLDS = Object.keys(RARITY_ODDS).reduce((result, rarity) => {
 const chooseColor = (random = randomInt) => {
     const roll = random(100)
     const rarity = RARITY_THRESHOLDS.find((entry) => roll < entry.ceiling)?.rarity ?? 'Common'
-    const pool = COSMETIC_CATALOG.filter((item) => item.rarity === rarity)
+    const pool = CRATE_CATALOG.filter((item) => item.rarity === rarity)
     return pool[random(pool.length)]
 }
 
-const getEconomySnapshot = async (userId) => db.runTransaction(async (transaction) => {
-    const account = await readAccount(transaction, userId)
-    const { progress, wallet } = writeAccount(transaction, account)
+// readAccount only ever calls `transaction.get`, so handing it this instead reads
+// the same two documents without taking a transaction lock on them.
+const DIRECT_READS = { get: (ref) => ref.get() }
+
+const economySnapshot = (progress, wallet) => {
     const nextGoals = BADGE_DEFINITIONS.filter((badge) => (Number(progress[badge.counter]) || 0) < badge.target)
     const goals = [
         nextGoals.find((badge) => badge.counter === 'rankedMatches'),
@@ -127,6 +156,8 @@ const getEconomySnapshot = async (userId) => db.runTransaction(async (transactio
         badges: badgesForProgress(progress),
         goals,
         catalog: COSMETIC_CATALOG,
+        defaultTitle: DEFAULT_TITLE_ID,
+        earnedTitles: EARNED_TITLE_DEFINITIONS.map((entry) => ({ id: entry.id, requirement: entry.requirement })),
         starterColors: STARTER_COLORS,
         starterFaces: STARTER_FACES,
         rarityOdds: RARITY_ODDS,
@@ -134,7 +165,41 @@ const getEconomySnapshot = async (userId) => db.runTransaction(async (transactio
         duplicateRefund: DUPLICATE_REFUND,
         claimable: claimableLevels(progress.level, wallet.claimedLevels),
     }
-})
+}
+
+// Reads, and only writes when the read turned up something not yet stored.
+//
+// This used to be a read-write transaction unconditionally, which made the most
+// frequently hit endpoint in the app contend for a lock on users/{uid} and
+// wallets/{uid} with every other refresh and with the mutations themselves. A
+// burst of refreshes - the client reloads the snapshot on every XP change, and
+// each reward also awaits one directly - then aborted one another, and the
+// client was left holding no snapshot at all. Since the roadmap, the locker and
+// the crate's drop table all read a missing snapshot as an empty one, that is
+// what made every level look claimable, the locker look like nothing was owned
+// and the drop table lose its percentages, all at the same moment.
+const getEconomySnapshot = async (userId) => {
+    const account = await readAccount(DIRECT_READS, userId)
+    const progress = grantXp(account.progress, 0)
+    const inventory = grantedTitles(progress, account.wallet.inventory)
+    const stored = account.user?.progress ?? {}
+
+    // An earned title the student has just qualified for, or an account still on
+    // an older XP curve. Both are one-offs, so they get persisted the same way
+    // every other account write does rather than being re-derived on every read.
+    const settled = inventory.length === account.wallet.inventory.length
+        && progress.curveVersion === stored.curveVersion
+        && progress.level === stored.level
+        && progress.xp === stored.xp
+
+    if(settled) return economySnapshot(progress, { ...account.wallet, inventory })
+
+    return db.runTransaction(async (transaction) => {
+        const fresh = await readAccount(transaction, userId)
+        const { progress: written, wallet } = writeAccount(transaction, fresh)
+        return economySnapshot(written, wallet)
+    })
+}
 
 const claimLevelReward = async (userId, level) => {
     const target = Math.floor(Number(level))
@@ -163,7 +228,7 @@ const openCrate = async (userId, operationId) => {
         const useToken = account.wallet.crateTokens > 0
         if(!useToken && account.wallet.balance < CRATE_PRICE) throw new Error('Not enough Lumen.')
         const rarityPath = rollCrateRarityPath(RARITY_ODDS, () => randomInt(1000000000) / 1000000000)
-        const pool = COSMETIC_CATALOG.filter((item) => item.rarity === rarityPath.at(-1))
+        const pool = CRATE_CATALOG.filter((item) => item.rarity === rarityPath.at(-1))
         const color = pool[randomInt(pool.length)]
         const duplicate = account.wallet.inventory.includes(color.id)
         const wallet = {
@@ -195,6 +260,23 @@ const equipAvatar = async (userId, color, face) => {
     })
 }
 
+// Titles are equipped on their own rather than through equipAvatar, which validates a colour and
+// a face as a matched pair and has no sensible behaviour for a third independent slot.
+const equipTitle = async (userId, titleId) => {
+    const requested = String(titleId ?? '')
+    const title = TITLE_CATALOG.find((entry) => entry.id === requested)
+    if(!title) throw new Error('Unknown title.')
+
+    return db.runTransaction(async (transaction) => {
+        const account = await readAccount(transaction, userId)
+        const owned = grantedTitles(account.progress, account.wallet.inventory)
+        if(!owned.includes(title.id)) throw new Error('Unlock this title first.')
+
+        transaction.update(account.userRef, { 'profile.title': title.id })
+        return { title: title.id, name: title.name, rarity: title.rarity }
+    })
+}
+
 const tipResource = async (senderId, resourceId, amount, operationId) => {
     if(!TIP_AMOUNTS.has(Number(amount))) throw new Error('Choose 10, 25, or 50 Lumen.')
     if(!/^[a-zA-Z0-9_-]{8,100}$/.test(String(operationId || ''))) throw new Error('Invalid operation ID.')
@@ -220,4 +302,10 @@ const tipResource = async (senderId, resourceId, amount, operationId) => {
     })
 }
 
-export { BADGE_DEFINITIONS, COLOR_CATALOG, COSMETIC_CATALOG, FACE_CATALOG, RARITY_ODDS, STARTER_COLORS, STARTER_FACES, badgesForProgress, chooseColor, claimLevelReward, equipAvatar, getEconomySnapshot, openCrate, readAccount, tipResource, writeAccount }
+export {
+    BADGE_DEFINITIONS, COLOR_CATALOG, COSMETIC_CATALOG, CRATE_CATALOG, DEFAULT_TITLE_ID,
+    EARNED_TITLE_DEFINITIONS, EARNED_TITLE_IDS, FACE_CATALOG, RARITY_ODDS, STARTER_COLORS,
+    STARTER_FACES, TITLE_CATALOG, badgesForProgress, chooseColor, claimLevelReward,
+    earnedTitlesForProgress, equipAvatar, equipTitle, getEconomySnapshot, grantedTitles,
+    openCrate, readAccount, tipResource, writeAccount,
+}

@@ -3,7 +3,7 @@ import Card from '../../../shared/components/ui/Card'
 import { formatScoreLabel } from '../utils/reviewUtils'
 import { SUBJECT_ICONS } from '../utils/courseUtils';
 
-const AllCoursesCard = ({ course, score, onOpen }) => {
+const AllCoursesCard = ({ course, score, onOpen, featured = false }) => {
 
     const SubjectIcon = SUBJECT_ICONS[course.subject];
 
@@ -16,7 +16,7 @@ const AllCoursesCard = ({ course, score, onOpen }) => {
 
                 <div className='flex flex-col gap-3 min-w-0 px-2 pb-2'>
                     <div>
-                        <p className='font-semibold text-neutral0 truncate'>{course.title}</p>
+                        <p className={`font-semibold text-neutral0 ${featured ? '' : 'truncate'}`}>{course.title}</p>
                         <p className='text-xs text-neutral1 truncate flex items-center gap-1'>
                             <span>{course.subject}</span>
                             <span>•</span>
@@ -27,7 +27,7 @@ const AllCoursesCard = ({ course, score, onOpen }) => {
                         </p>
                     </div>
 
-                    <p className='text-xs text-neutral1 overflow-hidden line-clamp-3'>
+                    <p className={`text-xs text-neutral1 ${featured ? 'leading-relaxed' : 'overflow-hidden line-clamp-3'}`}>
                         {course.description || 'No description available.'}
                     </p>
                 </div>

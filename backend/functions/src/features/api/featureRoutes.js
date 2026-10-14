@@ -1,8 +1,14 @@
+import { getOnlineEvents, acknowledgeEvent, startOnboarding, reserveArtifact, advanceOnboarding, answerPractice, completeOnboarding, openTutorialCrate, resetOnboardingForTesting } from '../onboarding/onboardingService.js'
+import { listJoinedCircles, mutateMembership, setPrimaryCircle, editCircleIdentity, circleActivity, claimCircleGrandQuest } from '../socials/circleApi.js'
 import { Router } from 'express'
 import { auth, db } from '../../lib/firebaseAdmin.js'
-import { claimLevelReward, equipAvatar, getEconomySnapshot, openCrate, readAccount, tipResource, writeAccount } from '../economy/economyService.js'
+import { deliverFeedback, validateFeedback } from '../feedback/feedbackService.js'
+import { submitWithCooldown } from '../feedback/feedbackSubmission.js'
+import { claimLevelReward, equipAvatar, equipTitle, getEconomySnapshot, openCrate, readAccount, tipResource, writeAccount } from '../economy/economyService.js'
 import { reconcileTaskTree, setTaskStatus } from '../tasks/taskStatusService.js'
-import { getQuestBoard } from '../quests/questService.js'
+import { claimQuest, getQuestBoard, questById, recordQuestEvent, rerollQuest } from '../quests/questService.js'
+import { claimStreakReward, getStreakBoard } from '../progress/streakService.js'
+import { getMasteryBoard, getMatchMastery } from '../mastery/masteryService.js'
 import {
     getResource, listCollegePosts, listResources, removeCollegePost, removeResource,
     reportCollegePost, reportResource, saveCollegePost, saveResource, toggleHeart,
@@ -11,7 +17,7 @@ import {
 const router = Router()
 const route = (handler) => async (req, res) => {
     try { res.json(await handler(req)) }
-    catch(error) { res.status(error.message?.includes('cannot') || error.message?.includes('Unauthorized') ? 403 : 400).json({ error: error.message || 'Request failed.' }) }
+    catch(error) { res.status(error.statusCode || (error.message?.includes('cannot') || error.message?.includes('Unauthorized') ? 403 : 400)).json({ error: error.message || 'Request failed.' }) }
 }
 
 router.use(async (req, res, next) => {
@@ -23,11 +29,47 @@ router.use(async (req, res, next) => {
     } catch { res.status(401).json({ error: 'Unauthorized.' }) }
 })
 
+router.get('/events', route(req => getOnlineEvents(req.identity.uid)))
+router.post('/events/acknowledge', route(req => acknowledgeEvent(req.identity.uid,req.body.eventId)))
+router.post('/onboarding/start', route(req => startOnboarding(req.identity.uid,req.body.path)))
+router.post('/onboarding/artifact', route(req => reserveArtifact(req.identity.uid,req.body)))
+router.post('/onboarding/advance', route(req => advanceOnboarding(req.identity.uid,req.body)))
+router.post('/onboarding/practice', route(req => answerPractice(req.identity.uid,req.body)))
+router.post('/onboarding/crate', route(req => openTutorialCrate(req.identity.uid,req.body)))
+router.post('/onboarding/complete', route(req => completeOnboarding(req.identity.uid,req.body)))
+
+router.get('/circles', route(req => listJoinedCircles(req.identity.uid)))
+router.post('/circles/membership', route(req => mutateMembership(req.identity.uid, req.body)))
+router.post('/circles/primary', route(req => setPrimaryCircle(req.identity.uid, req.body.circleId)))
+router.post('/circles/:id/identity', route(req => editCircleIdentity(req.identity.uid, req.params.id, req.body.profile)))
+router.get('/circles/:id/activity', route(req => circleActivity(req.identity.uid, req.params.id, req.query.before)))
+router.post('/circles/:id/grand-quest/claim', route(req => claimCircleGrandQuest(req.identity.uid, req.params.id, req.body.cycle)))
+
+router.post('/feedback', route(async (req) => {
+    const feedback = validateFeedback(req.body)
+    const webhookUrl = process.env.DISCORD_FEEDBACK_WEBHOOK_URL
+    if (!webhookUrl) throw new Error('Feedback is temporarily unavailable. Please try again later.')
+    const uid = req.identity.uid
+    const profile = await db.collection('users').doc(uid).get()
+    return submitWithCooldown({
+        db, uid,
+        deliver: () => deliverFeedback({ webhookUrl, feedback, displayName: profile.data()?.profile?.displayName }),
+    })
+}))
+
 router.get('/economy', route((req) => getEconomySnapshot(req.identity.uid)))
 router.get('/quests', route((req) => getQuestBoard(req.identity.uid, String(req.query.timeZone || 'UTC'))))
 router.post('/economy/crates/open', route((req) => openCrate(req.identity.uid, req.body.operationId)))
 router.post('/economy/levels/claim', route((req) => claimLevelReward(req.identity.uid, req.body.level)))
 router.post('/economy/avatar/equip', route((req) => equipAvatar(req.identity.uid, req.body.color, req.body.face)))
+router.post('/economy/title/equip', route((req) => equipTitle(req.identity.uid, req.body.title)))
+router.post('/quests/claim', route((req) => claimQuest(req.identity.uid, req.body.questId, req.body.instanceId, String(req.body.timeZone || 'UTC'))))
+
+router.post('/quests/reroll', route((req) => rerollQuest(req.identity.uid, req.body.questId, String(req.body.timeZone || 'UTC'))))
+router.get('/streak', route((req) => getStreakBoard(req.identity.uid, String(req.query.timeZone || 'UTC'))))
+router.post('/streak/claim', route((req) => claimStreakReward(req.identity.uid, String(req.body.timeZone || 'UTC'))))
+router.get('/mastery', route((req) => getMasteryBoard(req.identity.uid)))
+router.get('/mastery/matches/:gameId', route((req) => getMatchMastery(req.identity.uid, req.params.gameId)))
 router.post('/economy/tips', route((req) => tipResource(req.identity.uid, req.body.resourceId, Number(req.body.amount), req.body.operationId)))
 router.post('/tasks/:id/status', route((req) => setTaskStatus({ userId: req.identity.uid, taskId: req.params.id, status: req.body.status, timeZone: req.body.timeZone })))
 router.post('/tasks/:id/reconcile', route((req) => reconcileTaskTree({ userId: req.identity.uid, taskId: req.params.id })))
@@ -58,6 +100,7 @@ router.post('/moderation/college-posts/:id/hide', route(async (req) => {
 // Local-only helper for exercising reward animations against the emulators.
 // It is never registered against deployed functions.
 if(process.env.FUNCTIONS_EMULATOR === 'true') {
+    router.post('/dev/onboarding/reset', route(req => resetOnboardingForTesting(req.identity.uid)))
     router.post('/dev/grant', route(async (req) => {
         const xp = Math.max(0, Math.min(10000, Number(req.body.xp) || 0))
         const lumen = Math.max(0, Math.min(10000, Number(req.body.lumen) || 0))
@@ -65,6 +108,20 @@ if(process.env.FUNCTIONS_EMULATOR === 'true') {
             const account = await readAccount(transaction, req.identity.uid)
             return writeAccount(transaction, account, { xp, lumen })
         })
+    }))
+
+    // Advances whichever quest currently fills a board slot by one, through the same path a real
+    // match takes, so the toast and the claimable card can be exercised without playing anything.
+    router.post('/dev/quests/progress', route(async (req) => {
+        const slot = Math.max(0, Number(req.body.slot) || 0)
+        const timeZone = String(req.body.timeZone || 'UTC')
+        const board = await getQuestBoard(req.identity.uid, timeZone)
+        const quest = (board.quests ?? [])[slot]
+        const metric = quest ? questById(quest.id)?.metric : null
+
+        if(!metric) throw new Error('No quest to advance in that slot.')
+
+        return recordQuestEvent(req.identity.uid, metric, { amount: 1, timeZone })
     }))
 
     // Clears level, XP, Lumen and every claimed reward so the progress roadmap

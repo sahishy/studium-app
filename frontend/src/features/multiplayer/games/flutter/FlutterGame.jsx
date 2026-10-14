@@ -1,3 +1,4 @@
+import { getMatchCountdown } from '../../utils/matchIntroTiming'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getGameServerNow, recordGameVisualCorrection, sendGameMessage, subscribeToGameReconnect, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
 import QuestionPane from '../sat-classic/components/QuestionPane'
@@ -236,6 +237,8 @@ const FlutterMatchEnd = ({ snapshot, userId, startedAt, spectatorName = null }) 
     })
     const endedAt = Number(endedEvent?.createdAt) || Date.now()
     return <MatchEndOverlay
+        gameId={snapshot?.room?.uid}
+        matchSettled={Boolean(endedEvent?.data?.rewardsByUserId?.[userId])}
         winnerUserId={winnerUserId}
         userId={userId}
         modeId={MODE_ID}
@@ -261,7 +264,7 @@ const keyDirection = (key) => {
     return null
 }
 
-const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null }) => {
+const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null, matchIntro = null }) => {
     const [snapshot, setSnapshot] = useState(null)
     const [response, setResponse] = useState('')
     const [calculatorOpen, setCalculatorOpen] = useState(false)
@@ -294,8 +297,7 @@ const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null })
     const phase = state?.phase
     const currentQuestion = state?.questionsById?.[state?.currentQuestionId] ?? null
     const hasAnswered = Boolean(localPlayer?.state?.answeredQuestionIds?.includes(state?.currentQuestionId))
-    const questionCountdownRemainingMs = Math.max(0, Number(state?.currentQuestionActiveAt || 0) - now)
-    const questionCountdown = Math.max(0, Math.ceil(questionCountdownRemainingMs / 1000))
+    const { remainingMs: questionCountdownRemainingMs, seconds: questionCountdown } = getMatchCountdown(state?.currentQuestionActiveAt, now)
     const questionRemaining = Math.max(0, Number(state?.currentQuestionDeadlineAt || 0) - now)
     const countdownRemainingMs = Math.max(0, Number(state?.flutterCountdownEndsAt || 0) - Math.max(now, Number(state?.flutterCountdownStartedAt || 0)))
     const countdown = Math.max(0, Math.ceil(countdownRemainingMs / 1000))
@@ -444,6 +446,7 @@ const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null })
 
             {phase === 'question_active' || isQuestionRevealActive ? (
                 <div className='relative flex-1 flex min-h-0'>
+                    {matchIntro}
                     <QuestionPane
                         gameState={isQuestionRevealActive ? { ...state, questionIndex: questionReveal.questionIndex } : state}
                         currentQuestion={isQuestionRevealActive ? questionReveal.question : currentQuestion}

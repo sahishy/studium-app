@@ -24,14 +24,13 @@ const pointAt = (angle, distance) => {
     }
 }
 
-const rotationDegreesAt = ({ now, roundStartedAt, rotationTurnsPerSecond, slowdownStartedAt, reducedMotion }) => {
+const rotationDegreesAt = ({ now, roundStartedAt, rotationTurnsPerSecond, slowdownStartedAt }) => {
     if(!roundStartedAt) return 0
     const speedDegreesPerSecond = Number(rotationTurnsPerSecond) * 360
     const roundStart = Number(roundStartedAt)
     const stopStart = Number(slowdownStartedAt)
     if(!stopStart || now <= stopStart) return speedDegreesPerSecond * (Math.max(0, now - roundStart) / 1000)
     const elapsedBeforeStop = Math.max(0, stopStart - roundStart) / 1000
-    if(reducedMotion) return speedDegreesPerSecond * elapsedBeforeStop
     const stopProgress = Math.min(1, Math.max(0, now - stopStart) / ROTATION_STOP_DURATION_MS)
     const easedStopSeconds = (ROTATION_STOP_DURATION_MS / 1000) * (stopProgress - ((stopProgress * stopProgress) / 2))
     return speedDegreesPerSecond * (elapsedBeforeStop + easedStopSeconds)
@@ -102,7 +101,6 @@ const PunctureScene = ({
     playerColor = '#60a5fa',
     serverNow = Date.now,
 }) => {
-    const [reducedMotion, setReducedMotion] = useState(false)
     const [queue, setQueue] = useState([])
     const [activeLaunch, setActiveLaunch] = useState(null)
     const [lastImpact, setLastImpact] = useState(null)
@@ -110,16 +108,7 @@ const PunctureScene = ({
     const seenShotKeysRef = useRef(new Set())
     const playbackIdentityRef = useRef(null)
     const timingRef = useRef(null)
-    timingRef.current = { roundStartedAt, rotationTurnsPerSecond, slowdownStartedAt, reducedMotion }
-
-    useEffect(() => {
-        const media = window.matchMedia?.('(prefers-reduced-motion: reduce)')
-        if(!media) return () => {}
-        const update = () => setReducedMotion(media.matches)
-        update()
-        media.addEventListener?.('change', update)
-        return () => media.removeEventListener?.('change', update)
-    }, [])
+    timingRef.current = { roundStartedAt, rotationTurnsPerSecond, slowdownStartedAt }
 
     // Rotation is the only continuously changing visual. Updating the SVG transform directly
     // avoids rendering both React scene trees on every animation frame.
@@ -145,12 +134,6 @@ const PunctureScene = ({
             setQueue([])
             setActiveLaunch(null)
             setLastImpact(null)
-            return
-        }
-        if(reducedMotion) {
-            currentByKey.forEach((_, key) => seenShotKeysRef.current.add(key))
-            setQueue([])
-            setActiveLaunch(null)
             return
         }
         setQueue((current) => {
@@ -179,23 +162,23 @@ const PunctureScene = ({
             if(!updatedShot) return null
             return updatedShot === current.shot ? current : { ...current, shot: updatedShot }
         })
-    }, [playbackResetKey, reducedMotion, roundIndex, shotEvents])
+    }, [playbackResetKey, roundIndex, shotEvents])
 
     useLayoutEffect(() => {
-        if(activeLaunch || reducedMotion || !queue.length) return
+        if(activeLaunch || !queue.length) return
         const [next, ...remaining] = queue
         const visualImpactAt = serverNow() + LAUNCH_DURATION_MS
         const rotationAtImpact = rotationDegreesAt({ now: visualImpactAt, ...timingRef.current })
         const target = pointAt(Number(next.shot.targetAngle) + rotationAtImpact, PIN_HEAD_DISTANCE)
         setQueue(remaining)
         setActiveLaunch({ ...next, target, visualImpactAt, isMoving: false, durationMs: LAUNCH_DURATION_MS })
-    }, [activeLaunch, queue, reducedMotion, serverNow])
+    }, [activeLaunch, queue, serverNow])
 
     // Completion depends only on the launch key. Ack replacement cannot cancel this timer and
     // strand a pin between the tower and wheel.
     useLayoutEffect(() => {
         const launchKey = activeLaunch?.key
-        if(!launchKey || reducedMotion) return () => {}
+        if(!launchKey) return () => {}
         let timeoutId = null
         const frameId = window.requestAnimationFrame(() => {
             setActiveLaunch((current) => current?.key === launchKey ? { ...current, isMoving: true } : current)
@@ -211,7 +194,7 @@ const PunctureScene = ({
             window.cancelAnimationFrame(frameId)
             if(timeoutId != null) window.clearTimeout(timeoutId)
         }
-    }, [activeLaunch?.key, reducedMotion, serverNow])
+    }, [activeLaunch?.key, serverNow])
 
     const { displayPinsRemaining, visibleAttachedPinAngles } = getPlaybackView({
         pinsRemaining,
@@ -237,13 +220,12 @@ const PunctureScene = ({
                 durationMs={activeLaunch?.durationMs ?? LAUNCH_DURATION_MS}
                 color={playerColor}
             />
-            {activeLaunch && !reducedMotion ? (
+            {activeLaunch ? (
                 <ShotPulse color={playerColor} target={activeLaunch.target} isMoving={Boolean(activeLaunch.isMoving)} durationMs={activeLaunch.durationMs} />
             ) : null}
             <SvgBurstParticles
                 burstKey={lastImpact?.key ?? 0}
                 startAt={lastImpact?.startedAt}
-                disabled={reducedMotion}
                 gravity={300}
                 lifetimeMs={760}
                 originX={lastImpact?.target?.x ?? CENTER_X}

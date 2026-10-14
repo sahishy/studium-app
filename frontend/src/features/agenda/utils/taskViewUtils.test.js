@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildTaskTree, deriveTreeStatuses, getDescendants, sortBoardTasks } from './taskViewUtils.js'
+import { hasTasksDueOnDate, buildTaskTree, deriveTreeStatuses, getDescendants, sortBoardTasks } from './taskViewUtils.js'
 
 const tasks = [
     { uid: 'root', status: 'Incomplete', boardIndex: -1, listIndex: 2, parentTaskId: null },
@@ -27,4 +27,19 @@ test('board ordering falls back to list index and then uses board index', () => 
         { uid: 'earlier', boardIndex: -1, listIndex: 1 },
     ])
     assert.deepEqual(ordered.map((task) => task.uid), ['placed', 'earlier', 'later'])
+})
+
+const scheduledTask = (dueDate, status = 'Incomplete', extra = {}) => ({
+    status,
+    title: { segments: [{ type: 'widget', widgetType: 'date', value: { dueDate } }] },
+    ...extra,
+})
+
+test('due today indicator includes pending subtasks and shared tasks, excluding completed and other dates', () => {
+    const date = '2026-10-09'
+    assert.equal(hasTasksDueOnDate([scheduledTask(date, 'Completed'), scheduledTask('2026-10-08'), scheduledTask('2026-10-10'), { title: null }], date), false)
+    assert.equal(hasTasksDueOnDate([scheduledTask(date, 'In Progress', { parentTaskId: 'parent' })], date), true)
+    assert.equal(hasTasksDueOnDate([scheduledTask(date, 'Incomplete', { circleId: 'circle' })], date), true)
+    assert.equal(hasTasksDueOnDate([scheduledTask(date)], '2026-10-10'), false)
+    assert.equal(hasTasksDueOnDate([], date), false)
 })

@@ -7,6 +7,7 @@ import MatchmakingToast from '../components/toasts/MatchmakingToast'
 import ChatBox from '../components/ChatBox'
 import { leaveRoom, subscribeToRoomById, subscribeToRoomPlayers } from '../services/roomService'
 import GameHandler from '../games/GameHandler'
+import MatchIntroOverlay from '../components/MatchIntroOverlay'
 import MatchRewardWatcher from '../components/MatchRewardWatcher'
 import { subscribeToGameErrors } from '../services/realtimeSocketService'
 import ErrorState from '../../../shared/components/ui/ErrorState'
@@ -133,6 +134,7 @@ const MatchRoom = () => {
                 <MatchRewardWatcher roomId={roomId} userId={profile?.uid} />
             ) : null}
 
+
             <Topbar
                 profile={profile}
                 showGameAction={Boolean(room) || isSpectating}
@@ -144,7 +146,7 @@ const MatchRoom = () => {
             />
 
             <div className='w-full flex-1 min-h-0 px-8 xl:px-12 pb-8 pt-2 flex items-center justify-center'>
-                <div className='w-full max-w-[88rem] h-full min-h-[420px] flex flex-col gap-2'>
+                <div className='relative w-full max-w-[88rem] h-full min-h-[420px] flex flex-col gap-2'>
                     {isSpectating && spectatedPlayer ? (
                         <p className='text-center text-sm font-semibold text-neutral1'>Spectating {spectatedPlayer.displayName}</p>
                     ) : null}
@@ -159,6 +161,16 @@ const MatchRoom = () => {
                             userId={isSpectating ? spectatedUserId : profile?.uid}
                             readOnly={isSpectating}
                             spectatorName={spectatedPlayer?.displayName ?? null}
+                            matchIntro={!isSpectating && room?.state?.introEndsAt ? (
+                                <MatchIntroOverlay
+                                    roomId={roomId}
+                                    players={players}
+                                    userId={profile?.uid}
+                                    modeId={room?.modeId || session?.modeId}
+                                    introEndsAt={Number(room.state.introEndsAt) || 0}
+                                    placementByUserId={room?.state?.placementByUserId ?? {}}
+                                />
+                            ) : null}
                         />
                     )}
                 </div>

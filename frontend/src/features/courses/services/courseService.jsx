@@ -1,3 +1,4 @@
+import { prepareTutorialRecord, tutorialSignal } from '../../onboarding/onboardingBridge'
 import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, query, serverTimestamp, setDoc, where } from 'firebase/firestore'
 import { useEffect, useMemo, useState } from 'react'
 import coursesCatalog from '../../../data/courses.json'
@@ -152,8 +153,6 @@ const joinCourse = async (studentId, courseId, options = {}) => {
 
     const now = serverTimestamp()
     const {
-        day = 'A',
-        teacherId = null,
         customization = { color: '#ffffff' }
     } = options
     
@@ -165,8 +164,6 @@ const joinCourse = async (studentId, courseId, options = {}) => {
         await setDoc(enrollmentRef, {
             courseId: String(courseId),
             studentId: String(studentId),
-            day: day === 'B' ? 'B' : 'A',
-            teacherId: teacherId ? String(teacherId) : null,
             customization: {
                 color: customization?.color ?? '#ffffff'
             },
@@ -178,15 +175,15 @@ const joinCourse = async (studentId, courseId, options = {}) => {
         const studentCoursesQuery = query(coursesRef, where('studentId', '==', String(studentId)))
         const studentCoursesSnapshot = await getDocs(studentCoursesQuery)
         const sortIndex = studentCoursesSnapshot.size
+        const tutorial = courseId === 'LCPS-750100' ? await prepareTutorialRecord('course',enrollmentId) : {}
 
         await setDoc(enrollmentRef, {
             courseId: String(courseId),
             studentId: String(studentId),
-            day: day === 'B' ? 'B' : 'A',
-            teacherId: teacherId ? String(teacherId) : null,
             customization: {
                 color: customization?.color ?? '#ffffff'
             },
+            ...tutorial,
             sortIndex,
             createdAt: now,
             lastUpdated: now
@@ -194,6 +191,7 @@ const joinCourse = async (studentId, courseId, options = {}) => {
     }
 
     clearCourseEnrollmentsCache(studentId)
+    if(courseId === 'LCPS-750100') tutorialSignal('course-added')
 
     return enrollmentId
 

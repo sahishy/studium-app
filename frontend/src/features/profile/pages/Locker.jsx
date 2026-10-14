@@ -1,5 +1,6 @@
+import { useOnboarding } from '../../onboarding/OnboardingContext'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { useOutletContext, useParams, useNavigate } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
 import Card from '../../../shared/components/ui/Card'
 import AvatarModel from '../../../shared/components/avatar/AvatarModel'
@@ -15,18 +16,21 @@ import LoadingState from '../../../shared/components/ui/LoadingState'
 import { FaCheck, FaChild, FaDroplet, FaFaceSmile, FaLock, FaUnlock } from 'react-icons/fa6'
 import PageHeader from '../../../shared/components/ui/PageHeader'
 import { FaCheckCircle, FaSmile } from 'react-icons/fa'
-import Logo from '../../../shared/components/misc/Logo'
 import CrateView from '../../economy/components/CrateView'
 import CrateHeader from '../../economy/components/CrateHeader'
 import CrateDropTable from '../../economy/components/CrateDropTable'
 import useCrateOpening from '../../economy/useCrateOpening'
 import CosmeticTooltip from '../../economy/components/CosmeticTooltip'
+import Logo from '../../../shared/components/misc/Logo'
+import Title from '../components/Title'
+import { DEFAULT_TITLE_ID } from '../utils/titleUtils'
 import { describeColor, describeFace, getRarityStyle } from '../../economy/utils/rarityUtils'
 import ColorSwatch from '../../economy/components/ColorSwatch'
 
 const tabs = [
     { name: 'color', label: 'Color' },
     { name: 'face', label: 'Face' },
+    { name: 'title', label: 'Title' },
     { name: 'hat', label: 'Hat' },
 ]
 
@@ -36,25 +40,38 @@ const Locker = () => {
     const { profile } = useOutletContext()
     const [selectedColor, setSelectedColor] = useState(AVATAR_COLORS[0])
     const [selectedFace, setSelectedFace] = useState(0)
-    const [activeTab, setActiveTab] = useState(0)
-    const [showingCrates, setShowingCrates] = useState(false)
-    const crate = useCrateOpening()
+    const [selectedTitle, setSelectedTitle] = useState(DEFAULT_TITLE_ID)
+    const { tab: requestedTab } = useParams()
+    const navigate = useNavigate()
+    const activeTab = tabs.some(tab => tab.name === requestedTab) ? requestedTab : 'color'
+    const showingCrates = requestedTab === 'crates'
+    useEffect(() => {
+        if(!requestedTab || ![...tabs.map(tab => tab.name), 'crates'].includes(requestedTab)) navigate('/locker/color', {replace:true})
+    }, [requestedTab, navigate])
+    const { snapshot: economy } = useEconomy()
+    const { crateOffer } = useOnboarding()
+    const crate = useCrateOpening(crateOffer)
     const [saving, setSaving] = useState(false)
     const [saveCooldownSecondsLeft, setSaveCooldownSecondsLeft] = useState(() => getAvatarSaveCooldownSecondsLeft())
     const [avatarLoading, setAvatarLoading] = useState(true)
-    const { snapshot: economy } = useEconomy()
-    const unlockedColors = [...AVATAR_COLORS, ...(economy?.catalog || []).filter((item) => item.type !== 'face' && economy?.wallet?.inventory?.includes(item.id)).map((item) => item.value)]
+    const unlockedColors = [...AVATAR_COLORS, ...(economy?.catalog || []).filter((item) => item.type === 'color' && economy?.wallet?.inventory?.includes(item.id)).map((item) => item.value)]
     const inventory = economy?.wallet?.inventory ?? []
-    const colorCatalog = (economy?.catalog || []).filter((item) => item.type !== 'face')
+    const colorCatalog = (economy?.catalog || []).filter((item) => item.type === 'color')
     const faceCatalog = (economy?.catalog || []).filter((item) => item.type === 'face')
+    const titleCatalog = (economy?.catalog || []).filter((item) => item.type === 'title')
     const lockedColors = colorCatalog.filter((item) => !inventory.includes(item.id))
     const unlockedFaces = [...STARTER_FACES, ...faceCatalog.filter((item) => inventory.includes(item.id)).map((item) => item.value)]
     const lockedFaces = faceCatalog.filter((item) => !inventory.includes(item.id))
+    const ownsTitle = (id) => id === DEFAULT_TITLE_ID || inventory.includes(id)
+    const unlockedTitles = titleCatalog.filter((item) => ownsTitle(item.id))
+    const lockedTitles = titleCatalog.filter((item) => !ownsTitle(item.id))
+    const earnedRequirements = Object.fromEntries((economy?.earnedTitles ?? []).map((entry) => [entry.id, entry.requirement]))
     const isOpeningCrate = showingCrates && crate.phase !== 'ready' && crate.phase !== 'closing'
 
     const currentProfileAvatar = profile?.profile?.avatar || profile?.avatar || {}
     const currentColor = currentProfileAvatar?.color || AVATAR_COLORS[0]
     const currentFace = currentProfileAvatar?.face ?? 0
+    const currentTitle = profile?.profile?.title || DEFAULT_TITLE_ID
 
     useEffect(() => {
 
@@ -65,9 +82,10 @@ const Locker = () => {
 
         setSelectedColor(currentColor)
         setSelectedFace(currentFace)
+        setSelectedTitle(currentTitle)
         setAvatarLoading(false)
 
-    }, [profile, currentColor, currentFace])
+    }, [profile, currentColor, currentFace, currentTitle])
 
     useEffect(() => {
 
@@ -86,7 +104,9 @@ const Locker = () => {
 
     }, [saveCooldownSecondsLeft])
 
-    const hasUnsavedChanges = selectedColor !== currentColor || selectedFace !== currentFace
+    const hasUnsavedChanges = selectedColor !== currentColor
+        || selectedFace !== currentFace
+        || selectedTitle !== currentTitle
 
     const previewProfile = useMemo(() => {
 
@@ -125,6 +145,12 @@ const Locker = () => {
 
             await post('/v1/economy/avatar/equip', { color: selectedColor, face: selectedFace })
 
+            // Titles are equipped through their own endpoint: equipAvatar validates a colour and a
+            // face as a matched pair and has no slot for a third, independent cosmetic.
+            if(selectedTitle !== currentTitle) {
+                await post('/v1/economy/title/equip', { title: selectedTitle })
+            }
+
             await uploadProfilePicture({
                 uid: profile.uid,
                 profileForThumbnail: latestProfileForThumbnail,
@@ -152,9 +178,17 @@ const Locker = () => {
 
     }
 
+    const handleTitleSelect = (titleId) => {
+
+        if (titleId === selectedTitle) return
+        setSelectedTitle(titleId)
+
+    }
+
     const handleDiscardChanges = () => {
         setSelectedColor(currentColor)
         setSelectedFace(currentFace)
+        setSelectedTitle(currentTitle)
     }
 
     const saveButtonText = saving
@@ -175,14 +209,15 @@ const Locker = () => {
                     <div className='flex items-center gap-2'>
                         <TextTabSelector
                             tabs={tabs}
-                            currentIndex={showingCrates ? -1 : activeTab}
-                            onSelect={(_, index) => { setActiveTab(index); setShowingCrates(false) }}
+                            currentIndex={showingCrates ? -1 : tabs.findIndex((tab) => tab.name === activeTab)}
+                            onSelect={(tab) => navigate(`/locker/${tab.name}`)}
                         />
 
                         <div className='p-1 bg-neutral5 rounded-full'>
                             <button
                                 type='button'
-                                onClick={() => setShowingCrates(true)}
+                                data-onboarding="locker:crates"
+                                onClick={() => navigate('/locker/crates')}
                                 className={`px-4 py-2 rounded-full text-sm transition-colors cursor-pointer
                                     ${showingCrates
                                         ? 'bg-neutral6 text-neutral0'
@@ -198,7 +233,7 @@ const Locker = () => {
                 {avatarLoading ? (
                     <LoadingState className='flex-1' />
                 ) : (
-                    <div className='flex-1 min-h-0 flex flex-col gap-8 lg:flex-row'>
+                    <div data-onboarding={showingCrates ? 'locker:crate-shop' : 'locker:customize'} className='flex-1 min-h-0 flex flex-col gap-8 lg:flex-row'>
 
                         <div className={`relative min-h-[320px] flex-1 rounded-xl flex justify-center lg:min-h-0
                             ${showingCrates ? '' : 'bg-neutral6 overflow-hidden'}`}
@@ -266,7 +301,7 @@ const Locker = () => {
 
                             {showingCrates && <CrateDropTable />}
 
-                            {!showingCrates && activeTab === 0 && (
+                            {!showingCrates && activeTab === 'color' && (
                                 <div className='flex flex-col gap-4'>
 
                                     <h2 className='flex items-center gap-2 text-lg font-semibold text-neutral0'>
@@ -327,7 +362,7 @@ const Locker = () => {
                                 </div>
                             )}
 
-                            {!showingCrates && activeTab === 1 && (
+                            {!showingCrates && activeTab === 'face' && (
                                 <div className='flex flex-col gap-4'>
 
                                     <h2 className='flex items-center gap-2 text-lg font-semibold text-neutral0'>
@@ -388,7 +423,7 @@ const Locker = () => {
                                 </div>
                             )}
 
-                            {!showingCrates && activeTab === 2 && (
+                            {!showingCrates && activeTab === 'hat' && (
                                 <div className='flex flex-col gap-4 h-full'>
 
                                     <h2 className='flex items-center gap-2 text-lg font-semibold text-neutral1'>
@@ -400,6 +435,64 @@ const Locker = () => {
                                         <Logo className={'mb-3'} />
                                         <h1 className='text-3xl font-bold'>Coming soon</h1>
                                         <p className='text-sm text-neutral1'>Hats will be obtained in a future system.</p>
+                                    </div>
+
+                                </div>
+                            )}
+
+                            {!showingCrates && activeTab === 'title' && (
+                                <div className='flex flex-col gap-4'>
+
+                                    <h2 className='flex items-center gap-2 text-lg font-semibold text-neutral0'>
+                                        Unlocked Titles
+                                        <FaUnlock className='text-sm mb-0.5' />
+                                    </h2>
+
+                                    <div className='flex flex-wrap gap-4'>
+                                        {unlockedTitles.map((item) => (
+                                            <CosmeticTooltip key={item.id} name={item.name} rarity={item.rarity}>
+                                                <button
+                                                    onClick={() => handleTitleSelect(item.id)}
+                                                    className={`relative w-20 h-20 flex items-center justify-center overflow-hidden rounded-xl border p-2 transition-all cursor-pointer
+                                                        ${selectedTitle === item.id ? 'border-neutral0 border-2 scale-105' : 'border-neutral4 hover:scale-105'}`}
+                                                >
+                                                    <div className={`absolute inset-0 ${getRarityStyle(item.rarity).tint}`} />
+
+                                                    <Title titleId={item.id} size='xs' className='relative text-center leading-tight' />
+
+                                                    <div className={`absolute top-1 right-1 p-1 bg-neutral0 rounded-full scale-80 opacity-0
+                                                        ${selectedTitle === item.id && 'scale-100 opacity-100'} transition`}
+                                                    >
+                                                        <FaCheck className='text-neutral6 text-xs' />
+                                                    </div>
+                                                </button>
+                                            </CosmeticTooltip>
+                                        ))}
+                                    </div>
+
+                                    <h2 className='flex items-center gap-2 text-lg font-semibold text-neutral1 mt-6'>
+                                        Locked Titles
+                                        <FaLock className='text-sm mb-0.5' />
+                                    </h2>
+
+                                    <div className='flex flex-wrap gap-4'>
+                                        {lockedTitles.map((item) => (
+                                            <CosmeticTooltip
+                                                key={item.id}
+                                                locked
+                                                rarity={item.rarity}
+                                                // The three earned titles never drop from a crate, so the
+                                                // tooltip says how they are unlocked. The tile itself stays
+                                                // identical to every other locked cosmetic.
+                                                hint={item.earned ? earnedRequirements[item.id] : undefined}
+                                            >
+                                                <div className='relative w-20 h-20 flex items-center justify-center overflow-hidden rounded-xl bg-neutral5'>
+                                                    <div className={`absolute inset-0 ${getRarityStyle(item.rarity).tint}`} />
+                                                    <FaLock className='relative text-neutral0/10 text-lg' />
+                                                    <span className='sr-only'>Locked {item.rarity} title</span>
+                                                </div>
+                                            </CosmeticTooltip>
+                                        ))}
                                     </div>
 
                                 </div>

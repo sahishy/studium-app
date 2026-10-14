@@ -5,6 +5,11 @@ import type { QueueEntry } from "../types";
 import { createBotIdentity } from "../bots/profile";
 import { requestRoom } from "../utils";
 
+// Mirrors MATCH_JOIN_DELAY_SECONDS in frontend/src/features/multiplayer/utils/multiplayerUtils.jsx:
+// the countdown a matched player watches on the Play screen before the room opens. The intro
+// window has to outlast it, or it expires before anyone is there to see it.
+const MATCH_JOIN_DELAY_MS = 3_000;
+
 export class MatchmakerServer extends Server<Env> {
   queue: QueueEntry[] = [];
 
@@ -79,7 +84,7 @@ export class MatchmakerServer extends Server<Env> {
       const selectedIds = new Set(selected.map((entry) => entry.id));
       const players = selected.flatMap((entry) => entry.players);
       const gameId = crypto.randomUUID();
-      const initialized = await requestRoom(this.env.GAME, gameId, { type: "game.initialize", modeId: mode.id, ranked: mode.ranked, players });
+      const initialized = await requestRoom(this.env.GAME, gameId, { type: "game.initialize", modeId: mode.id, ranked: mode.ranked, players, introDelayMs: MATCH_JOIN_DELAY_MS });
       if (!initialized.ok) throw new Error((await initialized.text()) || "Unable to initialize the game.");
       this.queue = this.queue.filter((entry) => !selectedIds.has(entry.id));
       await this.ctx.storage.put("queue", this.queue);
@@ -96,7 +101,7 @@ export class MatchmakerServer extends Server<Env> {
         const bot = createBotIdentity(human, mode.id, `${entry.id}:${entry.joinedAt}`);
         const players = [human, bot];
         const gameId = crypto.randomUUID();
-        const initialized = await requestRoom(this.env.GAME, gameId, { type: "game.initialize", modeId: mode.id, ranked: mode.ranked, players });
+        const initialized = await requestRoom(this.env.GAME, gameId, { type: "game.initialize", modeId: mode.id, ranked: mode.ranked, players, introDelayMs: MATCH_JOIN_DELAY_MS });
         if (!initialized.ok) continue;
         this.queue = this.queue.filter((queued) => queued.id !== entry.id);
         await this.ctx.storage.put("queue", this.queue);

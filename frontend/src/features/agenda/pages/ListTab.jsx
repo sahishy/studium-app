@@ -11,7 +11,8 @@ import { useTasks } from '../contexts/TasksContext'
 import { useCircles } from '../../socials/contexts/CirclesContext'
 import { useCourses } from '../../courses/contexts/CoursesContext'
 import { enqueueTaskPatch } from '../services/taskCacheService'
-import { buildChildCounts, buildDepthMap, buildGroupedTaskSections, buildListReindexUpdates, buildShiftedListIndexUpdates, deriveStatusByTaskId, hasConflictingGroupWidget, injectGroupWidgetIfNeeded, LIST_GROUP_OPTIONS, sortTasksByListIndex } from '../utils/taskListUtils'
+import { validateTutorialTaskInput } from '../../onboarding/onboardingBridge'
+import { buildChildCounts, buildDepthMap, buildGroupedTaskSections, buildListReindexUpdates, buildShiftedListIndexUpdates, hasConflictingGroupWidget, injectGroupWidgetIfNeeded, LIST_GROUP_OPTIONS, sortTasksByListIndex } from '../utils/taskListUtils'
 import { buildListIndexPatchUpdates, buildReorderPlanForSection, buildSortableIds } from '../utils/taskDragDropUtils'
 import { MAX_USER_TASKS } from '../utils/taskUtils'
 import TextTooltip from '../../../shared/components/tooltips/TextTooltip'
@@ -157,6 +158,13 @@ const ListTab = () => {
             activationConstraint: { distance: 6 },
         })
     )
+    const collisionDetection = useCallback((args) => {
+        const active = tasksById.get(args.active.id)
+        if(!active) return []
+        const section = groupedTaskSections.find((section) => section.tasks.some((task) => task.uid === active.uid))
+        const siblingIds = new Set((section?.tasks || []).filter((task) => (task.parentTaskId || null) === (active.parentTaskId || null)).map((task) => task.uid))
+        return closestCenter({ ...args, droppableContainers: args.droppableContainers.filter((container) => siblingIds.has(container.id)) })
+    }, [groupedTaskSections, tasksById])
     useEffect(() => {
         if (!isTaskLimitReached) addTaskInputRef.current?.focusAtEnd?.()
     }, [])
@@ -214,7 +222,6 @@ const ListTab = () => {
             typeof t.listIndex === 'number' ? Math.max(max, t.listIndex) : max
         ), -1) + 1
 
-        const fallback = sortedTasks[0] || null
         createTaskOptimistic({
             title: normalizedTitle,
             userId: profile.uid,
@@ -322,6 +329,7 @@ const ListTab = () => {
     const handleCreateTaskAfter = useCallback(async (sourceTask, draftPayload = null) => {
 
         if (!sourceTask) return
+        if(validateTutorialTaskInput({title:''})===false)return
 
         const effectiveSource = {
             ...sourceTask,
@@ -472,7 +480,7 @@ const ListTab = () => {
             <div className='w-full h-full flex flex-col items-center gap-6'>
 
                 <div className='relative flex w-full h-11 items-center justify-end'>
-                    {agendaPreferences?.list?.layout !== 'table' && <div
+                    {agendaPreferences?.list?.layout !== 'table' && <div data-onboarding="agenda:editor"
                         className={`absolute left-1/2 top-1/2 -translate-1/2
                                 bg-neutral5 rounded-full flex gap-3 items-center w-96 transition-all
                                 ${isTaskLimitReached ? 'opacity-60 cursor-not-allowed' : 'cursor-text hover:w-104 focus-within:w-104'}
@@ -494,18 +502,19 @@ const ListTab = () => {
                             commitOnBlur={false}
                             allowEmptyCommit
                             onCommit={handleAddTask}
+                            onBeforeCommit={validateTutorialTaskInput}
                             invertedWidgets
                             hideCircleWidgets={hideCircleWidgetControl}
                         />
                     </div>}
 
-                    <ViewOptionsButton preferences={agendaPreferences} onSave={saveAgendaPreferences} />
+                    <ViewOptionsButton view='list' preferences={agendaPreferences} onSave={saveAgendaPreferences} />
                 </div>
 
 
                 <DndContext
                     sensors={sensors}
-                    collisionDetection={closestCenter}
+                    collisionDetection={collisionDetection}
                     onDragEnd={handleDragEnd}
                 >
                     <div className='w-full min-h-[60vh] space-y-5'>

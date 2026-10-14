@@ -4,7 +4,8 @@ import { BsHandIndexThumbFill } from 'react-icons/bs'
 import { FaRegCircle } from 'react-icons/fa'
 import shine2Url from '../../../assets/images/shine2.png'
 import shine3Url from '../../../assets/images/shine3.png'
-import { CRATE_CHANCES, RARITY_EFFECT_COLORS, getCrateProgressDots } from '../utils/crateInteraction'
+import shineUrl from '../../../assets/images/shine4.png'
+import { CRATE_CHANCES, CRATE_RARITY_SHINES, RARITY_EFFECT_COLORS, getCrateProgressDots } from '../utils/crateInteraction'
 import { RARITY_ORDER } from '../utils/rarityUtils'
 import { getWindowRoot } from '../../../shared/utils/windowLayerUtils'
 
@@ -22,15 +23,12 @@ const RING_OPTIONS = { duration: 1100, iterations: Infinity, easing: 'ease-out' 
 const STAR_FRAMES = [
     { opacity: 0, transform: 'rotate(-80deg) scale(0.1)', offset: 0 },
     { opacity: 0.38, transform: 'rotate(-15deg) scale(1.35)', offset: 0.18 },
-    { opacity: 0.25, transform: 'rotate(90deg) scale(1)', offset: 0.48 },
+    { opacity: 0.3, transform: 'rotate(90deg) scale(1.1)', offset: 0.62 },
     { opacity: 0, transform: 'rotate(240deg) scale(0.15)', offset: 1 },
 ]
-const STAR_OPTIONS = { duration: 650, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)', fill: 'forwards' }
-const SOFT_STAR_FRAMES = [{ opacity: 0.25 }, { opacity: 0 }]
-const SOFT_OPTIONS = { duration: 200, fill: 'forwards' }
+const STAR_OPTIONS = { duration: 1400, easing: 'ease-out', fill: 'forwards' }
 const FLASH_FRAMES = [{ opacity: 0, offset: 0 }, { opacity: 0.55, offset: 0.16 }, { opacity: 0, offset: 1 }]
 const FLASH_OPTIONS = { duration: 320, easing: 'ease-out', fill: 'forwards' }
-const SOFT_FLASH_FRAMES = [{ opacity: 0.1 }, { opacity: 0 }]
 const PULSE_OPTIONS = { duration: 3200, iterations: Infinity, easing: 'ease-in-out' }
 
 const useElementMotion = (ref, frames, options, enabled = true) => {
@@ -41,26 +39,28 @@ const useElementMotion = (ref, frames, options, enabled = true) => {
     }, [ref, frames, options, enabled])
 }
 
-const UpgradeShine = ({ color, reducedMotion }) => {
+const UpgradeShine = ({ color }) => {
     const ref = useRef(null)
-    useElementMotion(ref, reducedMotion ? SOFT_STAR_FRAMES : STAR_FRAMES, reducedMotion ? SOFT_OPTIONS : STAR_OPTIONS)
+    useElementMotion(ref, STAR_FRAMES, STAR_OPTIONS)
     return <div ref={ref} data-testid='crate-upgrade-shine' aria-hidden='true'
-        className='pointer-events-none absolute z-[1110] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[clamp(180px,32vw,380px)] aspect-square opacity-0 [mask-size:contain] [mask-repeat:no-repeat] [mask-position:center]'
+        className='pointer-events-none absolute z-[1060] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[clamp(180px,32vw,380px)] aspect-square opacity-0 [mask-size:contain] [mask-repeat:no-repeat] [mask-position:center]'
         style={{ backgroundColor: color, maskImage: `url(${shine3Url})` }} />
 }
 
-const RarityFlash = ({ color, reducedMotion }) => {
+const RarityFlash = ({ color }) => {
     const ref = useRef(null)
-    useElementMotion(ref, reducedMotion ? SOFT_FLASH_FRAMES : FLASH_FRAMES, reducedMotion ? SOFT_OPTIONS : FLASH_OPTIONS)
+    useElementMotion(ref, FLASH_FRAMES, FLASH_OPTIONS)
     return <div ref={ref} data-testid='crate-flash' aria-hidden='true'
         className='pointer-events-none fixed inset-0 z-[1250] opacity-0' style={{ backgroundColor: color }} />
 }
 
 const CrateInteractionOverlay = ({ crate, container, onTap }) => {
-    const { phase, rarity, upgradeId, chancesUsed, reducedMotion, canTap } = crate
+    const { phase, rarity, upgradeId, chancesUsed, canTap } = crate
     const finale = ['bursting', 'flashing', 'revealed', 'closing'].includes(phase)
+    const fadeShine = ['bursting', 'flashing', 'revealed', 'closing'].includes(phase)
     const button = useRef(null)
     const rays = useRef(null)
+    const rarityShine = useRef(null)
     const vignette = useRef(null)
     const ring = useRef(null)
     const guide = useRef(null)
@@ -71,16 +71,21 @@ const CrateInteractionOverlay = ({ crate, container, onTap }) => {
     const opacity = 0.48 + tier * 0.04
     const edgeWidth = 7 + tier * 1.5
     const pulseFrames = useMemo(() => [{ opacity: opacity * 0.7 }, { opacity, offset: 0.5 }, { opacity: opacity * 0.7 }], [opacity])
-    useElementMotion(rays, SPIN_FRAMES, SPIN_OPTIONS, !reducedMotion)
-    useElementMotion(vignette, pulseFrames, PULSE_OPTIONS, !reducedMotion)
-    useElementMotion(ring, RING_FRAMES, RING_OPTIONS, canTap && !reducedMotion)
-    useElementMotion(guide, ENTER_FRAMES, ENTER_OPTIONS, !finale && phase !== 'requesting' && !reducedMotion)
+    useElementMotion(rays, SPIN_FRAMES, SPIN_OPTIONS)
+    useElementMotion(rarityShine, SPIN_FRAMES, SPIN_OPTIONS)
+    useElementMotion(vignette, pulseFrames, PULSE_OPTIONS)
+    useElementMotion(ring, RING_FRAMES, RING_OPTIONS, canTap)
+    useElementMotion(guide, ENTER_FRAMES, ENTER_OPTIONS, !finale && phase !== 'requesting')
     const remaining = CRATE_CHANCES - chancesUsed
     const color = RARITY_EFFECT_COLORS[rarity]
+    const shine = CRATE_RARITY_SHINES[rarity]
     const screenRoot = getWindowRoot() ?? document.body
     return <>
         {createPortal(<>
             <div className='pointer-events-none absolute inset-0 z-[1050] overflow-hidden'>
+                <div ref={rarityShine} data-testid='crate-rarity-shine' aria-hidden='true'
+                    className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 aspect-square transition-[width,opacity,background-color] ${fadeShine ? 'duration-200' : 'duration-[320ms]'} [mask-size:contain] [mask-repeat:no-repeat] [mask-position:center]`}
+                    style={{ width: `min(150vw, ${shine?.size ?? 840}px)`, opacity: fadeShine ? 0 : shine?.opacity ?? 0, backgroundColor: color, maskImage: `url(${shineUrl})` }} />
                 <div ref={rays} aria-hidden='true'
                     className='absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(110vw,760px)] aspect-square opacity-10 transition-colors duration-[320ms] [mask-size:contain] [mask-repeat:no-repeat] [mask-position:center] [mask-composite:intersect]'
                     style={{ backgroundColor: color, maskImage: `url(${shine2Url}), radial-gradient(circle, #000 15%, transparent 64%)` }} />
@@ -95,12 +100,12 @@ const CrateInteractionOverlay = ({ crate, container, onTap }) => {
                     <BsHandIndexThumbFill className='absolute size-8 bottom-0 left-1.5 animate-bounce' aria-hidden='true' />
                     <FaRegCircle ref={ring} data-testid='crate-tap-ring' className='absolute size-[19px] left-2.5 top-0' aria-hidden='true' />
                 </div>
-                <div className='flex gap-[9px]' role='img' aria-label={`${remaining} ${remaining === 1 ? 'tap' : 'taps'} remaining`}>
+                {chancesUsed === CRATE_CHANCES ? <span data-testid='crate-open-prompt' className='text-xs font-medium text-neutral1'>Tap to open!</span> : <div className='flex gap-[9px]' role='img' aria-label={`${remaining} ${remaining === 1 ? 'tap' : 'taps'} remaining`}>
                     {getCrateProgressDots(chancesUsed).map((used, index) => <span key={index} data-testid='crate-progress-dot' data-used={used}
                         className={`size-[7px] rounded-full transition-[background-color,opacity] duration-150 ${used ? 'bg-gray-300 opacity-50' : 'bg-gray-500'}`} />)}
-                </div>
+                </div>}
             </div>
-            {upgradeId > 0 && !finale && <UpgradeShine key={upgradeId} color={color} reducedMotion={reducedMotion} />}
+            {upgradeId > 0 && !finale && <UpgradeShine key={upgradeId} color={color} />}
         </>, container)}
         {/* Outside the Locker's shaking transform, covering the sidebar too. */}
         {createPortal(<>
@@ -110,7 +115,7 @@ const CrateInteractionOverlay = ({ crate, container, onTap }) => {
                 className='pointer-events-none absolute inset-0 transition-[background-color,opacity] duration-[320ms]'
                 style={{ backgroundColor: color, opacity, maskImage: `linear-gradient(to right, #000, transparent ${edgeWidth}%, transparent ${100 - edgeWidth}%, #000), linear-gradient(to bottom, #000, transparent ${edgeWidth}%, transparent ${100 - edgeWidth}%, #000)` }} />
             </div>
-            {phase === 'flashing' && <RarityFlash color={color} reducedMotion={reducedMotion} />}
+            {phase === 'flashing' && <RarityFlash color={color} />}
         </>, screenRoot)}
     </>
 }

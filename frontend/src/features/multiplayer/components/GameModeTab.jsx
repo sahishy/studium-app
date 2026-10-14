@@ -6,24 +6,14 @@ import ProgressBar from '../../../shared/components/ui/ProgressBar'
 import TextTabSelector from '../../../shared/components/ui/TextTabSelector'
 import { useUserStats } from '../../profile/contexts/UserStatsContext'
 import { buildMultiplayerUiState } from '../utils/multiplayerUtils'
-import { getRankInfoFromElo } from '../../profile/utils/statsUtils'
 
-import classic_thumbnail from '../../../assets/images/gamemodes/classic.jpg'
-import timber_thumbnail from '../../../assets/images/gamemodes/timber.jpg'
-import puncture_thumbnail from '../../../assets/images/gamemodes/puncture.jpg'
-import flutter_thumbnail from '../../../assets/images/gamemodes/flutter.jpg'
+import { MODE_THUMBNAILS } from '../utils/modeThumbnails'
 
 const TABS = [
     { name: 'multiplayer', label: 'Multiplayer' },
     { name: 'singleplayer', label: 'Singleplayer' },
 ]
 
-const MODE_THUMBNAILS = {
-    'sat-classic': classic_thumbnail,
-    'sat-timber': timber_thumbnail,
-    'sat-puncture': puncture_thumbnail,
-    'sat-flutter': flutter_thumbnail,
-}
 
 const GameModeTab = ({ modes = [], selectedModeId, onSelectMode, onBack }) => {
 
@@ -64,9 +54,6 @@ const GameModeTab = ({ modes = [], selectedModeId, onSelectMode, onBack }) => {
                         const rankedProgression = mode.ranked
                             ? buildMultiplayerUiState({ userStats, modeId: mode.id })
                             : null
-                        const nextRankInfo = rankedProgression?.nextTierThreshold
-                            ? getRankInfoFromElo(rankedProgression.nextTierThreshold.minElo)
-                            : rankedProgression?.rankInfo
 
                         return (
                             <button

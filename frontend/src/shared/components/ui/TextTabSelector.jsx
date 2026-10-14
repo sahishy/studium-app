@@ -1,4 +1,4 @@
-const TextTabSelector = ({ tabs = [], currentIndex = 0, onSelect, notificationTabs = [], className }) => {
+const TextTabSelector = ({ tabs = [], currentIndex = 0, onSelect, notificationTabs = [], className, tabListLabel, disabled = false }) => {
 
     if (!tabs.length) return null
 
@@ -20,6 +20,8 @@ const TextTabSelector = ({ tabs = [], currentIndex = 0, onSelect, notificationTa
             />
 
             <div
+                role={tabListLabel ? 'tablist' : undefined}
+                aria-label={tabListLabel}
                 className='relative z-10 grid'
                 style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
             >
@@ -31,6 +33,20 @@ const TextTabSelector = ({ tabs = [], currentIndex = 0, onSelect, notificationTa
                     return (
                         <button
                             key={tab.name ?? index}
+                            type='button'
+                            disabled={disabled}
+                            role={tabListLabel ? 'tab' : undefined}
+                            aria-selected={tabListLabel ? isCurrent : undefined}
+                            id={tab.id}
+                            aria-controls={tab.panelId}
+                            tabIndex={tabListLabel && !isCurrent ? -1 : undefined}
+                            onKeyDown={(event) => {
+                                if(!tabListLabel || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return
+                                event.preventDefault()
+                                const nextIndex = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length
+                                onSelect?.(tabs[nextIndex], nextIndex)
+                                event.currentTarget.parentElement.children[nextIndex]?.focus()
+                            }}
                             onClick={() => onSelect?.(tab, index)}
                             className={`w-full px-4 py-2 flex items-center justify-center gap-2 rounded-full text-sm
                                 transition-colors cursor-pointer

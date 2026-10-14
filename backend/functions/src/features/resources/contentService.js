@@ -2,10 +2,15 @@ import { randomUUID } from 'node:crypto'
 import { db } from '../../lib/firebaseAdmin.js'
 import { readAccount, writeAccount } from '../economy/economyService.js'
 import { applyQuestProgress, questDayRef, resolveDayKey } from '../quests/questService.js'
+import { validateElement, validateParamShape } from './elementModel.js'
+import { pack, unpack } from './firestoreArrays.js'
 
-const RESOURCE_TYPES = new Set(['link', 'lesson', 'course'])
+const RESOURCE_TYPES = new Set(['link', 'lesson'])
+const MAX_PAGES = 40
+const MAX_BLOCKS_PER_PAGE = 12
+const MAX_VARIABLES_PER_PAGE = 6
 const LINK_TYPES = new Set(['document', 'video', 'website'])
-const BLOCK_TYPES = new Set(['text', 'media', 'quiz', 'graph'])
+const BLOCK_TYPES = new Set(['text', 'media', 'quiz', 'interactive'])
 const COLLEGE_OUTCOMES = new Set(['accepted', 'waitlisted', 'rejected', 'committed'])
 const cleanText = (value, max) => String(value ?? '').trim().slice(0, max)
 
@@ -17,38 +22,34 @@ const validExternalUrl = (value) => {
     } catch { return null }
 }
 
-const validateBlock = (block, allowIncomplete = false) => {
+// Blocks are placed on a page rather than stacked, so every one carries a frame in page
+// percentages — the same numbers render the page at any size, for the author and the reader.
+const validateFrame = (frame) => {
+    const bounded = (value, fallback) => {
+        const number = Number(value)
+        return Number.isFinite(number) ? Math.min(Math.max(number, 0), 100) : fallback
+    }
+    const width = Math.max(bounded(frame?.w, 60), 5)
+    const height = Math.max(bounded(frame?.h, 40), 5)
+    return { x: Math.min(bounded(frame?.x, 5), 100 - width), y: Math.min(bounded(frame?.y, 5), 100 - height), w: width, h: height }
+}
+
+const validateBlock = (block, allowIncomplete = false, variables = []) => {
     if(!BLOCK_TYPES.has(block?.type)) throw new Error('Unsupported lesson block.')
     const id = cleanText(block.id, 80) || randomUUID()
-    if(block.type === 'text') return { id, type: 'text', text: cleanText(block.text, 4000) }
+    const frame = validateFrame(block.frame)
+    if(block.type === 'text') return { id, frame, type: 'text', text: cleanText(block.text, 4000) }
     if(block.type === 'media') {
         const url = validExternalUrl(block.url)
         if(!url && !(allowIncomplete && !block.url)) throw new Error('Enter a valid media URL.')
-        return { id, type: 'media', url: url || '', caption: cleanText(block.caption, 200) }
+        return { id, frame, type: 'media', url: url || '', caption: cleanText(block.caption, 200) }
     }
     if(block.type === 'quiz') {
         const options = (Array.isArray(block.options) ? block.options : []).slice(0, 6).map((option) => cleanText(option, 200))
         if(!allowIncomplete && (options.length < 2 || options.some((option) => !option) || !Number.isInteger(block.answerIndex) || block.answerIndex < 0 || block.answerIndex >= options.length)) throw new Error('Quiz needs valid options and an answer.')
-        return { id, type: 'quiz', prompt: cleanText(block.prompt, 500), options, answerIndex: block.answerIndex, explanation: cleanText(block.explanation, 1000) }
+        return { id, frame, type: 'quiz', prompt: cleanText(block.prompt, 500), options, answerIndex: block.answerIndex, explanation: cleanText(block.explanation, 1000) }
     }
-    const curves = (Array.isArray(block.curves) ? block.curves : []).slice(0, 4).map((curve) => ({
-        id: cleanText(curve.id, 80) || randomUUID(), label: cleanText(curve.label, 80),
-        slope: Math.max(-100, Math.min(100, Number(curve.slope) || 0)),
-        intercept: Math.max(-1000, Math.min(1000, Number(curve.intercept) || 0)),
-    }))
-    if(!curves.length) throw new Error('Graph needs at least one curve.')
-    const sliders = (Array.isArray(block.sliders) ? block.sliders : []).slice(0, 4).map((slider) => ({
-        id: cleanText(slider.id, 80) || randomUUID(), label: cleanText(slider.label, 80),
-        curveId: cleanText(slider.curveId, 80), field: slider.field === 'slope' ? 'slope' : 'intercept',
-        min: Math.max(-1000, Number(slider.min) || 0), max: Math.min(1000, Number(slider.max) || 100),
-        step: Math.max(0.1, Math.min(100, Number(slider.step) || 1)),
-    }))
-    if(sliders.some((slider) => !curves.some((curve) => curve.id === slider.curveId) || slider.max <= slider.min)) throw new Error('Graph slider has an invalid curve or range.')
-    return {
-        id, type: 'graph', title: cleanText(block.title, 100), xLabel: cleanText(block.xLabel, 50), yLabel: cleanText(block.yLabel, 50),
-        xMax: Math.max(1, Math.min(1000, Number(block.xMax) || 100)), yMax: Math.max(1, Math.min(1000, Number(block.yMax) || 100)),
-        curves, sliders, showIntersection: Boolean(block.showIntersection), shadeBetween: Boolean(block.shadeBetween),
-    }
+    return { id, frame, type: 'interactive', title: cleanText(block.title, 100), caption: cleanText(block.caption, 300), ...validateElement(block, allowIncomplete, variables) }
 }
 
 const validateResource = (input) => {
@@ -62,21 +63,27 @@ const validateResource = (input) => {
         if((!url && !(base.status === 'draft' && !input.url)) || !LINK_TYPES.has(input.linkType)) throw new Error('Choose a link type and a valid URL.')
         return { ...base, url: url || '', linkType: input.linkType }
     }
-    if(type === 'lesson') {
-        const blocks = (Array.isArray(input.blocks) ? input.blocks : []).slice(0, 50).map((block) => validateBlock(block, base.status === 'draft'))
-        if(base.status === 'published' && !blocks.length) throw new Error('Add a block before publishing.')
-        return { ...base, blocks }
-    }
-    const lessonIds = Array.from(new Set((Array.isArray(input.lessonIds) ? input.lessonIds : []).map((id) => cleanText(id, 100)).filter(Boolean))).slice(0, 30)
-    if(base.status === 'published' && !lessonIds.length) throw new Error('Add a lesson before publishing.')
-    return { ...base, lessonIds }
+    // A lesson is a sequence of pages the reader steps through, not one long scroll.
+    const pages = (Array.isArray(input.pages) ? input.pages : []).slice(0, MAX_PAGES).map((page) => {
+        // A page's variables are declared before its blocks, because every block on the page
+        // may read them.
+        const variables = (Array.isArray(page?.variables) ? page.variables : []).slice(0, MAX_VARIABLES_PER_PAGE).map(validateParamShape)
+        return {
+            id: cleanText(page?.id, 80) || randomUUID(),
+            variables,
+            blocks: (Array.isArray(page?.blocks) ? page.blocks : []).slice(0, MAX_BLOCKS_PER_PAGE).map((block) => validateBlock(block, base.status === 'draft', variables)),
+        }
+    })
+    if(base.status === 'published' && !pages.some((page) => page.blocks.length)) throw new Error('Add something to a page before publishing.')
+    return { ...base, pages }
 }
 
 const resourcePublicData = (doc, viewerId = null) => {
     const value = doc.data()
     if(value.status === 'deleted' || value.status === 'hidden') return null
     if(value.status !== 'published' && viewerId !== value.ownerId) return null
-    return { id: doc.id, ...value }
+    // Expressions are stored with their nesting packed, so every read has to undo that.
+    return { id: doc.id, ...unpack(value) }
 }
 
 // Resource cards show who made something, so author profiles are fetched once
@@ -128,20 +135,15 @@ const saveResource = async (userId, input) => {
         const current = await transaction.get(ref)
         if(current.exists && current.data().ownerId !== userId) throw new Error('You cannot edit this resource.')
         if(current.exists && ['hidden', 'deleted'].includes(current.data().status)) throw new Error('This resource cannot be republished.')
-        if(data.type === 'course') {
-            const lessonRefs = data.lessonIds.map((id) => db.collection('resources').doc(id))
-            const lessons = await Promise.all(lessonRefs.map((lessonRef) => transaction.get(lessonRef)))
-            if(lessons.some((lesson) => !lesson.exists || lesson.data().type !== 'lesson' || lesson.data().ownerId !== userId || lesson.data().status !== 'published')) throw new Error('Publish your lessons before adding them to a course.')
-        }
         const account = await readAccount(transaction, userId)
         const firstPublish = data.status === 'published' && !current.data()?.everPublished
         const publishDayKey = resolveDayKey(account)
         const publishQuestSnap = await transaction.get(questDayRef(userId, publishDayKey))
         const publishQuests = firstPublish
             ? applyQuestProgress(transaction, { userId, dayKey: publishDayKey, daySnap: publishQuestSnap, metric: 'resource_published' })
-            : { reward: { xp: 0, lumen: 0 }, completed: [], quests: [] }
+            : { reward: { xp: 0, lumen: 0, crates: 0 }, completed: [], quests: [] }
         transaction.set(ref, {
-            ...data, ownerId: userId, heartsCount: current.data()?.heartsCount || 0,
+            ...pack(data), ownerId: userId, heartsCount: current.data()?.heartsCount || 0,
             everPublished: Boolean(current.data()?.everPublished || firstPublish),
             reportsCount: current.data()?.reportsCount || 0, createdAt: current.data()?.createdAt || new Date(), updatedAt: new Date(),
         })
@@ -177,9 +179,9 @@ const toggleHeart = async (userId, id) => db.runTransaction(async (transaction) 
     // Only adding a heart advances the quest; un-hearting never takes it back.
     const heartQuests = active && resource.data().ownerId !== userId
         ? applyQuestProgress(transaction, { userId, dayKey: heartDayKey, daySnap: heartQuestSnap, metric: 'heart_given' })
-        : { reward: { xp: 0, lumen: 0 }, completed: [], quests: [] }
+        : { reward: { xp: 0, lumen: 0, crates: 0 }, completed: [], quests: [] }
 
-    if(heartQuests.reward.xp || heartQuests.reward.lumen) {
+    if(heartQuests.reward.xp || heartQuests.reward.lumen || heartQuests.reward.crates) {
         writeAccount(transaction, giver, heartQuests.reward)
     }
 

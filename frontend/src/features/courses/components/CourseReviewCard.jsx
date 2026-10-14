@@ -1,10 +1,10 @@
 import { getSchoolNameById, SCORE_OPTIONS } from '../utils/reviewUtils'
 import AvatarPicture from '../../../shared/components/avatar/AvatarPicture';
 import { FaSchool } from 'react-icons/fa6';
-import { FaChalkboardTeacher, FaEdit } from 'react-icons/fa';
+import { FaEdit } from 'react-icons/fa';
 import { MdDelete } from 'react-icons/md';
 
-const CourseReviewCard = ({ review, reviewer, teacherName, canManage = false, onEdit, onDelete, deleting = false }) => {
+const CourseReviewCard = ({ review, reviewer, canManage = false, onEdit, onDelete, deleting = false }) => {
 
     const score = review?.score;
     const schoolName = getSchoolNameById(review?.schoolId)
@@ -48,12 +48,9 @@ const CourseReviewCard = ({ review, reviewer, teacherName, canManage = false, on
                     <p className='font-semibold text-neutral0'>
                         {reviewer?.profile?.displayName || 'Loading...'}
                     </p>
-                    <p className='text-xs text-neutral1 flex items-center gap-2'>
+                    {review.schoolId && <p className='text-xs text-neutral1 flex items-center gap-2'>
                         <FaSchool /> Attends {(schoolName ? `${schoolName} High School` : 'an unknown high school')}
-                    </p>
-                    <p className='text-xs text-neutral1 flex items-center gap-2'>
-                        <FaChalkboardTeacher /> Taught by {teacherName || 'Unknown teacher'}
-                    </p>
+                    </p>}
 
                 </div>
 

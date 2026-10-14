@@ -1,3 +1,7 @@
+import { FaEllipsis } from 'react-icons/fa6'
+import BasePopover from '../../../shared/components/popovers/BasePopover'
+import '../components/circles.css'
+import { setPrimaryCircle } from '../services/circleService'
 import { Link, useOutletContext } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar.jsx'
 import CircleCard from '../components/CircleCard.jsx'
@@ -21,7 +25,12 @@ import { CIRCLE_MAX_COUNT } from '../utils/circleUtils.jsx'
 const Socials = () => {
 
     const { profile } = useOutletContext()
-    const circles = useCircles()
+    const joinedCircles = useCircles()
+    const circles = joinedCircles
+    const primaryCircle = circles.find(circle => circle.uid === profile.primaryCircleId)
+    const otherCircles = circles.filter(circle => circle.uid !== primaryCircle?.uid)
+    const [primaryBusy, setPrimaryBusy] = useState(false)
+    const [primaryError,setPrimaryError] = useState('')
     
     const { friends, incomingRequests, friendsLoading, incomingRequestsLoading } = useFriends()
     const [visibleFriendCount, setVisibleFriendCount] = useState(FRIENDS_PAGE_SIZE)
@@ -37,6 +46,14 @@ const Socials = () => {
     const canLoadMoreFriends = sortedFriends.length > visibleFriends.length
     const isLoading = friendsLoading || incomingRequestsLoading
 
+    const handlePrimary = async (circleId) => {
+        if (primaryBusy) return
+        setPrimaryBusy(true)
+        try { await setPrimaryCircle(circleId); setPrimaryError('') }
+        catch (err) { setPrimaryError(err.message) }
+        finally { setPrimaryBusy(false) }
+    }
+
     const handleAddFriend = () => {
         openModal(<AddFriendModal profile={profile} closeModal={closeModal} />)
     }
@@ -49,7 +66,7 @@ const Socials = () => {
         <div className='flex flex-col h-full overflow-y-auto overflow-x-hidden'>
             <Topbar profile={profile} />
 
-            <div className='w-full h-full flex flex-col gap-8 px-24 pb-8 pt-2 m-auto'>
+            <div data-onboarding="socials:friends" className='w-full h-full flex flex-col gap-8 px-4 sm:px-6 lg:px-24 pb-8 pt-2 m-auto'>
                 <PageHeader text={'Socials'} icon={FaUserGroup} />
 
                 <div className='w-full flex flex-col gap-3'>
@@ -120,19 +137,21 @@ const Socials = () => {
                             <div className='w-full flex flex-col items-center justify-center py-16 gap-1'>
                                 <img src={social0} alt='Friends studying' className='object-contain w-96 mb-3' />
                                 <h1 className='text-3xl font-bold'>No circles</h1>
-                                <p className='text-sm text-neutral1'>You haven't joined any study circles yet. Join or create one!</p>
+                                <p className='text-sm text-neutral1'>You haven't joined any circles yet. Join or create one!</p>
                             </div>
                         ) : (
-                            <div className='w-full grid grid-cols-2 auto-rows-auto gap-4'>
-                                {circles.sort((a, b) => a.profile.title.localeCompare(b.profile.title)).map((circle) => (
-                                    <Link
-                                        key={circle.uid}
-                                        to={`/socials/circle/${circle.uid}`}
-                                    >
-                                        <CircleCard circle={circle} />
-                                    </Link>
-                                ))}
-                            </div>
+                            <>
+                                {primaryError && <p role="alert" className="text-sm text-red-400">{primaryError}</p>}
+                                {primaryCircle && <div className="flex flex-col items-center gap-3 py-8 sm:py-10">
+                                    <div className="circle-primary-float w-full max-w-lg">
+                                        <CircleTile featured circle={primaryCircle} primaryCircleId={profile.primaryCircleId} busy={primaryBusy} onPrimary={handlePrimary} />
+                                    </div>
+                                    <div aria-hidden="true" className="circle-primary-shadow h-2 w-32 rounded-full bg-neutral0/5 blur-sm mt-2" />
+                                </div>}
+                                <div className="w-full grid grid-cols-1 sm:grid-cols-2 auto-rows-auto gap-4">
+                                    {otherCircles.map(circle => <CircleTile key={circle.uid} circle={circle} primaryCircleId={profile.primaryCircleId} busy={primaryBusy} onPrimary={handlePrimary} />)}
+                                </div>
+                            </>
                         )}
                     </div>
 
@@ -143,6 +162,24 @@ const Socials = () => {
         </div>
     )
 
+}
+
+const CircleTile = ({ circle, primaryCircleId, busy, onPrimary, featured = false }) => {
+    const isPrimary = circle.uid === primaryCircleId
+    const disabled = busy || Boolean(primaryCircleId && !isPrimary)
+    return <div className="relative min-w-0">
+        <Link to={`/socials/circle/${circle.uid}`} className="block rounded-xl"><CircleCard circle={circle} featured={featured} /></Link>
+        <div className="absolute right-3 top-3"><BasePopover align="end" content={close => (
+            <button type="button" disabled={disabled}
+                onClick={() => { onPrimary(isPrimary ? null : circle.uid); close() }}
+                className="w-full text-left p-2 rounded-lg text-sm text-neutral0 hover:bg-neutral5 disabled:text-neutral2 disabled:cursor-not-allowed cursor-pointer">
+                {isPrimary ? 'Remove primary' : 'Make primary'}
+            </button>
+        )}>
+            {isOpen => <button type="button" aria-label={`Options for ${circle.profile.title}`} aria-haspopup="true" aria-expanded={isOpen}
+                className="p-2 rounded-lg text-neutral1 hover:text-neutral0 hover:bg-neutral4/50 cursor-pointer"><FaEllipsis /></button>}
+        </BasePopover></div>
+    </div>
 }
 
 const CreateCircleButton = ({ profile, disabled = false }) => {

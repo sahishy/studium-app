@@ -4,7 +4,6 @@ import { FaArrowRightFromBracket, FaBook, FaBoxArchive, FaFaceFrown, FaFaceGrin,
 import Button from '../../../shared/components/ui/Button'
 import CourseReviewCard from '../components/CourseReviewCard'
 import { getCourseReviews, upsertCourseReview, getUsersByIdsMap, deleteCourseReview, computeAverageScoreFromReviews } from '../services/reviewService'
-import { getTeachersByIdsMap } from '../services/teacherService'
 import { getCourseById, getStudentCountForCourse, leaveCourse } from '../services/courseService'
 import { useUserStats } from '../../profile/contexts/UserStatsContext'
 import { SCORE_OPTIONS, sortReviewsBySchoolPriority, formatScoreLabel } from '../utils/reviewUtils'
@@ -67,7 +66,6 @@ const CourseOverview = () => {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [isDeletingReview, setIsDeletingReview] = useState(false)
     const [usersMap, setUsersMap] = useState({})
-    const [teachersMap, setTeachersMap] = useState({})
     const reviewInputRef = useRef(null)
 
     const myEnrollment = useMemo(() => {
@@ -141,15 +139,10 @@ const CourseOverview = () => {
     useEffect(() => {
         const loadMaps = async () => {
             const uniqueUserIds = Array.from(new Set(reviews.map((review) => String(review.userId))))
-            const uniqueTeacherIds = Array.from(new Set(reviews.map((review) => String(review.teacherId)).filter(Boolean)))
 
-            const [nextUsers, nextTeachers] = await Promise.all([
-                getUsersByIdsMap(uniqueUserIds),
-                getTeachersByIdsMap(uniqueTeacherIds),
-            ])
+            const nextUsers = await getUsersByIdsMap(uniqueUserIds)
 
             setUsersMap(nextUsers)
-            setTeachersMap(nextTeachers)
         }
 
         loadMaps()
@@ -219,7 +212,6 @@ const CourseOverview = () => {
                 courseId,
                 userId: profile.uid,
                 schoolId: userStats?.academic?.schoolId ?? null,
-                teacherId: myEnrollment?.teacherId ?? null,
                 review: reviewText,
                 score,
             })
@@ -229,7 +221,6 @@ const CourseOverview = () => {
                 courseId: String(courseId),
                 userId: String(profile.uid),
                 schoolId: userStats?.academic?.schoolId ? String(userStats.academic.schoolId) : null,
-                teacherId: myEnrollment?.teacherId ? String(myEnrollment.teacherId) : null,
                 review: String(reviewText ?? '').trim(),
                 score: Number(score),
                 lastUpdated: {
@@ -434,7 +425,7 @@ const CourseOverview = () => {
                             <FaBoxArchive className='text-3xl text-neutral2' />
                             <div className='flex flex-col'>
                                 <h2 className='font-bold text-2xl leading-5'>0</h2>
-                                <p className='text-sm text-neutral1'>resource{0 != 1 && 's'} for this course</p>
+                                <p className='text-sm text-neutral1'>resources for this course</p>
                             </div>
                         </div>
                     </Card>
@@ -573,7 +564,7 @@ const CourseOverview = () => {
                         </button>
                     )}
 
-                    <div className='grid grid-cols-3 gap-3'>
+                    <div data-onboarding="courses:reviews" className='grid grid-cols-1 md:grid-cols-3 gap-3'>
 
                         {sortedReviews.length === 0 ? (
                             <div className='col-span-3 flex flex-col items-center py-16'>
@@ -594,7 +585,6 @@ const CourseOverview = () => {
                                         key={review.uid}
                                         review={review}
                                         reviewer={reviewer}
-                                        teacherName={teachersMap[String(review.teacherId)]?.name}
                                         canManage={String(review.userId) === String(profile?.uid)}
                                         onEdit={String(review.userId) === String(profile?.uid) ? handleEditMyReview : undefined}
                                         onDelete={String(review.userId) === String(profile?.uid) ? handleDeleteMyReview : undefined}

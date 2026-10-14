@@ -2,7 +2,7 @@ import { OrbitControls } from "@react-three/drei";
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 
-const RotateControls = () => {
+const RotateControls = ({ enabled = true }) => {
 
     const controlsRef = useRef(null);
     const lastInteraction = useRef(Date.now());
@@ -33,6 +33,7 @@ const RotateControls = () => {
     return (
         <OrbitControls
             ref={controlsRef}
+            enabled={enabled}
             enableZoom={false}
             enablePan={false}
             target={[0, 0.2, 0]}

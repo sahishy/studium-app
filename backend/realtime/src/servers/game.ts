@@ -38,6 +38,16 @@ const MIN_BROADCAST_INTERVAL_MS = 100;
 const CHECKPOINT_INTERVAL_ACTIVE_MS = 5_000;
 const CHECKPOINT_INTERVAL_IDLE_MS = 30_000;
 const MAX_RTT_MS = 400;
+// A short pre-roll before the first question, so the match intro animation has somewhere to play
+// that is not on top of live gameplay. Classic otherwise opens straight into question_active, and
+// an overlay there would eat answering time. Every engine is initialized as though the match
+// begins at the end of this window, so no mode loses clock to it.
+const INTRO_MS = 2_200;
+// Callers add the time players spend elsewhere before they reach the room. A matchmade game sits
+// behind a join countdown on the Play screen, so anchoring the window at creation closed it before
+// anyone had arrived and the intro never played at all.
+const MAX_INTRO_DELAY_MS = 10_000;
+
 const MAX_COMPENSATION_MS = 150;
 /** A bot action already this far past is discarded rather than executed - see runAlarm. */
 const STALE_BOT_ACTION_MS = 250;
@@ -215,6 +225,12 @@ export class GameServer extends Server<Env> {
       await requestRoom(this.env.USER, identity.userId, { type: "game.finished", gameId: this.name });
       changed = true;
     }
+    else if (Date.now() < Number(this.game.state.introEndsAt || 0)) {
+      // The engine's clock has not started yet. Accepting an action here would be recorded as an
+      // answer at zero elapsed time, which is the fastest possible - so the intro is also the
+      // window in which an action has to be refused outright.
+      this.sendMessage(connection, "game.ack", { accepted: false, reason: "intro" }, message.id);
+    }
     else {
       const engine = this.engine();
       const now = Date.now();
@@ -339,10 +355,24 @@ export class GameServer extends Server<Env> {
       return new Response(`Question provider returned ${questions.length} questions; expected 10.`, { status: 502 });
     }
     await this.storeQuestions(questions);
-    mode.createGame().initialize(this.game, questions, this.context());
+    // Engine clocks start at the end of the intro rather than at `now`, so every deadline the
+    // engine sets already accounts for the animation.
+    // Single-player modes have no opponent to introduce, so they skip the pre-roll entirely
+    // rather than making one player stare at their own banner.
+    const introDelayMs = Math.max(0, Math.min(MAX_INTRO_DELAY_MS, Number(body.introDelayMs) || 0));
+    const introEndsAt = mode.playerCount > 1 ? now + INTRO_MS + introDelayMs : now;
+    mode.createGame().initialize(this.game, questions, this.context(introEndsAt));
+    if (introEndsAt > now) this.game.state.introEndsAt = introEndsAt;
+    // Published so the intro banner can show "Unranked" for a player still in placement rather
+    // than the Bronze I that an unearned rating of 0 would otherwise resolve to. Only the flag is
+    // sent - how far through placement someone is stays private to them.
+    this.game.state.placementByUserId = Object.fromEntries(this.game.players.map((player) => [
+      player.userId,
+      { placed: player.placementByMode?.[mode.id]?.placed ?? true },
+    ]));
     this.questionsLoaded = true;
     initializeBots(this.game);
-    ensureBotActions(this.game, now);
+    ensureBotActions(this.game, introEndsAt);
     await this.afterMutation();
     return Response.json({ ok: true, gameId: this.name });
   }

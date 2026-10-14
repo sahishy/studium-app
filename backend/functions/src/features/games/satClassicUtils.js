@@ -6,55 +6,100 @@ const SAT_CLASSIC_POST_SUBMIT_GRACE_MS = 16000
 const SAT_CLASSIC_MIN_TIME_MULTIPLIER = 0.35
 const SAT_CLASSIC_TIME_SCALE_SEC = 8
 const ANSWERED_FIRST_MULTIPLIER = 1.5
-const SAT_CLASSIC_WIN_ELO_MIN_DELTA = 10
-const SAT_CLASSIC_WIN_ELO_MAX_DELTA = 20
-const SAT_CLASSIC_LOSS_ELO_MIN_DELTA = -10
-const SAT_CLASSIC_LOSS_ELO_MAX_DELTA = -5
 
-const getRandomIntInclusive = (min, max) => {
-    const safeMin = Math.ceil(Math.min(min, max))
-    const safeMax = Math.floor(Math.max(min, max))
-    return Math.floor(Math.random() * (safeMax - safeMin + 1)) + safeMin
+const ELO_K_FACTOR = 32
+const PLACEMENT_MATCHES = 3
+// The first placement opponent is pitched around low Silver, and each result moves the next one by
+// a step. A brand new account is rated 0, so without an explicit ladder every placement bot would
+// also be rated 0 and three matches would place everybody in the same spot.
+const PLACEMENT_START_ELO = 350
+const PLACEMENT_STEP = 120
+const PLACEMENT_SPAN = 220
+const PLACEMENT_MIN_ELO = 120
+const PLACEMENT_MAX_ELO = 900
+
+const clamp01 = (value) => Math.min(1, Math.max(0, Number(value) || 0))
+
+const clampPlacementElo = (value) => Math.min(
+    PLACEMENT_MAX_ELO,
+    Math.max(PLACEMENT_MIN_ELO, Math.round(Number(value) || 0)),
+)
+
+const expectedScore = (selfElo, opponentElo) => 1 / (
+    1 + Math.pow(10, ((Number(opponentElo) || 0) - (Number(selfElo) || 0)) / 400)
+)
+
+// A short match moves a rating less than a long one: two rounds says far less about skill than
+// ten, and without this an early finish would be the quickest way to climb.
+const roundsConfidence = (roundsPlayed) => {
+    const rounds = Math.max(0, Number(roundsPlayed) || 0)
+    if(rounds <= 1) return 0.1
+    if(rounds >= 6) return 1
+    return 0.6 + (((rounds - 2) / 4) * 0.4)
 }
 
-const getRankedEloDelta = ({ isWin = false, isLoss = false, roundsPlayed = 0 } = {}) => {
-    const safeRoundsPlayed = Math.max(0, Number(roundsPlayed) || 0)
+// Standard Elo. The delta now depends on who you played: beating someone far above you is worth
+// several times beating someone far below, and the ladder stops drifting upward for everyone the
+// way a fixed win/loss band does.
+const getRankedEloDelta = ({
+    isWin = false,
+    isLoss = false,
+    roundsPlayed = 0,
+    selfElo = 0,
+    opponentElo = 0,
+} = {}) => {
+    if(!isWin && !isLoss) return 0
 
-    if(isWin) {
-        const baseWinDelta = getRandomIntInclusive(SAT_CLASSIC_WIN_ELO_MIN_DELTA, SAT_CLASSIC_WIN_ELO_MAX_DELTA)
+    const actual = isWin ? 1 : 0
+    const raw = ELO_K_FACTOR * (actual - expectedScore(selfElo, opponentElo)) * roundsConfidence(roundsPlayed)
+    const rounded = Math.round(raw)
 
-        if(safeRoundsPlayed <= 1) {
-            return Math.round(baseWinDelta * 0.1)
-        }
+    // A decided match never rounds to nothing, or beating a much weaker opponent would read on
+    // the match screen as though the game had not counted at all.
+    if(rounded === 0) return isWin ? 1 : -1
 
-        if(safeRoundsPlayed <= 5) {
-            const partialMultiplier = Number((safeRoundsPlayed * 0.1).toFixed(1))
-            return Math.round(baseWinDelta * partialMultiplier)
-        }
-
-        return baseWinDelta
-    }
-
-    if(isLoss) {
-        const baseLossDelta = getRandomIntInclusive(SAT_CLASSIC_LOSS_ELO_MIN_DELTA, SAT_CLASSIC_LOSS_ELO_MAX_DELTA)
-
-        if(safeRoundsPlayed < 5) {
-            const earlyLossMultiplierByRounds = {
-                1: 2,
-                2: 1.8,
-                3: 1.6,
-                4: 1.4,
-            }
-
-            const earlyLossMultiplier = earlyLossMultiplierByRounds[safeRoundsPlayed] ?? 2
-            return Math.round(baseLossDelta * earlyLossMultiplier)
-        }
-
-        return baseLossDelta
-    }
-
-    return 0
+    return rounded
 }
+
+// Rating for the next placement opponent, derived from how the earlier placement matches went.
+const placementLadderStep = (outcome) => {
+    if(outcome === 'win') return PLACEMENT_STEP
+    if(outcome === 'draw') return 0
+    return -PLACEMENT_STEP
+}
+
+const placementOpponentElo = (placementLog = []) => (Array.isArray(placementLog) ? placementLog : [])
+    .filter(Boolean)
+    .reduce(
+        (elo, entry) => clampPlacementElo(elo + placementLadderStep(entry?.outcome)),
+        PLACEMENT_START_ELO,
+    )
+
+// Where a player lands after their placement matches. Anchored on the opponents they actually
+// faced, then pushed up or down by how they did against them, so both who you played and how you
+// played decide the result. Clamped well short of the top ranks: three matches is evidence for a
+// starting point, not for mastery.
+const computePlacementElo = (placementLog = []) => {
+    const results = (Array.isArray(placementLog) ? placementLog : []).filter(Boolean)
+
+    if(!results.length) return clampPlacementElo(PLACEMENT_START_ELO)
+
+    const anchor = results.reduce((total, entry) => total + (Number(entry.opponentElo) || 0), 0) / results.length
+    const winShare = results.reduce(
+        (total, entry) => total + (entry.outcome === 'win' ? 1 : (entry.outcome === 'draw' ? 0.5 : 0)),
+        0,
+    ) / results.length
+    const performanceShare = results.reduce((total, entry) => total + clamp01(entry.performance), 0) / results.length
+
+    // 0.5 means "held your own" and leaves the anchor alone; 1 lifts a full span, 0 drops one.
+    const combined = (winShare * 0.6) + (performanceShare * 0.4)
+
+    return clampPlacementElo(anchor + ((combined - 0.5) * 2 * PLACEMENT_SPAN))
+}
+
+const isPlacementComplete = (placementGamesPlayed) => (
+    Math.max(0, Math.floor(Number(placementGamesPlayed) || 0)) >= PLACEMENT_MATCHES
+)
 
 const SAT_CLASSIC_BASE_DAMAGE = {
     Easy: 800,
@@ -270,6 +315,16 @@ export {
     SAT_CLASSIC_ROUND_DURATION_MS,
     SAT_CLASSIC_POST_SUBMIT_GRACE_MS,
     ANSWERED_FIRST_MULTIPLIER,
+    ELO_K_FACTOR,
+    PLACEMENT_MATCHES,
+    PLACEMENT_MAX_ELO,
+    PLACEMENT_MIN_ELO,
+    PLACEMENT_START_ELO,
+    computePlacementElo,
+    expectedScore,
+    isPlacementComplete,
+    placementOpponentElo,
+    roundsConfidence,
     getRankedEloDelta,
     getRoundDamageMultiplier,
     getBaseDamageByDifficulty,

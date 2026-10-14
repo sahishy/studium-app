@@ -1,0 +1,9 @@
+// Emulator-only rules. Mirrors storage.rules, but lets the Emulator UI
+// Storage tab browse the bucket (it is an ordinary client and is subject
+// to these rules, unlike the production console). Never deployed.
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} { allow read, write: if true; }
+  }
+}

@@ -1,3 +1,5 @@
+import { getCircleTitle } from './taskCircleUtils'
+
 function createId(prefix = "id") {
 	if (typeof crypto !== "undefined" && crypto.randomUUID) {
 		return crypto.randomUUID();
@@ -227,6 +229,7 @@ function extractTaskTitleMetadata(title) {
 		}
 		if (segment.widgetType === "date" && !metadata.dueDate) {
 			metadata.dueDate = segment.value?.dueDate || "";
+            metadata.dueTime = segment.value?.dueTime || "";
 		}
 		if (segment.widgetType === "taskType" && !metadata.taskType) {
 			metadata.taskType = segment.value?.taskType || "";
@@ -523,7 +526,7 @@ function buildCourseIndex(courses) {
 function buildCircleIndex(circles) {
 	return circles.map((circle) => {
 		const aliases = [];
-		const title = circle.title || circle.name || "";
+		const title = getCircleTitle(circle);
 		const titleNorm = normalizeText(title);
 		const titleWords = titleNorm.split(" ").filter(Boolean);
 
@@ -1382,9 +1385,30 @@ function parseTaskInput(text, { courses = [], circles = [], now = new Date() } =
 	};
 }
 
+// Keep due times on the existing date widget, so grouping still uses its day.
+function attachDateTimes(title) {
+    const normalized = normalizeTaskTitle(title);
+    const segments = normalized.segments.map(segment => ({...segment}));
+    for (let index = 0; index < segments.length - 1; index++) {
+        const date = segments[index], tail = segments[index + 1];
+        if (date.widgetType !== 'date' || tail.type !== 'text') continue;
+        const match = String(tail.rawText || '').match(/^\s+(?:at\s+)?(1[0-2]|[1-9])(?::([0-5]\d))?\s*(am|pm)\b/i);
+        if (!match) continue;
+        const hour = Number(match[1]) % 12 + (match[3].toLowerCase() === 'pm' ? 12 : 0);
+        const dueTime = `${String(hour).padStart(2,'0')}:${match[2] || '00'}`;
+        const timeLabel = `${match[1]}${match[2] ? ':' + match[2] : ''} ${match[3].toLowerCase()}`;
+        date.value = {...date.value, dueTime, timeLabel};
+        date.rawText = `${date.rawText} at ${timeLabel}`;
+        date.displayText = date.rawText;
+        tail.rawText = String(tail.rawText).slice(match[0].length);
+        tail.displayText = tail.rawText;
+    }
+    return normalizeTaskTitle({segments});
+}
+
 function parseTextToTaskTitle(text, options = {}) {
 	const parseResult = parseTaskInput(text || "", options);
-	const title = buildTitleSegmentsFromMatches(text || "", parseResult.matches);
+	const title = attachDateTimes(buildTitleSegmentsFromMatches(text || "", parseResult.matches));
 	return {
 		title,
 		parseResult,
@@ -1397,6 +1421,7 @@ export {
 	extractTaskTitleMetadata,
 	parseTaskInput,
 	parseTextToTaskTitle,
+    attachDateTimes,
 	convertMatchToWidget,
 	makeTextSegment,
 };
