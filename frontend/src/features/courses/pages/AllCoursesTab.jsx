@@ -4,10 +4,14 @@ import { FaMagnifyingGlass } from 'react-icons/fa6'
 import Button from '../../../shared/components/ui/Button'
 import CourseCommandPalette from '../components/commandPalettes/CourseCommandPalette'
 import AllCoursesCard from '../components/AllCoursesCard'
+import StudentReviewsSection from '../components/StudentReviewsSection'
 import { getAllCourses, getCourseSubjects, searchCourses } from '../services/courseService'
 import { getAverageScoreByCourseIds } from '../services/reviewService'
 import { createCacheKey, resolveCachedRecordsByIds, setCachedRecordsById } from '../../../shared/services/cacheService'
 import { CACHE_NAMESPACES, CACHE_TTLS_MS } from '../../../shared/utils/cacheUtils'
+
+import { featuredCourses } from '../utils/featuredCourses'
+
 
 const CARD_PAGE_SIZE = 9
 const PALETTE_PAGE_SIZE = 10
@@ -21,6 +25,13 @@ const getScoreCacheKey = (courseId) => {
 const AllCoursesTab = () => {
     
     const navigate = useNavigate()
+    const [today, setToday] = useState(() => new Date().toISOString().slice(0, 10))
+    useEffect(() => {
+        const update = () => setToday(new Date().toISOString().slice(0, 10))
+        const timer = setInterval(update, 1000)
+        window.addEventListener('focus', update)
+        return () => { clearInterval(timer); window.removeEventListener('focus', update) }
+    }, [])
     const [visibleCount, setVisibleCount] = useState(CARD_PAGE_SIZE)
     const [isPaletteOpen, setIsPaletteOpen] = useState(false)
     const [query, setQuery] = useState('')
@@ -35,6 +46,7 @@ const AllCoursesTab = () => {
         return getAllCourses().slice().sort((a, b) => a.title.localeCompare(b.title))
     }, [])
 
+    const featured = useMemo(() => featuredCourses(allCourses, new Date(today)), [allCourses, today])
     const normalizedQuery = query.trim()
 
     const visibleCourses = useMemo(() => {
@@ -76,6 +88,7 @@ const AllCoursesTab = () => {
         let cancelled = false
 
         const visibleIds = Array.from(new Set([
+            ...featured.map((course) => String(course.courseId)),
             ...visibleCourses.map((course) => String(course.courseId)),
             ...visibleSearchResults.map((course) => String(course.courseId)),
             ...visibleSubjectCourses.map((course) => String(course.courseId))
@@ -170,7 +183,7 @@ const AllCoursesTab = () => {
         return () => {
             cancelled = true
         }
-    }, [visibleCourses, visibleSearchResults, visibleSubjectCourses])
+    }, [featured, visibleCourses, visibleSearchResults, visibleSubjectCourses])
 
     useEffect(() => {
         setSearchVisibleCount(PALETTE_PAGE_SIZE)
@@ -208,6 +221,12 @@ const AllCoursesTab = () => {
                         </button>
                     </div>
 
+                    <StudentReviewsSection />
+                    <section className="w-full mb-8" aria-label="Daily featured courses">
+                        <h2 className="text-xl font-semibold mb-4">Discover something new</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{featured.map(course => <AllCoursesCard key={course.courseId} course={course} score={scoreMap[course.courseId]} featured onOpen={() => openCourse(course.courseId)} />)}</div>
+                    </section>
+                    <h2 className="text-xl font-semibold mb-4">All courses</h2>
                     <div className='w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4'>
                         {visibleCourses.map((course) => (
                             <AllCoursesCard

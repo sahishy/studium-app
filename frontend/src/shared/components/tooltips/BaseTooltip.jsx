@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-const BaseTooltip = ({ children, content, className = '', delay = 0, placement = 'auto', disabled = false, open = undefined }) => {
+// `interactive` turns the tooltip into something the pointer can enter and click. A plain tooltip
+// is pointer-events-none and closes the moment the cursor leaves the trigger, which makes any
+// control inside it unreachable - the streak reward claim lives in one, so it needs this.
+const BaseTooltip = ({ children, content, className = '', delay = 0, placement = 'auto', gap = 4, disabled = false, open = undefined, interactive = false }) => {
 
-    const gap = 4;
-    const animationDuration = 150;
 
     const [phase, setPhase] = useState('hidden');
     const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
@@ -70,6 +71,21 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
         setPhase('hidden');
     };
 
+    // An interactive tooltip closes on a short delay so the pointer can cross the 4px gap between
+    // the trigger and the panel without the panel vanishing on the way.
+    const scheduleHide = () => {
+        if (!interactive) return hideTooltip();
+        clearTimeout(showTimeoutRef.current);
+        clearTimeout(hideTimeoutRef.current);
+        hideTimeoutRef.current = setTimeout(() => setPhase('hidden'), 140);
+        return undefined;
+    };
+
+    const cancelHide = () => {
+        if (!interactive) return;
+        clearTimeout(hideTimeoutRef.current);
+    };
+
     useEffect(() => {
         return () => {
             clearTimeout(showTimeoutRef.current);
@@ -80,6 +96,27 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
     useEffect(() => {
         if (disabled) hideTooltip();
     }, [disabled]);
+
+    // Escape and an outside click both close an interactive panel, which a hover-only tooltip
+    // never needed because leaving the trigger was always enough.
+    useEffect(() => {
+        if (!interactive || isControlled || phase === 'hidden') return undefined;
+
+        const onKeyDown = (event) => { if (event.key === 'Escape') hideTooltip(); };
+        const onPointerDown = (event) => {
+            if (tooltipRef.current?.contains(event.target)) return;
+            if (triggerRef.current?.contains(event.target)) return;
+            hideTooltip();
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        window.addEventListener('pointerdown', onPointerDown, true);
+
+        return () => {
+            window.removeEventListener('keydown', onKeyDown);
+            window.removeEventListener('pointerdown', onPointerDown, true);
+        };
+    }, [interactive, isControlled, phase]);
 
     useEffect(() => {
         if (!isControlled || disabled) return;
@@ -96,9 +133,9 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
                 ref={triggerRef}
                 className='w-full h-full'
                 onMouseEnter={isControlled ? undefined : showTooltip}
-                onMouseLeave={isControlled ? undefined : hideTooltip}
+                onMouseLeave={isControlled ? undefined : scheduleHide}
                 onFocus={isControlled ? undefined : showTooltip}
-                onBlur={isControlled ? undefined : hideTooltip}
+                onBlur={isControlled ? undefined : scheduleHide}
             >
                 {children}
             </div>
@@ -106,8 +143,11 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
             {!disabled && isMounted && createPortal(
                 <div
                     ref={tooltipRef}
+                    onMouseEnter={interactive && !isControlled ? cancelHide : undefined}
+                    onMouseLeave={interactive && !isControlled ? scheduleHide : undefined}
                     className={`
-                        absolute z-[9999] pointer-events-none select-none
+                        absolute z-[9999]
+                        ${interactive ? '' : 'pointer-events-none select-none'}
                         transition duration-150 ease-out
                         ${phase === 'visible' ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
                     `}

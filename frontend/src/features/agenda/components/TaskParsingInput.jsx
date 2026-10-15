@@ -3,7 +3,7 @@ import { createEditor, Editor, Element as SlateElement, Range, Text, Transforms 
 import { Editable, ReactEditor, Slate, withReact } from 'slate-react'
 import TaskWidgetElement from './TaskWidgetElement.jsx'
 import { replaceTextNodeWithWidget, segmentsToSlateChildren, slateChildrenToSegments } from '../utils/taskParsingSlateUtils'
-import { extractTaskTitleMetadata, flattenTaskTitle, normalizeTaskTitle, parseTaskInput } from '../utils/naturalLanguage'
+import { extractTaskTitleMetadata, flattenTaskTitle, normalizeTaskTitle, parseTaskInput, parseTextToTaskTitle, attachDateTimes } from '../utils/naturalLanguage'
 
 const makeLineValue = (title = '') => ([{
     type: 'task-line',
@@ -140,7 +140,10 @@ const TaskParsingInput = ({
             ? slateChildrenToSegments(lineNode.children)
             : normalizeTaskTitle('').segments
 
-        const normalizedTitle = normalizeTaskTitle({ segments })
+        const committedSegments = segments.flatMap(segment => segment.type === 'text'
+            ? parseTextToTaskTitle(segment.rawText || '', {courses,circles}).title.segments
+            : [segment])
+        const normalizedTitle = attachDateTimes({ segments: committedSegments })
         const plainTitle = flattenTaskTitle(normalizedTitle)
         const metadata = extractTaskTitleMetadata(normalizedTitle)
 
@@ -150,7 +153,7 @@ const TaskParsingInput = ({
             metadata,
             parsedTaskType: metadata.taskType || 'assignment',
         }
-    }, [editor])
+    }, [editor,courses,circles])
 
     const isEmpty = useCallback(() => {
         const lineNode = editor.children?.[0]
@@ -205,7 +208,9 @@ const TaskParsingInput = ({
 
     const commitFromEditor = useCallback((reason) => {
         const payload = buildPayloadFromEditor()
-        const nextPayload = onBeforeCommit?.(payload, { reason }) || payload
+        const preparedPayload = onBeforeCommit?.(payload, { reason })
+        if(preparedPayload===false)return null
+        const nextPayload = preparedPayload || payload
 
         if (!nextPayload.plainTitle) {
             if (allowEmptyCommit) {

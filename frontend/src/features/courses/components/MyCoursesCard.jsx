@@ -1,12 +1,11 @@
-import { MdDeleteOutline } from 'react-icons/md'
 import Card from '../../../shared/components/ui/Card'
 import { FaBook } from 'react-icons/fa6'
-import { FaChalkboardTeacher, FaExternalLinkAlt } from 'react-icons/fa'
+
 import { SUBJECT_ICONS } from '../utils/courseUtils'
 import { useNavigate } from 'react-router-dom'
 import { hexToRgba } from '../../../shared/utils/colorUtils'
 
-const MyCoursesCard = ({ course, customization, teacherName, loading = false }) => {
+const MyCoursesCard = ({ course, customization }) => {
 
     const navigate = useNavigate();
 
@@ -18,7 +17,7 @@ const MyCoursesCard = ({ course, customization, teacherName, loading = false }) 
     }
 
     return (
-        <button onClick={openCourse} className='w-full text-left'>
+        <button data-onboarding={`course:${course.courseId}`} onClick={openCourse} className='w-full text-left'>
             <Card hoverable className='p-2!'>
                 <div
                     className={`h-28 rounded-xl flex items-center justify-center text-neutral2`}
@@ -33,11 +32,6 @@ const MyCoursesCard = ({ course, customization, teacherName, loading = false }) 
                         <SubjectIcon />
                         {course.subject}
                     </p>
-                    {teacherName && (
-                        <p className='text-xs text-neutral1 truncate flex items-center gap-2'>
-                            <FaChalkboardTeacher /> {teacherName}
-                        </p>
-                    )}
                 </div>
             </Card>
         </button >

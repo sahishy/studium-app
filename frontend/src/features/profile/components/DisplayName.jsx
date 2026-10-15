@@ -1,3 +1,4 @@
+import { useCircle } from '../../socials/services/circleService'
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import { useIsFriend } from "../../socials/services/friendService";
@@ -5,7 +6,7 @@ import { FaUserGroup } from "react-icons/fa6";
 import TextTooltip from "../../../shared/components/tooltips/TextTooltip";
 import { getUserStatsByUserId } from "../services/statsService";
 
-const DisplayName = ({ targetProfile, className }) => {
+const DisplayName = ({ targetProfile, className, userStats: providedUserStats }) => {
 
     const { profile } = useOutletContext();
     const isFriend = useIsFriend(profile?.uid, targetProfile?.uid);
@@ -15,6 +16,7 @@ const DisplayName = ({ targetProfile, className }) => {
     const flair = targetProfile?.profile?.flair;
 
     useEffect(() => {
+        if(providedUserStats !== undefined) return
         let isCancelled = false;
 
         const loadUserStats = async () => {
@@ -44,13 +46,15 @@ const DisplayName = ({ targetProfile, className }) => {
         return () => {
             isCancelled = true;
         };
-    }, [targetProfile?.uid]);
+    }, [targetProfile?.uid, providedUserStats]);
 
-    const satScore = userStats?.academic?.scores?.sat;
-    const actScore = userStats?.academic?.scores?.act;
-    const weightedGpa = userStats?.academic?.gpa?.weighted;
-    const unweightedGpa = userStats?.academic?.gpa?.unweighted;
-    const circleFlair = null;
+    const stats = providedUserStats !== undefined ? providedUserStats : userStats;
+    const satScore = stats?.academic?.scores?.sat;
+    const actScore = stats?.academic?.scores?.act;
+    const weightedGpa = stats?.academic?.gpa?.weighted;
+    const unweightedGpa = stats?.academic?.gpa?.unweighted;
+    const { circle: primaryCircle } = useCircle(targetProfile?.primaryCircleId)
+    const circleFlair = primaryCircle?.profile?.flair || null;
 
     const flairLabel = (() => {
         switch(flair) {

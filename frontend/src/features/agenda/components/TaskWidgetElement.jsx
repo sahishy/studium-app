@@ -42,7 +42,10 @@ const TaskWidgetElement = ({
 
     if (widgetType === 'date') {
         const currentDate = element.segment?.value?.dueDate || ''
-        const dynamicLabel = resolveTaskDateWidgetLabel({ editor, element, rawLabel: label, dueDate: currentDate })
+        const timeLabel = element.segment?.value?.timeLabel
+        const suffix = timeLabel ? ` at ${timeLabel}` : ''
+        const dateLabel = suffix && label.endsWith(suffix) ? label.slice(0, -suffix.length) : label
+        const dynamicLabel = resolveTaskDateWidgetLabel({ editor, element, rawLabel: dateLabel, dueDate: currentDate })
         const { selectedDate } = getDateControlState({ segments: [element.segment] })
 
         return (
@@ -55,7 +58,7 @@ const TaskWidgetElement = ({
                                 ...element.segment,
                                 rawText: '',
                                 displayText: '',
-                                value: { ...(element.segment?.value || {}), dueDate: '' },
+                                value: { dueDate: '' },
                             })
                             return
                         }
@@ -75,7 +78,7 @@ const TaskWidgetElement = ({
                             onMouseDown={preventEditorBlur}
                             className={`${chipClass} ${isOpen && chipOpenClass}`}
                         >
-                            <span>{dynamicLabel || label}</span>
+                            <span>{dynamicLabel || dateLabel}{suffix}</span>
                         </button>
                     )}
                 </DatePicker>

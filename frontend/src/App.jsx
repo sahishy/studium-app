@@ -1,4 +1,6 @@
-import { Routes, Route } from 'react-router-dom'
+import PracticeMatchRoute from './features/onboarding/PracticeMatchRoute'
+import CircleActivityTab from './features/socials/pages/CircleActivityTab'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import PrivateRoute from './routes/PrivateRoute'
 import MainScreen from './features/main/pages/MainScreen'
 import Agenda from './features/agenda/pages/Agenda'
@@ -23,7 +25,8 @@ import AllCoursesTab from './features/courses/pages/AllCoursesTab'
 import CourseOverview from './features/courses/pages/CourseOverview'
 import CoursesIndexRedirect from './routes/CoursesIndexRedirect'
 import MultiplayerSessionRedirect from './routes/MultiplayerSessionRedirect'
-import Avatar from './features/profile/pages/Avatar'
+import Locker from './features/profile/pages/Locker'
+import Progress from './features/progress/pages/Progress'
 import Settings from './features/profile/pages/Settings'
 import ProfileOverview from './features/profile/pages/ProfileOverview'
 import Landing from './features/main/pages/Landing'
@@ -33,6 +36,8 @@ import { ToastProvider } from './shared/contexts/ToastContext'
 import JoinCircle from './features/socials/pages/JoinCircle'
 import ErrorState from './shared/components/ui/ErrorState'
 import Resources from './features/resources/pages/Resources'
+import LessonBuilderPage from './features/resources/pages/LessonBuilderPage'
+import LessonPlayer from './features/resources/pages/LessonPlayer'
 import Play from './features/multiplayer/pages/Play'
 import MatchRoom from './features/multiplayer/pages/MatchRoom'
 import MaintenanceRoute from './routes/MaintenanceRoute'
@@ -72,6 +77,7 @@ export default function App() {
 								<Route index element={<Socials />} />
 								<Route path="circle/:circleId" element={<CircleOverview />}>
 									<Route index element={<CircleOverviewIndexRedirect />} />
+                                    <Route path="activity" element={<CircleActivityTab />} />
 									<Route path="agenda" element={<CircleAgenda />}>
 										<Route index element={<CircleAgendaIndexRedirect />} />
 										<Route path="list" element={<CircleAgendaListTab />} />
@@ -94,12 +100,19 @@ export default function App() {
 								<Route path="all/:courseId" element={<CourseOverview />} />
 							</Route>
 							<Route path="/resources" element={<Resources />} />
+							<Route path="/resources/lesson/:resourceId" element={<LessonPlayer />} />
+							<Route path="/resources/build" element={<LessonBuilderPage />} />
+							<Route path="/resources/build/:resourceId" element={<LessonBuilderPage />} />
 							<Route path="/leaderboards" element={<Leaderboards />} />
 							<Route path="/play" element={<Play />} />
 							<Route path="/play/party/:partyId" element={<PartyJoinRedirect />} />
-							<Route path="/play/game/:roomId" element={<MatchRoom />} />
+							<Route path="/play/tutorial/:runId" element={<PracticeMatchRoute />} />
+                            <Route path="/play/game/:roomId" element={<MatchRoom />} />
 							<Route path="/join/:inviteCode" element={<JoinCircle />} />
-							<Route path="/avatar" element={<Avatar />} />
+							<Route path="/locker" element={<Locker />} />
+                            <Route path="/locker/:tab" element={<Locker />} />
+							<Route path="/avatar" element={<Navigate to="/locker" replace />} />
+							<Route path="/progress" element={<Progress />} />
 							<Route path="/settings" element={<Settings />} />
 							<Route path="/profile/:username" element={<ProfileOverview />} />
 						</Route>

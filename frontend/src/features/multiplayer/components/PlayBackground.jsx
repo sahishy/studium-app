@@ -2,8 +2,16 @@ import { useEffect, useRef } from "react";
 
 const ORIGIN_X = 45;
 
-const COLORS = [
+const LIGHT_COLORS = [
     "#F3F4F6",
+];
+
+// Mirrors the neutral palette's dark-mode surface treatment. Keeping a
+// dedicated canvas for each theme lets Tailwind swap them just like Logo and
+// Podium swap their light/dark assets, without a flash while the animation is
+// running.
+const DARK_COLORS = [
+    "#26262C",
 ];
 
 const RING_COUNT = 8;
@@ -15,7 +23,7 @@ const getRandomThickness = () => {
     return MIN_THICKNESS + Math.random() * (MAX_THICKNESS - MIN_THICKNESS);
 }
 
-const PlayBackground = () => {
+const AnimatedRings = ({ colors, className }) => {
 
     const canvasRef = useRef(null);
 
@@ -25,7 +33,7 @@ const PlayBackground = () => {
         let rafId;
 
         const rings = Array.from({ length: RING_COUNT }, (_, i) => ({
-            color: COLORS[i % COLORS.length],
+            color: colors[i % colors.length],
             progress: i / RING_COUNT,
             thickness: getRandomThickness(),
         }));
@@ -33,8 +41,13 @@ const PlayBackground = () => {
         let lastTime = null;
 
         const resize = () => {
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
+            const pixelRatio = window.devicePixelRatio || 1;
+            const width = canvas.offsetWidth;
+            const height = canvas.offsetHeight;
+
+            canvas.width = width * pixelRatio;
+            canvas.height = height * pixelRatio;
+            ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
         };
 
         const draw = (timestamp) => {
@@ -42,13 +55,15 @@ const PlayBackground = () => {
             const delta = timestamp - lastTime;
             lastTime = timestamp;
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const width = canvas.offsetWidth;
+            const height = canvas.offsetHeight;
+            ctx.clearRect(0, 0, width, height);
 
-            const ox = (ORIGIN_X / 100) * canvas.width;
-            const oy = canvas.height / 2;
+            const ox = (ORIGIN_X / 100) * width;
+            const oy = height / 2;
 
             const maxRadius = Math.sqrt(
-                Math.max(ox, canvas.width - ox) ** 2 + Math.max(oy, canvas.height - oy) ** 2
+                Math.max(ox, width - ox) ** 2 + Math.max(oy, height - oy) ** 2
             );
 
             for (const ring of rings) {
@@ -88,14 +103,22 @@ const PlayBackground = () => {
             window.removeEventListener("resize", resize);
         };
 
-    }, []);
+    }, [colors]);
+
+    return (
+        <canvas
+            ref={canvasRef}
+            className={`absolute inset-0 h-full w-full opacity-80 ${className}`}
+        />
+    )
+}
+
+const PlayBackground = () => {
 
     return (
         <div className="absolute inset-0 z-[-1] overflow-hidden">
-            <canvas
-                ref={canvasRef}
-                className="absolute inset-0 w-full h-full opacity-80"
-            />
+            <AnimatedRings colors={LIGHT_COLORS} className="dark:hidden" />
+            <AnimatedRings colors={DARK_COLORS} className="hidden dark:block" />
         </div>
     )
 

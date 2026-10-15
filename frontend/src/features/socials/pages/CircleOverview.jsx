@@ -11,6 +11,7 @@ import { useCircle, useCircleMembers } from '../services/circleService'
 import CircleBanner from '../components/CircleBanner'
 
 const tabs = [
+    { name: 'activity', label: 'Activity' },
     { name: 'agenda', label: 'Agenda' },
     { name: 'members', label: 'Members' },
     { name: 'settings', label: 'Settings' },
@@ -44,7 +45,8 @@ const CircleOverview = () => {
         ? 'settings'
         : location.pathname.includes('/members')
             ? 'members'
-            : 'agenda'
+            : location.pathname.includes('/agenda') ? 'agenda' : 'activity'
+    const isActivity = activeTab === 'activity'
     const currentTab = tabs.findIndex((tab) => tab.name === activeTab)
 
     const handleInvite = async () => {
@@ -58,13 +60,13 @@ const CircleOverview = () => {
     }
 
     return (
-        <div className='flex flex-col h-full overflow-scroll'>
+        <div className={`flex flex-col h-full ${isActivity ? 'overflow-hidden' : 'overflow-y-auto'}`}>
 
             <Topbar profile={profile} />
 
-            <div className='w-full flex-1 flex flex-col gap-4 px-24 pb-24 pt-2'>
+            <div className={`w-full flex-1 min-h-0 flex flex-col gap-4 px-4 sm:px-6 lg:px-24 pt-2 ${isActivity ? 'pb-4' : 'pb-24'}`}>
 
-                <div className='w-full grid grid-cols-[1fr_auto_1fr] items-center gap-6'>
+                <div className='w-full shrink-0 flex flex-wrap lg:grid lg:grid-cols-[1fr_auto_1fr] items-center gap-4 lg:gap-6'>
 
                     <div className='flex items-center gap-4 justify-self-start min-w-0'>
                         <CircleBanner
@@ -72,7 +74,7 @@ const CircleOverview = () => {
                             className='rounded-xl w-16 h-16 text-2xl shrink-0'
                         />
                         <div className='flex flex-col min-w-0'>
-                            <h1 className='text-2xl font-semibold text-neutral0 truncate'>{circle.profile.title}</h1>
+                            <h1 className='text-2xl font-semibold text-neutral0 truncate max-w-64'>{circle.profile.title}</h1>
                             <span className="text-sm text-neutral1">{circle.memberCount} member{circle.memberCount !== 1 && 's'}</span>
                         </div>
                     </div>
@@ -93,13 +95,13 @@ const CircleOverview = () => {
                 </div>
 
 
-                <div className='w-full min-w-0'>
-                    <Outlet context={{ profile, circle, circleId }} />
+                <div className={`w-full min-w-0 ${isActivity ? 'flex-1 min-h-0' : ''}`}>
+                    <Outlet context={{ profile, circle, circleId, circleMembers }} />
                 </div>
 
             </div>
 
-            <BottomFade />
+            {!isActivity && <BottomFade />}
             
         </div>
     )

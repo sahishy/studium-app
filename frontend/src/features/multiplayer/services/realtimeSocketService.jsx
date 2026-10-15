@@ -1,7 +1,9 @@
 import PartySocket from 'partysocket'
+import { getModeStats } from '../../profile/utils/statsUtils'
 import { auth } from '../../../lib/firebase'
 import { createServerClock, monotonicNow } from './serverClock'
 import { appendById, applyRoomPatch, applyStatePatch } from './gameViewPatch'
+import { createRealtimeMetrics, recordActionAck, recordActionSent, recordVisualCorrection, summary as summarizeRealtimeMetrics } from './realtimeMetrics'
 
 const host = import.meta.env.VITE_REALTIME_HOST || 'localhost:8787'
 // v3: the server sends a generic room/players diff (game.update) instead of per-mode hand-rolled
@@ -19,15 +21,40 @@ const configureRealtimeProfile = (profile, userStats = null) => {
     currentUserStats = userStats
 }
 
-const buildQuery = async () => ({
-    protocolVersion: PROTOCOL_VERSION,
-    userId: auth.currentUser?.uid || currentProfile?.uid || '',
-    token: auth.currentUser ? await auth.currentUser.getIdToken() : '',
+// The realtime identity, in the shape both the connect query and `identity.update` want. The
+// server captures it once per connection, so anything that can change mid-session (avatar,
+// display name, elo) has to be pushed again when it does.
+const realtimeIdentity = () => ({
     displayName: currentProfile?.profile?.displayName || 'Player',
-    profilePicture: JSON.stringify(currentProfile?.profile?.profilePicture ?? null),
-    avatar: JSON.stringify(currentProfile?.profile?.avatar ?? null),
-    eloByMode: JSON.stringify(Object.fromEntries(Object.entries(currentUserStats?.play ?? {}).map(([modeId, stats]) => [modeId, Number(stats?.elo) || 0]))),
+    profilePicture: currentProfile?.profile?.profilePicture ?? null,
+    avatar: currentProfile?.profile?.avatar ?? null,
+    title: currentProfile?.profile?.title ?? null,
+    level: currentProfile?.progress?.level ?? 1,
+    eloByMode: Object.fromEntries(Object.keys(currentUserStats?.play ?? {}).map((modeId) => [modeId, getModeStats(currentUserStats, { id: modeId }).elo ?? 0])),
+    // Only read when the worker runs without a backend to verify against, which is the local
+    // development setup. In production the verify endpoint supplies the authoritative copy, so a
+    // client cannot claim to be unplaced to draw an easier placement opponent.
+    placementByMode: Object.fromEntries(Object.entries(currentUserStats?.play ?? {}).map(([modeId, stats]) => [modeId, {
+        placed: Boolean(stats?.placed),
+        gamesPlayed: Math.max(0, Number(stats?.placementGamesPlayed) || 0),
+    }])),
 })
+
+const buildQuery = async () => {
+    const identity = realtimeIdentity()
+    return {
+        protocolVersion: PROTOCOL_VERSION,
+        userId: auth.currentUser?.uid || currentProfile?.uid || '',
+        token: auth.currentUser ? await auth.currentUser.getIdToken() : '',
+        displayName: identity.displayName,
+        profilePicture: JSON.stringify(identity.profilePicture),
+        avatar: JSON.stringify(identity.avatar),
+        title: identity.title ?? '',
+        level: String(identity.level),
+        eloByMode: JSON.stringify(identity.eloByMode),
+        placementByMode: JSON.stringify(identity.placementByMode),
+    }
+}
 
 const createSocket = ({ party, room }) => new PartySocket({ host, party, room, query: buildQuery, maxRetries: 20 })
 
@@ -48,6 +75,7 @@ const requestResync = (channel) => {
     const now = Date.now()
     if(channel.resyncRequestedAt && now - channel.resyncRequestedAt < RESYNC_TIMEOUT_MS) return
     channel.resyncRequestedAt = now
+    channel.metrics.resyncs += 1
     channel.socket.send(message('game.resync'))
 }
 
@@ -109,11 +137,13 @@ const getGameChannel = (roomId) => {
         listeners: new Set(),
         actionResultListeners: new Set(),
         reconnectListeners: new Set(),
+        errorListeners: new Set(),
         closeTimer: null,
         clock: createServerClock(),
         clockTimers: new Set(),
         clockInterval: null,
         hasOpened: false,
+        metrics: createRealtimeMetrics(),
     }
     socket.addEventListener('message', (event) => {
         try {
@@ -124,7 +154,12 @@ const getGameChannel = (roomId) => {
                 return
             }
             if(incoming.type === 'game.actionResult') {
+                recordActionAck(channel.metrics, incoming.id, incoming.payload, receivedAt)
                 channel.actionResultListeners.forEach((listener) => listener(incoming.payload ?? {}))
+                return
+            }
+            if(incoming.type === 'game.ack') {
+                recordActionAck(channel.metrics, incoming.id, incoming.payload, receivedAt)
                 return
             }
             // Observe only - never anchor here. Anchoring off every message with no latency
@@ -134,6 +169,7 @@ const getGameChannel = (roomId) => {
                 synchronizeClock(channel)
             }
             if(incoming.type === 'game.snapshot') {
+                channel.error = null
                 channel.snapshot = incoming.payload
                 channel.revision = Number(incoming.payload?.revision ?? incoming.revision) || 0
                 channel.resyncRequestedAt = null
@@ -155,15 +191,20 @@ const getGameChannel = (roomId) => {
             channel.reconnectListeners.forEach((listener) => listener())
         }
     })
-    socket.addEventListener('close', () => {
+    socket.addEventListener('close', (event) => {
         // Reset the resync gate so a reconnect can always ask again, and drop the revision base:
         // applying a post-reconnect delta on top of pre-disconnect state would corrupt it silently,
         // which is worse than the freeze this replaces.
         channel.resyncRequestedAt = null
         channel.revision = -1
+        if(event.code === 1008) {
+            channel.error = new Error(event.reason || 'This match is no longer available.')
+            channel.errorListeners.forEach((listener) => listener(channel.error))
+        }
     })
     channel.clockInterval = window.setInterval(() => synchronizeClock(channel), CLOCK_REFRESH_MS)
     gameChannels.set(roomId, channel)
+    if(import.meta.env.DEV) window.__studiumLatency = () => Object.fromEntries([...gameChannels.keys()].map((id) => [id, getGameLatencyMetrics(id)]))
     return channel
 }
 
@@ -189,6 +230,13 @@ const subscribeToGameReconnect = (roomId, listener) => {
     return () => channel.reconnectListeners.delete(listener)
 }
 
+const subscribeToGameErrors = (roomId, listener) => {
+    const channel = getGameChannel(roomId)
+    channel.errorListeners.add(listener)
+    if(channel.error) listener(channel.error)
+    return () => channel.errorListeners.delete(listener)
+}
+
 const subscribeToGameActionResults = (roomId, listener) => {
     const channel = getGameChannel(roomId)
     channel.actionResultListeners.add(listener)
@@ -201,10 +249,25 @@ const requestGameResync = (roomId) => {
 }
 
 const sendGameMessage = (roomId, type, payload = {}) => {
-    const socket = getGameChannel(roomId).socket
-    const sendNow = () => socket.send(message(type, payload))
+    const channel = getGameChannel(roomId)
+    const socket = channel.socket
+    const wire = message(type, payload)
+    const id = JSON.parse(wire).id
+    const sendNow = () => {
+        if(type.startsWith('game.') && !['game.resync', 'game.subscribe', 'game.leave'].includes(type)) recordActionSent(channel.metrics, id, type, monotonicNow())
+        socket.send(wire)
+    }
     if(socket.readyState === WebSocket.OPEN) sendNow()
     else socket.addEventListener('open', sendNow, { once: true })
+}
+
+const getGameLatencyMetrics = (roomId) => {
+    const channel = gameChannels.get(roomId)
+    return channel ? summarizeRealtimeMetrics(channel.metrics) : null
+}
+const recordGameVisualCorrection = (roomId, magnitude = 1) => {
+    const channel = gameChannels.get(roomId)
+    if(channel) recordVisualCorrection(channel.metrics, magnitude)
 }
 
 const getGameServerNow = (roomId) => gameChannels.get(roomId)?.clock.now() ?? Date.now()
@@ -224,12 +287,16 @@ export {
     buildQuery,
     closeGameChannel,
     configureRealtimeProfile,
+    realtimeIdentity,
     createSocket,
     getGameServerNow,
+    getGameLatencyMetrics,
     message,
+    recordGameVisualCorrection,
     requestGameResync,
     sendGameMessage,
     subscribeToGameActionResults,
+    subscribeToGameErrors,
     subscribeToGameReconnect,
     subscribeToGameSnapshot,
 }

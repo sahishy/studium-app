@@ -1,103 +1,15 @@
-import { PiStarFourFill } from "react-icons/pi";
-import Card from "../../../shared/components/ui/Card";
-import AvatarStack from "../../../shared/components/avatar/AvatarStack";
-import { useCircleMembers } from "../services/circleService";
-import ProgressBar from "../../../shared/components/ui/ProgressBar";
-import { useMembers } from "../contexts/MembersContext";
-import { HiChevronDoubleUp } from "react-icons/hi";
-import { FaBookOpen, FaTrophy, FaUserGroup } from "react-icons/fa6";
-import CircleBanner from "./CircleBanner";
-import { useTasks } from "../../agenda/contexts/TasksContext";
-import { useMemo } from "react";
-import { extractTaskTitleMetadata } from "../../agenda/utils/naturalLanguage";
-
-const CircleCard = ({ circle }) => {
-
-    const { members: circleMembers } = useCircleMembers(circle.uid);
-    const allMembers = useMembers();
-    const { circle: circleTasks = [] } = useTasks();
-
-    const xpToNextLevel = Math.pow(2, circle.level) * 100
-    const isCompetitive = circle.type === 'competitive'
-    const circleTaskCount = useMemo(() => {
-        return circleTasks.filter((task) => extractTaskTitleMetadata(task.title).circleId === circle.uid).length
-    }, [circleTasks, circle.uid])
-    const circleTotalElo = Number(circle.totalElo) || 0
-    const circleMemberProfiles = useMemo(
-        () => allMembers.filter((user) => circleMembers.some((member) => member.userId === user.uid)),
-        [allMembers, circleMembers]
-    )
-
-    return (
-        <Card
-            style={{background: `linear-gradient(to bottom, ${circle.profile.banner.bgColor.slice(0, -2)}14, transparent)`}}
-            hoverable={true}
-        >
-
-            <div className="flex items-center gap-4">
-                <CircleBanner
-                    banner={circle.profile.banner}
-                    className='rounded-xl w-24 h-24 p-2 text-4xl pointer-events-none'
-                />
-                <div className="flex-1 min-w-0 flex flex-col gap-1">
-
-                    <div className="flex items-center gap-2 min-w-0">
-                        <h1 className="min-w-0 text-lg font-semibold text-neutral0 truncate">{circle.profile.title}</h1>
-                        {circle.profile.flair && (
-                            <span className="shrink-0 px-2 py-1 text-[10px] rounded-lg bg-neutral5 text-neutral1">
-                                {circle.profile.flair}
-                            </span>
-                        )}
-                    </div>
-
-                    {isCompetitive ? (
-                        <p className="flex items-center gap-2 text-sm text-neutral1">
-                            <FaTrophy className="text-xs" />
-                            <span>
-                                {circleTotalElo} <span className="text-[10px]">SAT</span>
-                            </span>
-                        </p>
-                    ) : (
-                        <p className="flex items-center gap-2 text-sm text-neutral1">
-                            <FaBookOpen className="text-xs" /> {circleTaskCount} task{circleTaskCount !== 1 && 's'}
-                        </p>
-                    )}
-
-                    <p className="flex items-center gap-2 text-sm text-neutral1">
-                        <FaUserGroup className="text-xs" /> {circle.memberCount} member{circle.memberCount !== 1 && 's'}
-                    </p>
-
-                </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-                <h1 className="flex items-center justify-center gap-2 text-sm font-semibold text-neutral1">
-                    <PiStarFourFill />
-                    Lv. {circle.level}
-                </h1>
-                <ProgressBar
-                    value={circle.xp}
-                    max={xpToNextLevel}
-                    className="flex-1"
-                />
-                <h1 className="flex items-center justify-center gap-2 text-sm font-semibold text-neutral1">
-                    {200} xp left
-                    <HiChevronDoubleUp />
-                </h1>
-            </div>
-
-            <AvatarStack
-                users={circleMemberProfiles}
-                totalCount={circle.memberCount || 0}
-                maxVisible={4}
-                sizeClassName="w-10 h-10"
-                overlapClassName="-space-x-3"
-                outlineClassName="outline-4 outline-neutral6"
-            />
-
-        </Card >
-    )
-
+import Card from '../../../shared/components/ui/Card'
+import AvatarStack from '../../../shared/components/avatar/AvatarStack'
+import { useCircleMembers } from '../services/circleService'
+import { useMembers } from '../contexts/MembersContext'
+import { FaTrophy, FaUserGroup } from 'react-icons/fa6'
+import CircleBanner from './CircleBanner'
+const CircleCard = ({ circle, featured = false }) => {
+    const { members } = useCircleMembers(circle.uid)
+    const profiles = useMembers().filter(user => members.some(member => member.userId === user.uid))
+    return <Card hoverable className={featured ? "p-5! sm:p-6! gap-5!" : ""}>
+        <div className="flex gap-4 items-center"><CircleBanner banner={circle.profile.banner} className={featured ? "size-24 shrink-0 rounded-2xl text-4xl" : "size-20 shrink-0 rounded-xl text-3xl"} /><div className="min-w-0 flex flex-col gap-2"><h3 className={`font-semibold truncate pr-8 ${featured ? "text-xl sm:text-2xl" : ""}`}>{circle.profile.title}</h3>{circle.profile.flair && <span className="text-xs text-neutral1">{circle.profile.flair}</span>}<p className="text-sm text-neutral1 flex items-center gap-2"><FaTrophy />{Number(circle.totalElo) || 0} ELO</p><p className="text-sm text-neutral1 flex items-center gap-2"><FaUserGroup />{circle.memberCount} members</p></div></div>
+        <AvatarStack users={profiles} totalCount={circle.memberCount} maxVisible={4} sizeClassName={featured ? "size-11!" : "size-10"} overlapClassName="-space-x-3" />
+    </Card>
 }
-
-export default CircleCard;
+export default CircleCard

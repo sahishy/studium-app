@@ -15,7 +15,7 @@ const ConditionalTooltip = ({ children, label, isCurrent }) => {
 }
 
 
-const IconTabSelector = ({ tabs = [], currentIndex = 0, onSelect }) => {
+const IconTabSelector = ({ tabs = [], currentIndex = 0, onSelect, onboardingPrefix }) => {
     if (!tabs.length) return null
 
     const safeIndex = currentIndex >= 0 ? currentIndex : 0
@@ -29,8 +29,9 @@ const IconTabSelector = ({ tabs = [], currentIndex = 0, onSelect }) => {
                 return (
                     <ConditionalTooltip key={tab.name ?? index} label={label} isCurrent={isCurrent}>
                         <button
+                            data-onboarding={onboardingPrefix ? `${onboardingPrefix}:${tab.name}` : undefined}
                             onClick={() => onSelect?.(tab, index)}
-                            className={`h-11 rounded-full bg-neutral5 flex items-center justify-center cursor-pointer shrink-0 overflow-hidden motion-reduce:transition-none transition-[width,color] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                            className={`h-11 rounded-full bg-neutral5 flex items-center justify-center cursor-pointer shrink-0 overflow-hidden transition-[width,color] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] ${
                                 isCurrent
                                     ? 'w-32 text-neutral0'
                                     : 'w-11 text-neutral1 hover:text-neutral0'

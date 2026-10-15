@@ -1,4 +1,3 @@
-import highschools from '../../../data/highschools.json'
 import { FaThumbsUp, FaHandshake, FaThumbsDown, FaHeart } from 'react-icons/fa6'
 
 const SCORE_OPTIONS = [
@@ -62,37 +61,17 @@ const formatScoreLabel = (score) => {
     return `${normalizedPercent}%`
 }
 
-const sortReviewsBySchoolPriority = (reviews = [], schoolIds = []) => {
-    const normalizedSchoolIds = new Set((Array.isArray(schoolIds) ? schoolIds : [schoolIds]).filter(Boolean).map((schoolId) => String(schoolId)))
-
-    return [...reviews].sort((a, b) => {
-        const aMatch = normalizedSchoolIds.has(String(a?.schoolId ?? '')) ? 1 : 0
-        const bMatch = normalizedSchoolIds.has(String(b?.schoolId ?? '')) ? 1 : 0
-        if(bMatch !== aMatch) {
-            return bMatch - aMatch
-        }
-
-        const aTime = a?.lastUpdated?.seconds ?? a?.createdAt?.seconds ?? 0
-        const bTime = b?.lastUpdated?.seconds ?? b?.createdAt?.seconds ?? 0
-        return bTime - aTime
-    })
-}
-
-const getSchoolNameById = (schoolId) => {
-    if(!schoolId) {
-        return 'Unknown School'
-    }
-
-    const found = highschools.find((school) => String(school.highSchoolId) === String(schoolId))
-    return found?.name ?? 'Unknown School'
-}
+const sortReviewsByNewest = (reviews = []) => [...reviews].sort((a, b) => {
+    const aTime = a?.lastUpdated?.seconds ?? a?.createdAt?.seconds ?? 0
+    const bTime = b?.lastUpdated?.seconds ?? b?.createdAt?.seconds ?? 0
+    return bTime - aTime
+})
 
 export {
     clampReviewScore,
     computeAverageScoreFromReviews,
     buildCourseScoreMap,
     formatScoreLabel,
-    sortReviewsBySchoolPriority,
-    getSchoolNameById,
+    sortReviewsByNewest,
     SCORE_OPTIONS
 }

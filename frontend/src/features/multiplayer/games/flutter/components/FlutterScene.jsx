@@ -240,7 +240,7 @@ const FlutterWings = ({ opacity = 1, ...groupProps }) => {
     )
 }
 
-const FlightAvatar = ({ player, local = false, pendingInputsRef = null, winner = false, falling = false, fallStartedAt = null, resultAnimationKey = 0, serverNow = Date.now }) => {
+const FlightAvatar = ({ player, local = false, pendingInputsRef = null, winner = false, falling = false, fallStartedAt = null, resultAnimationKey = 0, serverNow = Date.now, onVisualCorrection = null }) => {
     const placementRef = useRef(null)
     const positionRef = useRef(new THREE.Vector2(Number(player?.state?.flutterX) || 0, Number(player?.state?.flutterY) || 0))
     const velocityRef = useRef(new THREE.Vector2(Number(player?.state?.flutterVelocityX) || 0, Number(player?.state?.flutterVelocityY) || 0))
@@ -311,8 +311,10 @@ const FlightAvatar = ({ player, local = false, pendingInputsRef = null, winner =
         // step as an offset at the moment it happens and decay it to nothing, rather than chasing
         // the target every frame and paying a permanent tracking error for the privilege.
         if(anchoredAt !== lastAnchorRef.current) {
+            const hadAnchor = lastAnchorRef.current != null
             lastAnchorRef.current = anchoredAt
             offsetRef.current.copy(positionRef.current).sub(targetRef.current)
+            if(local && hadAnchor && offsetRef.current.length() > 0.2) onVisualCorrection?.(Number(offsetRef.current.length().toFixed(2)))
             if(offsetRef.current.length() > SNAP_DISTANCE) offsetRef.current.set(0, 0)
         }
         offsetRef.current.multiplyScalar(Math.exp(-(local ? LOCAL_CORRECTION_RATE : OPPONENT_CORRECTION_RATE) * delta))
@@ -363,7 +365,7 @@ const FlightAvatar = ({ player, local = false, pendingInputsRef = null, winner =
     )
 }
 
-const FlutterWorld = ({ localPlayer, opponent, rings, pendingInputsRef, resultWinnerUserId, fallingUserIds, slowdownStartedAt, animationKey, serverNow }) => {
+const FlutterWorld = ({ localPlayer, opponent, rings, pendingInputsRef, resultWinnerUserId, fallingUserIds, slowdownStartedAt, animationKey, serverNow, onVisualCorrection }) => {
     return (
         <>
             <ambientLight intensity={1.4} />
@@ -389,6 +391,7 @@ const FlutterWorld = ({ localPlayer, opponent, rings, pendingInputsRef, resultWi
                 fallStartedAt={slowdownStartedAt}
                 resultAnimationKey={animationKey}
                 serverNow={serverNow}
+                onVisualCorrection={onVisualCorrection}
             />
         </>
     )
@@ -397,7 +400,7 @@ const FlutterWorld = ({ localPlayer, opponent, rings, pendingInputsRef, resultWi
 // Memoised deliberately. Nothing in this subtree is driven by React state any more - rings and
 // avatars both advance in useFrame off the synced clock - so a HUD re-render (the game's 50ms
 // clock tick) must not walk the whole react-three-fiber tree 20 times a second alongside it.
-const FlutterScene = memo(({ localPlayer, opponent, rings = [], pendingInputsRef = null, resultWinnerUserId = null, fallingUserIds = [], slowdownStartedAt = null, animationKey = 0, serverNow = Date.now }) => (
+const FlutterScene = memo(({ localPlayer, opponent, rings = [], pendingInputsRef = null, resultWinnerUserId = null, fallingUserIds = [], slowdownStartedAt = null, animationKey = 0, serverNow = Date.now, onVisualCorrection = null }) => (
     <Canvas
         className='absolute inset-0 h-full! w-full!'
         dpr={[1, 2]}
@@ -416,6 +419,7 @@ const FlutterScene = memo(({ localPlayer, opponent, rings = [], pendingInputsRef
                 slowdownStartedAt={slowdownStartedAt}
                 animationKey={animationKey}
                 serverNow={serverNow}
+                onVisualCorrection={onVisualCorrection}
             />
         </Suspense>
     </Canvas>

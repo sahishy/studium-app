@@ -1,0 +1,13 @@
+.circle-primary-float { animation: circle-float 6s ease-in-out infinite; }
+.circle-primary-float:focus-within, .circle-primary-float:hover { animation-play-state: paused; }
+.circle-primary-shadow { animation: circle-shadow 6s ease-in-out infinite; }
+.circle-quest-liquid { transition: height 1.2s cubic-bezier(.22, 1, .36, 1); }
+.circle-quest-wave { position: absolute; top: -20px; left: 0; width: 200%; height: 40px; color: #38bdf8; animation: circle-wave 9s linear infinite; }
+.circle-quest-wave-back { top: -25px; color: #7dd3fc; animation-duration: 13s; animation-direction: reverse; }
+@keyframes circle-float { 0%, 100% { transform: translateY(0) rotate(-0.8deg); } 50% { transform: translateY(-12px) rotate(0.8deg); } }
+@keyframes circle-shadow { 0%, 100% { transform: scaleX(1); opacity: .8; } 50% { transform: scaleX(.82); opacity: .4; } }
+@keyframes circle-wave { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.circle-quest-orb { animation: circle-orb-hover 7s ease-in-out infinite; }
+.circle-quest-shadow { animation: circle-orb-shadow 7s ease-in-out infinite; }
+@keyframes circle-orb-hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes circle-orb-shadow { 0%, 100% { transform: scaleX(1); opacity: 1; } 50% { transform: scaleX(.93); opacity: .8; } }

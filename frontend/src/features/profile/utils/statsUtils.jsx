@@ -23,7 +23,7 @@ const RANK_TIERS = [
     { minElo: 180, tierName: 'Bronze', tier: 'IV' },
     { minElo: 120, tierName: 'Bronze', tier: 'III' },
     { minElo: 60, tierName: 'Bronze', tier: 'II' },
-    { minElo: 0, tierName: 'Bronze', tier: 'I' },
+    { minElo: 1, tierName: 'Bronze', tier: 'I' },
 ]
 
 const rankedIconModules = import.meta.glob('../../../assets/images/ranked/*.svg', {
@@ -41,7 +41,17 @@ const rankedIconMap = Object.entries(rankedIconModules).reduce((acc, [path, src]
 
 }, {})
 
-const getRankInfoFromElo = (elo = 0) => {
+const UNRANKED_INFO = {
+    tierName: 'Unranked',
+    tier: null,
+    placed: false,
+    get imageSrc() { return rankedIconMap.unranked },
+}
+
+// Placement status remains Unranked even after the participation floor is set.
+const getRankInfoFromElo = (elo = 0, { placed = true } = {}) => {
+
+    if(!placed) return { ...UNRANKED_INFO, imageSrc: rankedIconMap.unranked }
 
     const safeElo = Number.isFinite(Number(elo)) ? Math.max(0, Number(elo)) : 0
     const matched = RANK_TIERS.find((entry) => safeElo >= entry.minElo)
@@ -50,6 +60,7 @@ const getRankInfoFromElo = (elo = 0) => {
         return {
             tierName: 'Unranked',
             tier: null,
+            placed: false,
             imageSrc: rankedIconMap.unranked,
         }
     }
@@ -60,10 +71,29 @@ const getRankInfoFromElo = (elo = 0) => {
     return {
         tierName: matched.tierName,
         tier: matched.tier,
+        placed: true,
         imageSrc: rankedIconMap[iconKey] ?? rankedIconMap.unranked,
     }
 
 }
+
+const PLACEMENT_MATCHES = 3
+
+// Placement state for one mode. Mirrors the backend's per-mode record, and treats anything it has
+// not seen as "still placing" so a new account is never shown a rating it has not earned.
+const getPlacementState = (userStats, modeId) => {
+    const modeStats = userStats?.play?.[modeId] ?? {}
+    const gamesPlayed = Math.max(0, Number(modeStats.placementGamesPlayed) || 0)
+
+    return {
+        placed: Boolean(modeStats.placed),
+        gamesPlayed,
+        required: PLACEMENT_MATCHES,
+        remaining: Math.max(0, PLACEMENT_MATCHES - gamesPlayed),
+    }
+}
+
+const isModePlaced = (userStats, modeId) => getPlacementState(userStats, modeId).placed
 
 const getModeStats = (userStats, mode) => {
     const modeStats = userStats?.play?.[mode?.id] ?? {}
@@ -76,9 +106,13 @@ const getModeStats = (userStats, mode) => {
     }
 
     return {
-        elo: modeStats?.elo ?? 0,
-        peakElo: modeStats?.peakElo ?? 0,
+        elo: modeStats.placed
+            ? Math.max(1, Number(modeStats.elo) || 0)
+            : (Number(modeStats.gamesPlayed) > 0 || Number(modeStats.placementGamesPlayed) > 0 ? 1 : 0),
+        peakElo: modeStats.placed ? Math.max(1, Number(modeStats.peakElo) || 0, Number(modeStats.elo) || 0) : 0,
         gamesPlayed: modeStats?.gamesPlayed ?? 0,
+        placed: Boolean(modeStats?.placed),
+        placementGamesPlayed: Math.max(0, Number(modeStats?.placementGamesPlayed) || 0),
     }
 }
 
@@ -91,15 +125,18 @@ const getTotalElo = (userStats) => {
     }
 
     return Object.keys(rankedStats).reduce((total, modeId) => {
-        const modeStats = rankedStats?.[modeId] ?? {}
-        return total + (Number(modeStats?.elo) || 0)
+        if(modeId === 'blitz') return total
+        return total + getModeStats(userStats, { id: modeId, type: 'multiplayer' }).elo
     }, 0)
 
 }
 
 export {
+    PLACEMENT_MATCHES,
     RANK_TIERS,
+    getPlacementState,
     getRankInfoFromElo,
     getModeStats,
-    getTotalElo
+    getTotalElo,
+    isModePlaced,
 }

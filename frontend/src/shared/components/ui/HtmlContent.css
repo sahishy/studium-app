@@ -1,0 +1,7 @@
+/* Question HTML includes legacy border attributes and publisher-specific classes.
+   Supply the grid explicitly because the CSS reset removes default borders. */
+.html-content table:not(.table_Borderless):not([border='0']),
+.html-content table:not(.table_Borderless):not([border='0']) > tr > :is(th, td),
+.html-content table:not(.table_Borderless):not([border='0']) > :is(thead, tbody, tfoot) > tr > :is(th, td) {
+    border: 1px solid currentColor;
+}

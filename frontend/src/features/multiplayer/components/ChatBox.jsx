@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { sendRoomChatMessage, subscribeToRoomChat } from '../services/chatService'
 import { formatTimeFromFirestoreLike, toMillisFromFirestoreLike } from '../../../shared/utils/formatters'
 import { cleanText } from '../../../shared/services/censorService'
+import { getChatSenderPresentation } from '../utils/chatPresentation'
 
-const ChatBox = ({ roomId, userId, senderName, messages = null, onSendMessage = null, className = '' }) => {
+const ChatBox = ({ roomId, userId, senderName, isSpectator = false, messages = null, onSendMessage = null, className = '' }) => {
 
     const [chatMessages, setChatMessages] = useState([])
     const [pendingMessages, setPendingMessages] = useState([])
@@ -78,6 +79,7 @@ const ChatBox = ({ roomId, userId, senderName, messages = null, onSendMessage = 
             text: trimmedInput,
             createdAt: new Date(),
             pending: true,
+            ...(isSpectator ? { senderRole: 'spectator' } : {}),
         }
 
         setPendingMessages((previous) => [...previous, optimisticMessage])
@@ -101,9 +103,7 @@ const ChatBox = ({ roomId, userId, senderName, messages = null, onSendMessage = 
             >
                 {mergedMessages.map((message) => {
 
-                    const isSystemMessage = message.system || message.senderName === 'System';
-                    const isOwnMessage = message.userId === userId
-                    const senderLabel = isOwnMessage ? 'You' : (message.senderName ?? 'Opponent')
+                    const { isSystemMessage, isSpectatorMessage, senderLabel } = getChatSenderPresentation(message, userId)
                     const timestamp = formatTimeFromFirestoreLike(message.createdAt)
 
                     return (
@@ -112,6 +112,7 @@ const ChatBox = ({ roomId, userId, senderName, messages = null, onSendMessage = 
                             className={`p-1 whitespace-pre-wrap break-words bg-neutral0/[0.05] [backdrop-filter:blur(14px)_saturate(125%)] [-webkit-backdrop-filter:blur(14px)_saturate(125%)] flex justify-between gap-2
                                 ${message.pending && 'text-neutral1'}
                                 ${isSystemMessage && 'text-neutral1'}
+                                ${isSpectatorMessage && 'text-neutral1'}
                             `}
                         >
                             <div>

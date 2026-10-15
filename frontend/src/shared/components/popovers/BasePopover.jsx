@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-const BasePopover = ({ children, content, className = '', onOpen }) => {
+// `align` picks which edge the popover lines up with: 'start' opens to the right of the
+// trigger, 'end' opens to its left. Either way it still flips when there is no room.
+const BasePopover = ({ children, content, className = '', onOpen, align = 'start' }) => {
 
     const gap = 4;
 
@@ -77,9 +79,11 @@ const BasePopover = ({ children, content, className = '', onOpen }) => {
                     ? buttonRect.bottom + gap
                     : Math.max(buttonRect.top - rect.height - gap, gap);
 
-                const left = spaceRight > rect.width + (gap * 2)
-                    ? buttonRect.left
-                    : Math.max(buttonRect.right - rect.width, gap);
+                const left = align === 'end'
+                    ? Math.max(buttonRect.right - rect.width, gap)
+                    : spaceRight > rect.width + (gap * 2)
+                        ? buttonRect.left
+                        : Math.max(buttonRect.right - rect.width, gap);
 
                 setPopoverPosition({ top, left });
             }
@@ -87,7 +91,7 @@ const BasePopover = ({ children, content, className = '', onOpen }) => {
             // reset animation when closed
             setAnimate(false);
         }
-    }, [isOpen]);
+    }, [isOpen, align]);
 
     useEffect(() => {
         if (isOpen) {

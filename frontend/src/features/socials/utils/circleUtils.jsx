@@ -51,14 +51,6 @@ const getCircleIcon = (iconIndex = 0) => {
     return CIRCLE_ICON_OPTIONS[iconIndex] ?? CIRCLE_ICON_OPTIONS[0]
 }
 
-const getCompetitiveCircle = (circles = []) => {
-    if(!Array.isArray(circles)) {
-        return null
-    }
-
-    return circles.find((circle) => circle?.type === 'competitive') ?? null
-}
-
 export {
     CIRCLE_ICON_COLORS,
     CIRCLE_BACKGROUND_COLORS,
@@ -68,5 +60,4 @@ export {
     CIRCLE_TITLE_MIN,
     CIRCLE_MAX_COUNT,
     getCircleIcon,
-    getCompetitiveCircle,
 }

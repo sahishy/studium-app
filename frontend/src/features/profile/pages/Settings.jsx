@@ -1,3 +1,4 @@
+import { useOnboarding } from '../../onboarding/OnboardingContext'
 import { useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { useAuth } from '../../auth/contexts/AuthContext'
@@ -38,6 +39,7 @@ const DetailRow = ({ label, value, action, onAction }) => {
 }
 
 const Settings = () => {
+    const { start: startTutorial, active: tutorialActive } = useOnboarding()
 
     const { profile } = useOutletContext()
     const { logout } = useAuth()
@@ -47,6 +49,8 @@ const Settings = () => {
     const displayName = profile?.profile?.displayName || '—'
     const resolvedEmail = profile?.email || '—'
     const preferenceTheme = profile?.preferences?.theme
+    const deviceTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+    const savedTimeZone = profile?.preferences?.timeZone || profile?.progress?.timeZone || deviceTimeZone
 
     useEffect(() => {
         const activeTheme = preferenceTheme === 'dark' ? 'dark' : 'light'
@@ -84,9 +88,9 @@ const Settings = () => {
     }
 
     return (
-        <div className='flex flex-col h-full overflow-scroll'>
+        <div className='flex flex-col h-full overflow-y-auto'>
             <Topbar profile={profile} />
-            <div className='w-full max-w-3xl mx-auto flex-1 flex flex-col gap-12'>
+            <div className='w-full max-w-3xl mx-auto flex flex-col gap-12 px-4 pb-32 sm:px-8'>
 
                 <PageHeader text={'Settings'} icon={FaGear} />
 
@@ -135,9 +139,11 @@ const Settings = () => {
 
                         </div>
                     </div>
+                    <div className='border-t border-neutral4 pt-4'><DetailRow label='Daily task reset timezone' value={savedTimeZone} action={savedTimeZone === deviceTimeZone ? null : 'Use this device'} onAction={() => updateUserPreference(profile.uid, 'timeZone', deviceTimeZone)} /></div>
 
                 </section>
 
+                <section className="flex flex-col gap-4"><h2 className="text-xl font-semibold">Tutorials</h2><div className="divide-y divide-neutral4"><DetailRow label="Play tutorial" value="Learn the games, progress, and cosmetics." action={tutorialActive ? null : 'Start'} onAction={() => startTutorial('play')} /><DetailRow label="Study tutorial" value="Learn smart tasks, courses, and resources." action={tutorialActive ? null : 'Start'} onAction={() => startTutorial('study')} /></div></section>
                 <section className='flex flex-col gap-6'>
                     <h2 className='text-xl font-semibold text-neutral0'>Manage Account</h2>
 

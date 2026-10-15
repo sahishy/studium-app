@@ -4,13 +4,15 @@
 	"main": "src/index.js",
 	"type": "module",
 	"scripts": {
-		"test": "node --test src/features/realtime/activityService.test.js src/features/realtime/resultUtils.test.js"
+		"test": "node --test src/features/socials/circlePolicy.test.js src/features/realtime/activityService.test.js src/features/realtime/resultUtils.test.js src/features/realtime/ratingState.test.js src/features/economy/progression.test.js src/features/economy/crateRolls.test.js src/features/resources/contentService.test.js src/features/resources/elementExpr.test.js src/features/resources/elementModel.test.js src/features/resources/firestoreArrays.test.js src/features/quests/questService.test.js src/features/quests/matchQuestEvents.test.js src/features/mastery/masteryService.test.js src/features/feedback/feedbackService.test.js src/features/onboarding/onboarding.test.js",
+		"test:emulator": "USE_FIREBASE_EMULATORS=true node --test src/features/economy/optimizations.emulator.test.js src/features/economy/emulator.integration.test.js src/features/economy/crateRolls.emulator.test.js src/features/quests/questService.emulator.test.js src/features/socials/circleActivity.emulator.test.js src/features/onboarding/onboarding.emulator.test.js src/features/onboarding/permissions.emulator.test.js src/features/courses/reviewHeartService.emulator.test.js"
 	},
 	"dependencies": {
 		"cors": "^2.8.6",
 		"express": "^5.2.1",
 		"firebase-admin": "^13.8.0",
-		"firebase-functions": "^7.2.5"
+		"firebase-functions": "^7.2.5",
+		"obscenity": "^0.4.6"
 	},
 	"engines": {
 		"node": "20"

@@ -50,7 +50,7 @@ const BottomFade = ({ scrollRef }) => {
                 <FaArrowUp />
             </Button>
 
-            <div className="ml-64 pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-neutral6 to-transparent" />
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-neutral6 to-transparent" />
         </>
     );
 };

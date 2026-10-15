@@ -87,6 +87,7 @@ test("uses all human messages since the bot's previous reply", () => {
     { uid: "old-human", userId: "human", text: "old", senderName: "Human", createdAt: 1 },
     { uid: "bot-reply", userId: "bot", text: "ok", senderName: "Bot", createdAt: 2 },
     { uid: "new-1", userId: "human", text: "what", senderName: "Human", createdAt: 3 },
+    { uid: "spectator", userId: "viewer", text: "ignore me", senderName: "Viewer", senderRole: "spectator", createdAt: 3.5 },
     { uid: "system", userId: null, text: "notice", senderName: "System", createdAt: 4, system: true },
     { uid: "new-2", userId: "human", text: "respond", senderName: "Human", createdAt: 5 },
   );
@@ -144,6 +145,12 @@ test("debounces rapid messages into one restart-safe generation job", () => {
   const started = beginBotChatGeneration(game, "bot", second[0].jobId, second[0].revision, 2_150);
   assert.deepEqual(started.request.messages, ["hi", "hello"]);
   assert.equal(scheduleBotChatReply(game, addHumanMessage(game, "m3", "respond"), 2_200).length, 0);
+});
+
+test("ignores spectator chat when scheduling bot replies", () => {
+  const game = makeGame();
+  const message = { ...addHumanMessage(game, "spectator", "answer is A"), userId: "viewer", senderRole: "spectator" };
+  assert.deepEqual(scheduleBotChatReply(game, message, 1_000), []);
 });
 
 test("sends ten regular replies, then waits 3-6 messages, and stops at twenty", () => {

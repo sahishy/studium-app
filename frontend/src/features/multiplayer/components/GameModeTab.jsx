@@ -2,28 +2,18 @@ import { useMemo, useState } from 'react'
 import { FaArrowLeft } from 'react-icons/fa6'
 import Button from '../../../shared/components/ui/Button'
 import Card from '../../../shared/components/ui/Card'
-import ProgressBar from '../../../shared/components/ui/ProgressBar'
+import ComingSoon from '../../../shared/components/ui/ComingSoon'
 import TextTabSelector from '../../../shared/components/ui/TextTabSelector'
 import { useUserStats } from '../../profile/contexts/UserStatsContext'
 import { buildMultiplayerUiState } from '../utils/multiplayerUtils'
-import { getRankInfoFromElo } from '../../profile/utils/statsUtils'
 
-import classic_thumbnail from '../../../assets/images/gamemodes/classic.jpg'
-import timber_thumbnail from '../../../assets/images/gamemodes/timber.jpg'
-import puncture_thumbnail from '../../../assets/images/gamemodes/puncture.jpg'
-import flutter_thumbnail from '../../../assets/images/gamemodes/flutter.jpg'
+import { MODE_THUMBNAILS } from '../utils/modeThumbnails'
 
 const TABS = [
     { name: 'multiplayer', label: 'Multiplayer' },
     { name: 'singleplayer', label: 'Singleplayer' },
 ]
 
-const MODE_THUMBNAILS = {
-    'sat-classic': classic_thumbnail,
-    'sat-timber': timber_thumbnail,
-    'sat-puncture': puncture_thumbnail,
-    'sat-flutter': flutter_thumbnail,
-}
 
 const GameModeTab = ({ modes = [], selectedModeId, onSelectMode, onBack }) => {
 
@@ -38,8 +28,8 @@ const GameModeTab = ({ modes = [], selectedModeId, onSelectMode, onBack }) => {
     }, [modes, activeTab])
 
     return (
-        <div className='w-full px-8 xl:px-24 pb-12 pt-2'>
-            <div className='w-full max-w-6xl mx-auto flex flex-col gap-8 min-h-full'>
+        <div className='w-full flex-1 flex flex-col px-8 xl:px-24 pb-12 pt-2'>
+            <div className='w-full max-w-6xl mx-auto flex-1 flex flex-col gap-8 min-h-full'>
 
                 <div className='relative flex items-center justify-between gap-6'>
                     <Button onClick={onBack} aria-label='Back to lobby'>
@@ -57,6 +47,10 @@ const GameModeTab = ({ modes = [], selectedModeId, onSelectMode, onBack }) => {
                     <div className='w-24' aria-hidden='true' />
                 </div>
 
+                {/* Singleplayer mode selection is temporarily paused; keep the shared grid for multiplayer. */}
+                {activeTab === 'singleplayer' ? (
+                    <ComingSoon description='Singleplayer modes will be available in a future update.' />
+                ) : (
                 <div className='grid grid-cols-3 gap-8'>
                     {visibleModes.map((mode) => {
                         const isSelected = mode.id === selectedModeId
@@ -64,9 +58,6 @@ const GameModeTab = ({ modes = [], selectedModeId, onSelectMode, onBack }) => {
                         const rankedProgression = mode.ranked
                             ? buildMultiplayerUiState({ userStats, modeId: mode.id })
                             : null
-                        const nextRankInfo = rankedProgression?.nextTierThreshold
-                            ? getRankInfoFromElo(rankedProgression.nextTierThreshold.minElo)
-                            : rankedProgression?.rankInfo
 
                         return (
                             <button
@@ -89,7 +80,7 @@ const GameModeTab = ({ modes = [], selectedModeId, onSelectMode, onBack }) => {
 
                                     <div className='relative w-full aspect-[16/10] mb-8'>
                                         <img src={MODE_THUMBNAILS[mode.id]} className='w-full h-full object-cover border border-neutral4 rounded group-hover/card:scale-102 transition-transform' />
-                                        <div className='absolute -bottom-5 left-1/2 -translate-x-1/2 w-12 h-12 rounded-xl bg-neutral5 outline-8 outline-white flex items-center justify-center'>
+                                        <div className='absolute -bottom-5 left-1/2 -translate-x-1/2 w-12 h-12 rounded-xl bg-neutral5 dark:bg-neutral2 outline-8 outline-neutral6 dark:outline-neutral5 flex items-center justify-center'>
                                             <ModeIcon className='text-2xl text-neutral1' />
                                         </div>
                                     </div>
@@ -126,6 +117,7 @@ const GameModeTab = ({ modes = [], selectedModeId, onSelectMode, onBack }) => {
                         )
                     })}
                 </div>
+                )}
             </div>
         </div>
     )

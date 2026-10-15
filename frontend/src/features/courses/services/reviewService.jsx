@@ -1,15 +1,17 @@
-import { collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, setDoc, where, documentId, limit, startAfter } from 'firebase/firestore'
+import { collection, doc, getDoc, getDocs, onSnapshot, orderBy, query, serverTimestamp, setDoc, where, documentId, limit, startAfter } from 'firebase/firestore'
 import { useEffect, useState } from 'react'
 import { buildCourseScoreMap, clampReviewScore, computeAverageScoreFromReviews } from '../utils/reviewUtils'
 import { createCacheKey, deleteCacheEntry } from '../../../shared/services/cacheService'
 import { CACHE_NAMESPACES } from '../../../shared/utils/cacheUtils'
 import { db } from '../../../lib/firebase'
+import { remove } from '../../../shared/services/apiService'
+import { selectRandomReviews } from '../utils/randomReviews'
 
 const COURSE_SCORE_CACHE_NAMESPACE = CACHE_NAMESPACES.COURSE_SCORE
 
 const buildReviewId = (courseId, userId) => `${String(courseId)}_${String(userId)}`
 
-const upsertCourseReview = async ({ courseId, userId, schoolId = null, teacherId = null, review = '', score = 0.5 }) => {
+const upsertCourseReview = async ({ courseId, userId, review = '', score = 0.5 }) => {
 
     const reviewId = buildReviewId(courseId, userId)
     const reviewRef = doc(db, 'courseReviews', reviewId)
@@ -19,8 +21,6 @@ const upsertCourseReview = async ({ courseId, userId, schoolId = null, teacherId
     const payload = {
         courseId: String(courseId),
         userId: String(userId),
-        schoolId: schoolId ? String(schoolId) : null,
-        teacherId: teacherId ? String(teacherId) : null,
         review: String(review ?? '').trim(),
         score: clampReviewScore(score),
         lastUpdated: now,
@@ -152,9 +152,14 @@ const getUsersByIdsMap = async (userIds = []) => {
 
 const deleteCourseReview = async (courseId, userId) => {
     const reviewId = buildReviewId(courseId, userId)
-    const reviewRef = doc(db, 'courseReviews', reviewId)
-    await deleteDoc(reviewRef)
+    await remove(`/v1/course-reviews/${encodeURIComponent(reviewId)}`)
     deleteCacheEntry(createCacheKey(COURSE_SCORE_CACHE_NAMESPACE, courseId))
+}
+
+const getRandomCourseReviews = async () => {
+    const snapshot = await getDocs(collection(db, 'courseReviews'))
+    const reviews = snapshot.docs.map(value => ({ ...value.data(), uid: value.id }))
+    return selectRandomReviews(reviews)
 }
 
 export {
@@ -167,4 +172,5 @@ export {
     buildCourseScoreMap,
     getAverageScoreByCourseIds,
     getUsersByIdsMap,
+    getRandomCourseReviews,
 }

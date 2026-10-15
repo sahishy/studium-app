@@ -11,8 +11,8 @@ const Podium = ({ className, fadeBottom = false, glow = false }) => {
 
     // return (
     //     <>
-    //         <img src={podiumLight} className={`dark:hidden ${className}`} style={fadeStyle} />
-    //         <img src={podiumDark} className={`hidden dark:flex ${className}`} style={fadeStyle} />
+    // <img src={podiumLight} className={`dark:hidden ${className}`} style={fadeStyle} />
+    // <img src={podiumDark} className={`hidden dark:flex ${className}`} style={fadeStyle} />
     //     </>
     // )
 
@@ -23,7 +23,7 @@ const Podium = ({ className, fadeBottom = false, glow = false }) => {
             <img src={podiumDark} className='hidden w-full h-auto dark:flex' style={fadeStyle} />
             <img
                 src={podiumGlow}
-                className={`absolute z-20 bottom-[73.2%] w-full h-auto pointer-events-none transition-opacity duration-300 ease-out motion-reduce:transition-none ${glow ? 'opacity-40' : 'opacity-0'}`}
+                className={`absolute z-20 bottom-[73.2%] w-full h-auto pointer-events-none transition-opacity duration-300 ease-out ${glow ? 'opacity-40' : 'opacity-0'}`}
             />
             </div>
         </div>

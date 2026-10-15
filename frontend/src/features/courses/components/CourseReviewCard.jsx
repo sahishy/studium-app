@@ -1,63 +1,56 @@
-import { getSchoolNameById, SCORE_OPTIONS } from '../utils/reviewUtils'
-import AvatarPicture from '../../../shared/components/avatar/AvatarPicture';
-import { FaSchool } from 'react-icons/fa6';
-import { FaChalkboardTeacher, FaEdit } from 'react-icons/fa';
+import { SCORE_OPTIONS } from '../utils/reviewUtils'
+import AuthorIdentity from '../../profile/components/AuthorIdentity'
+import HeartButton from '../../../shared/components/ui/HeartButton'
+import { useOutletContext } from 'react-router-dom'
+import { useReviewHeart } from '../services/reviewHeartService'
+import { getCourseById } from '../services/courseService'
+import { FaBook } from 'react-icons/fa6';
+import { FaEdit } from 'react-icons/fa';
 import { MdDelete } from 'react-icons/md';
 
-const CourseReviewCard = ({ review, reviewer, teacherName, canManage = false, onEdit, onDelete, deleting = false }) => {
+const CourseReviewCard = ({ review, reviewer, showCourse = false, canManage = false, onEdit, onDelete, deleting = false }) => {
 
     const score = review?.score;
-    const schoolName = getSchoolNameById(review?.schoolId)
+    const { profile } = useOutletContext()
+    const heart = useReviewHeart(review?.uid, profile?.uid)
+    const course = showCourse ? getCourseById(review?.courseId) : null
 
     const scoreOption = SCORE_OPTIONS.find(x => Number(x.value) === Number(score)) ?? SCORE_OPTIONS.find((x) => Number(x.value) === 0.5);
     const scoreName = scoreOption?.label ?? 'Okay';
     const ScoreIcon = scoreOption?.icon;
 
     return (
-        <div className='group relative flex flex-col gap-6'>
+        <div className='group relative flex min-w-0 flex-col gap-6'>
 
             {canManage ? (
                 <div className='absolute right-6 top-6 hidden group-hover:flex gap-3 text-neutral1 z-1'>
-                    <button className='cursor-pointer hover:text-neutral0 transition' type='button' onClick={onEdit}>
+                    <button aria-label='Edit review' className='cursor-pointer hover:text-neutral0 transition' type='button' onClick={onEdit}>
                         <FaEdit className='text-sm' />
                     </button>
-                    <button className='cursor-pointer hover:text-neutral0 transition disabled:opacity-50 disabled:cursor-not-allowed' type='button' onClick={onDelete} disabled={deleting}>
+                    <button aria-label='Delete review' className='cursor-pointer hover:text-neutral0 transition disabled:opacity-50 disabled:cursor-not-allowed' type='button' onClick={onDelete} disabled={deleting}>
                         <MdDelete className='text-lg' />
                     </button>
                 </div>
             ) : null}
 
-            <div className='relative bg-neutral5 rounded-4xl p-6 flex flex-col gap-3'>
-                <div className='text-sm font-semibold text-neutral1 flex items-center gap-2'>
-                    {ScoreIcon ? <ScoreIcon /> : null} Rated {scoreName}
+            <div className='relative bg-neutral5 rounded-4xl p-6 flex flex-1 flex-col gap-3'>
+                {course ? <p className='text-xs text-neutral1 flex items-start gap-2'>
+                    <FaBook className='shrink-0 mt-0.5' /> <span>{course.title}</span>
+                </p> : null}
+                <p className='text-sm whitespace-pre-wrap break-words'>{review.review || 'Loading...'}</p>
+                <div className='flex justify-between translate-y-2'>
+                    <div className='text-sm font-semibold text-neutral1 flex items-center gap-2'>
+                        {ScoreIcon ? <ScoreIcon /> : null} Rated {scoreName}
+                    </div>
+                    <HeartButton active={heart.active} count={heart.count} disabled={heart.loading || heart.pending || deleting || !profile?.uid} onClick={heart.toggle} label='review' />
                 </div>
-                <p className='text-sm'>{review.review || 'Loading...'}</p>
+                {heart.error ? <p role='alert' className='text-xs text-red-400'>{heart.error}</p> : null}
 
                 <ChatBubbleSwoosh className={'absolute w-8 -bottom-33 left-16 dark:hidden'} color='#F3F4F6' />
                 <ChatBubbleSwoosh className={'absolute w-8 -bottom-33 left-16 hidden dark:flex'} color='#1c1c21' />
             </div>
 
-            <div className='flex gap-3 items-center'>
-
-                <AvatarPicture
-                    profile={reviewer}
-                    className='w-20 h-20'
-                />
-
-                <div className='flex flex-col gap-1'>
-                    <p className='font-semibold text-neutral0'>
-                        {reviewer?.profile?.displayName || 'Loading...'}
-                    </p>
-                    <p className='text-xs text-neutral1 flex items-center gap-2'>
-                        <FaSchool /> Attends {(schoolName ? `${schoolName} High School` : 'an unknown high school')}
-                    </p>
-                    <p className='text-xs text-neutral1 flex items-center gap-2'>
-                        <FaChalkboardTeacher /> Taught by {teacherName || 'Unknown teacher'}
-                    </p>
-
-                </div>
-
-            </div>
+            <AuthorIdentity author={reviewer} />
 
         </div >
     )

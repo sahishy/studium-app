@@ -18,8 +18,6 @@ const EditCourseModal = ({ profile, course, enrollment, closeModal, onSaved = ()
         setIsSaving(true)
         try {
             await joinCourse(profile.uid, course.courseId, {
-                day: enrollment?.day === 'B' ? 'B' : 'A',
-                teacherId: enrollment?.teacherId ?? null,
                 customization: {
                     color: selectedColor ?? COURSE_COLORS[0],
                 },
@@ -60,10 +58,10 @@ const EditCourseModal = ({ profile, course, enrollment, closeModal, onSaved = ()
                 </div>
 
                 <div className='flex gap-3 mt-2'>
-                    <Button onClick={closeModal} type='secondary' className='w-full py-3'>
+                    <Button onClick={closeModal} type='secondary' className='w-full py-4'>
                         Cancel
                     </Button>
-                    <Button htmlType='submit' type='primary' className='w-full py-3' disabled={isSaving}>
+                    <Button htmlType='submit' type='primary' className='w-full py-4' disabled={isSaving}>
                         {isSaving ? 'Saving...' : 'Save Changes'}
                     </Button>
                 </div>

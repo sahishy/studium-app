@@ -6,13 +6,17 @@ const CALCULATOR_INITIAL_SIZE = { width: 780, height: 560 }
 
 const CalculatorWindow = ({ isOpen, onClose }) => {
 
+    const initialSize = useMemo(() => ({
+        width: Math.min(CALCULATOR_INITIAL_SIZE.width, window.innerWidth - 24),
+        height: Math.min(CALCULATOR_INITIAL_SIZE.height, window.innerHeight - 40),
+    }), [isOpen])
     const resolvedInitialPosition = useMemo(() => {
-        const centerPosition = getCenteredWindowPosition(CALCULATOR_INITIAL_SIZE)
+        const centerPosition = getCenteredWindowPosition(initialSize)
         return {
-            x: centerPosition.x - CALCULATOR_INITIAL_SIZE.width / 3,
+            x: window.innerWidth < 800 ? centerPosition.x : centerPosition.x - initialSize.width / 3,
             y: centerPosition.y,
         }
-    }, [])
+    }, [initialSize])
 
     return (
         <Window
@@ -20,14 +24,14 @@ const CalculatorWindow = ({ isOpen, onClose }) => {
             onClose={onClose}
             title='Calculator'
             initialPosition={resolvedInitialPosition}
-            initialSize={CALCULATOR_INITIAL_SIZE}
-            minWidth={520}
-            minHeight={380}
+            initialSize={initialSize}
+            minWidth={Math.min(520, initialSize.width)}
+            minHeight={Math.min(380, initialSize.height)}
             contentClassName='p-0! h-full'
         >
             <iframe
                 src='https://www.desmos.com/testing/collegeboard/graphing'
-                title='Desmos Graphing Calculator'
+                aria-label='Desmos Graphing Calculator'
                 className='w-full h-full border-0 rounded-b-xl'
                 loading='lazy'
                 referrerPolicy='strict-origin-when-cross-origin'

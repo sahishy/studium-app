@@ -266,7 +266,7 @@ const resetChatCadenceAfterAttempt = (bot: BotRuntime) => {
 };
 
 export const scheduleBotChatReply = (game: StoredGame, message: ChatMessage, now: number): BotChatDispatch[] => {
-  if (game.status !== "active" || !message.uid || message.system || !message.userId) return [];
+  if (game.status !== "active" || !message.uid || message.system || message.senderRole === "spectator" || !message.userId) return [];
   initializeBots(game);
   const dispatches: BotChatDispatch[] = [];
   for (const bot of Object.values(runtimes(game))) {

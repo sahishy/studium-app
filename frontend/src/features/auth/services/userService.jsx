@@ -47,6 +47,8 @@ const createNewUserObject = async ({ email }) => {
 
     return {
         email: email,
+        primaryCircleId: null,
+        circleMemberships: { version: 1, ids: [] },
         profile: {
             displayName,
             avatar: {
@@ -65,7 +67,8 @@ const createNewUserObject = async ({ email }) => {
             xp: 0,
             streak: 0,
             tasksCompleted: 0,
-        }
+        },
+        preferences: { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' },
     }
 
 }
@@ -126,6 +129,13 @@ const getUserById = async (uid) => {
         ...userSnap.data(),
     }
 
+}
+
+const subscribeToUserById = (uid, onChange) => {
+    if(!uid) return () => {}
+    return onSnapshot(doc(db, 'users', uid), (snapshot) => {
+        onChange(snapshot.exists() ? { uid: snapshot.id, ...snapshot.data() } : null)
+    })
 }
 
 const getUserByDisplayName = async (displayName) => {
@@ -286,6 +296,7 @@ export {
     isDisplayNameAvailable,
     generateUniqueDisplayName,
     getUserById,
+    subscribeToUserById,
     getUserByDisplayName,
     updateUserInfo,
     updateUserPreference,

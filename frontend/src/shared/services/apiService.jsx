@@ -1,3 +1,5 @@
+import { auth } from '../../lib/firebase'
+
 const API_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE_URL
 
 const buildUrl = (path) => {
@@ -9,17 +11,54 @@ const buildUrl = (path) => {
     return `${API_BASE_URL}${normalizedPath}`
 }
 
+let authReadyPromise = null
+
+const waitForAuthUser = () => {
+
+    if(auth.currentUser) {
+        return Promise.resolve(auth.currentUser)
+    }
+
+    if(!authReadyPromise) {
+        authReadyPromise = new Promise((resolve) => {
+            const unsubscribe = auth.onAuthStateChanged((user) => {
+                unsubscribe()
+                authReadyPromise = null
+                resolve(user)
+            })
+        })
+    }
+
+    return authReadyPromise
+}
+
 const request = async ({ path, method = 'GET', body = null, headers = {} }) => {
+    const user = await waitForAuthUser()
+    const token = user ? await user.getIdToken() : null
     const response = await fetch(buildUrl(path), {
         method,
         headers: {
             ...(body ? { 'Content-Type': 'application/json' } : {}),
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
             ...headers,
         },
         ...(body ? { body: JSON.stringify(body) } : {}),
     })
 
-    const data = await response.json().catch(() => ({}))
+    // A body that is present but not JSON means the response was cut short or
+    // never came from the API at all. Reading that as `{}` handed callers an
+    // object that looked like a valid, empty payload - and a screen that reads
+    // an absent field as "nothing here" rather than "unknown" then renders
+    // confidently wrong rather than failing.
+    const text = await response.text()
+    let data = {}
+
+    if(text) {
+        try { data = JSON.parse(text) }
+        catch {
+            if(response.ok) throw new Error(`Malformed response from ${path}.`)
+        }
+    }
 
     if(!response.ok) {
         throw new Error(data?.error || `Request failed: ${response.status}`)
@@ -29,8 +68,10 @@ const request = async ({ path, method = 'GET', body = null, headers = {} }) => {
 }
 
 const post = (path, body = {}) => request({ path, method: 'POST', body })
+const remove = (path) => request({ path, method: 'DELETE' })
 
 export {
     request,
     post,
+    remove,
 }

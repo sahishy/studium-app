@@ -138,7 +138,7 @@ export const getMessagesSinceBotReply = (game: StoredGame, bot: BotRuntime) => {
     ? messages.findIndex((message) => message.uid === bot.chat.lastBotMessageUid)
     : -1;
   return messages.slice(lastBotIndex + 1)
-    .filter((message) => !message.system && message.userId && message.userId !== bot.userId)
+    .filter((message) => !message.system && message.senderRole !== "spectator" && message.userId && message.userId !== bot.userId)
     .map((message) => sanitizeChatText(message.text))
     .filter(Boolean);
 };

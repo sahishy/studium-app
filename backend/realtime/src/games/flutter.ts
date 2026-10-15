@@ -1,5 +1,14 @@
+import { initializeGameplayTelemetry, recordGameplayAction } from "./gameplay-telemetry";
 import { changedAction, unchangedAction, type GameContext, type GameEngine, type StoredGame } from "./contracts";
-import { buildReviewQuestionsById, isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
+import {
+  buildReviewQuestionsById,
+  buildSatResultTelemetry,
+  isCorrectSatAnswer,
+  recordSatAnswer,
+  recordSatQuestionFaced,
+  recordSatRoundWin,
+  sanitizeSatQuestion,
+} from "./sat-questions";
 
 const MAX_QUESTIONS = 10;
 const SCORE_TO_WIN = 3;
@@ -119,6 +128,7 @@ const finish = (game: StoredGame, winnerUserId: string | null, endReason: string
     playerIds: game.players.map((player) => player.userId),
     winnerUserId,
     scoreByUserId: Object.fromEntries(game.players.map((player) => [player.userId, Number(player.state.score) || 0])),
+    ...buildSatResultTelemetry(game),
     roundsPlayed: Number(game.state.flutterRoundsPlayed) || 0,
     endReason,
     startedAt: game.startedAt,
@@ -202,6 +212,15 @@ const startFlutterCountdown = (game: StoredGame, context: GameContext, retry = f
         earnedAdvantage: player.userId === advantageOwnerUserId,
       };
     });
+    // Inside the !retry branch on purpose: a retry replays the same question, and recording it
+    // again would count one question several times toward accuracy and mastery.
+    recordSatQuestionFaced(game, questionId);
+    for (const entry of game.players) {
+      const answer = answers[entry.userId];
+      if (!answer) continue;
+      recordSatAnswer(game, entry.userId, question, { isCorrect: answer.isCorrect, elapsedMs: answer.elapsedMs });
+    }
+
     context.addEvent("QUESTION_RESOLVED", {
       questionId,
       correctAnswer: question?.correctAnswerDisplay ?? question?.correctAnswer ?? null,
@@ -244,6 +263,7 @@ const resolveFlutterRound = (game: StoredGame, winnerUserId: string | null, reas
     const winner = game.players.find((player) => player.userId === winnerUserId);
     if (winner) winner.state.score = (Number(winner.state.score) || 0) + 1;
     game.state.flutterRoundsPlayed = (Number(game.state.flutterRoundsPlayed) || 0) + 1;
+    recordSatRoundWin(game, winnerUserId);
   }
   const scoresByUserId = Object.fromEntries(game.players.map((player) => [player.userId, Number(player.state.score) || 0]));
   const ringsClearedByUserId = Object.fromEntries(game.players.map((player) => [player.userId, Number(player.state.flutterRingsCleared) || 0]));
@@ -273,6 +293,10 @@ const passCurrentRing = (game: StoredGame, context: GameContext) => {
   const index = Number(game.state.flutterRingIndex) || 0;
   const center = ringCenter(game, index);
   const missed = game.players.filter((player) => !clearsRing(player, center));
+  // Count actual clears before resolving an opponent's miss; a shield is not a clear.
+  for (const player of game.players) {
+    if (!missed.includes(player)) recordGameplayAction(game, player.userId, "flutterRingsCleared");
+  }
   const unprotectedMisses = missed.filter((player) => {
     if (!player.state.flutterShieldAvailable) return true;
     player.state.flutterShieldAvailable = false;
@@ -318,6 +342,7 @@ const publicState = (game: StoredGame) => {
 
 export const createFlutterGame = (): GameEngine => ({
   initialize(game, questions, context) {
+    initializeGameplayTelemetry(game);
     const selected = questions.slice(0, MAX_QUESTIONS);
     const ids = selected.map((question) => question.id);
     game.privateState.questionsById = Object.fromEntries(selected.map((question) => [question.id, question]));

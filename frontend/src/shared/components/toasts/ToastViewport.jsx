@@ -16,6 +16,7 @@ const ToastViewport = ({ toasts, onRequestCloseToast }) => {
                         <BaseToast
                             isVisible={toastEntry.isVisible}
                             duration={toastEntry.duration}
+                            background={toastEntry.background ?? null}
                             canHide={toastEntry.canHide ?? (toastEntry.duration != null)}
                             onRequestClose={() => onRequestCloseToast?.(toastEntry.id)}
                         >

@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useOutletContext } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
 import Button from '../../../shared/components/ui/Button'
 import Card from '../../../shared/components/ui/Card'
 import ProgressBar from '../../../shared/components/ui/ProgressBar'
 import { useUserStats } from '../../profile/contexts/UserStatsContext'
-import { getRankInfoFromElo } from '../../profile/utils/statsUtils'
+import { getModeStats, getRankInfoFromElo } from '../../profile/utils/statsUtils'
 import { useMultiplayer } from '../contexts/MultiplayerContext'
 import { useToast } from '../../../shared/contexts/ToastContext'
 import { useModal } from '../../../shared/contexts/ModalContext'
 import MatchmakingToast from '../components/toasts/MatchmakingToast'
 import { HiChevronDoubleUp } from 'react-icons/hi'
+import { FaTrophy, FaChartSimple } from 'react-icons/fa6'
 import {
     buildMultiplayerUiState,
     buildSingleplayerUiState,
@@ -20,6 +21,8 @@ import {
     MATCH_JOIN_DELAY_SECONDS,
 } from '../utils/multiplayerUtils'
 import GameModeTab from '../components/GameModeTab'
+import GameModeThumbnail from '../components/GameModeThumbnail'
+import GameModeStatsModal from '../components/modals/GameModeStatsModal'
 import TextTooltip from '../../../shared/components/tooltips/TextTooltip'
 import PlayBackground from '../components/PlayBackground'
 import PartyStage from '../components/PartyStage'
@@ -80,6 +83,7 @@ const Play = () => {
         rankLabel,
         nextTierLabel,
         nextTierThreshold,
+        placement,
     } = multiplayerUi
 
     const { singleplayerStats } = singleplayerUi
@@ -112,7 +116,9 @@ const Play = () => {
                 displayName: profile?.profile?.displayName || 'Player',
                 profilePicture: profile?.profile?.profilePicture ?? null,
                 avatar: profile?.profile?.avatar ?? null,
-                eloByMode: Object.fromEntries(Object.entries(userStats?.play ?? {}).map(([modeId, stats]) => [modeId, Number(stats?.elo) || 0])),
+                title: profile?.profile?.title ?? null,
+                level: profile?.progress?.level ?? 1,
+                eloByMode: Object.fromEntries(Object.keys(userStats?.play ?? {}).map((modeId) => [modeId, getModeStats(userStats, { id: modeId }).elo ?? 0])),
                 ready: false,
             }],
         }
@@ -203,6 +209,13 @@ const Play = () => {
         else setSelectedModeId(modeId)
         setActivePlayTab('lobby')
     }
+
+    // The mode list and the lobby share one scroll container, and only the mode list scrolls.
+    // Leaving the list while scrolled down used to keep that scrollTop on a now overflow-hidden
+    // container, so the lobby stayed shifted up with no way to scroll back.
+    useLayoutEffect(() => {
+        if(scrollRef.current) scrollRef.current.scrollTop = 0
+    }, [activePlayTab])
 
     useEffect(() => {
         if (queueStateForMode !== 'idle') {
@@ -317,6 +330,16 @@ const Play = () => {
         }
     }
 
+    // The matchmaking toast lives in a provider above this screen, so it outlives the screen.
+    // Hiding it only on the countdown path left it on top of the match whenever something else
+    // navigated first - a session redirect straight into an already-open room, for instance.
+    useEffect(() => () => {
+        if (matchmakingToastIdRef.current) {
+            hideToast(matchmakingToastIdRef.current, { force: true })
+            matchmakingToastIdRef.current = null
+        }
+    }, [hideToast])
+
     useEffect(() => {
         if (!isSelectedModeMultiplayer || queueStateForMode !== 'matched' || !session?.currentRoomId) {
             autoJoinRoomIdRef.current = null
@@ -398,16 +421,50 @@ const Play = () => {
                         showJoinParty={!isInParty}
                     />
 
-                <div className='w-full min-h-0 max-w-[19rem] gap-4 flex flex-col justify-center pb-8'>
+                <div className='w-full min-h-0 max-w-[19rem] gap-4 flex flex-col [justify-content:safe_center] overflow-y-auto no-scrollbar pt-2 pb-8'>
 
-                    <Card className='max-w-8xl p-5! gap-2! items-center'>
-                        <Card className='absolute! -top-7 font-semibold flex-row items-center gap-3!'>
-                            <ModeIcon className='text-lg' />
-                            {selectedMode.name}
-                        </Card>
+                    <div data-onboarding="lobby:game-card" className='group/mode relative isolate mt-10 shrink-0'>
+                        <div data-onboarding="lobby:modes"><GameModeThumbnail
+                            mode={selectedMode}
+                            disabled={isInParty && !isPartyLeader}
+                            onClick={() => setActivePlayTab('modes')}
+                        /></div>
+                    <Card className='z-10 max-w-8xl p-5! gap-2! items-center'>
+                        <div className='absolute -top-7 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10'>
+                            <TextTooltip text='Leaderboards' placement='top' className='shrink-0'>
+                                <button
+                                    type='button'
+                                    aria-label='View leaderboards'
+                                    onClick={() => navigate(`/leaderboards?mode=${encodeURIComponent(selectedMode.ranked ? activeModeId : 'total')}`)}
+                                    className='size-8 flex items-center justify-center rounded-lg border border-neutral4 bg-neutral6 dark:bg-neutral5 text-neutral1 hover:text-neutral0 hover:bg-neutral5 dark:hover:bg-neutral4 shadow-sm shadow-shadow transition cursor-pointer'
+                                >
+                                    <FaTrophy className='text-sm' />
+                                </button>
+                            </TextTooltip>
+                            <button type='button' className='gamemode-trigger rounded-xl cursor-pointer disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral2'
+                                disabled={isInParty && !isPartyLeader} onClick={() => setActivePlayTab('modes')} aria-label='Change gamemode'>
+                            <Card className='font-semibold flex-row! items-center gap-3! whitespace-nowrap'>
+                                <ModeIcon className='text-lg' />
+                                {selectedMode.name}
+                            </Card>
+                            </button>
+                            <TextTooltip text='View stats' placement='top' className='shrink-0'>
+                                <button
+                                    type='button'
+                                    aria-label='View game mode stats'
+                                    onClick={() => openModal({
+                                        content: <GameModeStatsModal mode={selectedMode} gamesPlayed={userStats?.play?.[activeModeId]?.gamesPlayed} closeModal={closeModal} />,
+                                        maxWidthClass: 'max-w-sm',
+                                    })}
+                                    className='size-8 flex items-center justify-center rounded-lg border border-neutral4 bg-neutral6 dark:bg-neutral5 text-neutral1 hover:text-neutral0 hover:bg-neutral5 dark:hover:bg-neutral4 shadow-sm shadow-shadow transition cursor-pointer'
+                                >
+                                    <FaChartSimple className='text-sm' />
+                                </button>
+                            </TextTooltip>
+                        </div>
                         {isSelectedModeMultiplayer ? (
                             <>
-                                <div className='flex flex-col items-center gap-3'>
+                                <div data-onboarding="lobby:rank" className='flex flex-col items-center gap-3'>
 
                                     <div className='absolute mt-4 w-20 h-20 overflow-hidden flex items-center justify-center'>
                                         <img
@@ -424,30 +481,34 @@ const Play = () => {
                                 </div>
 
                                 <ProgressBar
-                                    value={currentTierProgress}
-                                    max={currentTierSpan}
-                                    secondaryValue={Math.max(0, rankedStats.peakElo - currentTierMinElo)}
+                                    value={placement.placed ? currentTierProgress : placement.gamesPlayed}
+                                    max={placement.placed ? currentTierSpan : placement.required}
+                                    secondaryValue={placement.placed ? Math.max(0, rankedStats.peakElo - currentTierMinElo) : null}
                                     secondaryMax={currentTierSpan}
                                     secondaryClassName='bg-sky-300/40'
                                 />
 
-                                <div className='flex justify-between w-full'>
-                                    <p className='text-sm font-semibold'>
-                                        {rankedStats.elo} <span className='text-xs text-neutral1'>SAT</span>
-                                    </p>
-                                    <p className='text-sm text-neutral1 flex items-center gap-1'>
-                                        <HiChevronDoubleUp />
-                                        {nextTierThreshold ?
-                                            <span className='flex items-center gap-1'>
-                                                {eloToNextTier} to 
-                                                <div className='ml-1 mb-0.5 flex items-center justify-center w-4 h-4 opacity-60'><img src={nextTierIcon} alt={`${nextTierLabel} icon`} className='absolute w-7 h-7 object-cover'/></div>
-                                                {nextTierLabel}
-                                            </span>
-                                        :
-                                            <span>{nextTierLabel}</span>
-                                        }
-                                    </p>
-                                </div>
+                                {!placement.placed ? (
+                                    <p className='w-full text-center text-sm text-neutral1'>{nextTierLabel}</p>
+                                ) : (
+                                    <div className='flex justify-between w-full'>
+                                        <p className='text-sm font-semibold'>
+                                            {rankedStats.elo} <span className='text-xs text-neutral1'>SAT</span>
+                                        </p>
+                                        <p className='text-sm text-neutral1 flex items-center gap-1'>
+                                            <HiChevronDoubleUp />
+                                            {nextTierThreshold ?
+                                                <span className='flex items-center gap-1'>
+                                                    {eloToNextTier} to
+                                                    <div className='ml-1 mb-0.5 flex items-center justify-center w-4 h-4 opacity-60'><img src={nextTierIcon} alt={`${nextTierLabel} icon`} className='absolute w-7 h-7 object-cover'/></div>
+                                                    {nextTierLabel}
+                                                </span>
+                                            :
+                                                <span>{nextTierLabel}</span>
+                                            }
+                                        </p>
+                                    </div>
+                                )}
                             </>
                         ) : (
                             <>
@@ -458,11 +519,13 @@ const Play = () => {
                             </>
                         )}
                     </Card>
+                    </div>
 
-                    <div className='flex gap-3'>
+                    <div className='flex gap-3 shrink-0'>
                         <Button
                             type='primary'
-                            className='p-4! text-xl! font-bold! flex-3'
+                            className='p-4! text-xl! font-bold! w-full'
+                            data-onboarding="lobby:play"
                             onClick={handlePlayClick}
                             disabled={effectiveQueueState !== 'idle' || (isInParty && (!party || partyOverCapacity))}
                             loading={!isInParty && effectiveQueueState === 'queueing'}
@@ -471,17 +534,6 @@ const Play = () => {
                                 ? (currentPartyMember?.ready ? 'UNREADY' : 'READY')
                                 : (effectiveQueueState === 'queueing' ? 'QUEUEING' : effectiveQueueState === 'matched' ? 'JOINING' : 'PLAY')}
                         </Button>
-                        <TextTooltip text={isInParty && !isPartyLeader ? 'Party Leader Only' : 'Change mode'} className='flex-1' placement='top'>
-                            <button
-                                onClick={() => setActivePlayTab('modes')}
-                                disabled={isInParty && !isPartyLeader}
-                                className='block w-full h-full appearance-none bg-transparent border-0 p-0 m-0 text-inherit leading-none align-top disabled:opacity-50 disabled:cursor-not-allowed'
-                            >
-                                <Card className='w-full h-full justify-center items-center hover:bg-neutral5 dark:hover:bg-neutral4 transition cursor-pointer'>
-                                    <ModeIcon className='text-2xl' />
-                                </Card>
-                            </button>
-                        </TextTooltip>
                     </div>
 
                     {realtimeError || partyError ? <p className='text-sm text-red-400 text-center'>{partyError || realtimeError.message}</p> : null}

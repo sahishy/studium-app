@@ -19,7 +19,7 @@ const FriendsListItem = ({ friend }) => {
                 <AvatarPicture profile={friend} className='relative w-24 h-24 group/avatar cursor-pointer'>
 
                     <div
-                        title={activity.label}
+                        aria-description={activity.label}
                         className={`absolute bottom-0.5 right-0.5 w-6 h-6 border-4 border-neutral6 rounded-full
                             ${activity.dotColorClass} opacity-100 group-hover/avatar:opacity-0 transition`}
                     />

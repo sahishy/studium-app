@@ -1,5 +1,5 @@
 import { Server, type Connection, type ConnectionContext, type WSMessage } from "partyserver";
-import { appendChatMessage, type ChatMessage } from "../chat";
+import { appendChatMessage, appendSystemChatMessage, type ChatMessage } from "../chat";
 import type { GameContext, StoredGame } from "../games/contracts";
 import { getGameMode } from "../games/registry";
 import type { ConnectionState, PlayerIdentity } from "../types";
@@ -21,6 +21,7 @@ import {
   scheduleBotChatReply,
 } from "../bots/controller";
 import type { BotChatDispatch } from "../bots/chat";
+import { canSpectatorSendMessage, getGameConnectionRole } from "../connection-role";
 
 const DISCONNECT_GRACE_MS = 30_000;
 // v3: game.update carries a generic room/players diff (see servers/game-view.ts) instead of the
@@ -37,6 +38,16 @@ const MIN_BROADCAST_INTERVAL_MS = 100;
 const CHECKPOINT_INTERVAL_ACTIVE_MS = 5_000;
 const CHECKPOINT_INTERVAL_IDLE_MS = 30_000;
 const MAX_RTT_MS = 400;
+// A short pre-roll before the first question, so the match intro animation has somewhere to play
+// that is not on top of live gameplay. Classic otherwise opens straight into question_active, and
+// an overlay there would eat answering time. Every engine is initialized as though the match
+// begins at the end of this window, so no mode loses clock to it.
+const INTRO_MS = 2_200;
+// Callers add the time players spend elsewhere before they reach the room. A matchmade game sits
+// behind a join countdown on the Play screen, so anchoring the window at creation closed it before
+// anyone had arrived and the intro never played at all.
+const MAX_INTRO_DELAY_MS = 10_000;
+
 const MAX_COMPENSATION_MS = 150;
 /** A bot action already this far past is discarded rather than executed - see runAlarm. */
 const STALE_BOT_ACTION_MS = 250;
@@ -147,15 +158,30 @@ export class GameServer extends Server<Env> {
 
   async onConnect(connection: Connection, context: ConnectionContext) {
     const state = stateFromRequest(context.request);
-    connection.setState(state);
+    if (!this.game) return connection.close(1008, "Game not found");
     const player = this.game?.players.find((entry) => entry.userId === state.userId);
-    if (!player) return connection.close(1008, "Not a player in this game");
-    if (player.disconnectedAt != null) {
+    const connectionRole = getGameConnectionRole(this.game, state.userId);
+    if (!connectionRole) return connection.close(1008, "This game cannot be spectated");
+    connection.setState({ ...state, connectionRole });
+    let spectatorStarted = false;
+    if (connectionRole === "spectator") {
+      const wasAlreadySpectating = [...this.getConnections<ConnectionState>()].some((candidate) => (
+        candidate.id !== connection.id
+        && candidate.state?.userId === state.userId
+        && candidate.state?.connectionRole === "spectator"
+      ));
+      if (!wasAlreadySpectating) {
+        this.game.chat = appendSystemChatMessage(this.game.chat as ChatMessage[], `${state.displayName} started spectating.`);
+        spectatorStarted = true;
+      }
+    }
+    if (player?.disconnectedAt != null) {
       player.disconnectedAt = null;
       await this.checkpoint(true);
     }
     await this.ensureQuestionsLoaded();
     this.emit(connection);
+    if (spectatorStarted) await this.afterMutation(true);
     // A connection just appeared - shouldTick() may now be true. armTick() alone would leave the
     // durable alarm on its old (possibly much-later) precise-deadline target, so also refresh it.
     await this.scheduleNextAlarm();
@@ -164,9 +190,12 @@ export class GameServer extends Server<Env> {
 
   async onMessage(connection: Connection, raw: WSMessage) {
     const message = parseMessage(raw);
-    const identity = connection.state as PlayerIdentity;
+    const identity = connection.state as ConnectionState;
     if (!message || !this.game || !identity?.userId) return;
     await this.ensureQuestionsLoaded();
+    if (identity.connectionRole === "spectator" && !canSpectatorSendMessage(message.type)) {
+      return this.sendMessage(connection, "error", { message: "Spectators cannot perform game actions." }, message.id);
+    }
     if (message.type === "game.subscribe" || message.type === "game.resync") return this.emit(connection, message.id);
     if (message.type === "system.clockPing") {
       const receivedAt = Date.now();
@@ -186,7 +215,9 @@ export class GameServer extends Server<Env> {
     let changed = false;
     if (message.type === "chat.send" || message.type === "game.chat") {
       const appended = this.addChat(identity, message.payload as any);
-      if (!identity.isBot && appended) chatDispatches = scheduleBotChatReply(this.game, appended, Date.now());
+      if (identity.connectionRole === "player" && !identity.isBot && appended) {
+        chatDispatches = scheduleBotChatReply(this.game, appended, Date.now());
+      }
       changed = Boolean(appended);
     }
     else if (message.type === "game.leave") {
@@ -194,12 +225,19 @@ export class GameServer extends Server<Env> {
       await requestRoom(this.env.USER, identity.userId, { type: "game.finished", gameId: this.name });
       changed = true;
     }
+    else if (Date.now() < Number(this.game.state.introEndsAt || 0)) {
+      // The engine's clock has not started yet. Accepting an action here would be recorded as an
+      // answer at zero elapsed time, which is the fastest possible - so the intro is also the
+      // window in which an action has to be refused outright.
+      this.sendMessage(connection, "game.ack", { accepted: false, reason: "intro" }, message.id);
+    }
     else {
       const engine = this.engine();
       const now = Date.now();
       const deadline = engine?.nextDeadline(this.game) ?? null;
       if (engine && deadline && now >= deadline) {
         engine.handleDeadline(this.game, this.context(now));
+        this.sendMessage(connection, "game.ack", { accepted: false, reason: "deadline" }, message.id);
         changed = true;
       } else {
         const before = { ...(this.game.players.find((player) => player.userId === identity.userId)?.state ?? {}) };
@@ -207,8 +245,14 @@ export class GameServer extends Server<Env> {
         const nowCompensated = now - Math.min(MAX_COMPENSATION_MS, rttMs / 2);
         const result = engine?.handleAction(this.game, identity.userId, message, this.context(now, nowCompensated));
         if (result?.reply) this.sendMessage(connection, result.reply.type, result.reply.payload, message.id);
+        else this.sendMessage(connection, "game.ack", { accepted: Boolean(result?.changed) }, message.id);
         changed = Boolean(result?.changed);
-        if (changed) observeHumanAction(this.game, identity.userId, message, now, before);
+        if (changed) {
+          const counts = (this.game.privateState.participationByUserId ?? {}) as Record<string, number>;
+          counts[identity.userId] = (Number(counts[identity.userId]) || 0) + 1;
+          this.game.privateState.participationByUserId = counts;
+          observeHumanAction(this.game, identity.userId, message, now, before);
+        }
       }
     }
     if (!changed) return;
@@ -218,7 +262,21 @@ export class GameServer extends Server<Env> {
   }
 
   async onClose(connection: Connection) {
-    const identity = connection.state as PlayerIdentity;
+    const identity = connection.state as ConnectionState;
+    if (identity?.connectionRole === "spectator") {
+      const isStillSpectating = [...this.getConnections<ConnectionState>()].some((candidate) => (
+        candidate.state?.userId === identity.userId
+        && candidate.state?.connectionRole === "spectator"
+      ));
+      if (!isStillSpectating && this.game) {
+        this.game.chat = appendSystemChatMessage(this.game.chat as ChatMessage[], `${identity.displayName} stopped spectating.`);
+        await this.afterMutation(true);
+      } else {
+        await this.scheduleNextAlarm();
+        this.armTick();
+      }
+      return;
+    }
     const player = this.game?.players.find((entry) => entry.userId === identity?.userId);
     const stillConnected = [...this.getConnections<PlayerIdentity>()].some((candidate) => candidate.state?.userId === identity?.userId);
     if (!stillConnected && player && this.game?.status === "active") {
@@ -297,10 +355,24 @@ export class GameServer extends Server<Env> {
       return new Response(`Question provider returned ${questions.length} questions; expected 10.`, { status: 502 });
     }
     await this.storeQuestions(questions);
-    mode.createGame().initialize(this.game, questions, this.context());
+    // Engine clocks start at the end of the intro rather than at `now`, so every deadline the
+    // engine sets already accounts for the animation.
+    // Single-player modes have no opponent to introduce, so they skip the pre-roll entirely
+    // rather than making one player stare at their own banner.
+    const introDelayMs = Math.max(0, Math.min(MAX_INTRO_DELAY_MS, Number(body.introDelayMs) || 0));
+    const introEndsAt = mode.playerCount > 1 ? now + INTRO_MS + introDelayMs : now;
+    mode.createGame().initialize(this.game, questions, this.context(introEndsAt));
+    if (introEndsAt > now) this.game.state.introEndsAt = introEndsAt;
+    // Published so the intro banner can show "Unranked" for a player still in placement rather
+    // than the Bronze I that an unearned rating of 0 would otherwise resolve to. Only the flag is
+    // sent - how far through placement someone is stays private to them.
+    this.game.state.placementByUserId = Object.fromEntries(this.game.players.map((player) => [
+      player.userId,
+      { placed: player.placementByMode?.[mode.id]?.placed ?? true },
+    ]));
     this.questionsLoaded = true;
     initializeBots(this.game);
-    ensureBotActions(this.game, now);
+    ensureBotActions(this.game, introEndsAt);
     await this.afterMutation();
     return Response.json({ ok: true, gameId: this.name });
   }
@@ -680,7 +752,7 @@ export class GameServer extends Server<Env> {
     this.scheduledAlarmAt = next;
   }
 
-  private addChat(identity: PlayerIdentity, payload: { text?: string; clientMessageId?: string }): ChatMessage | null {
+  private addChat(identity: ConnectionState, payload: { text?: string; clientMessageId?: string }): ChatMessage | null {
     if (!this.game) return null;
     const beforeUid = (this.game.chat.at(-1) as ChatMessage | undefined)?.uid;
     this.game.chat = appendChatMessage(this.game.chat as ChatMessage[], identity, payload);
@@ -730,14 +802,25 @@ export class GameServer extends Server<Env> {
     if (!this.env.BACKEND_API_BASE_URL) return;
     const response = await fetch(`${this.env.BACKEND_API_BASE_URL}/realtime/results`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...this.game.result, botPlayerIds: this.game.players.filter((player) => player.isBot).map((player) => player.userId) }),
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${this.env.REALTIME_ACTIVITY_SECRET ?? ""}` },
+      body: JSON.stringify({ ...this.game.result, participationByUserId: this.game.privateState.participationByUserId ?? {}, botPlayerIds: this.game.players.filter((player) => player.isBot).map((player) => player.userId) }),
     });
     if (!response.ok) return;
-    const saved = await response.json() as { eloDeltaByUserId?: Record<string, number> };
+    const saved = await response.json() as {
+      eloDeltaByUserId?: Record<string, number>;
+      rewardsByUserId?: Record<string, { xp: number; lumen: number }>;
+      questsByUserId?: Record<string, unknown>;
+    };
     const endedEvent = [...this.game.events].reverse().find((event) => event.type === "GAME_ENDED");
-    if (endedEvent && saved.eloDeltaByUserId) {
-      endedEvent.data = { ...endedEvent.data, eloDeltaByUserId: saved.eloDeltaByUserId };
+    if (endedEvent) {
+      // The rewards the backend actually granted ride along on the end event so
+      // the client can animate exactly what was awarded.
+      endedEvent.data = {
+        ...endedEvent.data,
+        ...(saved.eloDeltaByUserId ? { eloDeltaByUserId: saved.eloDeltaByUserId } : {}),
+        ...(saved.rewardsByUserId ? { rewardsByUserId: saved.rewardsByUserId } : {}),
+        ...(saved.questsByUserId ? { questsByUserId: saved.questsByUserId } : {}),
+      };
     }
     this.game.privateState.resultCommitted = true;
     await this.save();

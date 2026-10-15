@@ -7,6 +7,7 @@ import { decodeQuestionChunks, encodeQuestionChunks } from "./question-storage";
 import type { BotChatServer } from "./servers/bot-chat";
 import type { GameServer } from "./servers/game";
 import type { MatchmakerServer } from "./servers/matchmaker";
+import type { UserServer } from "./servers/user";
 
 const runtimeEnv = env as Env;
 
@@ -19,23 +20,24 @@ const questions = Array.from({ length: 10 }, (_, index) => ({
   correctAnswer: "A",
 }));
 
-const mockExternalServices = () => vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+const mockExternalServices = (questionSet = questions) => vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
   const url = new URL(input instanceof Request ? input.url : String(input));
   if (url.origin === "https://backend.test" && url.pathname === "/realtime/auth/verify") {
     const headers = new Headers(input instanceof Request ? input.headers : init?.headers);
-    if (headers.get("Authorization") !== "Bearer valid") {
+    const token = headers.get("Authorization")?.replace(/^Bearer\s+/, "");
+    if (token !== "valid" && token !== "viewer") {
       return new Response("Invalid token", { status: 401 });
     }
     return Response.json({
-      userId: "user-1",
-      displayName: "Player One",
+      userId: token === "viewer" ? "viewer-1" : "user-1",
+      displayName: token === "viewer" ? "Match Viewer" : "Player One",
       profilePicture: null,
       avatar: null,
       eloByMode: {},
     });
   }
   if (url.origin === "https://backend.test" && url.pathname === "/realtime/questions") {
-    return Response.json({ questions });
+    return Response.json({ questions: questionSet });
   }
   if (url.origin === "https://backend.test" && url.pathname === "/realtime/results") {
     return Response.json({ ok: true, duplicate: false, eloDeltaByUserId: {} });
@@ -66,7 +68,11 @@ describe("Worker routing", () => {
   it("serves health and rejects externally routed room commands", async () => {
     const health = await exports.default.fetch(new Request("https://realtime.test/health"));
     expect(health.status).toBe(200);
-    expect(await health.json()).toEqual({ ok: true, service: "studium-realtime" });
+    expect(await health.json()).toEqual({
+      ok: true,
+      service: "studium-realtime",
+      activityPublishingConfigured: true,
+    });
 
     const command = await exports.default.fetch(internalPost(
       { type: "game.initialize" },
@@ -100,6 +106,135 @@ describe("Worker routing", () => {
 });
 
 describe("Durable realtime state", () => {
+  it("measures action acknowledgements and coalesced updates for every ranked mode", async () => {
+    mockExternalServices(Array.from({ length: 10 }, (_, index) => ({ id: `benchmark-question-${index}`, prompt: "Choose A", questionType: "mcq", difficulty: "Medium", choices: [{ id: "A", label: "Answer" }], correctAnswer: "A" })));
+    const measurements: Array<{ mode: string; condition: string; ackMs: number; updates: number }> = [];
+    for (const mode of ["sat-classic", "sat-timber", "sat-puncture", "sat-flutter"]) {
+      for (const condition of ["normal", "impaired"]) {
+        const gameId = `latency-${mode}-${condition}`;
+        const stub = runtimeEnv.GAME.getByName(gameId);
+        const initialized = await stub.fetch(internalPost({
+          type: "game.initialize", modeId: mode, ranked: true,
+          players: [
+            { userId: "user-1", displayName: "Player One", profilePicture: null },
+            { userId: "user-2", displayName: "Player Two", profilePicture: null },
+          ],
+        }));
+        if(initialized.status !== 200) throw new Error(`${gameId}: ${initialized.status} ${await initialized.text()}`);
+        await runInDurableObject(stub, async (instance: GameServer) => {
+          instance.game!.state.currentQuestionActiveAt = Date.now() - 1_000;
+          // This measures action-to-ack latency, not the intro gate, so the pre-roll is expired
+          // the same way the question clock is backdated above.
+          instance.game!.state.introEndsAt = Date.now() - 1_000;
+        });
+        const connected = await exports.default.fetch(new Request(
+          `https://realtime.test/parties/game/${gameId}?token=valid&protocolVersion=3`,
+          { headers: { Upgrade: "websocket" } },
+        ));
+        expect(connected.status).toBe(101);
+        const socket = connected.webSocket!;
+        socket.accept();
+        const actionId = `answer-${mode}-${condition}`;
+        let updates = 0;
+        const ack = new Promise<{ accepted: boolean }>((resolve, reject) => {
+          const timer = setTimeout(() => reject(new Error(`No action acknowledgement for ${gameId}`)), 5_000);
+          socket.addEventListener("message", (event) => {
+            const payload = JSON.parse(String(event.data));
+            if(payload.type === "game.update") updates += 1;
+            if(payload.id !== actionId || payload.type !== "game.ack") return;
+            clearTimeout(timer);
+            resolve(payload.payload);
+          });
+        });
+        const delay = condition === "impaired" ? 120 : 0;
+        const started = performance.now();
+        if(delay) await new Promise((resolve) => setTimeout(resolve, delay));
+        socket.send(JSON.stringify({ id: actionId, type: "game.answer", payload: { submittedResponse: "A" } }));
+        const result = await ack;
+        if(delay) await new Promise((resolve) => setTimeout(resolve, delay));
+        const ackMs = Math.round(performance.now() - started);
+        await new Promise((resolve) => setTimeout(resolve, 140));
+        measurements.push({ mode, condition, ackMs, updates });
+        expect(result.accepted).toBe(true);
+        expect(updates).toBeLessThanOrEqual(1);
+        socket.close(1000, "benchmark complete");
+      }
+    }
+    console.info("Ranked action-to-ack sample (local Worker; impaired adds 120 ms each direction):", measurements);
+  });
+
+  it("announces when a spectator starts and stops spectating", async () => {
+    mockExternalServices();
+    const gameId = "spectator-presence-game";
+    const gameStub = runtimeEnv.GAME.getByName(gameId);
+    const initialized = await gameStub.fetch(internalPost({
+      type: "game.initialize",
+      modeId: "sat-classic",
+      ranked: false,
+      players: [
+        { userId: "user-1", displayName: "Player One", profilePicture: null },
+        { userId: "user-2", displayName: "Player Two", profilePicture: null },
+      ],
+    }));
+    expect(initialized.status).toBe(200);
+
+    const connected = await exports.default.fetch(new Request(
+      `https://realtime.test/parties/game/${gameId}?token=viewer`,
+      { headers: { Upgrade: "websocket" } },
+    ));
+    expect(connected.status).toBe(101);
+    connected.webSocket?.accept();
+
+    await vi.waitFor(async () => {
+      await runInDurableObject(gameStub, async (instance: GameServer) => {
+        expect(instance.game?.chat.at(-1)).toMatchObject({
+          senderName: "System",
+          text: "Match Viewer started spectating.",
+          system: true,
+        });
+      });
+    });
+
+    connected.webSocket?.close(1000, "stopped spectating");
+    await vi.waitFor(async () => {
+      await runInDurableObject(gameStub, async (instance: GameServer) => {
+        expect(instance.game?.chat.at(-1)).toMatchObject({
+          senderName: "System",
+          text: "Match Viewer stopped spectating.",
+          system: true,
+        });
+      });
+    });
+  });
+
+  it("publishes an assigned player's in-game activity with the room id", async () => {
+    const fetchMock = mockExternalServices();
+    const userStub = runtimeEnv.USER.getByName("user-1");
+    const response = await userStub.fetch(internalPost({
+      type: "game.assigned",
+      modeId: "sat-timber",
+      gameId: "game-123",
+    }));
+    expect(response.status).toBe(200);
+
+    await runInDurableObject(userStub, async (instance: UserServer) => {
+      expect(instance.state.status).toBe("in_room");
+      expect(instance.state.currentRoomId).toBe("game-123");
+    });
+
+    const activityCall = fetchMock.mock.calls.find(([input]) => {
+      const url = new URL(input instanceof Request ? input.url : String(input));
+      return url.pathname === "/realtime/activity";
+    });
+    expect(activityCall).toBeTruthy();
+    expect(JSON.parse(String(activityCall?.[1]?.body))).toEqual({
+      updates: [{
+        userId: "user-1",
+        activity: { state: "in_game", modeId: "sat-timber", roomId: "game-123" },
+      }],
+    });
+  });
+
   it("stores oversized questions in chunks and restores them after startup", async () => {
     mockExternalServices();
     const stub = runtimeEnv.GAME.getByName("large-game");

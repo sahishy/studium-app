@@ -203,10 +203,12 @@ const ignoreFriendRequest = async (requestId) => {
 const useFriendIds = (userId) => {
 
     const [friendIds, setFriendIds] = useState([])
+    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         if(!userId) {
             setFriendIds([])
+            setLoading(false)
             return
         }
 
@@ -217,23 +219,30 @@ const useFriendIds = (userId) => {
         if(Array.isArray(cachedValue)) {
             setFriendIds(cachedValue)
         }
+        setLoading(cacheStatus !== CACHE_STATUS.FRESH || !Array.isArray(cachedValue))
 
         let isMounted = true
 
         const fetchFriendIds = async () => {
-            const friendsRef = collection(db, 'users', userId, 'friends')
-            const snapshot = await getDocs(friendsRef)
-            const nextFriendIds = snapshot.docs.map((friendDoc) => friendDoc.id)
+            try {
+                const friendsRef = collection(db, 'users', userId, 'friends')
+                const snapshot = await getDocs(friendsRef)
+                const nextFriendIds = snapshot.docs.map((friendDoc) => friendDoc.id)
 
-            setCacheEntry(cacheKey, nextFriendIds, {
-                ttlMs: CACHE_TTLS_MS.SOCIALS_FRIEND_IDS,
-            })
+                setCacheEntry(cacheKey, nextFriendIds, {
+                    ttlMs: CACHE_TTLS_MS.SOCIALS_FRIEND_IDS,
+                })
 
-            if(!isMounted) return
-            setFriendIds(nextFriendIds)
+                if(!isMounted) return
+                setFriendIds(nextFriendIds)
+            } catch(error) {
+                console.error('Could not load friends', error)
+            } finally {
+                if(isMounted) setLoading(false)
+            }
         }
 
-        if(cacheStatus !== CACHE_STATUS.FRESH) {
+        if(cacheStatus !== CACHE_STATUS.FRESH || !Array.isArray(cachedValue)) {
             fetchFriendIds()
         }
 
@@ -249,7 +258,7 @@ const useFriendIds = (userId) => {
         }
     }, [userId])
 
-    return friendIds
+    return { friendIds, loading }
 
 }
 

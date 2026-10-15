@@ -64,7 +64,7 @@ const levelUpAnimation = (isCircle) => {
 
     var duration = 3000;
     var animationEnd = Date.now() + duration;
-    var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0, colors: (isCircle ? ['#38bdf8'] : ['#facc15']) };
+    var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 2000, colors: (isCircle ? ['#38bdf8'] : ['#facc15']) };
 
     function randomInRange(min, max) {
         return Math.random() * (max - min) + min;
@@ -85,4 +85,4 @@ const levelUpAnimation = (isCircle) => {
 
 }
 
-export { updateUserXP, updateCircleXP }
+export { levelUpAnimation, updateUserXP, updateCircleXP }

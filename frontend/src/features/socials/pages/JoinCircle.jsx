@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { useAuth } from "../../auth/contexts/AuthContext";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { canJoinCircle, getCircle, joinCircle } from "../services/circleService.jsx";
 import { useNavigate } from "react-router-dom";
 import { PiStarFourFill } from "react-icons/pi";
@@ -8,13 +8,14 @@ import { FaUserFriends } from "react-icons/fa";
 import LoadingState from "../../../shared/components/ui/LoadingState.jsx";
 import ErrorState from "../../../shared/components/ui/ErrorState.jsx";
 import { useCircles } from "../contexts/CirclesContext.jsx";
-import { CIRCLE_MAX_COUNT, getCompetitiveCircle } from "../utils/circleUtils.jsx";
+import { CIRCLE_MAX_COUNT } from "../utils/circleUtils.jsx";
 import Card from "../../../shared/components/ui/Card.jsx";
 import CircleBanner from "../components/CircleBanner.jsx";
 
 const JoinCircle = () => {
 
-    const { profile } = useAuth();
+    const { user } = useAuth();
+    const profile = useMemo(() => user ? { uid: user.uid } : null, [user]);
     const { inviteCode } = useParams();
     const [loading, setLoading] = useState(true)
     const [circle, setCircle] = useState(null);
@@ -59,15 +60,6 @@ const JoinCircle = () => {
                     setCircle(null)
                     setJoinError("Circle doesn't exist or can't be joined")
                     return
-                }
-
-                if(circleData.type === 'competitive') {
-                    const currentCompetitiveCircle = getCompetitiveCircle(circles)
-                    if(currentCompetitiveCircle && currentCompetitiveCircle.uid !== circleData.uid) {
-                        setCircle(null)
-                        setJoinError('You can only be in one competitive circle at a time.')
-                        return
-                    }
                 }
 
                 setJoinError('')

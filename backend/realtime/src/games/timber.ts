@@ -1,5 +1,14 @@
+import { initializeGameplayTelemetry, recordGameplayAction } from "./gameplay-telemetry";
 import { changedAction, unchangedAction, type GameContext, type GameEngine, type StoredGame } from "./contracts";
-import { buildReviewQuestionsById, isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
+import {
+  buildReviewQuestionsById,
+  buildSatResultTelemetry,
+  isCorrectSatAnswer,
+  recordSatAnswer,
+  recordSatQuestionFaced,
+  recordSatRoundWin,
+  sanitizeSatQuestion,
+} from "./sat-questions";
 
 export type TimberSide = "left" | "right";
 export type TimberBranch = TimberSide | null;
@@ -94,6 +103,7 @@ const finish = (game: StoredGame, winnerUserId: string | null, endReason: string
     endReason,
     startedAt: game.startedAt,
     endedAt: context.now,
+    ...buildSatResultTelemetry(game),
   };
   context.addEvent("GAME_ENDED", { winnerUserId, endReason, eloDeltaByUserId: {} });
 };
@@ -174,6 +184,13 @@ const startTimberCountdown = (game: StoredGame, context: GameContext) => {
       earnedAdvantage: player.userId === advantageOwnerUserId,
     };
   });
+  recordSatQuestionFaced(game, questionId);
+  for (const player of game.players) {
+    const answer = answers[player.userId];
+    if (!answer) continue;
+    recordSatAnswer(game, player.userId, question, { isCorrect: answer.isCorrect, elapsedMs: answer.elapsedMs });
+  }
+
   context.addEvent("QUESTION_RESOLVED", {
     questionId,
     correctAnswer: question?.correctAnswerDisplay ?? question?.correctAnswer ?? null,
@@ -188,6 +205,7 @@ const resolveTimberRound = (game: StoredGame, winnerUserId: string | null, reaso
   if (winnerUserId) {
     const winner = game.players.find((player) => player.userId === winnerUserId);
     if (winner) winner.state.score = (Number(winner.state.score) || 0) + 1;
+    recordSatRoundWin(game, winnerUserId);
   }
   game.state.timberRoundsPlayed = (Number(game.state.timberRoundsPlayed) || 0) + 1;
   const scoresByUserId = Object.fromEntries(game.players.map((player) => [player.userId, Number(player.state.score) || 0]));
@@ -237,6 +255,7 @@ const publicState = (game: StoredGame) => {
 
 export const createTimberGame = (): GameEngine => ({
   initialize(game, questions, context) {
+    initializeGameplayTelemetry(game);
     const selected = questions.slice(0, MAX_QUESTIONS);
     const ids = selected.map((question) => question.id);
     game.privateState.questionsById = Object.fromEntries(selected.map((question) => [question.id, question]));
@@ -312,7 +331,10 @@ export const createTimberGame = (): GameEngine => ({
     player.state.timberProgress = Math.min(Number(game.state.requiredChops), (Number(player.state.timberProgress) || 0) + 1);
     const hit = branch === side;
     if (hit) {
+      recordGameplayAction(game, userId, "stuns");
       player.state.stunnedUntil = chopAt + STUN_MS;
+    } else {
+      recordGameplayAction(game, userId, "timberLogsChopped");
     }
     if (Number(player.state.timberProgress) >= Number(game.state.requiredChops)) {
       resolveTimberRound(game, userId, "target_reached", context);

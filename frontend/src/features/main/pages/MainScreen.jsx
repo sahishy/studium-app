@@ -1,3 +1,4 @@
+import OnboardingProvider from '../../onboarding/OnboardingProvider'
 import { Outlet } from 'react-router-dom'
 import Sidebar from '../../../shared/components/ui/Sidebar'
 import { useState, useEffect } from 'react'
@@ -8,20 +9,29 @@ import { CirclesProvider } from '../../socials/contexts/CirclesContext'
 import { MembersProvider } from '../../socials/contexts/MembersContext'
 import { FriendsProvider } from '../../socials/contexts/FriendsContext'
 import { TasksProvider } from '../../agenda/contexts/TasksContext'
+import { EconomyProvider } from '../../economy/EconomyContext'
+import { RewardFxProvider } from '../../economy/RewardFxContext'
+import { QuestProvider } from '../../quests/QuestContext'
 import { CoursesProvider } from '../../courses/contexts/CoursesContext'
 import { UserStatsProvider } from '../../profile/contexts/UserStatsContext'
 import { MultiplayerProvider } from '../../multiplayer/contexts/MultiplayerContext'
 import LoadingState from '../../../shared/components/ui/LoadingState'
+import { FaBars, FaXmark } from 'react-icons/fa6'
 
 const MainScreenLayout = ({ profile }) => {
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+    useEffect(() => { const open=()=>setMobileMenuOpen(true); const close=()=>setMobileMenuOpen(false);window.addEventListener('onboarding:open-navigation',open);window.addEventListener('onboarding:close-navigation',close);return()=>{window.removeEventListener('onboarding:open-navigation',open);window.removeEventListener('onboarding:close-navigation',close)} },[])
     return (
         <>
             <div className="flex min-h-screen">
 
-                <Sidebar profile={profile} />
+                <Sidebar key={profile.uid} profile={profile} />
 
-                <main className="relative flex-1 h-screen max-w-[2560px] mx-auto overflow-x-hidden">
+                <button type='button' aria-label='Open navigation' onClick={() => setMobileMenuOpen(true)} className='fixed left-4 top-5 z-50 rounded-lg bg-neutral5 p-2 text-neutral1 lg:hidden'><FaBars /></button>
+                {mobileMenuOpen && <div className='fixed inset-0 z-[60] lg:hidden'><button type='button' aria-label='Close navigation' onClick={() => setMobileMenuOpen(false)} className='absolute inset-0 bg-black/35' /><div className='relative h-full w-56'><Sidebar key={profile.uid} profile={profile} mobile onNavigate={() => setMobileMenuOpen(false)} /><button type='button' aria-label='Close navigation' onClick={() => setMobileMenuOpen(false)} className='absolute right-2 top-2 rounded-lg p-2 text-neutral1'><FaXmark /></button></div></div>}
+
+                <main data-onboarding="main:screen" className="relative min-w-0 flex-1 h-screen max-w-[2560px] mx-auto overflow-x-hidden">
 
                     {/* <div className='absolute w-full h-full opacity-[0.067] z-[-1]'>
                         <img
@@ -76,10 +86,15 @@ const MainScreen = () => {
                     <FriendsProvider profile={profile}>
                         <CoursesProvider profile={profile}>
                             <MembersProvider>
-                                <TasksProvider profile={profile}>
-                                    <MainScreenLayout profile={profile} />
-
-                                </TasksProvider>
+                                <EconomyProvider userId={profile.uid} progressVersion={`${profile.progress?.level}:${profile.progress?.xp}`}>
+                                    <RewardFxProvider>
+                                        <QuestProvider userId={profile.uid}>
+                                            <TasksProvider profile={profile}>
+                                                <OnboardingProvider profile={profile}><MainScreenLayout profile={profile} /></OnboardingProvider>
+                                            </TasksProvider>
+                                        </QuestProvider>
+                                    </RewardFxProvider>
+                                </EconomyProvider>
                             </MembersProvider>
                         </CoursesProvider>
                     </FriendsProvider>

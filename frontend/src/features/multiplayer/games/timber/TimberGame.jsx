@@ -1,5 +1,6 @@
+import { getMatchCountdown } from '../../utils/matchIntroTiming'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { getGameServerNow, sendGameMessage, subscribeToGameActionResults, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
+import { getGameServerNow, recordGameVisualCorrection, sendGameMessage, subscribeToGameActionResults, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
 import QuestionPane from '../sat-classic/components/QuestionPane'
 import MatchEndOverlay from '../sat-classic/components/MatchEndOverlay'
 import { buildMatchEndRounds, countAnsweredQuestions } from '../sat-classic/utils/matchEndUtils'
@@ -285,7 +286,7 @@ const LegacyTimberMatchEnd = ({ snapshot, userId, startedAt }) => {
     )
 }
 
-const TimberMatchEnd = ({ snapshot, userId, startedAt }) => {
+const TimberMatchEnd = ({ snapshot, userId, startedAt, spectatorName = null }) => {
     const { userStats } = useUserStats()
     const state = snapshot?.room?.state ?? {}
     const players = snapshot?.players ?? EMPTY_PLAYERS
@@ -295,7 +296,7 @@ const TimberMatchEnd = ({ snapshot, userId, startedAt }) => {
     const isWin = winnerUserId === userId
     const endedEvent = [...(snapshot?.events ?? [])].reverse().find((event) => event.type === 'GAME_ENDED')
     const endReason = endedEvent?.data?.endReason ?? null
-    const reasonLabel = endReason === 'first_to_three'
+    const reasonLabel = spectatorName ? null : endReason === 'first_to_three'
         ? (isWin ? 'You won the Timber match.' : 'Your opponent won the Timber match.')
         : (endReason === 'max_questions' ? 'Reached max questions' : (endReason === 'player_left'
             ? (isWin ? 'Your opponent left the match.' : 'You left the match.') : null))
@@ -308,6 +309,8 @@ const TimberMatchEnd = ({ snapshot, userId, startedAt }) => {
     })
     const endedAt = Number(endedEvent?.createdAt) || Date.now()
     return <MatchEndOverlay
+        gameId={snapshot?.room?.uid}
+        matchSettled={Boolean(endedEvent?.data?.rewardsByUserId?.[userId])}
         winnerUserId={winnerUserId}
         userId={userId}
         modeId='sat-timber'
@@ -320,10 +323,11 @@ const TimberMatchEnd = ({ snapshot, userId, startedAt }) => {
         eloDelta={Number(endedEvent?.data?.eloDeltaByUserId?.[userId]) || 0}
         players={players}
         rounds={rounds}
+        spectatorName={spectatorName}
     />
 }
 
-const TimberGame = ({ roomId, userId }) => {
+const TimberGame = ({ roomId, userId, readOnly = false, spectatorName = null, matchIntro = null }) => {
     const [snapshot, setSnapshot] = useState(null)
     const [response, setResponse] = useState('')
     const [calculatorOpen, setCalculatorOpen] = useState(false)
@@ -350,8 +354,7 @@ const TimberGame = ({ roomId, userId }) => {
     const opponent = players.find((player) => player.userId !== userId) ?? null
     const currentQuestion = state?.questionsById?.[state?.currentQuestionId] ?? null
     const hasAnswered = Boolean(localPlayer?.state?.answeredQuestionIds?.includes(state?.currentQuestionId))
-    const questionCountdownRemainingMs = Math.max(0, Number(state?.currentQuestionActiveAt || 0) - now)
-    const questionCountdown = Math.max(0, Math.ceil(questionCountdownRemainingMs / 1000))
+    const { remainingMs: questionCountdownRemainingMs, seconds: questionCountdown } = getMatchCountdown(state?.currentQuestionActiveAt, now)
     const phase = state?.phase
     const localActualChops = Number(localPlayer?.state?.timberActualChops) || 0
     const localStunnedUntil = Number(localPlayer?.state?.stunnedUntil) || 0
@@ -377,6 +380,7 @@ const TimberGame = ({ roomId, userId }) => {
     // entry and an acceptance retires exactly its own.
     useEffect(() => subscribeToGameActionResults(roomId, (result) => {
         if(result?.action !== 'game.chop' || !result?.clientActionId) return
+        if(!result.accepted) recordGameVisualCorrection(roomId)
         setPendingChops((current) => (result.accepted
             ? current.map((chop) => (chop.clientActionId === result.clientActionId
                 ? { ...chop, actualChops: Number(result.actualChops) || null }
@@ -546,7 +550,7 @@ const TimberGame = ({ roomId, userId }) => {
     // coalesced update, so the benefit wasn't worth that regression - render raw.
 
     useEffect(() => {
-        if(phase !== 'timber_active') return () => {}
+        if(phase !== 'timber_active' || readOnly) return () => {}
         const onKeyDown = (event) => {
             if(event.repeat || ['INPUT', 'TEXTAREA'].includes(event.target?.tagName)) return
             const key = String(event.key).toLowerCase()
@@ -565,14 +569,14 @@ const TimberGame = ({ roomId, userId }) => {
         }
         window.addEventListener('keydown', onKeyDown)
         return () => window.removeEventListener('keydown', onKeyDown)
-    }, [phase, roomId, shake])
+    }, [phase, readOnly, roomId, shake])
 
     const questionRemaining = Math.max(0, Number(state?.currentQuestionDeadlineAt || 0) - now)
     const timberRemaining = Math.max(0, Number(state?.timberRoundDeadlineAt || 0) - now)
     const timberCountdownRemainingMs = Math.max(0, Number(state?.timberCountdownEndsAt || 0) - Math.max(now, Number(state?.timberCountdownStartedAt || 0)))
     const countdownRemaining = Math.max(0, Math.ceil(timberCountdownRemainingMs / 1000))
     if(!state || !localPlayer || !opponent) return <LoadingState className='min-h-[420px]' />
-    if(phase === 'finished') return <TimberMatchEnd snapshot={snapshot} userId={userId} startedAt={state.startedAt} />
+    if(phase === 'finished') return <TimberMatchEnd snapshot={snapshot} userId={userId} startedAt={state.startedAt} spectatorName={readOnly ? (spectatorName || localPlayer.displayName) : null} />
 
     const isRoundHold = phase === 'timber_result' || phase === 'match_result'
     const activeTimer = phase === 'question_active'
@@ -594,26 +598,28 @@ const TimberGame = ({ roomId, userId }) => {
 
             {phase === 'question_active' || isQuestionRevealActive ? (
                 <div className='relative flex-1 flex min-h-0'>
+                    {matchIntro}
                     <QuestionPane
                         gameState={isQuestionRevealActive ? { ...state, questionIndex: questionReveal.questionIndex } : state}
                         currentQuestion={isQuestionRevealActive ? questionReveal.question : currentQuestion}
                         submittedResponse={isQuestionRevealActive ? questionReveal.submittedResponse : response}
                         isSprQuestion={String((isQuestionRevealActive ? questionReveal.question : currentQuestion)?.questionType).toLowerCase() === 'spr'}
                         isCalculatorOpen={calculatorOpen}
-                        onToggleCalculator={() => setCalculatorOpen((value) => !value)}
-                        isBusy={isQuestionRevealActive || !currentQuestion || hasAnswered || questionCountdown > 0}
+                        onToggleCalculator={() => !readOnly && setCalculatorOpen((value) => !value)}
+                        isBusy={readOnly || isQuestionRevealActive || !currentQuestion || hasAnswered || questionCountdown > 0}
                         hasAnswered={isQuestionRevealActive || hasAnswered}
                         onChoiceSelect={(value) => setResponse(String(value))}
                         onResponseChange={setResponse}
                         onSubmit={() => {
                             const submittedResponse = response.trim()
-                            if(submittedResponse && !hasAnswered && questionCountdown <= 0) sendGameMessage(roomId, 'game.answer', { submittedResponse })
+                            if(!readOnly && submittedResponse && !hasAnswered && questionCountdown <= 0) sendGameMessage(roomId, 'game.answer', { submittedResponse })
                         }}
                         answerReveal={isQuestionRevealActive ? {
                             correctAnswer: questionReveal.correctAnswer,
                             isCorrect: questionReveal.isCorrect,
                             responses: questionReveal.answerResponses,
                         } : null}
+                        readOnly={readOnly}
                     />
                     {questionCountdown > 0 && !isQuestionRevealActive ? (
                         <TimberTransitionOverlay
@@ -649,7 +655,7 @@ const TimberGame = ({ roomId, userId }) => {
                             remainingMs={timberCountdownRemainingMs}
                             countdown={countdownRemaining}
                             title={state.advantageOwnerUserId
-                                ? `${state.advantageOwnerUserId === userId ? 'You have' : `${opponent.displayName} has`} a +10 head start`
+                                ? `${state.advantageOwnerUserId === userId ? `${readOnly ? localPlayer.displayName : 'You'} ${readOnly ? 'has' : 'have'}` : `${opponent.displayName} has`} a +10 head start`
                                 : 'Get ready...'}
                         />
                     ) : null}
@@ -657,7 +663,7 @@ const TimberGame = ({ roomId, userId }) => {
                 </div>
             )}
 
-            {phase === 'timber_active' || isRoundHold ? (
+            {!readOnly && (phase === 'timber_active' || isRoundHold) ? (
                 <div className='flex items-center justify-center gap-2 text-sm text-neutral1'>
                     <kbd className='min-w-8 rounded-lg bg-neutral5 px-2 py-1 text-center font-semibold text-neutral1'>A</kbd>
                     <kbd className='min-w-8 rounded-lg bg-neutral5 px-2 py-1 text-center font-semibold text-neutral1'>D</kbd>
@@ -666,7 +672,7 @@ const TimberGame = ({ roomId, userId }) => {
                     <kbd className='min-w-8 rounded-lg bg-neutral5 px-2 py-1 text-center font-semibold text-neutral1'>→</kbd>
                 </div>
             ) : null}
-            <CalculatorWindow isOpen={calculatorOpen && phase === 'question_active'} onClose={() => setCalculatorOpen(false)} />
+            <CalculatorWindow isOpen={!readOnly && calculatorOpen && phase === 'question_active'} onClose={() => setCalculatorOpen(false)} />
         </div>
     )
 }

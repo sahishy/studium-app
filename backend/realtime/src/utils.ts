@@ -26,7 +26,10 @@ export const connectionIdentity = (connection: Connection): PlayerIdentity => {
     displayName: state?.displayName || "Player",
     profilePicture: state?.profilePicture ?? null,
     avatar: state?.avatar ?? null,
+    title: state?.title ?? null,
+    level: state?.level ?? 1,
     eloByMode: state?.eloByMode ?? {},
+    placementByMode: state?.placementByMode ?? {},
   };
 };
 
@@ -39,7 +42,10 @@ export const verifyConnection = async (request: Request, env: Env) => {
     displayName: url.searchParams.get("displayName") || "Player",
     profilePicture: parseJson(url.searchParams.get("profilePicture"), null),
     avatar: parseJson(url.searchParams.get("avatar"), null),
+    title: url.searchParams.get("title") || null,
+    level: Math.max(1, Number(url.searchParams.get("level")) || 1),
     eloByMode: parseJson(url.searchParams.get("eloByMode"), {}),
+    placementByMode: parseJson(url.searchParams.get("placementByMode"), {}),
   };
 
   if (env.BACKEND_API_BASE_URL) {
@@ -63,7 +69,10 @@ export const verifyConnection = async (request: Request, env: Env) => {
   headers.set("X-Display-Name", encodeURIComponent(identity.displayName));
   headers.set("X-Profile-Picture", encodeURIComponent(JSON.stringify(identity.profilePicture ?? null)));
   headers.set("X-Avatar", encodeURIComponent(JSON.stringify(identity.avatar ?? null)));
+  headers.set("X-Title", encodeURIComponent(JSON.stringify(identity.title ?? null)));
+  headers.set("X-Level", String(identity.level ?? 1));
   headers.set("X-Elo-By-Mode", encodeURIComponent(JSON.stringify(identity.eloByMode ?? {})));
+  headers.set("X-Placement-By-Mode", encodeURIComponent(JSON.stringify(identity.placementByMode ?? {})));
   return new Request(request, { headers });
 };
 
@@ -80,7 +89,10 @@ export const stateFromRequest = (request: Request): ConnectionState => ({
     catch { return null; }
   })(),
   avatar: parseJson(decodeURIComponent(request.headers.get("X-Avatar") || "null"), null),
+  title: parseJson(decodeURIComponent(request.headers.get("X-Title") || "null"), null),
+  level: Math.max(1, Number(request.headers.get("X-Level")) || 1),
   eloByMode: parseJson(decodeURIComponent(request.headers.get("X-Elo-By-Mode") || "{}"), {}),
+  placementByMode: parseJson(decodeURIComponent(request.headers.get("X-Placement-By-Mode") || "{}"), {}),
   connectedAt: Date.now(),
   protocolVersion: Math.max(1, Number(new URL(request.url).searchParams.get("protocolVersion")) || 1),
 });
@@ -98,26 +110,42 @@ export const requestRoom = <T extends Server<Env>>(
 export type PublicActivity =
   | { state: "online" }
   | { state: "in_party"; modeId: string; partyPlayerCount: number }
-  | { state: "in_game"; modeId: string };
+  | { state: "in_game"; modeId: string; roomId: string };
 
 let activitySecretWarningLogged = false;
 
 export const publishActivities = async (env: Env, updates: Array<{ userId: string; activity: PublicActivity }>) => {
-  if (!updates.length || !env.BACKEND_API_BASE_URL) return;
+  if (!updates.length) return true;
+  if (!env.BACKEND_API_BASE_URL) {
+    console.error("Unable to publish player activity: BACKEND_API_BASE_URL is not configured.", { count: updates.length });
+    return false;
+  }
   if (!env.REALTIME_ACTIVITY_SECRET) {
     if (!activitySecretWarningLogged) {
-      console.warn("Player activity is disabled: REALTIME_ACTIVITY_SECRET is not configured.");
+      console.error("Unable to publish player activity: REALTIME_ACTIVITY_SECRET is not configured.");
       activitySecretWarningLogged = true;
     }
-    return;
+    return false;
   }
-  const response = await fetch(`${env.BACKEND_API_BASE_URL}/realtime/activity`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${env.REALTIME_ACTIVITY_SECRET}`,
-    },
-    body: JSON.stringify({ updates }),
-  });
-  if (!response.ok) console.warn("Unable to publish player activity.", { status: response.status, count: updates.length });
+  try {
+    const response = await fetch(`${env.BACKEND_API_BASE_URL.replace(/\/$/, "")}/realtime/activity`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${env.REALTIME_ACTIVITY_SECRET}`,
+      },
+      body: JSON.stringify({ updates }),
+    });
+    if (response.ok) return true;
+
+    const detail = (await response.text()).slice(0, 500);
+    console.error("Unable to publish player activity.", { status: response.status, count: updates.length, detail });
+    return false;
+  } catch (error) {
+    console.error("Unable to publish player activity.", {
+      count: updates.length,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
 };

@@ -1,4 +1,6 @@
 import { FaBook, FaCalendar, FaCheckCircle, FaClock, FaDotCircle, FaUserFriends } from 'react-icons/fa'
+import useToday from '../../../shared/hooks/useToday'
+import { dateToIsoKey } from '../../../shared/utils/calendarUtils'
 import DatePicker from '../../../shared/components/popovers/DatePicker'
 import Select from '../../../shared/components/popovers/Select'
 import { buildCircleOptions, buildCircleWidgetSegment, buildCourseOptions, buildCourseWidgetSegment, buildDateWidgetSegment, ensureTitleSetter, getCircleControlState, getCourseControlState, getDateControlState, removeWidget, upsertWidget } from '../utils/taskWidgetControlUtils'
@@ -56,7 +58,8 @@ const DefaultDueDateTrigger = ({ isOpen, dueLabel, isSet, isOverdue }) => (
 )
 
 export const TaskDueDateInput = ({ title, setTitle, className = '', renderTrigger }) => {
-    const { selectedDate, dueLabel } = getDateControlState(title)
+    const { selectedDate, dueLabel, dueDate } = getDateControlState(title)
+    const today = useToday()
 
     const onSelectDate = (date) => {
         const apply = ensureTitleSetter(setTitle)
@@ -73,7 +76,7 @@ export const TaskDueDateInput = ({ title, setTitle, className = '', renderTrigge
     }
 
     const isSet = selectedDate !== -1
-    const isOverdue = isSet && selectedDate?.seconds * 1000 < Date.now()
+    const isOverdue = isSet && dueDate < dateToIsoKey(today)
 
     return (
         <DatePicker onSelect={onSelectDate} selectedDate={selectedDate} className={className}>

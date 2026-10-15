@@ -23,14 +23,14 @@ const HealthPanel = ({ player, align = 'start', damageIndicator = null, nowMs = 
     const showDamageIndicator = damageIndicator && indicatorProgress < 1
 
     return (
-        <div className={`flex-1 max-w-xs ${isEndAligned ? 'items-end' : ''}`}>
+        <div className={`flex-1 min-w-0 max-w-xs ${isEndAligned ? 'items-end' : ''}`}>
 
-            <div className={`flex items-center gap-3 mb-2 ${isEndAligned ? 'flex-row-reverse items-end' : ''}`}>
+            <div className={`flex items-center gap-2 sm:gap-3 mb-2 ${isEndAligned ? 'flex-row-reverse items-end' : ''}`}>
 
                 <AvatarPicture
                     profile={{ profile: { profilePicture: player?.profilePicture ?? null } }}
                     avatar={player?.avatar}
-                    className='w-12 h-12'
+                    className='w-8 h-8 sm:w-12 sm:h-12 shrink-0'
                 />
 
                 <div className={`min-w-0 ${isEndAligned ? 'text-right' : ''}`}>

@@ -68,6 +68,20 @@ export class SocialPartyServer extends Server<Env> {
       const member = this.state?.members.some((entry) => entry.userId === body.userId);
       return Response.json(member && this.state ? { activity: { modeId: this.state.modeId, partyPlayerCount: this.state.members.length } } : {});
     }
+    if (body.type === "party.identity") {
+      const member = this.state?.members.find((entry) => entry.userId === body.player?.userId);
+      if (member) {
+        // Cosmetics only: joinedAt, ready and disconnectedAt stay as the party recorded them.
+        member.displayName = body.player.displayName;
+        member.profilePicture = body.player.profilePicture ?? null;
+        member.avatar = body.player.avatar ?? null;
+        member.title = body.player.title ?? null;
+        member.level = body.player.level ?? 1;
+        member.eloByMode = body.player.eloByMode ?? {};
+        await this.saveAndBroadcast();
+      }
+      return Response.json({ ok: true });
+    }
     if (body.type === "party.presence") {
       const member = this.state?.members.find((entry) => entry.userId === body.userId);
       if (member) member.disconnectedAt = body.connected ? null : Date.now();

@@ -1,5 +1,14 @@
+import { initializeGameplayTelemetry, recordGameplayAction } from "./gameplay-telemetry";
 import { changedAction, unchangedAction, type GameContext, type GameEngine, type StoredGame } from "./contracts";
-import { buildReviewQuestionsById, isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
+import {
+  buildReviewQuestionsById,
+  buildSatResultTelemetry,
+  isCorrectSatAnswer,
+  recordSatAnswer,
+  recordSatQuestionFaced,
+  recordSatRoundWin,
+  sanitizeSatQuestion,
+} from "./sat-questions";
 
 const MAX_QUESTIONS = 10;
 const SCORE_TO_WIN = 3;
@@ -143,6 +152,7 @@ const finish = (game: StoredGame, winnerUserId: string | null, endReason: string
     endReason,
     startedAt: game.startedAt,
     endedAt: context.now,
+    ...buildSatResultTelemetry(game),
   };
   context.addEvent("GAME_ENDED", { winnerUserId, endReason, eloDeltaByUserId: {} });
 };
@@ -222,6 +232,13 @@ const startPunctureCountdown = (game: StoredGame, context: GameContext) => {
       earnedAdvantage: player.userId === advantageOwnerUserId,
     };
   });
+  recordSatQuestionFaced(game, questionId);
+  for (const player of game.players) {
+    const answer = answers[player.userId];
+    if (!answer) continue;
+    recordSatAnswer(game, player.userId, question, { isCorrect: answer.isCorrect, elapsedMs: answer.elapsedMs });
+  }
+
   context.addEvent("QUESTION_RESOLVED", {
     questionId,
     correctAnswer: question?.correctAnswerDisplay ?? question?.correctAnswer ?? null,
@@ -236,6 +253,7 @@ const resolvePunctureRound = (game: StoredGame, winnerUserId: string | null, rea
   if (winnerUserId) {
     const winner = game.players.find((player) => player.userId === winnerUserId);
     if (winner) winner.state.score = (Number(winner.state.score) || 0) + 1;
+    recordSatRoundWin(game, winnerUserId);
   }
   game.state.punctureRoundsPlayed = (Number(game.state.punctureRoundsPlayed) || 0) + 1;
   game.state.punctureRoundResolvedAt = context.now;
@@ -279,6 +297,7 @@ const publicState = (game: StoredGame) => {
 
 export const createPunctureGame = (): GameEngine => ({
   initialize(game, questions, context) {
+    initializeGameplayTelemetry(game);
     const selected = questions.slice(0, MAX_QUESTIONS);
     const ids = selected.map((question) => question.id);
     game.privateState.questionsById = Object.fromEntries(selected.map((question) => [question.id, question]));
@@ -381,10 +400,12 @@ export const createPunctureGame = (): GameEngine => ({
       shot,
     ].slice(-RECENT_SHOT_LIMIT);
     if (hit) {
+      recordGameplayAction(game, userId, "stuns");
       player.state.stunnedUntil = context.now + STUN_MS;
       return changedAction(shotReply(clientActionId, true, { shot }));
     }
 
+    recordGameplayAction(game, userId, "puncturePinsPlaced");
     player.state.puncturePinAngles = [
       ...((player.state.puncturePinAngles as number[] | undefined) ?? []),
       attachedAngle,

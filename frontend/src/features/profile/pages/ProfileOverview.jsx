@@ -12,7 +12,7 @@ import ProgressBar from '../../../shared/components/ui/ProgressBar'
 import { useModal } from '../../../shared/contexts/ModalContext'
 import { getMajorNameById } from '../services/majorService'
 import { getUserStatsByUserId, updateUserStatsByUserId } from '../services/statsService'
-import { getUserByDisplayName, updateUserInfo } from '../../auth/services/userService'
+import { getUserByDisplayName, subscribeToUserById, updateUserInfo } from '../../auth/services/userService'
 import { buildMultiplayerUiState, GAME_MODES, getCombinedRankedElo } from '../../multiplayer/utils/multiplayerUtils'
 import { FaGear } from 'react-icons/fa6'
 import { FaEdit } from 'react-icons/fa'
@@ -24,6 +24,11 @@ import { useUserStats } from '../contexts/UserStatsContext'
 import Podium from '../../../shared/components/avatar/Podium'
 import { removeFriend, sendFriendRequestByUserId, useHasOutgoingFriendRequest, useIsFriend } from '../../socials/services/friendService'
 import DisplayName from '../components/DisplayName'
+import Title from '../components/Title'
+import PlayerLevel from '../components/PlayerLevel'
+import { useMultiplayer } from '../../multiplayer/contexts/MultiplayerContext'
+import { getSpectateAvailability } from '../../multiplayer/utils/spectateAvailability'
+import { getPlayerActivity } from '../../../shared/utils/playerActivity'
 
 const ProfileOverview = () => {
 
@@ -31,6 +36,7 @@ const ProfileOverview = () => {
 
     const { profile: currentUserProfile } = useOutletContext()
     const { userStats: currentUserStats, loading: currentUserStatsLoading } = useUserStats()
+    const { session } = useMultiplayer()
     const { openModal, closeModal } = useModal()
     const { username: encodedUsername } = useParams()
     const username = decodeURIComponent(encodedUsername ?? '')
@@ -49,6 +55,12 @@ const ProfileOverview = () => {
     const targetUserId = displayedProfile?.uid
     const isFriend = useIsFriend(currentUserProfile?.uid, targetUserId)
     const hasOutgoingFriendRequest = useHasOutgoingFriendRequest(currentUserProfile?.uid, targetUserId)
+    const spectateAvailability = getSpectateAvailability({
+        currentUserId: currentUserProfile?.uid,
+        targetProfile: displayedProfile,
+        session,
+    })
+    const profileActivity = getPlayerActivity(displayedProfile)
 
     useEffect(() => {
 
@@ -88,6 +100,11 @@ const ProfileOverview = () => {
         }
 
     }, [username, isCurrentUser])
+
+    useEffect(() => {
+        if(isCurrentUser || !targetUserId) return () => {}
+        return subscribeToUserById(targetUserId, setProfile)
+    }, [isCurrentUser, targetUserId])
 
     useEffect(() => {
 
@@ -312,7 +329,12 @@ const ProfileOverview = () => {
                                 <AvatarPicture
                                     profile={displayedProfile}
                                     className='w-full h-full'
-                                />
+                                >
+                                    <div
+                                        aria-description={profileActivity.label}
+                                        className={`absolute bottom-1 right-1 w-8 h-8 border-6 border-neutral6 rounded-full ${profileActivity.dotColorClass}`}
+                                    />
+                                </AvatarPicture>
                             </div>
                         </div>
 
@@ -335,6 +357,16 @@ const ProfileOverview = () => {
                                 </>
                             ) : (
                                 <>
+                                    {spectateAvailability.visible ? (
+                                        <Button
+                                            type='primary'
+                                            disabled={spectateAvailability.disabled}
+                                            aria-description={spectateAvailability.disabled ? 'Leave matchmaking before spectating.' : `Spectate ${displayedProfile?.profile?.displayName ?? 'this player'}`}
+                                            onClick={() => navigate(`/play/game/${encodeURIComponent(spectateAvailability.roomId)}?spectate=${encodeURIComponent(targetUserId)}`)}
+                                        >
+                                            Spectate
+                                        </Button>
+                                    ) : null}
                                     {!isFriend ? (
                                         <Button
                                             disabled={hasOutgoingFriendRequest}
@@ -371,10 +403,15 @@ const ProfileOverview = () => {
                                     </button>
                                 )}
                             </div>
-                            <p className='text-sm font-semibold text-neutral1 mt-1'>
-                                {combinedRankedElo} <span className='text-[0.625rem] font-medium'>SAT</span>
-                            </p>
 
+                            {/* Sits directly under the name, which is also where it appears on the
+                                match intro banner, so a title reads the same in both places. */}
+                            <Title titleId={displayedProfile?.profile?.title} size='md' className='mt-0.5' />
+
+                            <div className='flex items-center gap-3 text-sm font-semibold text-neutral1 mt-1'>
+                                <p>{combinedRankedElo} <span className='text-[0.625rem] font-medium'>SAT</span></p>
+                                <PlayerLevel level={displayedProfile?.progress?.level} />
+                            </div>
                         </div>
 
                         {saveError ? (

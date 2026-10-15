@@ -68,6 +68,7 @@ export const ToastProvider = ({ children }) => {
         props = {},
         duration = 3000,
         canHide,
+        background = null,
     }) => {
 
         if(!component) {
@@ -84,6 +85,7 @@ export const ToastProvider = ({ children }) => {
                 props,
                 duration,
                 canHide,
+                background,
                 isVisible: true,
             },
         ])

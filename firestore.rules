@@ -1,8 +1,132 @@
-rules_version = '2'
+rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+    function signedIn() { return request.auth != null; }
+    function isSelf(uid) { return signedIn() && request.auth.uid == uid; }
+    function circleMember(circleId) {
+      return signedIn() && exists(/databases/$(database)/documents/circles/$(circleId)/members/$(request.auth.uid));
     }
+    function validTaskParent(taskId, data) {
+      let parentId = data.get('parentTaskId', null);
+      return parentId == null || (parentId != taskId
+        && exists(/databases/$(database)/documents/tasks/$(parentId))
+        && get(/databases/$(database)/documents/tasks/$(parentId)).data.get('circleId', null) == data.get('circleId', null)
+        && (data.get('circleId', null) != null
+          || get(/databases/$(database)/documents/tasks/$(parentId)).data.userId == data.userId));
+    }
+
+    function validTutorialRecord(data, recordId) {
+      let runId = data.get('tutorialRunId', null);
+      let kind = data.get('tutorialKind', '');
+      return runId == null || (exists(/databases/$(database)/documents/onboarding/$(request.auth.uid))
+        && get(/databases/$(database)/documents/onboarding/$(request.auth.uid)).data.active.id == runId
+        && get(/databases/$(database)/documents/onboarding/$(request.auth.uid)).data.active.artifacts.get(kind, null) == recordId);
+    }
+    function preservesRetiredCourseFields(before, after) {
+      return before.get('teacherId', null) == after.get('teacherId', null)
+        && before.get('day', null) == after.get('day', null);
+    }
+    function sameTutorialOwner(before, after) {
+      return before.get('tutorialRunId', null) == after.get('tutorialRunId', null)
+        && before.get('tutorialKind', null) == after.get('tutorialKind', null);
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create: if isSelf(uid) && request.resource.data.progress.level == 1 && request.resource.data.progress.xp == 0 && request.resource.data.get('primaryCircleId', null) == null
+        && (!request.resource.data.keys().hasAny(['circleMemberships'])
+          || request.resource.data.circleMemberships == {'version': 1, 'ids': []});
+      allow update: if isSelf(uid)
+        && request.resource.data.progress == resource.data.progress
+        && request.resource.data.get('badges', []) == resource.data.get('badges', [])
+        && request.resource.data.profile.avatar == resource.data.profile.avatar
+        && request.resource.data.get('primaryCircleId', null) == resource.data.get('primaryCircleId', null)
+        && request.resource.data.get('circleMemberships', null) == resource.data.get('circleMemberships', null);
+      allow delete: if false;
+      match /friends/{friendId} {
+        allow read: if signedIn();
+        allow write: if isSelf(uid);
+      }
+    }
+
+    match /userStats/{uid} {
+      allow read: if signedIn();
+      allow create: if isSelf(uid) && request.resource.data.play == {} && request.resource.data.get('totalElo', 0) == 0
+        && !request.resource.data.keys().hasAny(['dailyRewards', 'mastery']);
+      allow update: if isSelf(uid)
+        && request.resource.data.play == resource.data.play
+        && request.resource.data.get('totalElo', 0) == resource.data.get('totalElo', 0)
+        && request.resource.data.get('dailyRewards', null) == resource.data.get('dailyRewards', null)
+        && request.resource.data.get('mastery', null) == resource.data.get('mastery', null);
+      allow delete: if false;
+    }
+
+    match /tasks/{taskId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid
+        && request.resource.data.alreadyCompleted == false
+        && request.resource.data.status == 'Incomplete'
+        && (request.resource.data.get('circleId', null) == null || circleMember(request.resource.data.circleId))
+        && validTaskParent(taskId, request.resource.data)
+        && validTutorialRecord(request.resource.data, taskId);
+      allow update: if signedIn() && (resource.data.userId == request.auth.uid || (resource.data.get('circleId', null) != null && circleMember(resource.data.circleId)))
+        && request.resource.data.status == resource.data.status
+        && request.resource.data.alreadyCompleted == resource.data.alreadyCompleted
+        && request.resource.data.userId == resource.data.userId
+        && (request.resource.data.get('circleId', null) == null || circleMember(request.resource.data.circleId))
+        && validTaskParent(taskId, request.resource.data)
+        && sameTutorialOwner(resource.data, request.resource.data);
+      allow delete: if signedIn() && (resource.data.userId == request.auth.uid || (resource.data.get('circleId', null) != null && circleMember(resource.data.circleId)));
+    }
+
+    match /circles/{circleId} {
+      allow read: if signedIn();
+      allow create, update: if false;
+      allow delete: if signedIn() && resource.data.createdByUserId == request.auth.uid;
+      match /members/{uid} {
+        allow read: if signedIn();
+        allow create, update: if false;
+        allow delete: if signedIn() && get(/databases/$(database)/documents/circles/$(circleId)).data.createdByUserId == request.auth.uid
+          && !existsAfter(/databases/$(database)/documents/circles/$(circleId));
+      }
+    }
+
+    match /courses/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.studentId == request.auth.uid && validTutorialRecord(request.resource.data,id)
+        && !request.resource.data.keys().hasAny(['teacherId','day']);
+      allow update: if signedIn() && resource.data.studentId == request.auth.uid && request.resource.data.studentId == request.auth.uid && sameTutorialOwner(resource.data,request.resource.data) && preservesRetiredCourseFields(resource.data,request.resource.data);
+      allow delete: if signedIn() && resource.data.studentId == request.auth.uid;
+    }
+    match /courseReviews/{id} {
+      allow read: if signedIn();
+      // Delete through the API so the review's hearts are removed as well.
+      allow delete: if false;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid
+        && id == request.resource.data.courseId + '_' + request.auth.uid
+        && request.resource.data.get('heartsCount', 0) == 0
+        && !request.resource.data.keys().hasAny(['teacherId','day','schoolId']);
+      allow update: if signedIn() && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.courseId == resource.data.courseId
+        && request.resource.data.get('heartsCount', 0) == resource.data.get('heartsCount', 0)
+        && preservesRetiredCourseFields(resource.data,request.resource.data);
+      match /hearts/{uid} {
+        allow read: if isSelf(uid);
+        allow write: if false;
+      }
+    }
+    match /schoolTeachers/{id} { allow read: if signedIn(); allow write: if false; }
+    match /friendRequests/{id} { allow read, write: if signedIn(); }
+    match /config/{id} { allow read: if signedIn(); allow write: if false; }
+
+    // Rewards and publications are written through authenticated Functions.
+    match /wallets/{id} { allow read, write: if false; }
+    match /economyOps/{id} { allow read, write: if false; }
+    match /rewardEvents/{id} { allow read, write: if false; }
+    match /taskRewardDays/{id} { allow read, write: if false; }
+    match /gameResults/{id} { allow read, write: if false; }
+    match /resources/{id} { allow read, write: if false; match /{sub=**} { allow read, write: if false; } }
+    match /collegePosts/{id} { allow read, write: if false; match /{sub=**} { allow read, write: if false; } }
   }
 }

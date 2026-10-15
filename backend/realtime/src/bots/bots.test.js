@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { BOT_AVATAR_COLORS, createBotIdentity, createBotRuntime } from "./profile.ts";
+import { BOT_AVATAR_COLORS, BOT_AVATAR_FACES, botTargetElo, createBotIdentity, createBotRuntime } from "./profile.ts";
+import cosmetics from "../../../functions/src/features/economy/cosmeticCatalog.json" with { type: "json" };
 import { satAccuracy, satAnswerDelayMs } from "./sat.ts";
 import { flutterMissProbability, planFlutterAction } from "./flutter.ts";
 import { getPunctureCrowdingStage, planPunctureAction, punctureWouldHit } from "./puncture.ts";
@@ -12,8 +13,8 @@ test("creates a database-free bot profile near the human rating", () => {
   const bot = createBotIdentity(human, "sat-classic", "stable-seed");
   assert.match(bot.displayName, /^[A-Za-z]+[A-Za-z]+\d{5}$/);
   assert.ok(BOT_AVATAR_COLORS.includes(bot.avatar.color));
-  assert.ok([0, 1, 2].includes(bot.avatar.face));
-  assert.ok(bot.elo >= 0 && bot.elo <= 1600);
+  assert.ok(BOT_AVATAR_FACES.includes(bot.avatar.face));
+  assert.ok(bot.elo >= 1 && bot.elo <= 1600);
   assert.ok(Math.abs(bot.elo - human.elo) < 240);
   assert.equal(bot.profilePicture, null);
   assert.equal(bot.isBot, true);
@@ -233,4 +234,82 @@ test("Flutter stays still when aligned and releases movement after a short pulse
   assert.equal(release.payload.up, false);
   assert.equal(release.payload.right, false);
   assert.ok(release.at - 1_100 >= 110 && release.at - 1_100 <= 260);
+});
+
+test("an unplaced player faces the placement ladder, not a bot built from their rating of zero", () => {
+  const newcomer = {
+    userId: "new", displayName: "New", profilePicture: null, elo: 0, eloByMode: {},
+    placementByMode: { "sat-classic": { placed: false, gamesPlayed: 0, nextOpponentElo: 350 } },
+  };
+  assert.equal(botTargetElo(newcomer, "sat-classic"), 350);
+
+  const bot = createBotIdentity(newcomer, "sat-classic", "stable-seed");
+  assert.ok(bot.elo > 120, `a placement bot should be a real test, got ${bot.elo}`);
+
+  // The ladder climbs after a win, so the next opponent is tougher.
+  const afterAWin = {
+    ...newcomer,
+    placementByMode: { "sat-classic": { placed: false, gamesPlayed: 1, nextOpponentElo: 470 } },
+  };
+  assert.ok(botTargetElo(afterAWin, "sat-classic") > botTargetElo(newcomer, "sat-classic"));
+});
+
+test("a placed player faces a bot near their own rating again", () => {
+  const placed = {
+    userId: "placed", displayName: "Placed", profilePicture: null, elo: 900,
+    eloByMode: { "sat-classic": 900 },
+    placementByMode: { "sat-classic": { placed: true, gamesPlayed: 3 } },
+  };
+  assert.equal(botTargetElo(placed, "sat-classic"), 900);
+});
+
+test("a mode with no placement record falls back to the player rating", () => {
+  // A flat `elo` takes precedence over the per-mode map, which is how an identity built for a
+  // single room arrives; the map is only consulted when there is no flat rating.
+  assert.equal(botTargetElo(human, "sat-classic"), 700);
+  assert.equal(botTargetElo({ ...human, elo: undefined }, "sat-classic"), 700);
+  assert.equal(botTargetElo({ ...human, elo: undefined }, "sat-timber"), 0);
+});
+
+test("higher-ranked bots wear rarer cosmetics and have higher levels from the full catalog", () => {
+  const rarities = ["Common", "Uncommon", "Rare", "Epic", "Legendary"];
+  const allColors = [
+    ...cosmetics.STARTER_COLORS.map((value) => ({ value, rarity: "Common" })),
+    ...cosmetics.COLOR_CATALOG,
+  ];
+  const allFaces = [
+    ...cosmetics.STARTER_FACES.map((value) => ({ value, rarity: "Common" })),
+    ...cosmetics.FACE_CATALOG,
+  ];
+  const sample = (elo) => Array.from({ length: 500 }, (_, index) => {
+    const bot = createBotIdentity({ ...human, elo, level: 99 }, "sat-classic", `cosmetics-${index}`);
+    const color = allColors.find((item) => item.value === bot.avatar.color);
+    const face = allFaces.find((item) => item.value === bot.avatar.face);
+    const title = cosmetics.TITLE_CATALOG.find((item) => item.id === bot.title);
+    assert.ok(color && face && title, "all selected cosmetics exist in the game's catalog");
+    const rarity = [color, face, title].reduce((sum, item) => sum + rarities.indexOf(item.rarity), 0) / 3;
+    return { bot, rarity };
+  });
+  const bronze = sample(100);
+  const silver = sample(400);
+  const gold = sample(700);
+  const master = sample(1500);
+  const average = (items, getValue) => items.reduce((sum, item) => sum + getValue(item), 0) / items.length;
+  assert.ok(average(bronze, (item) => item.rarity) < average(silver, (item) => item.rarity));
+  assert.ok(average(silver, (item) => item.rarity) < average(gold, (item) => item.rarity));
+  assert.ok(average(gold, (item) => item.rarity) < average(master, (item) => item.rarity));
+  assert.ok(average(bronze, (item) => item.bot.level) < 7);
+  assert.ok(average(master, (item) => item.bot.level) > 30);
+  const used = [...bronze, ...silver, ...gold, ...master].map((item) => item.bot);
+  for (const value of BOT_AVATAR_COLORS) assert.ok(used.some((bot) => bot.avatar.color === value));
+  for (const value of BOT_AVATAR_FACES) assert.ok(used.some((bot) => bot.avatar.face === value));
+  for (const title of cosmetics.TITLE_CATALOG) assert.ok(used.some((bot) => bot.title === title.id));
+});
+
+test("bot appearance is stable for the same match seed and ignores the human level", () => {
+  const first = createBotIdentity({ ...human, level: 1 }, "sat-classic", "appearance-seed");
+  const second = createBotIdentity({ ...human, level: 80 }, "sat-classic", "appearance-seed");
+  assert.deepEqual(first.avatar, second.avatar);
+  assert.equal(first.title, second.title);
+  assert.equal(first.level, second.level);
 });

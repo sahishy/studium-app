@@ -151,20 +151,22 @@ const AvatarSceneModel = ({
     );
 };
 
-const AvatarModel = ({ profile, animation = null, className }) => {
+const AvatarModel = ({ profile, animation = null, className, rotation = [0, 0, 0], interactive = true, cameraPosition = [0, 4, 7] }) => {
     return (
         <AvatarModelErrorBoundary>
             <div className={`w-48 h-48 overflow-hidden ${className}`}>
-                <Canvas camera={{ position: [0, 4, 7], fov: 20 }}>
+                <Canvas camera={{ position: cameraPosition, fov: 20 }}>
 
                     <ambientLight intensity={1} />
                     <directionalLight position={[0, 1, 1]} intensity={1.5} />
 
                     <Suspense fallback={null}>
-                        <AvatarSceneModel profile={profile} animation={animation} />
+                        <AvatarSceneModel profile={profile} animation={animation} rotation={rotation} />
                     </Suspense>
 
-                    <RotateControls />
+                    {/* Disabled OrbitControls still clamp the camera during their idle reset.
+                        Static avatars must keep their supplied camera position for the whole intro. */}
+                    {interactive ? <RotateControls /> : null}
                 </Canvas>
             </div>
         </AvatarModelErrorBoundary>

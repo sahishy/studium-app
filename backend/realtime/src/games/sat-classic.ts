@@ -1,5 +1,13 @@
 import { changedAction, unchangedAction, type GameEngine, type StoredGame } from "./contracts";
-import { buildReviewQuestionsById, isCorrectSatAnswer, sanitizeSatQuestion } from "./sat-questions";
+import {
+  buildReviewQuestionsById,
+  buildSatResultTelemetry,
+  isCorrectSatAnswer,
+  recordSatAnswer,
+  recordSatQuestionFaced,
+  recordSatRoundWin,
+  sanitizeSatQuestion,
+} from "./sat-questions";
 
 const INITIAL_HEALTH = 3000;
 const MAX_QUESTIONS = 10;
@@ -22,6 +30,7 @@ const finish = (game: StoredGame, winnerUserId: string | null, endReason: string
     endReason,
     startedAt: game.startedAt,
     endedAt: now,
+    ...buildSatResultTelemetry(game),
   };
 };
 
@@ -33,12 +42,14 @@ const resolveRound = (game: StoredGame, now: number, addEvent: (type: string, da
   const roundMultiplier = Number((1 + index * 0.1).toFixed(1));
   const results = game.players.map((player) => {
     const answer = (player.state.lastAnswer as any) ?? {};
-    const correct = answer.questionId === questionId && Boolean(answer.isCorrect);
+    const answered = answer.questionId === questionId;
+    const correct = answered && Boolean(answer.isCorrect);
     const elapsedMs = Number(answer.elapsedMs || ROUND_MS);
     const timeMultiplier = 0.35 + 0.65 / (1 + elapsedMs / 8000);
     const baseDamage = correct ? (BASE_DAMAGE[question.difficulty] ?? BASE_DAMAGE.Medium) : 0;
     return {
       userId: player.userId,
+      answered,
       isCorrect: correct,
       submittedResponse: answer.submittedResponse ?? null,
       elapsedMs,
@@ -49,6 +60,12 @@ const resolveRound = (game: StoredGame, now: number, addEvent: (type: string, da
       damageRaw: Math.round(baseDamage * timeMultiplier * roundMultiplier),
     };
   });
+
+  recordSatQuestionFaced(game, questionId);
+  for (const result of results) {
+    if (!result.answered) continue;
+    recordSatAnswer(game, result.userId, question, { isCorrect: result.isCorrect, elapsedMs: result.elapsedMs });
+  }
   const correctResults = results.filter((result) => result.isCorrect).sort((a, b) => {
     const aa = Number((game.players.find((p) => p.userId === a.userId)?.state.lastAnswer as any)?.elapsedMs || ROUND_MS);
     const bb = Number((game.players.find((p) => p.userId === b.userId)?.state.lastAnswer as any)?.elapsedMs || ROUND_MS);
@@ -63,6 +80,9 @@ const resolveRound = (game: StoredGame, now: number, addEvent: (type: string, da
     const delta = a.damageRaw - b.damageRaw;
     const target = delta > 0 ? game.players.find((p) => p.userId === b.userId) : game.players.find((p) => p.userId === a.userId);
     if (target) target.state.health = Math.max(0, Number(target.state.health) - Math.abs(delta));
+    // Classic has no explicit round score, so out-damaging the opponent is what counts as taking
+    // the round. An even trade belongs to neither player.
+    if (delta !== 0) recordSatRoundWin(game, delta > 0 ? a.userId : b.userId);
   }
   addEvent("ROUND_RESOLVED", {
     questionId,

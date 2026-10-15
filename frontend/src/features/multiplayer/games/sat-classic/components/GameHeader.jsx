@@ -42,20 +42,20 @@ const GameHeader = ({ healthBoard, damageIndicators, elapsedSeconds, currentRoun
     }, [])
 
     return (
-        <div className='w-full flex items-center justify-between gap-6'>
+        <div className='w-full flex items-center justify-between gap-3 sm:gap-6'>
             <HealthPanel
                 player={healthBoard.leftPlayer}
                 damageIndicator={damageIndicators.left}
                 nowMs={nowMs}
             />
 
-            <div className='flex flex-col items-center justify-center'>
+            <div className='flex flex-col items-center justify-center shrink-0'>
                 <p
-                    className={`text-2xl font-semibold tabular-nums transform transition-all duration-150 ${isLowTime ? 'text-red-500' : ''} ${isPopping ? 'scale-110' : 'scale-100'}`}
+                    className={`text-xl sm:text-2xl font-semibold tabular-nums transform transition-all duration-150 ${isLowTime ? 'text-red-500' : ''} ${isPopping ? 'scale-110' : 'scale-100'}`}
                 >
                     {formatDurationMmSs(elapsedSeconds)}
                 </p>
-                <p className='text-sm text-neutral1'>
+                <p className='text-xs sm:text-sm text-neutral1 whitespace-nowrap'>
                     {currentRoundMultiplier.toFixed(1)}x damage
                 </p>
             </div>
