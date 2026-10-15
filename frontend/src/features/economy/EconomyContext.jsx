@@ -50,7 +50,7 @@ const EconomyProvider = ({ userId, progressVersion, children }) => {
             refresherRef.current = {
                 userId,
                 ...createSnapshotRefresher({
-                    fetchSnapshot: () => request({ path: '/v1/economy' }),
+                    fetchSnapshot: ({ fresh }) => request({ path: '/v1/economy', fresh }),
                     onSnapshot: value => {
                         if(activeUserIdRef.current !== userId) return
                         if(!isUsableSnapshot(value)) {
@@ -72,7 +72,12 @@ const EconomyProvider = ({ userId, progressVersion, children }) => {
         previousLevelRef.current = null
         return () => { refresherRef.current?.dispose(); refresherRef.current = null }
     }, [userId])
-    useEffect(() => { refresh({ fresh: false }) }, [refresh, progressVersion])
+    const progressRef = useRef({ userId, progressVersion })
+    useEffect(() => {
+        const previous = progressRef.current
+        progressRef.current = { userId, progressVersion }
+        refresh({ fresh: previous.userId === userId && previous.progressVersion !== progressVersion })
+    }, [refresh, progressVersion, userId])
     const openCrate = async () => {
         const operationId = crypto.randomUUID()
         const result = await post('/v1/economy/crates/open', { operationId })

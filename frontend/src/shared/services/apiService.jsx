@@ -1,4 +1,5 @@
 import { auth } from '../../lib/firebase'
+import { invalidateGamificationMutation, readGamificationCache } from './gamificationCache'
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_API_BASE_URL
 
@@ -32,8 +33,7 @@ const waitForAuthUser = () => {
     return authReadyPromise
 }
 
-const request = async ({ path, method = 'GET', body = null, headers = {} }) => {
-    const user = await waitForAuthUser()
+const fetchResponse = async ({ path, method, body, headers, user }) => {
     const token = user ? await user.getIdToken() : null
     const response = await fetch(buildUrl(path), {
         method,
@@ -44,6 +44,9 @@ const request = async ({ path, method = 'GET', body = null, headers = {} }) => {
         },
         ...(body ? { body: JSON.stringify(body) } : {}),
     })
+
+    // A successful write may already be committed even if its response body is cut short.
+    if(response.ok && method !== 'GET' && user) invalidateGamificationMutation(user.uid, path)
 
     // A body that is present but not JSON means the response was cut short or
     // never came from the API at all. Reading that as `{}` handed callers an
@@ -65,6 +68,15 @@ const request = async ({ path, method = 'GET', body = null, headers = {} }) => {
     }
 
     return data
+}
+
+// Cache only the explicitly supported gamification GET routes.
+const request = async ({ path, method = 'GET', body = null, headers = {}, fresh = false }) => {
+    const user = await waitForAuthUser()
+    const fetchData = () => fetchResponse({ path, method, body, headers, user })
+    return method === 'GET'
+        ? readGamificationCache({ userId: user?.uid, path, fresh, fetchData })
+        : fetchData()
 }
 
 const post = (path, body = {}) => request({ path, method: 'POST', body })

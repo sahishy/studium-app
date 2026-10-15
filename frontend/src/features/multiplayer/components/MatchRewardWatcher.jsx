@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { subscribeToGameSnapshot } from '../services/realtimeSocketService'
 import { useEconomy } from '../../economy/EconomyContext'
 import { useRewardFx } from '../../economy/RewardFxContext'
+import { invalidateGamificationCache } from '../../../shared/services/gamificationCache'
 import { useQuests } from '../../quests/QuestContext'
 
 // Match rewards are granted by the backend when the result is committed, so the
@@ -34,6 +35,7 @@ const MatchRewardWatcher = ({ roomId, userId }) => {
             if(announcedGamesRef.current.has(gameId)) return
 
             announcedGamesRef.current.add(gameId)
+            invalidateGamificationCache(userId)
 
             if(reward.xp || reward.lumen) {
                 celebrateReward({ xp: reward.xp, lumen: reward.lumen, scatter: true })

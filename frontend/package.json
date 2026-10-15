@@ -16,6 +16,7 @@
 		"deploy": "gh-pages -d dist",
 		"test:onboarding": "node --test src/features/courses/utils/featuredCourses.test.js src/features/onboarding/onboardingBridge.test.js",
 		"test:courses": "node --test src/features/courses/utils/randomReviews.test.js",
+		"test:cache": "node --test src/shared/services/gamificationCache.test.js src/features/economy/utils/snapshotRefresh.test.js",
 		"test:economy": "node --test src/features/economy/utils/*.test.js"
 	},
 	"dependencies": {

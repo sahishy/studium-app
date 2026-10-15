@@ -4,14 +4,14 @@ import { request } from '../../shared/services/apiService'
 const localTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 
 // The streak board drives both the tooltip's week strip and the notification dot on the Topbar
-// flame, so it loads once per session rather than per component.
+// flame. A short shared cache lets page headers reuse the same board.
 const useStreak = (userId) => {
 
     const [board, setBoard] = useState(null)
     const [loading, setLoading] = useState(true)
     const [claiming, setClaiming] = useState(false)
 
-    const refresh = useCallback(async () => {
+    const refresh = useCallback(async ({ fresh = true } = {}) => {
 
         if(!userId) {
             setLoading(false)
@@ -19,7 +19,7 @@ const useStreak = (userId) => {
         }
 
         try {
-            setBoard(await request({ path: `/v1/streak?timeZone=${encodeURIComponent(localTimeZone())}` }))
+            setBoard(await request({ path: `/v1/streak?timeZone=${encodeURIComponent(localTimeZone())}`, fresh }))
         } catch {
             setBoard(null)
         } finally {
@@ -28,7 +28,7 @@ const useStreak = (userId) => {
 
     }, [userId])
 
-    useEffect(() => { refresh() }, [refresh])
+    useEffect(() => { refresh({ fresh: false }) }, [refresh])
 
     const claim = useCallback(async () => {
 

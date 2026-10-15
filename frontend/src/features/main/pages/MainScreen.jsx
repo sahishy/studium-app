@@ -1,7 +1,7 @@
 import OnboardingProvider from '../../onboarding/OnboardingProvider'
 import { Outlet } from 'react-router-dom'
 import Sidebar from '../../../shared/components/ui/Sidebar'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../auth/contexts/AuthContext'
 import { doc, onSnapshot } from 'firebase/firestore'
 import { db } from '../../../lib/firebase'
@@ -9,6 +9,7 @@ import { CirclesProvider } from '../../socials/contexts/CirclesContext'
 import { MembersProvider } from '../../socials/contexts/MembersContext'
 import { FriendsProvider } from '../../socials/contexts/FriendsContext'
 import { TasksProvider } from '../../agenda/contexts/TasksContext'
+import { invalidateGamificationCache } from '../../../shared/services/gamificationCache'
 import { EconomyProvider } from '../../economy/EconomyContext'
 import { RewardFxProvider } from '../../economy/RewardFxContext'
 import { QuestProvider } from '../../quests/QuestContext'
@@ -53,6 +54,7 @@ const MainScreen = () => {
     const { user, loading } = useAuth()
     const [profile, setProfile] = useState(null)
     const [profileLoading, setProfileLoading] = useState(true)
+    const progressRef = useRef(null)
 
     useEffect(() => {
 
@@ -64,7 +66,14 @@ const MainScreen = () => {
 
         const unsubscribe = onSnapshot(docRef, (docSnap) => {
             if (docSnap.exists()) {
-                setProfile({ uid: docSnap.id, ...docSnap.data() })
+                const data = docSnap.data()
+                const version = JSON.stringify(data.progress ?? {})
+                const previous = progressRef.current
+                if(previous?.userId === docSnap.id && previous.version !== version) {
+                    invalidateGamificationCache(docSnap.id)
+                }
+                progressRef.current = { userId: docSnap.id, version }
+                setProfile({ uid: docSnap.id, ...data })
             } else {
                 console.log('No user profile found.')
             }

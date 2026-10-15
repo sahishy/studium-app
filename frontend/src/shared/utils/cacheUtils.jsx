@@ -1,4 +1,5 @@
 const CACHE_NAMESPACES = {
+    GAMIFICATION: 'gamification',
     COURSE_SCORE: 'course-score',
     COURSE_ENROLLMENTS: 'course-enrollments',
     COURSE_TEACHERS_MAP: 'course-teachers-map',
@@ -10,6 +11,10 @@ const CACHE_NAMESPACES = {
 }
 
 const CACHE_TTLS_MS = {
+    ECONOMY: 60 * 1000,
+    MASTERY: 5 * 60 * 1000,
+    MATCH_MASTERY: 30 * 60 * 1000,
+    STREAK: 60 * 1000,
     COURSE_SCORE: 60 * 1000,
     COURSE_ENROLLMENTS: 5 * 60 * 1000,
     COURSE_TEACHERS_MAP: 5 * 60 * 1000,
