@@ -48,9 +48,9 @@ const saveActivityUpdates = async (payload) => {
     const updates = normalizeActivityUpdates(payload)
     const batch = db.batch()
     updates.forEach(({ userId, activity }) => {
-        batch.set(db.collection('users').doc(userId), {
+        batch.update(db.collection('users').doc(userId), {
             activity: { ...activity, updatedAt: FieldValue.serverTimestamp() },
-        }, { merge: true })
+        })
     })
     await batch.commit()
     return { updated: updates.length }

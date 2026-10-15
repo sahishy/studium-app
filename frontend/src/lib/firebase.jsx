@@ -17,16 +17,19 @@ const firebaseConfig = {
 }
 
 const app = initializeApp(firebaseConfig)
+const shouldUseEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true'
 
 export const auth = getAuth(app)
 export const db = initializeFirestore(app, {
     localCache: persistentLocalCache({}),
+    // Use short-lived responses for local testing: Safari can fail the
+    // emulator's streaming Listen channel with an access-control error.
+    ...(shouldUseEmulators ? { experimentalForceLongPolling: true } : {}),
 })
 export const storage = getStorage(app)
 export const rtdb = getDatabase(app)
 export const ai = getAI(app, { backend: new GoogleAIBackend() })
 
-const shouldUseEmulators = import.meta.env.VITE_USE_FIREBASE_EMULATORS === 'true'
 if(shouldUseEmulators) {
 
     connectAuthEmulator(

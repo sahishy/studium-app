@@ -45,7 +45,8 @@ service cloud.firestore {
       allow delete: if false;
       match /friends/{friendId} {
         allow read: if signedIn();
-        allow write: if isSelf(uid);
+        // Both sides of a friendship are changed together by the authenticated API.
+        allow write: if false;
       }
     }
 
@@ -117,7 +118,17 @@ service cloud.firestore {
       }
     }
     match /schoolTeachers/{id} { allow read: if signedIn(); allow write: if false; }
-    match /friendRequests/{id} { allow read, write: if signedIn(); }
+    match /friendRequests/{id} {
+      allow read: if signedIn() && (resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['fromUserId', 'toUserId', 'createdAt'])
+        && request.resource.data.fromUserId == request.auth.uid
+        && request.resource.data.toUserId is string
+        && request.resource.data.toUserId != request.auth.uid
+        && exists(/databases/$(database)/documents/users/$(request.resource.data.toUserId))
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+      allow update, delete: if false;
+    }
     match /config/{id} { allow read: if signedIn(); allow write: if false; }
 
     // Rewards and publications are written through authenticated Functions.

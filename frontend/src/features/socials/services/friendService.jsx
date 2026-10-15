@@ -1,4 +1,5 @@
-import { addDoc, collection, deleteDoc, doc, documentId, getDocs, limit, onSnapshot, query, where, writeBatch } from 'firebase/firestore'
+import { post } from '../../../shared/services/apiService'
+import { addDoc, collection, doc, documentId, getDocs, limit, onSnapshot, query, where } from 'firebase/firestore'
 import { useEffect, useState } from 'react'
 import { db } from '../../../lib/firebase'
 import { getUserByDisplayName } from '../../auth/services/userService'
@@ -103,10 +104,7 @@ const removeFriend = async (currentUserId, targetUserId) => {
         throw new Error('Missing user ids.')
     }
 
-    const batch = writeBatch(db)
-    batch.delete(getFriendDocRef(currentUserId, targetUserId))
-    batch.delete(getFriendDocRef(targetUserId, currentUserId))
-    await batch.commit()
+    await post('/v1/friends/remove', { targetUserId })
 
     const currentUserCacheKey = getFriendIdsCacheKey(currentUserId)
     const targetUserCacheKey = getFriendIdsCacheKey(targetUserId)
@@ -139,21 +137,7 @@ const acceptFriendRequest = async ({ requestId, currentUserId, fromUserId }) => 
         throw new Error('Missing friend request metadata.')
     }
 
-    const now = new Date()
-    const batch = writeBatch(db)
-
-    batch.set(getFriendDocRef(currentUserId, fromUserId), {
-        friendUserId: fromUserId,
-        createdAt: now,
-    })
-
-    batch.set(getFriendDocRef(fromUserId, currentUserId), {
-        friendUserId: currentUserId,
-        createdAt: now,
-    })
-
-    batch.delete(doc(db, 'friendRequests', requestId))
-    await batch.commit()
+    await post(`/v1/friend-requests/${encodeURIComponent(requestId)}/respond`, { action: 'accept' })
 
     deleteCacheEntry(getIncomingFriendRequestsCacheKey(currentUserId))
 
@@ -194,7 +178,7 @@ const ignoreFriendRequest = async (requestId) => {
         throw new Error('Missing request id.')
     }
 
-    await deleteDoc(doc(db, 'friendRequests', requestId))
+    await post(`/v1/friend-requests/${encodeURIComponent(requestId)}/respond`, { action: 'ignore' })
 
     emitWindowEvent(INCOMING_REQUESTS_UPDATED_EVENT)
 

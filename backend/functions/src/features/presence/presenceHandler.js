@@ -32,11 +32,6 @@ const handlePresenceChange = onValueWritten({ ref: '/status/{uid}' }, async (eve
 
     const userRef = db.collection('users').doc(uid)
 
-    if(after?.state !== 'online') {
-        await userRef.set({ status: 'inactive', lastSeen: FieldValue.serverTimestamp() }, { merge: true })
-        return
-    }
-
     // Streak evaluation lives here (rather than a separate function) so the read of the
     // *previous* lastSeen and the write of the *new* lastSeen happen in one transaction -
     // otherwise a separate presence-mirroring function racing this one could overwrite
@@ -44,6 +39,13 @@ const handlePresenceChange = onValueWritten({ ref: '/status/{uid}' }, async (eve
     await db.runTransaction(async (transaction) => {
 
         const userSnap = await transaction.get(userRef)
+        // Presence can arrive before signup finishes or after account deletion.
+        // Never create a user document here or leave a status-only account behind.
+        if(!userSnap.exists || !userSnap.data()?.profile?.displayName) return
+        if(after?.state !== 'online') {
+            transaction.update(userRef, { status: 'inactive', lastSeen: FieldValue.serverTimestamp() })
+            return
+        }
         const lastSeen = userSnap.data()?.lastSeen?.toDate?.() ?? null
         const timeZone = userSnap.data()?.preferences?.timeZone
             || userSnap.data()?.progress?.timeZone
