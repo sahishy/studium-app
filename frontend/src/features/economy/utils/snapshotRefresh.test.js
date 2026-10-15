@@ -66,3 +66,21 @@ test('switching accounts discards in-flight and queued results', async () => {
     await f.refresh()
     assert.equal(f.pending.length,1)
 })
+
+
+test('background reads allow caching and queued mutation reads force a fresh snapshot', async () => {
+    const options = [], old = deferred()
+    const refresher = createSnapshotRefresher({
+        fetchSnapshot: option => {
+            options.push(option)
+            return options.length === 1 ? old.promise : Promise.resolve({ balance: 20 })
+        },
+        onSnapshot: () => {}, onError: () => {},
+    })
+    const background = refresher.refresh({ fresh: false })
+    await Promise.resolve()
+    const mutation = refresher.refresh()
+    old.resolve({ balance: 100 })
+    await Promise.all([background, mutation])
+    assert.deepEqual(options, [{ fresh: false }, { fresh: true }])
+})

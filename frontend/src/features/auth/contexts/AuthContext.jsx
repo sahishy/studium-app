@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
 import { auth, db } from '../../../lib/firebase'
 import { getDoc, doc } from 'firebase/firestore'
+import { clearGamificationCache } from '../../../shared/services/gamificationCache'
 import { startPresence, stopPresence } from '../services/presenceService'
 
 const AuthContext = createContext()
@@ -20,6 +21,7 @@ const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            clearGamificationCache()
             setUser(firebaseUser)
 
             if (firebaseUser) {

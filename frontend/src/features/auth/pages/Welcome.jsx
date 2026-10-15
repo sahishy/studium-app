@@ -6,6 +6,7 @@ import { FaArrowLeft } from 'react-icons/fa6'
 import { IoMdInformationCircleOutline } from 'react-icons/io'
 import { auth, db } from '../../../lib/firebase'
 import Button from '../../../shared/components/ui/Button'
+import LoadingState from '../../../shared/components/ui/LoadingState'
 import { useModal } from '../../../shared/contexts/ModalContext'
 import logoSmall from '../../../assets/images/logo_sm.png'
 import googleIcon from '../../../assets/images/google.svg'
@@ -25,6 +26,7 @@ const Welcome = () => {
     const [password, setPassword] = useState('')
     const [firebaseError, setFirebaseError] = useState({})
     const [errors, setErrors] = useState({})
+    const [isCreatingAccount, setIsCreatingAccount] = useState(false)
 
     const validateForm = () => {
         let isValid = true
@@ -65,9 +67,12 @@ const Welcome = () => {
     const handleSignup = async (e) => {
         e.preventDefault()
 
-        if (!validateForm()) {
+        if (isCreatingAccount || !validateForm()) {
             return
         }
+
+        setIsCreatingAccount(true)
+        setFirebaseError({})
 
         try {
             const res = await createUserWithEmailAndPassword(auth, email, password)
@@ -88,10 +93,16 @@ const Welcome = () => {
             navigate('/play')
         } catch (err) {
             setFirebaseError(err)
+            setIsCreatingAccount(false)
         }
     }
 
     const handleGoogleContinue = async () => {
+        if (isCreatingAccount) return
+
+        setIsCreatingAccount(true)
+        setFirebaseError({})
+
         const provider = new GoogleAuthProvider()
         provider.setCustomParameters({ prompt: 'select_account' })
 
@@ -118,12 +129,21 @@ const Welcome = () => {
             navigate('/play')
         } catch (err) {
             setFirebaseError(err)
+            setIsCreatingAccount(false)
         }
     }
 
     const openLogInModal = () => {
         openModal(
             <LogInModal onSwitchToSignUp={() => navigate('/welcome')} />
+        )
+    }
+
+    if (isCreatingAccount) {
+        return (
+            <div className="min-h-screen text-neutral0 flex flex-col items-center justify-center gap-4 px-6" aria-busy="true">
+                <LoadingState className="!h-16 !min-h-0" />
+            </div>
         )
     }
 

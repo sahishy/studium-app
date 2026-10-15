@@ -6,9 +6,9 @@ export const createSnapshotRefresher = ({ fetchSnapshot, onSnapshot, onError }) 
     let revision = 0
     let disposed = false
 
-    const run = () => {
+    const run = (fresh) => {
         const requestedRevision = ++revision
-        running = Promise.resolve().then(fetchSnapshot).then(value => {
+        running = Promise.resolve().then(() => fetchSnapshot({ fresh })).then(value => {
             if(!disposed && revision === requestedRevision) onSnapshot(value)
             return value
         }).catch(error => {
@@ -21,12 +21,12 @@ export const createSnapshotRefresher = ({ fetchSnapshot, onSnapshot, onError }) 
         refresh: ({ fresh = true } = {}) => {
             if(disposed) return Promise.resolve()
             if(queued) return queued
-            if(!running) return run()
+            if(!running) return run(fresh)
             if(!fresh) return running
             revision += 1
             queued = running.then(() => {
                 queued = null
-                return disposed ? undefined : run()
+                return disposed ? undefined : run(true)
             })
             return queued
         },

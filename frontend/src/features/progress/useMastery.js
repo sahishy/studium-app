@@ -8,7 +8,7 @@ const useMastery = (userId) => {
     const [board, setBoard] = useState(null)
     const [loading, setLoading] = useState(true)
 
-    const refresh = useCallback(async () => {
+    const refresh = useCallback(async ({ fresh = true } = {}) => {
 
         if(!userId) {
             setLoading(false)
@@ -16,7 +16,7 @@ const useMastery = (userId) => {
         }
 
         try {
-            setBoard(await request({ path: '/v1/mastery' }))
+            setBoard(await request({ path: '/v1/mastery', fresh }))
         } catch {
             // The skill web draws its own empty state, so a failed load degrades to "no data"
             // rather than taking the page down with it. A board that already loaded is kept,
@@ -29,7 +29,7 @@ const useMastery = (userId) => {
 
     }, [userId])
 
-    useEffect(() => { refresh() }, [refresh])
+    useEffect(() => { refresh({ fresh: false }) }, [refresh])
 
     return { board, loading, refresh }
 }
