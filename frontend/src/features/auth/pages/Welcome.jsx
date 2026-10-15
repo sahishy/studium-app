@@ -14,6 +14,7 @@ import { createNewUserObject } from '../services/userService'
 import { createUserStatsDocument } from '../../profile/services/statsService'
 import { uploadProfilePicture } from '../../../shared/services/storageService'
 import LogInModal from '../components/modals/LogInModal'
+import { useAuthSubmission, waitForAuthPaint } from '../hooks/useAuthSubmission'
 
 
 
@@ -26,7 +27,7 @@ const Welcome = () => {
     const [password, setPassword] = useState('')
     const [firebaseError, setFirebaseError] = useState({})
     const [errors, setErrors] = useState({})
-    const [isCreatingAccount, setIsCreatingAccount] = useState(false)
+    const { isSubmitting, startSubmission, finishSubmission } = useAuthSubmission()
 
     const validateForm = () => {
         let isValid = true
@@ -67,14 +68,14 @@ const Welcome = () => {
     const handleSignup = async (e) => {
         e.preventDefault()
 
-        if (isCreatingAccount || !validateForm()) {
+        if (isSubmitting || !validateForm() || !startSubmission()) {
             return
         }
 
-        setIsCreatingAccount(true)
         setFirebaseError({})
 
         try {
+            await waitForAuthPaint()
             const res = await createUserWithEmailAndPassword(auth, email, password)
             const user = res.user
             const userRef = doc(db, 'users', user.uid)
@@ -93,14 +94,13 @@ const Welcome = () => {
             navigate('/play')
         } catch (err) {
             setFirebaseError(err)
-            setIsCreatingAccount(false)
+            finishSubmission()
         }
     }
 
     const handleGoogleContinue = async () => {
-        if (isCreatingAccount) return
+        if (!startSubmission()) return
 
-        setIsCreatingAccount(true)
         setFirebaseError({})
 
         const provider = new GoogleAuthProvider()
@@ -129,7 +129,7 @@ const Welcome = () => {
             navigate('/play')
         } catch (err) {
             setFirebaseError(err)
-            setIsCreatingAccount(false)
+            finishSubmission()
         }
     }
 
@@ -139,10 +139,11 @@ const Welcome = () => {
         )
     }
 
-    if (isCreatingAccount) {
+    if (isSubmitting) {
         return (
             <div className="min-h-screen text-neutral0 flex flex-col items-center justify-center gap-4 px-6" aria-busy="true">
                 <LoadingState className="!h-16 !min-h-0" />
+                <p role="status" className="text-center text-neutral1">Setting up your account…</p>
             </div>
         )
     }

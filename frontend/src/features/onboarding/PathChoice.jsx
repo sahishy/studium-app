@@ -152,7 +152,7 @@ export default function PathChoice({ dialogRef, busy, error, onStart, onSkip }) 
                                 <p className="flex-1 text-sm leading-relaxed text-neutral1">
                                     {text}
                                 </p>
-                                <span className="flex items-center justify-center gap-1 text-sm font-semibold text-amber-500">
+                                <span className="flex items-center justify-center gap-1 text-sm font-semibold text-yellow-400">
                                     <PiStarFourFill aria-hidden="true" />
                                     +{xp} XP
                                 </span>

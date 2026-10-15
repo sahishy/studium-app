@@ -71,7 +71,7 @@ export const CircleActivityContent = ({ board, profile, circleId, members, circl
         {!board ? <p className="text-sm text-neutral1">Loading activity…</p> : <div className="flex-1 min-h-0 grid grid-cols-1 grid-rows-[minmax(0,1.4fr)_minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-1 gap-5 lg:gap-8">
             <section className="min-h-0 min-w-0 flex flex-col items-center text-center gap-1">
                 <h2 className="shrink-0 mt-8 text-lg font-semibold">Grand Quest</h2>
-                <p className="shrink-0 text-sm text-neutral1 max-w-xs">Complete quests and Circle tasks together to fill up the orb</p>
+                <p className="shrink-0 text-sm text-neutral1 max-w-xs">Complete quests together to fill up the orb!</p>
                 <div className={`shrink-0 flex items-center justify-center gap-3 mt-3 text-sm font-semibold ${isPrimary ? "text-neutral0" : "text-neutral2"}`}>
                     <span role="img" aria-label={`${board.reward.xp} XP`} className={`flex items-center gap-1 ${isPrimary ? "text-yellow-400" : "text-neutral2"}`}><PiStarFourFill />{board.reward.xp}</span>
                     <span role="img" aria-label={`${board.reward.lumen} Lumen`} className={`flex items-center gap-1 ${isPrimary ? "text-sky-500" : "text-neutral2"}`}><LumenIcon className={`size-4 ${isPrimary ? "" : "grayscale opacity-50"}`} />{board.reward.lumen}</span>

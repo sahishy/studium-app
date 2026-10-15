@@ -155,7 +155,9 @@ const AvatarModel = ({ profile, animation = null, className, rotation = [0, 0, 0
     return (
         <AvatarModelErrorBoundary>
             <div className={`w-48 h-48 overflow-hidden ${className}`}>
-                <Canvas camera={{ position: cameraPosition, fov: 20 }}>
+                {/* Measure layout dimensions so a fitted stage's transform doesn't
+                    shrink the canvas a second time or move it off the podium. */}
+                <Canvas camera={{ position: cameraPosition, fov: 20 }} resize={{ offsetSize: true }}>
 
                     <ambientLight intensity={1} />
                     <directionalLight position={[0, 1, 1]} intensity={1.5} />

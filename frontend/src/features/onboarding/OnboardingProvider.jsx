@@ -137,7 +137,7 @@ export default function OnboardingProvider({profile,children}){
             setState(s=>({...s,pending:s.pending.filter(e=>e.id!==pendingEvent.id)}))
         } catch(err){setError(err.message)}
     }
-    return <Context.Provider value={{start,active:run,step,ready:!!state,crateOffer,practiceActions:{onAnswer:async(answer,calculatorOpened)=>{await progressQueue.current;setState(await post('/v1/onboarding/practice',{runId:run.id,answer,calculatorOpened}))},onReturn:async()=>{await advance('practice');setPractice(false);navigate('/play')}},sidebarGroup:blocked?null:sidebarGroup}}>{children}
+    return <Context.Provider value={{start,active:run,step,ready:!!state,rewarded:state?.rewarded || [],crateOffer,practiceActions:{onAnswer:async(answer,calculatorOpened)=>{await progressQueue.current;setState(await post('/v1/onboarding/practice',{runId:run.id,answer,calculatorOpened}))},onReturn:async()=>{await advance('practice');setPractice(false);navigate('/play')}},sidebarGroup:blocked?null:sidebarGroup}}>{children}
         {EventRenderer && <EventRenderer event={pendingEvent} onAcknowledge={acknowledge} error={error} />}
         {showChoice && <PathChoice dialogRef={choiceRef} busy={busy} error={error} onStart={start} onSkip={acknowledge} />}
         {run && step && !blocked && !practice && !location.pathname.startsWith('/play/tutorial/') && !crateOpening && !isOpen && <Spotlight step={{...step,recordId:step.target==='agenda:sample-one'?run.artifacts?.['task-one']:step.target==='agenda:sample-two'?run.artifacts?.['task-two']:undefined}} visible={guidanceReady && location.pathname===step.route} busy={busy} error={error} onNext={()=>advance()} onRetry={()=>{setError('');setRetry(n=>n+1)}} />}

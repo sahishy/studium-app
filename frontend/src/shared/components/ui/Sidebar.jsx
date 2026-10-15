@@ -92,7 +92,8 @@ const Sidebar = ({ profile, mobile = false, onNavigate }) => {
     const { quests } = useQuests()
     const { user: userTasks, circle: circleTasks } = useTasks()
     const today = useToday()
-    const inRoom = session?.status === 'in_room' && Boolean(session?.currentRoomId)
+    const navigationDisabled = (session?.status === 'in_room' && Boolean(session?.currentRoomId))
+        || location.pathname.startsWith('/play/tutorial/')
 
     // Paths that should show a dot in the sidebar, each owned by whatever
     // actually needs the student's attention.
@@ -150,9 +151,9 @@ const Sidebar = ({ profile, mobile = false, onNavigate }) => {
     }
 
     return (
-        <aside className={`bg-neutral5 p-4 ${mobile ? 'flex h-full' : 'hidden lg:flex'} flex-col justify-between shrink-0 w-56 border-r border-neutral4`}>
+        <aside className={`bg-neutral5 p-4 ${mobile ? 'flex h-full' : 'hidden lg:flex h-dvh'} min-h-0 overflow-y-auto overscroll-y-contain flex-col justify-between gap-6 shrink-0 w-56 border-r border-neutral4`}>
 
-            <div className='flex flex-col gap-6'>
+            <div className='flex shrink-0 flex-col gap-6'>
 
                 <Logo className={'p-2'} large />
 
@@ -191,13 +192,13 @@ const Sidebar = ({ profile, mobile = false, onNavigate }) => {
                                         onToggle={() => toggleGroup(group.storageKey, setter)}
                                         items={group.items}
                                         location={location}
-                                        disabled={inRoom}
+                                        disabled={navigationDisabled}
                                         notifications={notifications}
                                         indicators={indicators}
                                         socialsExpanded={socialsExpanded}
                                         onSocialsClick={toggleSocials}
                                         hasPinnedCircles={pins.length>0}
-                                        circleLinks={<SidebarCircles expanded={expanded && socialsExpanded} pins={pins} toggle={togglePin} onNavigate={onNavigate} disabled={inRoom} />}
+                                        circleLinks={<SidebarCircles expanded={expanded && socialsExpanded} pins={pins} toggle={togglePin} onNavigate={onNavigate} disabled={navigationDisabled} />}
                                         onNavigate={onNavigate}
                                     />
                                 )
@@ -209,15 +210,15 @@ const Sidebar = ({ profile, mobile = false, onNavigate }) => {
 
             </div>
 
-            <div className='flex flex-col gap-4'>
-                <div className={`flex justify-center gap-1 mb-6 text-sm ${inRoom ? 'opacity-40' : ''}`}>
+            <div className='flex shrink-0 flex-col gap-4'>
+                <div className={`flex justify-center gap-1 mb-6 text-sm ${navigationDisabled ? 'opacity-40' : ''}`}>
                     <TextTooltip text='Profile' placement='top'>
                         <Link
                             to={`/profile/${encodeURIComponent(profile?.profile?.displayName ?? '')}`}
-                            onClick={inRoom ? (event) => event.preventDefault() : onNavigate}
+                            onClick={navigationDisabled ? (event) => event.preventDefault() : onNavigate}
                             aria-label='Profile'
-                            aria-disabled={inRoom}
-                            className={`size-9 flex items-center justify-center rounded-full transition text-neutral2 ${inRoom ? 'cursor-not-allowed' : 'hover:text-neutral0'}`}
+                            aria-disabled={navigationDisabled}
+                            className={`size-9 flex items-center justify-center rounded-full transition text-neutral2 ${navigationDisabled ? 'cursor-not-allowed' : 'hover:text-neutral0'}`}
                         >
                             <FaUser />
                         </Link>
@@ -225,10 +226,10 @@ const Sidebar = ({ profile, mobile = false, onNavigate }) => {
                     <TextTooltip text='Settings' placement='top'>
                         <Link
                             to='/settings'
-                            onClick={inRoom ? (event) => event.preventDefault() : onNavigate}
+                            onClick={navigationDisabled ? (event) => event.preventDefault() : onNavigate}
                             aria-label='Settings'
-                            aria-disabled={inRoom}
-                            className={`size-9 flex items-center justify-center rounded-full transition text-neutral2 ${inRoom ? 'cursor-not-allowed' : 'hover:text-neutral0'}`}
+                            aria-disabled={navigationDisabled}
+                            className={`size-9 flex items-center justify-center rounded-full transition text-neutral2 ${navigationDisabled ? 'cursor-not-allowed' : 'hover:text-neutral0'}`}
                         >
                             <FaGear />
                         </Link>
@@ -237,7 +238,7 @@ const Sidebar = ({ profile, mobile = false, onNavigate }) => {
                         <button
                             type='button'
                             aria-label='Submit Feedback'
-                            disabled={inRoom}
+                            disabled={navigationDisabled}
                             onClick={handleFeedback}
                             className='size-9 flex items-center justify-center rounded-full text-neutral2 transition hover:text-neutral0 cursor-pointer disabled:cursor-not-allowed disabled:hover:text-neutral2'
                         >
