@@ -86,4 +86,5 @@ jobs:
           firebase functions:secrets:set REALTIME_ACTIVITY_SECRET --data-file="$secret_file"
 
       - name: Deploy to Firebase
-        run: firebase deploy
+        # Acknowledge the retry policy on clearDeletedCirclePrimary in CI.
+        run: firebase deploy --non-interactive --force
