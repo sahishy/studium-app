@@ -7,18 +7,22 @@ import Topbar from '../../../shared/components/ui/Topbar'
 import Button from '../../../shared/components/ui/Button'
 import PageHeader from '../../../shared/components/ui/PageHeader'
 import { FaGear } from 'react-icons/fa6'
+import { PiStarFourFill } from 'react-icons/pi'
 import BottomFade from '../../../shared/components/ui/BottomFade'
 import { useModal } from '../../../shared/contexts/ModalContext'
 import EditDisplayNameModal from '../components/modals/EditDisplayNameModal'
 
-const DetailRow = ({ label, value, action, onAction }) => {
+const DetailRow = ({ label, value, action, onAction, rewardXp = 0 }) => {
 
     return (
         <div className='py-3'>
             <div className='flex items-start justify-between gap-6'>
 
                 <div>
-                    <p className='text-sm font-semibold text-neutral0'>{label}</p>
+                    <p className='flex flex-wrap items-center gap-2 text-sm font-semibold text-neutral0'>
+                        {label}
+                        {rewardXp > 0 && <span className='inline-flex items-center gap-1 text-xs text-yellow-400'><PiStarFourFill aria-hidden='true' />{rewardXp} XP</span>}
+                    </p>
                     {value ? <p className='text-sm text-neutral1'>{value}</p> : null}
                 </div>
 
@@ -39,7 +43,7 @@ const DetailRow = ({ label, value, action, onAction }) => {
 }
 
 const Settings = () => {
-    const { start: startTutorial, active: tutorialActive } = useOnboarding()
+    const { start: startTutorial, active: tutorialActive, ready: tutorialsReady, rewarded } = useOnboarding()
 
     const { profile } = useOutletContext()
     const { logout } = useAuth()
@@ -143,7 +147,13 @@ const Settings = () => {
 
                 </section>
 
-                <section className="flex flex-col gap-4"><h2 className="text-xl font-semibold">Tutorials</h2><div className="divide-y divide-neutral4"><DetailRow label="Play tutorial" value="Learn the games, progress, and cosmetics." action={tutorialActive ? null : 'Start'} onAction={() => startTutorial('play')} /><DetailRow label="Study tutorial" value="Learn smart tasks, courses, and resources." action={tutorialActive ? null : 'Start'} onAction={() => startTutorial('study')} /></div></section>
+                <section className='flex flex-col gap-4'>
+                    <h2 className='text-xl font-semibold'>Tutorials</h2>
+                    <div className='divide-y divide-neutral4'>
+                        <DetailRow label='Play tutorial' value='Learn the games, progress, and cosmetics.' rewardXp={tutorialsReady && !rewarded.includes('play') ? 150 : 0} action={tutorialActive ? null : 'Start'} onAction={() => startTutorial('play')} />
+                        <DetailRow label='Study tutorial' value='Learn smart tasks, courses, and resources.' rewardXp={tutorialsReady && !rewarded.includes('study') ? 150 : 0} action={tutorialActive ? null : 'Start'} onAction={() => startTutorial('study')} />
+                    </div>
+                </section>
                 <section className='flex flex-col gap-6'>
                     <h2 className='text-xl font-semibold text-neutral0'>Manage Account</h2>
 

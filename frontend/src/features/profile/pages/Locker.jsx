@@ -4,6 +4,7 @@ import { useOutletContext, useParams, useNavigate } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
 import Card from '../../../shared/components/ui/Card'
 import AvatarModel from '../../../shared/components/avatar/AvatarModel'
+import FittedAvatarStage from '../../../shared/components/avatar/FittedAvatarStage'
 import TextTabSelector from '../../../shared/components/ui/TextTabSelector'
 import background from '../../../assets/images/background.jpeg'
 import { AVATAR_COLORS, AVATAR_FACES, STARTER_FACES } from '../utils/avatarUtils'
@@ -259,11 +260,13 @@ const Locker = () => {
                                 <CrateView crate={crate} lockerRef={lockerRef} />
                             ) : (
                                 <>
-                                    <AvatarModel
-                                        profile={previewProfile || profile}
-                                        animation={'Idle'}
-                                        className='absolute bottom-16 z-2 w-144! h-144!'
-                                    />
+                                    <FittedAvatarStage minWidth={36} minHeight={40} className='absolute! inset-0 z-2'>
+                                        <AvatarModel
+                                            profile={previewProfile || profile}
+                                            animation={'Idle'}
+                                            className='absolute bottom-16 left-1/2 -translate-x-1/2 w-144! h-144!'
+                                        />
+                                    </FittedAvatarStage>
 
                                     <div className={`
                                             z-3 absolute bottom-0 w-full flex justify-center gap-3 py-12 bg-gradient-to-t from-neutral6 to-transparent

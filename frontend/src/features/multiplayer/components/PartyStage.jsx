@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { FaCrown, FaPlus, FaRightToBracket } from 'react-icons/fa6'
 import AvatarModel from '../../../shared/components/avatar/AvatarModel'
+import FittedAvatarStage from '../../../shared/components/avatar/FittedAvatarStage'
 import Podium from '../../../shared/components/avatar/Podium'
 import Title from '../../profile/components/Title'
 import PlayerLevel from '../../profile/components/PlayerLevel'
@@ -260,39 +261,41 @@ const PartyStage = ({ party, mode, currentProfile, friends = [], onInvite, onJoi
     })
 
     return (
-        <div className='relative flex-1 min-h-0 flex items-end justify-center px-1 pb-12'>
-            {backMembers.length ? (
-                <div className='absolute inset-x-0 bottom-60 z-5 h-48 opacity-70 pointer-events-none'>
-                    {backMembers.map((member, index) => (
-                        <div key={member.userId} className={`absolute bottom-0 ${backPositions[index]}`}>
-                            <AnimatedPlayerSpot
-                                playerRef={playerRef(member.userId)}
-                                member={member}
-                                party={party}
-                                mode={mode}
-                                currentProfile={currentProfile}
-                                back
-                                showLabel={false}
-                            />
-                        </div>
-                    ))}
-                </div>
-            ) : null}
-
-            <div className={`relative z-10 w-full grid ${stageColumns} items-end`}>
-                {leftMember ? (
-                    <AnimatedPlayerSpot playerRef={playerRef(leftMember.userId)} member={leftMember} party={party} mode={mode} currentProfile={currentProfile} roomy={roomy} twoPlayerParty={twoPlayerParty} className='relative z-10 translate-x-20 -translate-y-16' />
-                ) : (invitePosition === 'left' ? <InviteSpot onInvite={onInvite} onJoinParty={onJoinParty} showJoinParty={showJoinParty} onlineFriends={onlineFriends} roomy={roomy} className={singlePlayer ? 'translate-x-12' : ''} /> : <div />)}
-
-                {currentMember ? (
-                    <AnimatedPlayerSpot playerRef={playerRef(currentMember.userId)} member={currentMember} party={party} mode={mode} currentProfile={currentProfile} focus roomy={roomy} soloPlayer={singlePlayer} twoPlayerParty={twoPlayerParty} showPodiumShadow={!singlePlayer} className={`relative z-20 ${singlePlayer ? 'translate-x-16' : ''}`} />
+        <FittedAvatarStage minWidth={48} minHeight={roomy ? 46 : 42} className='flex-1'>
+            <div className='relative h-full flex items-end justify-center px-1 pb-12'>
+                {backMembers.length ? (
+                    <div className='absolute inset-x-0 bottom-60 z-5 h-48 opacity-70 pointer-events-none'>
+                        {backMembers.map((member, index) => (
+                            <div key={member.userId} className={`absolute bottom-0 ${backPositions[index]}`}>
+                                <AnimatedPlayerSpot
+                                    playerRef={playerRef(member.userId)}
+                                    member={member}
+                                    party={party}
+                                    mode={mode}
+                                    currentProfile={currentProfile}
+                                    back
+                                    showLabel={false}
+                                />
+                            </div>
+                        ))}
+                    </div>
                 ) : null}
 
-                {rightMember ? (
-                    <AnimatedPlayerSpot playerRef={playerRef(rightMember.userId)} member={rightMember} party={party} mode={mode} currentProfile={currentProfile} roomy={roomy} className='relative z-10 -translate-x-12 -translate-y-16' />
-                ) : (invitePosition === 'right' ? <InviteSpot onInvite={onInvite} onJoinParty={onJoinParty} showJoinParty={showJoinParty} onlineFriends={onlineFriends} roomy={roomy} /> : <div />)}
+                <div className={`relative z-10 w-full grid ${stageColumns} items-end`}>
+                    {leftMember ? (
+                        <AnimatedPlayerSpot playerRef={playerRef(leftMember.userId)} member={leftMember} party={party} mode={mode} currentProfile={currentProfile} roomy={roomy} twoPlayerParty={twoPlayerParty} className='relative z-10 translate-x-20 -translate-y-16' />
+                    ) : (invitePosition === 'left' ? <InviteSpot onInvite={onInvite} onJoinParty={onJoinParty} showJoinParty={showJoinParty} onlineFriends={onlineFriends} roomy={roomy} className={singlePlayer ? 'translate-x-12' : ''} /> : <div />)}
+
+                    {currentMember ? (
+                        <AnimatedPlayerSpot playerRef={playerRef(currentMember.userId)} member={currentMember} party={party} mode={mode} currentProfile={currentProfile} focus roomy={roomy} soloPlayer={singlePlayer} twoPlayerParty={twoPlayerParty} showPodiumShadow={!singlePlayer} className={`relative z-20 ${singlePlayer ? 'translate-x-16' : ''}`} />
+                    ) : null}
+
+                    {rightMember ? (
+                        <AnimatedPlayerSpot playerRef={playerRef(rightMember.userId)} member={rightMember} party={party} mode={mode} currentProfile={currentProfile} roomy={roomy} className='relative z-10 -translate-x-12 -translate-y-16' />
+                    ) : (invitePosition === 'right' ? <InviteSpot onInvite={onInvite} onJoinParty={onJoinParty} showJoinParty={showJoinParty} onlineFriends={onlineFriends} roomy={roomy} /> : <div />)}
+                </div>
             </div>
-        </div>
+        </FittedAvatarStage>
     )
 }
 

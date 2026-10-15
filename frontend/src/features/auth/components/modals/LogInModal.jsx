@@ -11,12 +11,15 @@ import { createNewUserObject } from '../../services/userService'
 import { createUserStatsDocument } from '../../../profile/services/statsService'
 import { uploadProfilePicture } from '../../../../shared/services/storageService'
 import googleIcon from '../../../../assets/images/google.svg'
+import LoadingState from '../../../../shared/components/ui/LoadingState'
+import { useAuthSubmission, waitForAuthPaint } from '../../hooks/useAuthSubmission'
 
 const LogInModal = ({ onSwitchToSignUp }) => {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [firebaseError, setFirebaseError] = useState({})
     const [errors, setErrors] = useState({})
+    const { isSubmitting, startSubmission, finishSubmission } = useAuthSubmission()
 
     const navigate = useNavigate()
     const { closeModal } = useModal()
@@ -24,18 +27,24 @@ const LogInModal = ({ onSwitchToSignUp }) => {
     const handleLogin = async (e) => {
         e.preventDefault()
 
-        if (validateForm()) {
+        if (!isSubmitting && validateForm() && startSubmission()) {
+            setFirebaseError({})
             try {
+                await waitForAuthPaint()
                 await signInWithEmailAndPassword(auth, email, password)
                 closeModal()
                 navigate('/play')
             } catch (err) {
                 setFirebaseError(err)
+                finishSubmission()
             }
         }
     }
 
     const handleGoogleContinue = async () => {
+        if (!startSubmission()) return
+        setFirebaseError({})
+
         const provider = new GoogleAuthProvider()
         provider.setCustomParameters({ prompt: 'select_account' })
 
@@ -60,6 +69,7 @@ const LogInModal = ({ onSwitchToSignUp }) => {
             navigate('/play')
         } catch (err) {
             setFirebaseError(err)
+            finishSubmission()
         }
     }
 
@@ -104,6 +114,15 @@ const LogInModal = ({ onSwitchToSignUp }) => {
             closeModal()
             onSwitchToSignUp()
         }
+    }
+
+    if (isSubmitting) {
+        return (
+            <div className='w-full min-h-64 flex flex-col items-center justify-center gap-4' aria-busy='true'>
+                <LoadingState className='!h-16 !min-h-0' />
+                <p role='status' className='text-center text-neutral1'>Getting your account ready…</p>
+            </div>
+        )
     }
 
     return (
