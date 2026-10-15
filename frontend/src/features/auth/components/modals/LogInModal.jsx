@@ -1,14 +1,12 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GoogleAuthProvider, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { FaCircleExclamation } from 'react-icons/fa6'
 import logoSmall from '../../../../assets/images/logo_sm.png'
-import { auth, db } from '../../../../lib/firebase'
+import { auth } from '../../../../lib/firebase'
 import { useModal } from '../../../../shared/contexts/ModalContext'
 import Button from '../../../../shared/components/ui/Button'
-import { createNewUserObject } from '../../services/userService'
-import { createUserStatsDocument } from '../../../profile/services/statsService'
+import { ensureUserProfile } from '../../services/userService'
 import { uploadProfilePicture } from '../../../../shared/services/storageService'
 import googleIcon from '../../../../assets/images/google.svg'
 import LoadingState from '../../../../shared/components/ui/LoadingState'
@@ -31,7 +29,8 @@ const LogInModal = ({ onSwitchToSignUp }) => {
             setFirebaseError({})
             try {
                 await waitForAuthPaint()
-                await signInWithEmailAndPassword(auth, email, password)
+                const result = await signInWithEmailAndPassword(auth, email, password)
+                await ensureUserProfile(result.user)
                 closeModal()
                 navigate('/play')
             } catch (err) {
@@ -52,13 +51,9 @@ const LogInModal = ({ onSwitchToSignUp }) => {
             const res = await signInWithPopup(auth, provider)
             const user = res.user
 
-            const userRef = doc(db, 'users', user.uid)
-            const userSnap = await getDoc(userRef)
+            const newUserObject = await ensureUserProfile(user)
 
-            if (!userSnap.exists()) {
-                const newUserObject = await createNewUserObject({ email: user.email })
-                await setDoc(userRef, newUserObject)
-                await createUserStatsDocument({ userId: user.uid })
+            if (!newUserObject?.profile?.profilePicture?.url) {
                 await uploadProfilePicture({
                     uid: user.uid,
                     profileForThumbnail: newUserObject,

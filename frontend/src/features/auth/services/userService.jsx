@@ -1,3 +1,4 @@
+import { post } from '../../../shared/services/apiService'
 import { doc, updateDoc, collection, getAggregateFromServer, getCountFromServer, onSnapshot, query, sum, where, documentId, getDocs, getDoc, setDoc, limit } from 'firebase/firestore'
 import { useEffect, useState } from 'react';
 import { getRandomAvatarColor } from '../../profile/utils/avatarUtils';
@@ -71,6 +72,24 @@ const createNewUserObject = async ({ email }) => {
         preferences: { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' },
     }
 
+}
+
+// Signup and the auth observer share one initialization, so neither can overwrite
+// the other's profile or mistake a presence-only document for a completed signup.
+const profileInitializations = new Map()
+const ensureUserProfile = (user) => {
+    if(profileInitializations.has(user.uid)) return profileInitializations.get(user.uid)
+    const pending = (async () => {
+        const existing = await getUserById(user.uid)
+        if(existing?.profile?.displayName?.trim() && existing?.profile?.avatar && existing?.progress?.level != null && existing?.progress?.xp != null) return existing
+        await post('/v1/profile/ensure', {
+            displayName: await generateUniqueDisplayName(),
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        })
+        return getUserById(user.uid)
+    })().finally(() => profileInitializations.delete(user.uid))
+    profileInitializations.set(user.uid, pending)
+    return pending
 }
 
 const updateUserInfo = async (uid, userData) => {
@@ -293,6 +312,7 @@ const useMembersList = (memberIds = []) => {
 
 export {
     createNewUserObject,
+    ensureUserProfile,
     isDisplayNameAvailable,
     generateUniqueDisplayName,
     getUserById,

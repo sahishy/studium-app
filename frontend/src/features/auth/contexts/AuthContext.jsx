@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { auth, db } from '../../../lib/firebase'
-import { getDoc, doc } from 'firebase/firestore'
+import { auth } from '../../../lib/firebase'
+import { ensureUserProfile } from '../services/userService'
 import { clearGamificationCache } from '../../../shared/services/gamificationCache'
 import { startPresence, stopPresence } from '../services/presenceService'
 
@@ -23,30 +23,31 @@ const AuthProvider = ({ children }) => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             clearGamificationCache()
             setUser(firebaseUser)
+            setProfile(null)
+            if(presenceUnsubscribeRef.current) {
+                presenceUnsubscribeRef.current()
+                presenceUnsubscribeRef.current = null
+            }
+            if(presenceUidRef.current) {
+                void stopPresence(presenceUidRef.current)
+                presenceUidRef.current = null
+            }
 
             if (firebaseUser) {
-                presenceUnsubscribeRef.current = startPresence(firebaseUser.uid)
-                presenceUidRef.current = firebaseUser.uid
-
-                const profileRef = doc(db, 'users', firebaseUser.uid)
-                const profileSnap = await getDoc(profileRef)
-                if(profileSnap.exists()) {
-                    const nextProfile = { uid: profileSnap.id, ...profileSnap.data() }
+                try {
+                    const nextProfile = await ensureUserProfile(firebaseUser)
+                    if(auth.currentUser?.uid !== firebaseUser.uid) return
                     setProfile(nextProfile)
                     applyThemePreference(nextProfile?.preferences?.theme)
-                } else {
+                    presenceUnsubscribeRef.current = startPresence(firebaseUser.uid)
+                    presenceUidRef.current = firebaseUser.uid
+                } catch(error) {
+                    if(auth.currentUser?.uid !== firebaseUser.uid) return
+                    console.error('Could not initialize your profile', error)
                     setProfile(null)
                     applyThemePreference('light')
                 }
             } else {
-                if(presenceUnsubscribeRef.current) {
-                    presenceUnsubscribeRef.current()
-                    presenceUnsubscribeRef.current = null
-                }
-                if(presenceUidRef.current) {
-                    stopPresence(presenceUidRef.current)
-                    presenceUidRef.current = null
-                }
                 setProfile(null)
                 applyThemePreference('light')
             }
@@ -54,7 +55,10 @@ const AuthProvider = ({ children }) => {
             setLoading(false)
         })
 
-        return () => unsubscribe()
+        return () => {
+            unsubscribe()
+            presenceUnsubscribeRef.current?.()
+        }
     }, [])
 
     return (

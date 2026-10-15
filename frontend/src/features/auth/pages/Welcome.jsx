@@ -1,17 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { FaArrowLeft } from 'react-icons/fa6'
 import { IoMdInformationCircleOutline } from 'react-icons/io'
-import { auth, db } from '../../../lib/firebase'
+import { auth } from '../../../lib/firebase'
 import Button from '../../../shared/components/ui/Button'
 import LoadingState from '../../../shared/components/ui/LoadingState'
 import { useModal } from '../../../shared/contexts/ModalContext'
 import logoSmall from '../../../assets/images/logo_sm.png'
 import googleIcon from '../../../assets/images/google.svg'
-import { createNewUserObject } from '../services/userService'
-import { createUserStatsDocument } from '../../profile/services/statsService'
+import { ensureUserProfile } from '../services/userService'
 import { uploadProfilePicture } from '../../../shared/services/storageService'
 import LogInModal from '../components/modals/LogInModal'
 import { useAuthSubmission, waitForAuthPaint } from '../hooks/useAuthSubmission'
@@ -78,14 +76,7 @@ const Welcome = () => {
             await waitForAuthPaint()
             const res = await createUserWithEmailAndPassword(auth, email, password)
             const user = res.user
-            const userRef = doc(db, 'users', user.uid)
-
-            const newUserObject = await createNewUserObject({
-                email: res.user.email,
-            })
-
-            await setDoc(userRef, newUserObject)
-            await createUserStatsDocument({ userId: user.uid })
+            const newUserObject = await ensureUserProfile(user)
             await uploadProfilePicture({
                 uid: user.uid,
                 profileForThumbnail: newUserObject,
@@ -110,16 +101,9 @@ const Welcome = () => {
             const res = await signInWithPopup(auth, provider)
             const user = res.user
 
-            const userRef = doc(db, 'users', user.uid)
-            const userSnap = await getDoc(userRef)
+            const newUserObject = await ensureUserProfile(user)
 
-            if (!userSnap.exists()) {
-                const newUserObject = await createNewUserObject({
-                    email: user.email,
-                })
-
-                await setDoc(userRef, newUserObject)
-                await createUserStatsDocument({ userId: user.uid })
+            if (!newUserObject?.profile?.profilePicture?.url) {
                 await uploadProfilePicture({
                     uid: user.uid,
                     profileForThumbnail: newUserObject,

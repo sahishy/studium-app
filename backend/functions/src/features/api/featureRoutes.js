@@ -1,6 +1,8 @@
 import { getOnlineEvents, acknowledgeEvent, startOnboarding, reserveArtifact, advanceOnboarding, answerPractice, completeOnboarding, openTutorialCrate, resetOnboardingForTesting } from '../onboarding/onboardingService.js'
 import { listJoinedCircles, mutateMembership, setPrimaryCircle, editCircleIdentity, circleActivity, claimCircleGrandQuest } from '../socials/circleApi.js'
 import { Router } from 'express'
+import { ensureUserProfile } from '../auth/profileService.js'
+import { removeFriend, respondToFriendRequest } from '../socials/friendService.js'
 import { toggleReviewHeart, removeCourseReview } from '../courses/reviewHeartService.js'
 import { auth, db } from '../../lib/firebaseAdmin.js'
 import { deliverFeedback, validateFeedback } from '../feedback/feedbackService.js'
@@ -29,6 +31,10 @@ router.use(async (req, res, next) => {
         next()
     } catch { res.status(401).json({ error: 'Unauthorized.' }) }
 })
+
+router.post('/profile/ensure', route(req => ensureUserProfile(req.identity, req.body)))
+router.post('/friends/remove', route(req => removeFriend(req.identity.uid, req.body.targetUserId)))
+router.post('/friend-requests/:id/respond', route(req => respondToFriendRequest(req.identity.uid, req.params.id, req.body.action)))
 
 router.get('/events', route(req => getOnlineEvents(req.identity.uid)))
 router.post('/events/acknowledge', route(req => acknowledgeEvent(req.identity.uid,req.body.eventId)))
