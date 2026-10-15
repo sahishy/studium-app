@@ -139,6 +139,7 @@ const Settings = () => {
                                 <div className='absolute -right-2 -bottom-2 w-38 h-26 rounded-xl bg-[#131316] border border-[#26262c] p-3'>
                                     <div className='text-white font-bold text-2xl text-start'>Aa</div>
                                 </div>
+                                <div className='absolute top-2 right-2 rounded-xl px-1.5 py-0.5 bg-neutral2 text-neutral0 text-[8px]'>BETA</div>
                             </button>
 
                         </div>

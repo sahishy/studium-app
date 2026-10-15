@@ -83,18 +83,18 @@ const PlayerBanner = ({ player, side, phase, modeId, placed, driftMs }) => {
 
             <div className='relative z-20 mx-auto -mt-[8%] flex w-[72%] min-w-0 flex-col items-center gap-1 text-center'>
 
-                <p className='max-w-full truncate text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900'>
+                <p className='max-w-full truncate text-lg sm:text-xl lg:text-2xl font-semibold text-neutral0'>
                     {player?.displayName || 'Player'}
                 </p>
 
-                <Title titleId={player?.title} size='sm' className='[&.text-neutral1]:text-gray-500' />
+                <Title titleId={player?.title} size='sm' className='[&.text-neutral1]:text-neutral1' />
 
                 <div className='mt-0.5 flex flex-wrap justify-center items-center gap-1.5 sm:gap-2'>
                     <img src={rank.imageSrc} alt='' className='size-4 sm:size-6 object-cover' />
-                    <span className='text-xs sm:text-sm font-semibold text-gray-500 tabular-nums'>
-                        {placed ? <>{elo} <span className='text-[9px] font-medium text-gray-500'>SAT</span></> : 'Unranked'}
+                    <span className='text-xs sm:text-sm font-semibold text-neutral1 tabular-nums'>
+                        {placed ? <>{elo} <span className='text-[9px] font-medium text-neutral1'>SAT</span></> : 'Unranked'}
                     </span>
-                    <PlayerLevel level={player?.level} className='sm:ml-2 text-gray-500!' />
+                    <PlayerLevel level={player?.level} className='sm:ml-2 text-neutral1!' />
                 </div>
 
             </div>
@@ -169,7 +169,7 @@ const MatchIntroOverlay = ({ players = [], userId, roomId, modeId, introEndsAt =
             // The avatar contexts only live for the intro window. They are unmounted hard once
             // `done` flips rather than left hidden, because stacking avatar canvases is what has
             // crashed a GPU context on this app before (see the note in Leaderboards.jsx).
-            className='pointer-events-none absolute z-50 inset-0 flex items-center justify-center overflow-hidden bg-white '
+            className='pointer-events-none absolute z-50 inset-0 flex items-center justify-center overflow-hidden bg-neutral6'
             // The background fades at the same speed as the banners, throughout the intro.
             style={{ opacity: phase === 'fade' ? 0 : 1, transition: `opacity ${INTRO_FADE_OUT_MS}ms` }}
             aria-hidden='true'
