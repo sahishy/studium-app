@@ -6,7 +6,7 @@ const GrandQuestOrb = ({ count, target, canClaim = false, claiming = false, onCl
     const fill = target > 0 ? 0.12 + 0.88 * Math.max(0, Math.min(1, count / target)) : 0.12
     return <div className="relative flex flex-col items-center mt-6 sm:mt-8 py-2 w-full max-w-72 sm:max-w-80 xl:max-w-88">
         <div className="relative isolate w-full aspect-square">
-            <div aria-hidden="true" className={`absolute z-0 -inset-[40%] w-[180%] aspect-square pointer-events-none [mask-size:contain] [mask-repeat:no-repeat] [mask-position:center] ${canClaim ? "bg-sky-400 opacity-[0.20] dark:opacity-[0.24] animate-[spin_60s_linear_infinite]" : "bg-neutral0 opacity-[0.06] dark:opacity-[0.03] animate-[spin_90s_linear_infinite]"}`} style={{ maskImage: `url(${shine})`, WebkitMaskImage: `url(${shine})` }} />
+            {canClaim && <div aria-hidden="true" className="absolute z-0 -inset-[40%] w-[180%] aspect-square pointer-events-none bg-sky-400 opacity-[0.20] dark:opacity-[0.24] [mask-size:contain] [mask-repeat:no-repeat] [mask-position:center] animate-[spin_60s_linear_infinite]" style={{ maskImage: `url(${shine})`, WebkitMaskImage: `url(${shine})` }} />}
             <div className="circle-quest-orb relative z-10 w-full aspect-square rounded-full overflow-hidden border-4 border-neutral3/60 bg-neutral5">
                 <div className="circle-quest-liquid absolute inset-x-0 bottom-0 bg-sky-400" style={{ height: `${fill * 100}%` }}>
                     {fill > 0 && fill < 1 && <>

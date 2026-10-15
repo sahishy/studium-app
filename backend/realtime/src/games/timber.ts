@@ -1,3 +1,4 @@
+import { initializeGameplayTelemetry, recordGameplayAction } from "./gameplay-telemetry";
 import { changedAction, unchangedAction, type GameContext, type GameEngine, type StoredGame } from "./contracts";
 import {
   buildReviewQuestionsById,
@@ -254,6 +255,7 @@ const publicState = (game: StoredGame) => {
 
 export const createTimberGame = (): GameEngine => ({
   initialize(game, questions, context) {
+    initializeGameplayTelemetry(game);
     const selected = questions.slice(0, MAX_QUESTIONS);
     const ids = selected.map((question) => question.id);
     game.privateState.questionsById = Object.fromEntries(selected.map((question) => [question.id, question]));
@@ -329,7 +331,10 @@ export const createTimberGame = (): GameEngine => ({
     player.state.timberProgress = Math.min(Number(game.state.requiredChops), (Number(player.state.timberProgress) || 0) + 1);
     const hit = branch === side;
     if (hit) {
+      recordGameplayAction(game, userId, "stuns");
       player.state.stunnedUntil = chopAt + STUN_MS;
+    } else {
+      recordGameplayAction(game, userId, "timberLogsChopped");
     }
     if (Number(player.state.timberProgress) >= Number(game.state.requiredChops)) {
       resolveTimberRound(game, userId, "target_reached", context);

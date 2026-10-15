@@ -1,6 +1,24 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { getBoardWidgetOrder, insertBoardTask, commitBoardMove } from './boardPresentationUtils.js'
+import { pendingPatchAfterCreate } from './taskOptimisticUtils.js'
+import { sortBoardTasks } from './taskViewUtils.js'
+
+test('create acknowledgment preserves the intended column and title edits while discarding server timestamps', () => {
+    const server = { uid: 'new', status: 'Incomplete', title: '', boardIndex: 3, createdAt: { seconds: 1 } }
+    const local = { ...server, status: 'In Progress', title: 'Edited while saving', createdAt: new Date(), updatedAt: new Date() }
+    const patch = pendingPatchAfterCreate(server, local)
+    assert.deepEqual(patch, { status: 'In Progress', title: 'Edited while saving' })
+    assert.equal(({ ...server, ...patch }).status, 'In Progress')
+    assert.deepEqual(pendingPatchAfterCreate({ ...server, ...patch }, patch), {})
+})
+
+test('normalizing column positions appends new tasks after sparse and legacy positions', () => {
+    const existing = [{ uid: 'legacy', boardIndex: -1, listIndex: 0 }, { uid: 'sparse', boardIndex: 90 }, { uid: 'first', boardIndex: 5 }]
+    const ordered = sortBoardTasks(existing)
+    const positioned = ordered.map((task, boardIndex) => ({ ...task, boardIndex }))
+    assert.deepEqual(sortBoardTasks([...positioned, { uid: 'new', boardIndex: positioned.length }]).map((task) => task.uid), ['first', 'sparse', 'legacy', 'new'])
+})
 
 test('grouping widget leads, followed by active widgets and unset widgets', () => {
     assert.deepEqual(getBoardWidgetOrder('status', { courseId: 'math' }), ['status', 'course', 'date'])

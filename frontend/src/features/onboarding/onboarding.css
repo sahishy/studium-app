@@ -1,8 +1,0 @@
-.onboarding-choice { background: rgba(255,255,255,.94); backdrop-filter: blur(32px); color: #111827; opacity: 1; transition: opacity 450ms ease, backdrop-filter 450ms ease; }
-.onboarding-choice-leaving { opacity: 0; pointer-events: none; }
-.onboarding-path { transition: transform 250ms ease, border-color 250ms ease, opacity 250ms ease; }
-.onboarding-path[aria-pressed="false"] { opacity: .65; }
-/* The card ring replaces the app-wide focus outline. */
-.onboarding-path:focus { outline: none; }
-.onboarding-path:not(:disabled):hover { transform: scale(1.025); }
-@media (prefers-reduced-motion: reduce) { .onboarding-choice, .onboarding-path { transition: none; } }

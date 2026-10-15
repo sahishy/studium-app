@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { request, post } from '../../../shared/services/apiService'
 import { useMembers } from '../contexts/MembersContext'
@@ -13,20 +13,45 @@ import { PiStarFourFill } from 'react-icons/pi'
 import { FaTrophy, FaClipboardCheck } from 'react-icons/fa6'
 import { useEconomy } from '../../economy/EconomyContext'
 import { useRewardFx } from '../../economy/RewardFxContext'
+import { createGrandQuestClaimGuard } from '../utils/grandQuestClaimGuard'
 const CircleActivityTab = () => {
     const { circleId, profile, circleMembers = [] } = useOutletContext()
     const members = useMembers()
     const [board, setBoard] = useState(null), [error, setError] = useState(''), [busy,setBusy] = useState(false)
+    const [claimGuard] = useState(createGrandQuestClaimGuard)
+    const loadSequence = useRef(0)
     const { refresh } = useEconomy(), { celebrateReward } = useRewardFx()
     const load = useCallback(async () => {
+        const sequence = ++loadSequence.current
         try {
             const result = await request({ path: `/v1/circles/${circleId}/activity` })
+            if (sequence !== loadSequence.current) return
+            const key = JSON.stringify([profile.uid, circleId, result.claimCycle])
+            if (result.claimCycle && claimGuard.hasClaimed(key)) return
             setBoard(result)
             setError('')
-        } catch (err) { setError(err.message) }
-    }, [circleId])
+        } catch (err) { if (sequence === loadSequence.current) setError(err.message) }
+    }, [circleId, profile.uid, claimGuard])
     useEffect(() => {setBoard(null);load(); const timer = setInterval(() => load(),30000); return () => clearInterval(timer)},[load,profile.primaryCircleId])
-    const claim = async () => {setBusy(true); try {const result=await post(`/v1/circles/${circleId}/grand-quest/claim`, { cycle: board.claimCycle });celebrateReward(result.reward);await refresh();await load()}catch(err){setError(err.message)}finally{setBusy(false)}}
+    const claim = async () => {
+        const cycle = board?.claimCycle
+        if (!board?.canClaim || !Number.isSafeInteger(cycle) || cycle < 1) return
+        const key = JSON.stringify([profile.uid, circleId, cycle])
+        if (!claimGuard.start(key)) return
+        ++loadSequence.current
+        setBusy(true)
+        setError('')
+        try {
+            const result = await post(`/v1/circles/${circleId}/grand-quest/claim`, { cycle })
+            claimGuard.markClaimed(key)
+            setBoard(current => current?.claimCycle === cycle ? { ...current, canClaim: false, claimCycle: null, count: 0 } : current)
+            if (!result.alreadyClaimed) celebrateReward(result.reward)
+            await refresh()
+            await load()
+        } catch (err) { setError(err.message) }
+        finally { claimGuard.finish(); setBusy(false) }
+    }
+
     return <CircleActivityContent board={board} profile={profile} circleId={circleId} members={members} circleMembers={circleMembers}
         error={error} busy={busy} onClaim={claim} onRetry={load} />
 }
@@ -46,19 +71,19 @@ export const CircleActivityContent = ({ board, profile, circleId, members, circl
         {!board ? <p className="text-sm text-neutral1">Loading activity…</p> : <div className="flex-1 min-h-0 grid grid-cols-1 grid-rows-[minmax(0,1.4fr)_minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-1 gap-5 lg:gap-8">
             <section className="min-h-0 min-w-0 flex flex-col items-center text-center gap-1">
                 <h2 className="shrink-0 mt-8 text-lg font-semibold">Grand Quest</h2>
-                <p className="shrink-0 text-sm text-neutral1 max-w-xs">Work together to fill up the orb</p>
+                <p className="shrink-0 text-sm text-neutral1 max-w-xs">Complete quests and Circle tasks together to fill up the orb</p>
                 <div className={`shrink-0 flex items-center justify-center gap-3 mt-3 text-sm font-semibold ${isPrimary ? "text-neutral0" : "text-neutral2"}`}>
                     <span role="img" aria-label={`${board.reward.xp} XP`} className={`flex items-center gap-1 ${isPrimary ? "text-yellow-400" : "text-neutral2"}`}><PiStarFourFill />{board.reward.xp}</span>
                     <span role="img" aria-label={`${board.reward.lumen} Lumen`} className={`flex items-center gap-1 ${isPrimary ? "text-sky-500" : "text-neutral2"}`}><LumenIcon className={`size-4 ${isPrimary ? "" : "grayscale opacity-50"}`} />{board.reward.lumen}</span>
-                    {!isPrimary && <TextTooltip placement="top" text={<span className="block max-w-60 leading-relaxed">Grand Quest rewards can only be claimed from your primary Circle.</span>}>
-                        <button type="button" aria-label="Why Grand Quest rewards are unavailable" className="flex items-center justify-center text-neutral1 hover:text-neutral0 cursor-pointer">
+                    {<TextTooltip placement="top" text={<span className="block max-w-60 leading-relaxed">To earn a Grand Quest reward, this must be your primary Circle when the goal finishes and when you claim.</span>}>
+                        <button type="button" aria-label="Why Grand Quest rewards are unavailable" className="flex items-center justify-center text-neutral2 hover:text-neutral1">
                             <IoMdInformationCircleOutline className="text-lg" />
                         </button>
                     </TextTooltip>}
                 </div>
                 <CircleQuestStage count={board.count} target={board.target} members={stageMembers}
                     canClaim={board.canClaim} claiming={busy} onClaim={onClaim} />
-                {!board.canClaim && isPrimary && complete && <p className="shrink-0 text-xs text-neutral1 mt-2 max-w-sm">Rewards are for members who were here when the goal finished.</p>}
+                {!board.canClaim && isPrimary && complete && <p className="shrink-0 text-xs text-neutral1 mt-2 max-w-sm">Rewards require this Circle to have been your primary when the goal finished.</p>}
             </section>
             <section className="min-w-0 min-h-0 flex flex-col gap-3">
                 <h2 className="shrink-0 text-lg font-semibold">Circle activity</h2>

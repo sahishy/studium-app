@@ -12,7 +12,7 @@ const ErrorState = ({ title = 'Something went wrong', description = '', fullPage
                 <FaFrown className="text-neutral2 text-4xl mb-3"/>
                 <h2 className='text-lg font-semibold text-neutral0'>{title}</h2>
                 {description ? (
-                    <p className='mt-2 text-sm text-neutral1 max-w-2xl text-wrap'>{description}</p>
+                    <p className='mt-1 text-sm text-neutral1 max-w-2xl text-wrap'>{description}</p>
                 ) : null}
             </div>
         </div>

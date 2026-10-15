@@ -142,6 +142,8 @@ test("clears rings, accelerates, and automatically consumes a shield on a miss",
   assert.equal(fixture.game.players[0].state.flutterShieldAvailable, false);
   assert.equal(fixture.game.state.flutterRingIndex, 2);
   assert.ok(fixture.events.some((event) => event.type === "FLUTTER_SHIELD_CONSUMED" && event.actorUserId === "p1"));
+  assert.equal(fixture.game.privateState.gameplayByUserId.p1.flutterRingsCleared, 1);
+  assert.equal(fixture.game.privateState.gameplayByUserId.p2.flutterRingsCleared, 2);
 });
 
 test("scores for the survivor and retries a simultaneous miss without using a question", () => {
@@ -153,6 +155,8 @@ test("scores for the survivor and retries a simultaneous miss without using a qu
   assert.equal(scoreFixture.game.players[0].state.score, 1);
   assert.equal(scoreFixture.game.state.phase, "flutter_result");
   assert.equal(scoreFixture.game.state.flutterRoundsPlayed, 1);
+  assert.equal(scoreFixture.game.privateState.gameplayByUserId.p1.flutterRingsCleared, 1);
+  assert.equal(scoreFixture.game.privateState.gameplayByUserId.p2.flutterRingsCleared, 0);
 
   const retryFixture = setup();
   enterFlutter(retryFixture);
@@ -167,6 +171,7 @@ test("scores for the survivor and retries a simultaneous miss without using a qu
   assert.equal(retryFixture.game.state.questionIndex, 0);
   assert.equal(retryFixture.game.state.flutterAttempt, 1);
   assert.equal(retryFixture.game.state.advantageOwnerUserId, null);
+  assert.equal(retryFixture.game.privateState.gameplayByUserId.p1.flutterRingsCleared, 0);
 });
 
 test("ends at three points and handles forfeits", () => {
@@ -181,6 +186,7 @@ test("ends at three points and handles forfeits", () => {
   passDeadline(fixture);
   assert.equal(fixture.game.result.winnerUserId, "p1");
   assert.equal(fixture.game.result.endReason, "first_to_three");
+  assert.equal(fixture.game.result.gameplayByUserId.p1.flutterRingsCleared, 1);
 
   const forfeit = setup();
   forfeit.engine.handleForfeit(forfeit.game, "p1", forfeit.context());

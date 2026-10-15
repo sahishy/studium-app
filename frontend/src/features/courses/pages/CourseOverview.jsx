@@ -5,11 +5,9 @@ import Button from '../../../shared/components/ui/Button'
 import CourseReviewCard from '../components/CourseReviewCard'
 import { getCourseReviews, upsertCourseReview, getUsersByIdsMap, deleteCourseReview, computeAverageScoreFromReviews } from '../services/reviewService'
 import { getCourseById, getStudentCountForCourse, leaveCourse } from '../services/courseService'
-import { useUserStats } from '../../profile/contexts/UserStatsContext'
-import { SCORE_OPTIONS, sortReviewsBySchoolPriority, formatScoreLabel } from '../utils/reviewUtils'
+import { SCORE_OPTIONS, sortReviewsByNewest, formatScoreLabel } from '../utils/reviewUtils'
 import { useCourses } from '../contexts/CoursesContext'
 import Card from '../../../shared/components/ui/Card'
-import { getEffectiveSchoolIds } from '../../profile/services/schoolService'
 import ProgressBar from '../../../shared/components/ui/ProgressBar'
 import AddCourseModal from '../components/modals/AddCourseModal'
 import EditCourseModal from '../components/modals/EditCourseModal'
@@ -48,7 +46,6 @@ const CourseOverview = () => {
 
     const { courseId } = useParams()
     const { profile } = useOutletContext()
-    const { userStats } = useUserStats()
     const { enrollments = [], selectedCourses = [] } = useCourses()
     const { openModal, closeModal } = useModal()
 
@@ -149,12 +146,7 @@ const CourseOverview = () => {
     }, [reviews])
 
     const sortedReviews = useMemo(() => {
-        const effectiveSchoolIds = getEffectiveSchoolIds({
-            schoolId: userStats?.academic?.schoolId ?? null,
-            schoolAffiliations: userStats?.academic?.schoolAffiliations ?? [],
-        })
-
-        const base = sortReviewsBySchoolPriority(reviews, effectiveSchoolIds)
+        const base = sortReviewsByNewest(reviews)
         if (!profile?.uid) {
             return base
         }
@@ -165,7 +157,7 @@ const CourseOverview = () => {
         }
 
         return [mine, ...base.filter((review) => String(review.userId) !== String(profile.uid))]
-    }, [reviews, profile?.uid, userStats?.academic?.schoolId, userStats?.academic?.schoolAffiliations])
+    }, [reviews, profile?.uid])
 
     const isOverviewLoading = reviewsLoading || studentsTakingCountLoading
 
@@ -211,7 +203,6 @@ const CourseOverview = () => {
             await upsertCourseReview({
                 courseId,
                 userId: profile.uid,
-                schoolId: userStats?.academic?.schoolId ?? null,
                 review: reviewText,
                 score,
             })
@@ -220,7 +211,6 @@ const CourseOverview = () => {
                 uid: `${String(courseId)}_${String(profile.uid)}`,
                 courseId: String(courseId),
                 userId: String(profile.uid),
-                schoolId: userStats?.academic?.schoolId ? String(userStats.academic.schoolId) : null,
                 review: String(reviewText ?? '').trim(),
                 score: Number(score),
                 lastUpdated: {
@@ -351,8 +341,6 @@ const CourseOverview = () => {
             <AddCourseModal
                 profile={profile}
                 course={course}
-                schoolId={userStats?.academic?.schoolId ?? null}
-                schoolAffiliations={userStats?.academic?.schoolAffiliations ?? []}
                 closeModal={closeModal}
             />
         )

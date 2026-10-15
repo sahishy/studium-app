@@ -1,3 +1,5 @@
+import './HtmlContent.css'
+
 const HtmlContent = ({ html, className = '' }) => {
 
     if (!html) {
@@ -40,6 +42,7 @@ const HtmlContent = ({ html, className = '' }) => {
     return (
         <div
             className={`
+                html-content
                 text-left
                 text-xs
                 leading-relaxed

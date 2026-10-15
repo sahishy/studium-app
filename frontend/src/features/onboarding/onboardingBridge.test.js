@@ -33,7 +33,7 @@ test('Local examples advance immediately while record reservation waits for prio
     assert.deepEqual(await reservation,{tutorialRunId:'run',tutorialKind:'task-one'})
     assert.equal(calls[0].body.kind,'task-one')
     assert.ok(bridge.tutorialTaskCreationError(title),'Tasks are blocked outside the creation step')
-    const second={segments:[{rawText:'APUSH',widgetType:'course',value:{courseId:'LCPS-750100'}},{text:' test '},{rawText:'tomorrow',widgetType:'date',value:{dueDate:'2026-10-13'}}]}
+    const second={segments:[{rawText:'APUSH',widgetType:'course',value:{courseId:'LCPS-750100'}},{text:' test '},{rawText:'in 2 days',widgetType:'date',value:{dueDate:'2026-10-15'}}]}
     bridge.setTutorialBridge({active:{id:'run',index:0,artifacts:{}},steps:[{event:'task-two'}]})
     assert.equal(bridge.tutorialTaskCreationError(second),null)
     assert.ok(bridge.tutorialTaskCreationError({...second,segments:second.segments.slice(1)}))

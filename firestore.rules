@@ -33,12 +33,15 @@ service cloud.firestore {
 
     match /users/{uid} {
       allow read: if signedIn();
-      allow create: if isSelf(uid) && request.resource.data.progress.level == 1 && request.resource.data.progress.xp == 0 && request.resource.data.get('primaryCircleId', null) == null;
+      allow create: if isSelf(uid) && request.resource.data.progress.level == 1 && request.resource.data.progress.xp == 0 && request.resource.data.get('primaryCircleId', null) == null
+        && (!request.resource.data.keys().hasAny(['circleMemberships'])
+          || request.resource.data.circleMemberships == {'version': 1, 'ids': []});
       allow update: if isSelf(uid)
         && request.resource.data.progress == resource.data.progress
         && request.resource.data.get('badges', []) == resource.data.get('badges', [])
         && request.resource.data.profile.avatar == resource.data.profile.avatar
-        && request.resource.data.get('primaryCircleId', null) == resource.data.get('primaryCircleId', null);
+        && request.resource.data.get('primaryCircleId', null) == resource.data.get('primaryCircleId', null)
+        && request.resource.data.get('circleMemberships', null) == resource.data.get('circleMemberships', null);
       allow delete: if false;
       match /friends/{friendId} {
         allow read: if signedIn();
@@ -48,10 +51,13 @@ service cloud.firestore {
 
     match /userStats/{uid} {
       allow read: if signedIn();
-      allow create: if isSelf(uid) && request.resource.data.play == {} && request.resource.data.get('totalElo', 0) == 0;
+      allow create: if isSelf(uid) && request.resource.data.play == {} && request.resource.data.get('totalElo', 0) == 0
+        && !request.resource.data.keys().hasAny(['dailyRewards', 'mastery']);
       allow update: if isSelf(uid)
         && request.resource.data.play == resource.data.play
-        && request.resource.data.get('totalElo', 0) == resource.data.get('totalElo', 0);
+        && request.resource.data.get('totalElo', 0) == resource.data.get('totalElo', 0)
+        && request.resource.data.get('dailyRewards', null) == resource.data.get('dailyRewards', null)
+        && request.resource.data.get('mastery', null) == resource.data.get('mastery', null);
       allow delete: if false;
     }
 
@@ -93,9 +99,22 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.studentId == request.auth.uid;
     }
     match /courseReviews/{id} {
-      allow read, delete: if signedIn();
-      allow create: if signedIn() && !request.resource.data.keys().hasAny(['teacherId','day']);
-      allow update: if signedIn() && preservesRetiredCourseFields(resource.data,request.resource.data);
+      allow read: if signedIn();
+      // Delete through the API so the review's hearts are removed as well.
+      allow delete: if false;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid
+        && id == request.resource.data.courseId + '_' + request.auth.uid
+        && request.resource.data.get('heartsCount', 0) == 0
+        && !request.resource.data.keys().hasAny(['teacherId','day','schoolId']);
+      allow update: if signedIn() && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.courseId == resource.data.courseId
+        && request.resource.data.get('heartsCount', 0) == resource.data.get('heartsCount', 0)
+        && preservesRetiredCourseFields(resource.data,request.resource.data);
+      match /hearts/{uid} {
+        allow read: if isSelf(uid);
+        allow write: if false;
+      }
     }
     match /schoolTeachers/{id} { allow read: if signedIn(); allow write: if false; }
     match /friendRequests/{id} { allow read, write: if signedIn(); }

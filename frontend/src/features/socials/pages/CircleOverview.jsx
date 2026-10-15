@@ -74,7 +74,7 @@ const CircleOverview = () => {
                             className='rounded-xl w-16 h-16 text-2xl shrink-0'
                         />
                         <div className='flex flex-col min-w-0'>
-                            <h1 className='text-2xl font-semibold text-neutral0 truncate'>{circle.profile.title}</h1>
+                            <h1 className='text-2xl font-semibold text-neutral0 truncate max-w-64'>{circle.profile.title}</h1>
                             <span className="text-sm text-neutral1">{circle.memberCount} member{circle.memberCount !== 1 && 's'}</span>
                         </div>
                     </div>

@@ -131,6 +131,8 @@ test("successful shots attach and decrement while collisions retain the pin and 
   assert.equal(player.state.pinsRemaining, before - 1);
   assert.equal(player.state.puncturePinAngles.length, 1);
   assert.equal(player.state.punctureShotCount, 1);
+  assert.equal(fixture.game.privateState.gameplayByUserId.p1.puncturePinsPlaced, 1);
+  assert.equal(fixture.game.privateState.gameplayByUserId.p1.stuns, 0);
 
   fixture.setNow(startedAt + 100);
   const rotation = Number(fixture.game.state.rotationTurnsPerSecond) * 360 * 0.175;
@@ -141,6 +143,8 @@ test("successful shots attach and decrement while collisions retain the pin and 
   assert.equal(player.state.puncturePinAngles.length, 1);
   assert.equal(player.state.stunnedUntil, startedAt + 2_100);
   assert.equal(player.state.punctureShotCount, 2);
+  assert.equal(fixture.game.privateState.gameplayByUserId.p1.puncturePinsPlaced, 1);
+  assert.equal(fixture.game.privateState.gameplayByUserId.p1.stuns, 1);
 
   fixture.setNow(startedAt + 200);
   shoot(fixture, "p1", "stun-blocked");
@@ -183,6 +187,7 @@ test("accepts a shot once and rejects a duplicate client action id", () => {
   assert.equal(duplicate.changed, false);
   assert.equal(duplicate.reply?.payload.accepted, true, "an idempotent retry returns the original accepted receipt");
   assert.deepEqual(duplicate.reply?.payload.shot, accepted.reply?.payload.shot);
+  assert.equal(fixture.game.privateState.gameplayByUserId.p1.puncturePinsPlaced, 1);
 });
 
 test("returns exact shot geometry and private rejection reasons", () => {

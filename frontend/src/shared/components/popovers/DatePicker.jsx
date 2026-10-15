@@ -17,9 +17,9 @@ const DatePicker = ({ children, selectedDate, onSelect, className = '' }) => {
     }
     const content = (closePopover) => <div className='flex w-64 flex-col gap-4 p-3'>
         <MiniCalendar month={month} selectedDate={date} onMonthChange={setMonth} onSelect={(day) => { setDate(day); setMonth(day) }} />
-        <div className='flex justify-end gap-2 border-t border-neutral4 pt-3'>
-            <Button onClick={() => { onSelect(-1); closePopover() }}>Clear</Button>
-            <Button type='primary' onClick={() => {
+        <div className='grid grid-cols-2 gap-2'>
+            <Button className='w-full' onClick={() => { onSelect(-1); closePopover() }}>Clear</Button>
+            <Button className='w-full' type='primary' onClick={() => {
                 const endOfDay = new Date(date)
                 endOfDay.setHours(23, 59, 59, 999)
                 onSelect(endOfDay)

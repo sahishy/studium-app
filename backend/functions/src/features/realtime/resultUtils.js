@@ -23,6 +23,20 @@ const sanitizeRealtimeResult = (result = {}) => {
             .map((userId) => [userId, result.performanceByUserId[userId]]))
         : {}
 
+    const humanGameplayByUserId = Object.fromEntries(humanPlayerIds
+        .filter((userId) => result.gameplayByUserId?.[userId])
+        .map((userId) => {
+            const telemetry = result.gameplayByUserId[userId]
+            const counters = Object.fromEntries(['timberLogsChopped', 'puncturePinsPlaced', 'flutterRingsCleared', 'stuns']
+                .map((key) => [key, Number.isFinite(telemetry[key]) ? Math.max(0, Math.floor(telemetry[key])) : 0]))
+            return [userId, {
+                ...counters,
+                // A missing or invalid stun count cannot prove a clean win.
+                trackedFromStart: telemetry.trackedFromStart === true
+                    && Number.isInteger(telemetry.stuns) && telemetry.stuns >= 0,
+            }]
+        }))
+
     // Ratings are keyed by every player, bots included, because pricing an underdog win needs the
     // opponent's rating. They are collapsed per human here and deliberately kept out of
     // persistedResult, which is the only object written to Firestore.
@@ -43,6 +57,7 @@ const sanitizeRealtimeResult = (result = {}) => {
         humanPlayerIds,
         outcomeByUserId,
         performanceByUserId: humanPerformanceByUserId,
+        gameplayByUserId: humanGameplayByUserId,
         selfEloByUserId,
         opponentEloByUserId,
         persistedResult: {
@@ -51,6 +66,7 @@ const sanitizeRealtimeResult = (result = {}) => {
             winnerUserId: humanPlayerIds.includes(result.winnerUserId) ? result.winnerUserId : null,
             ...(humanScoreByUserId ? { scoreByUserId: humanScoreByUserId } : {}),
             ...(result.performanceByUserId ? { performanceByUserId: humanPerformanceByUserId } : {}),
+            ...(result.gameplayByUserId ? { gameplayByUserId: humanGameplayByUserId } : {}),
             participationByUserId: humanParticipationByUserId,
             outcomeByUserId,
         },

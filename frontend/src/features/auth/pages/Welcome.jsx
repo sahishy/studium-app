@@ -79,7 +79,7 @@ const Welcome = () => {
             })
 
             await setDoc(userRef, newUserObject)
-            await createUserStatsDocument({ userId: user.uid, schoolId: null, schoolAffiliations: [] })
+            await createUserStatsDocument({ userId: user.uid })
             await uploadProfilePicture({
                 uid: user.uid,
                 profileForThumbnail: newUserObject,
@@ -108,7 +108,7 @@ const Welcome = () => {
                 })
 
                 await setDoc(userRef, newUserObject)
-                await createUserStatsDocument({ userId: user.uid, schoolId: null, schoolAffiliations: [] })
+                await createUserStatsDocument({ userId: user.uid })
                 await uploadProfilePicture({
                     uid: user.uid,
                     profileForThumbnail: newUserObject,

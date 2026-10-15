@@ -50,11 +50,20 @@ export type GameResult = {
    * mastery. Absent for modes that ask no questions, and for matches that started before the
    * telemetry shipped. */
   performanceByUserId?: Record<string, SatMatchPerformance>;
+  gameplayByUserId?: Record<string, GameplayPerformance>;
   /** Used only while committing the result; never persisted by the backend. */
   botPlayerIds?: string[];
   /** Opponent ratings at the moment the match ended, bots included, so the backend can price a
    * win against a stronger player without a second lookup. */
   eloByUserId?: Record<string, number>;
+};
+
+export type GameplayPerformance = {
+  trackedFromStart: boolean;
+  timberLogsChopped: number;
+  puncturePinsPlaced: number;
+  flutterRingsCleared: number;
+  stuns: number;
 };
 
 export type SatMatchPerformance = {

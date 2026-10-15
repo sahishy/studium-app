@@ -23,7 +23,7 @@ export const prepareTutorialRecord = async (kind, recordId, title) => {
 }
 
 const queuedTutorialTasks = new Map()
-const sampleText={'task-one':'Finish homework tomorrow','task-two':'apush test tomorrow'}
+const sampleText={'task-one':'Finish homework tomorrow','task-two':'apush test in 2 days'}
 const titleText=title=>typeof title==='string'?title:(title?.segments || []).map(s=>s.rawText ?? s.displayText ?? s.text ?? '').join('')
 const isExample = (kind,title) => {
     const segments=title?.segments || []

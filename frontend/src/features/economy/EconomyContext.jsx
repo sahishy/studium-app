@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { request, post } from '../../shared/services/apiService'
 import { levelUpAnimation } from '../profile/services/xpService'
+import { createSnapshotRefresher } from './utils/snapshotRefresh'
 
 const EconomyContext = createContext({ snapshot: null, refresh: async () => {} })
 
@@ -21,6 +22,8 @@ const EconomyProvider = ({ userId, progressVersion, children }) => {
     const [snapshot, setSnapshot] = useState(null)
     const [error, setError] = useState('')
     const previousLevelRef = useRef(null)
+    const activeUserIdRef = useRef(userId)
+    activeUserIdRef.current = userId
 
     useEffect(() => {
 
@@ -38,28 +41,38 @@ const EconomyProvider = ({ userId, progressVersion, children }) => {
         }
 
     }, [snapshot?.progress?.level])
-    const requestSequenceRef = useRef(0)
+    const refresherRef = useRef(null)
 
-    const refresh = useCallback(async () => {
-        if(!userId) return
-        const sequence = requestSequenceRef.current += 1
-        try {
-            const value = await request({ path: '/v1/economy' })
-            // Several refreshes can be in flight at once, so a slower earlier
-            // response must never overwrite a newer one.
-            if(sequence !== requestSequenceRef.current) return value
-            if(!isUsableSnapshot(value)) {
-                setError('The economy snapshot came back incomplete.')
-                return value
+    const refresh = useCallback(async (options) => {
+        if(!userId || activeUserIdRef.current !== userId) return
+        if(!refresherRef.current || refresherRef.current.userId !== userId) {
+            refresherRef.current?.dispose()
+            refresherRef.current = {
+                userId,
+                ...createSnapshotRefresher({
+                    fetchSnapshot: () => request({ path: '/v1/economy' }),
+                    onSnapshot: value => {
+                        if(activeUserIdRef.current !== userId) return
+                        if(!isUsableSnapshot(value)) {
+                            setError('The economy snapshot came back incomplete.')
+                            return
+                        }
+                        setSnapshot(value)
+                        setError('')
+                    },
+                    onError: err => { if(activeUserIdRef.current === userId) setError(err.message) },
+                }),
             }
-            setSnapshot(value)
-            setError('')
-            return value
-        } catch(err) {
-            if(sequence === requestSequenceRef.current) setError(err.message)
         }
+        return refresherRef.current.refresh(options)
     }, [userId])
-    useEffect(() => { refresh() }, [refresh, progressVersion])
+    useEffect(() => {
+        setSnapshot(null)
+        setError('')
+        previousLevelRef.current = null
+        return () => { refresherRef.current?.dispose(); refresherRef.current = null }
+    }, [userId])
+    useEffect(() => { refresh({ fresh: false }) }, [refresh, progressVersion])
     const openCrate = async () => {
         const operationId = crypto.randomUUID()
         const result = await post('/v1/economy/crates/open', { operationId })

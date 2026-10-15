@@ -1,4 +1,5 @@
 import type { StoredGame } from "./contracts";
+import { buildGameplayTelemetry } from "./gameplay-telemetry";
 
 const comparable = (value: unknown) => String(value ?? "").trim().toLowerCase().replace(/\s+/g, "");
 
@@ -114,6 +115,7 @@ export const recordSatRoundWin = (game: StoredGame, userId: string | null) => {
 // The telemetry fields every SAT mode attaches to its result. Kept here rather than repeated in
 // four finish() implementations so a new signal only has to be added once.
 export const buildSatResultTelemetry = (game: StoredGame) => ({
+  ...buildGameplayTelemetry(game),
   performanceByUserId: buildSatPerformance(game),
   eloByUserId: Object.fromEntries(game.players.map((player) => [
     player.userId,

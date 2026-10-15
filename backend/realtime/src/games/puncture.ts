@@ -1,3 +1,4 @@
+import { initializeGameplayTelemetry, recordGameplayAction } from "./gameplay-telemetry";
 import { changedAction, unchangedAction, type GameContext, type GameEngine, type StoredGame } from "./contracts";
 import {
   buildReviewQuestionsById,
@@ -296,6 +297,7 @@ const publicState = (game: StoredGame) => {
 
 export const createPunctureGame = (): GameEngine => ({
   initialize(game, questions, context) {
+    initializeGameplayTelemetry(game);
     const selected = questions.slice(0, MAX_QUESTIONS);
     const ids = selected.map((question) => question.id);
     game.privateState.questionsById = Object.fromEntries(selected.map((question) => [question.id, question]));
@@ -398,10 +400,12 @@ export const createPunctureGame = (): GameEngine => ({
       shot,
     ].slice(-RECENT_SHOT_LIMIT);
     if (hit) {
+      recordGameplayAction(game, userId, "stuns");
       player.state.stunnedUntil = context.now + STUN_MS;
       return changedAction(shotReply(clientActionId, true, { shot }));
     }
 
+    recordGameplayAction(game, userId, "puncturePinsPlaced");
     player.state.puncturePinAngles = [
       ...((player.state.puncturePinAngles as number[] | undefined) ?? []),
       attachedAngle,

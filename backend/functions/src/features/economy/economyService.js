@@ -1,5 +1,6 @@
 import cosmeticCatalog from './cosmeticCatalog.json' with { type: 'json' }
 import { randomInt } from 'node:crypto'
+import { isDeepStrictEqual } from 'node:util'
 import { rollCrateRarityPath } from './crateRolls.js'
 import { db } from '../../lib/firebaseAdmin.js'
 import {
@@ -76,9 +77,18 @@ const readAccount = async (transaction, userId) => {
         // day key alone decides whether today's is still available. Storing every claimed day
         // would grow without bound for no added behaviour.
         lastStreakClaim: stored.lastStreakClaim ?? null,
+        ...(stored.taskRewards ? { taskRewards: stored.taskRewards } : {}),
     }
-    return { userRef, walletRef, user, progress, wallet }
+    return { userRef, walletRef, user, progress, wallet, storedWallet: stored }
 }
+
+// Only changed fields are sent to Firestore. In particular, XP-only events should
+// not rewrite balances, inventories, and claim history on every action.
+const setChangedFields = (transaction, ref, before, after) => {
+    const changed = Object.fromEntries(Object.entries(after).filter(([key, value]) => !isDeepStrictEqual(before?.[key], value)))
+    if(Object.keys(changed).length) transaction.set(ref, changed, { merge: true })
+}
+const writeWallet = (transaction, account, wallet) => setChangedFields(transaction, account.walletRef, account.storedWallet, wallet)
 
 const badgesForProgress = (progress) => BADGE_DEFINITIONS.filter((badge) => (Number(progress[badge.counter]) || 0) >= badge.target).map((badge) => badge.id)
 
@@ -105,6 +115,7 @@ const writeAccount = (transaction, account, {
     counters = [],
     progressPatch = null,
     claimedLevels = null,
+    walletPatch = null,
 } = {}) => {
     const incremented = [counter, ...counters].filter(Boolean)
     const progress = grantXp({
@@ -119,9 +130,10 @@ const writeAccount = (transaction, account, {
         crateTokens: account.wallet.crateTokens + crates,
         inventory,
         ...(claimedLevels ? { claimedLevels } : {}),
+        ...(walletPatch ?? {}),
     }
-    transaction.set(account.userRef, { progress, badges: badgesForProgress(progress) }, { merge: true })
-    transaction.set(account.walletRef, wallet, { merge: true })
+    setChangedFields(transaction, account.userRef, account.user, { progress, badges: badgesForProgress(progress) })
+    writeWallet(transaction, account, wallet)
     return { progress, wallet }
 }
 
@@ -223,7 +235,12 @@ const openCrate = async (userId, operationId) => {
     return db.runTransaction(async (transaction) => {
         const opRef = db.collection('economyOps').doc(`${userId}_crate_${operationId}`)
         const opSnap = await transaction.get(opRef)
-        if(opSnap.exists) return opSnap.data().result
+        if(opSnap.exists) {
+            const result = opSnap.data().result
+            if(result.wallet) return result // Receipts written before compact storage.
+            const account = await readAccount(transaction, userId)
+            return { ...result, wallet: account.wallet }
+        }
         const account = await readAccount(transaction, userId)
         const useToken = account.wallet.crateTokens > 0
         if(!useToken && account.wallet.balance < CRATE_PRICE) throw new Error('Not enough Lumen.')
@@ -237,11 +254,10 @@ const openCrate = async (userId, operationId) => {
             crateTokens: account.wallet.crateTokens - (useToken ? 1 : 0),
             inventory: duplicate ? account.wallet.inventory : [...account.wallet.inventory, color.id],
         }
-        transaction.set(account.userRef, { progress: account.progress }, { merge: true })
-        transaction.set(account.walletRef, wallet, { merge: true })
-        const result = { color, rarityPath, duplicate, refund: duplicate ? DUPLICATE_REFUND : 0, wallet }
+        writeWallet(transaction, account, wallet)
+        const result = { color, rarityPath, duplicate, refund: duplicate ? DUPLICATE_REFUND : 0 }
         transaction.create(opRef, { userId, type: 'crate', result, createdAt: new Date() })
-        return result
+        return { ...result, wallet }
     })
 }
 
@@ -278,13 +294,19 @@ const equipTitle = async (userId, titleId) => {
 }
 
 const tipResource = async (senderId, resourceId, amount, operationId) => {
-    if(!TIP_AMOUNTS.has(Number(amount))) throw new Error('Choose 10, 25, or 50 Lumen.')
+    amount = Number(amount)
+    if(!TIP_AMOUNTS.has(amount)) throw new Error('Choose 10, 25, or 50 Lumen.')
     if(!/^[a-zA-Z0-9_-]{8,100}$/.test(String(operationId || ''))) throw new Error('Invalid operation ID.')
     return db.runTransaction(async (transaction) => {
         const opRef = db.collection('economyOps').doc(`${senderId}_tip_${operationId}`)
         const resourceRef = db.collection('resources').doc(String(resourceId || ''))
-        const [opSnap, resourceSnap] = await Promise.all([transaction.get(opRef), transaction.get(resourceRef)])
-        if(opSnap.exists) return opSnap.data().result
+        const opSnap = await transaction.get(opRef)
+        if(opSnap.exists) {
+            const result = opSnap.data().result
+            if(result.resourceId !== resourceId || Number(result.amount) !== amount) throw new Error('Operation ID was already used for a different tip.')
+            return result
+        }
+        const resourceSnap = await transaction.get(resourceRef)
         if(!resourceSnap.exists || resourceSnap.data().status !== 'published') throw new Error('Resource unavailable.')
         const recipientId = resourceSnap.data().ownerId
         if(senderId === recipientId) throw new Error('You cannot tip your own resource.')
@@ -292,10 +314,8 @@ const tipResource = async (senderId, resourceId, amount, operationId) => {
         if(sender.wallet.balance < amount) throw new Error('Not enough Lumen.')
         const senderWallet = { ...sender.wallet, balance: sender.wallet.balance - amount }
         const recipientWallet = { ...recipient.wallet, balance: recipient.wallet.balance + amount }
-        transaction.set(sender.userRef, { progress: sender.progress }, { merge: true })
-        transaction.set(recipient.userRef, { progress: recipient.progress }, { merge: true })
-        transaction.set(sender.walletRef, senderWallet, { merge: true })
-        transaction.set(recipient.walletRef, recipientWallet, { merge: true })
+        writeWallet(transaction, sender, senderWallet)
+        writeWallet(transaction, recipient, recipientWallet)
         const result = { balance: senderWallet.balance, amount, resourceId }
         transaction.create(opRef, { userId: senderId, recipientId, type: 'tip', result, createdAt: new Date() })
         return result

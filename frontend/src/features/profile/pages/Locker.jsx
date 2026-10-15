@@ -434,7 +434,7 @@ const Locker = () => {
                                     <div className='flex-1 mb-12 flex flex-col justify-center items-center '>
                                         <Logo className={'mb-3'} />
                                         <h1 className='text-3xl font-bold'>Coming soon</h1>
-                                        <p className='text-sm text-neutral1'>Hats will be obtained in a future system.</p>
+                                        <p className='mt-2 text-sm text-neutral1'>Hats will be obtained in a future system.</p>
                                     </div>
 
                                 </div>

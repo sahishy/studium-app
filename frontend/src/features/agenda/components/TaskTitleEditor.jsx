@@ -1,10 +1,17 @@
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import TaskParsingInput from './TaskParsingInput'
 
-const TaskTitleEditor = ({ task, circles, courses, hideCircleWidgets, onUpdate, className = '' }) => {
+const TaskTitleEditor = ({ task, autoFocus = false, circles, courses, hideCircleWidgets, onUpdate, className = '' }) => {
     const pendingRef = useRef(null)
+    const inputRef = useRef(null)
+    useEffect(() => {
+        if(!autoFocus) return
+        inputRef.current?.focusAtEnd?.()
+        inputRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+    }, [autoFocus])
     return (
         <TaskParsingInput
+            inputRef={inputRef}
             title={task.title}
             circles={circles}
             courses={courses}

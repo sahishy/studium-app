@@ -17,7 +17,7 @@ test('local emulators: nested task rewards, cap, deletion, crates, tips, hearts,
     const taskIds = ['root', 'child1', 'child2', 'deleteRoot', 'deleteChild', 'reconcileRoot', 'reconcileDone', 'reconcileRemoved', 'circleTask', 'standalone1', 'standalone2', 'standalone3'].map((value) => `${prefix}_${value}`)
     const [rootId, firstChildId, secondChildId, deleteRootId, deleteChildId, reconcileRootId, reconcileDoneId, reconcileRemovedId, circleTaskId, ...standaloneIds] = taskIds
     const refs = [
-        ...[first, second].flatMap((id) => [db.collection('users').doc(id), db.collection('wallets').doc(id), db.collection('userStats').doc(id)]),
+        ...[first, second].flatMap((id) => [db.collection('users').doc(id), db.collection('wallets').doc(id), db.collection('userStats').doc(id), db.collection('questBoards').doc(id)]),
         db.collection('circles').doc(circleId), db.collection('gameResults').doc(gameId),
         ...taskIds.map((id) => db.collection('tasks').doc(id)),
         ...taskIds.map((id) => db.collection('rewardEvents').doc(`task_${id}`)),
@@ -106,6 +106,7 @@ test('local emulators: nested task rewards, cap, deletion, crates, tips, hearts,
         const saved = await saveRealtimeResult(result)
         assert.deepEqual(saved.rewardsByUserId[first], { xp: 25, lumen: 10 })
         assert.equal((await saveRealtimeResult(result)).duplicate, true)
+        assert.equal((await db.collection('rewardEvents').doc(`match_${gameId}_${first}`).get()).exists, false, 'match results are the sole reward receipt')
     } finally {
         await Promise.allSettled(refs.map((ref) => db.recursiveDelete(ref)))
     }

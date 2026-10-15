@@ -1,5 +1,6 @@
 import { strict as assert } from 'node:assert'
 import test from 'node:test'
+import { buildMatchQuestEvents } from './matchQuestEvents.js'
 import { DAILY_QUEST_COUNT, QUEST_CATALOG, QUEST_RARITY_REWARDS, RARITY_LADDER, cycleQuest, applyQuestProgress, pickDailyQuests, questRarityReward, rollRarity } from './questService.js'
 
 const fakeTransaction = () => {
@@ -8,6 +9,42 @@ const fakeTransaction = () => {
 }
 
 const snapshotOf = (data) => ({ data: () => data })
+
+test('all nine new families scale targets with rarity and total 43 quests', () => {
+    const metrics = ['round_won', 'question_correct', 'math_question_correct', 'reading_question_correct',
+        'flutter_ring_cleared', 'timber_log_chopped', 'puncture_pin_placed', 'timber_clean_win', 'puncture_clean_win']
+    const quests = QUEST_CATALOG.filter((quest) => metrics.includes(quest.metric))
+    assert.equal(quests.length, 43)
+    assert.equal(new Set(QUEST_CATALOG.map((quest) => quest.id)).size, QUEST_CATALOG.length)
+    for(const metric of metrics) {
+        const family = quests.filter((quest) => quest.metric === metric)
+        assert.equal(family.length, metric.endsWith('clean_win') ? 4 : 5)
+        for(let index = 1; index < family.length; index += 1) {
+            assert.ok(family[index].target > family[index - 1].target)
+            assert.ok(RARITY_LADDER.indexOf(family[index].rarity) > RARITY_LADDER.indexOf(family[index - 1].rarity))
+        }
+        if(metric.endsWith('clean_win')) assert.ok(family.every((quest) => /^Win .*game.*without getting stunned$/.test(quest.label)))
+    }
+})
+
+test('new match events advance several objectives together, accumulate, and cap completion', () => {
+    const questIds = ['correct-8', 'math-correct-4', 'timber-logs-75']
+    const match = { modeId: 'sat-timber', ranked: true, endReason: 'first_to_three', roundsPlayed: 3,
+        winnerUserId: 'other', participationByUserId: { player: 3 } }
+    const events = buildMatchQuestEvents(match, 'player', { correct: 5, byDomain: { Algebra: { correct: 3 } } }, { timberLogsChopped: 90 })
+    let stored = { questIds }
+    for(let index = 0; index < 2; index += 1) {
+        const result = applyQuestProgress(fakeTransaction(), { userId: 'player', dayKey: '2026-10-14', daySnap: snapshotOf(stored), events })
+        stored = { questIds, progress: Object.fromEntries(result.quests.map((quest) => [quest.id, quest.current])),
+            completed: Object.fromEntries(result.quests.map((quest) => [quest.id, quest.completed])) }
+        assert.equal(result.reward.xp, 0)
+    }
+    assert.deepEqual(stored.progress, { 'correct-8': 8, 'math-correct-4': 4, 'timber-logs-75': 150 })
+    assert.ok(Object.values(stored.completed).every(Boolean))
+    const transaction = fakeTransaction()
+    applyQuestProgress(transaction, { userId: 'player', dayKey: '2026-10-14', daySnap: snapshotOf(stored), events })
+    assert.equal(transaction.writes.length, 0)
+})
 
 test('daily quests are stable for a user and day, and never repeat a quest', () => {
     const first = pickDailyQuests('user-a', '2026-10-05')
@@ -29,7 +66,8 @@ test('different users get different initial boards', () => {
 })
 
 test('progress advances matching quests and makes rewards claimable without paying', () => {
-    const [studyQuest] = pickDailyQuests('user-a', '2026-10-05')
+    const questIds = ['tasks-3', 'matches-1', 'hearts-1']
+    const studyQuest = QUEST_CATALOG.find((quest) => quest.id === 'tasks-3')
     const transaction = fakeTransaction()
 
     const progress = {}
@@ -37,7 +75,7 @@ test('progress advances matching quests and makes rewards claimable without payi
         const result = applyQuestProgress(transaction, {
             userId: 'user-a',
             dayKey: '2026-10-05',
-            daySnap: snapshotOf({ progress: { ...progress }, completed: {} }),
+            daySnap: snapshotOf({ questIds, progress: { ...progress }, completed: {} }),
             metric: 'task_completed',
         })
         progress[studyQuest.id] = result.quests.find((quest) => quest.id === studyQuest.id).current
@@ -46,7 +84,7 @@ test('progress advances matching quests and makes rewards claimable without payi
     const final = applyQuestProgress(transaction, {
         userId: 'user-a',
         dayKey: '2026-10-05',
-        daySnap: snapshotOf({ progress: { [studyQuest.id]: studyQuest.target - 1 }, completed: {} }),
+        daySnap: snapshotOf({ questIds, progress: { [studyQuest.id]: studyQuest.target - 1 }, completed: {} }),
         metric: 'task_completed',
     })
 
@@ -121,6 +159,8 @@ test('every catalog quest is wired to a metric the app actually emits', () => {
     // on the student's board. `lesson_opened` was exactly that before this list existed.
     const emitted = new Set([
         'task_completed', 'resource_published', 'heart_given', 'match_played', 'match_won',
+        'round_won', 'question_correct', 'math_question_correct', 'reading_question_correct',
+        'flutter_ring_cleared', 'timber_log_chopped', 'puncture_pin_placed', 'puncture_clean_win', 'timber_clean_win',
         'mode:sat-classic', 'mode:sat-timber', 'mode:sat-puncture', 'mode:sat-flutter',
     ])
     for(const quest of QUEST_CATALOG) {

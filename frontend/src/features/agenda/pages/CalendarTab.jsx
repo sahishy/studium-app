@@ -151,7 +151,6 @@ const CalendarTab = () => {
             <div className='mb-3 flex items-center justify-between text-xs font-semibold text-neutral1'><span>Unscheduled</span><span className='text-neutral2'>{unscheduled.length}</span></div>
             <CalendarDropZone dueDate='' className={`no-scrollbar min-h-0 flex-1 space-y-1 overflow-y-auto rounded-lg transition-colors ${dropTarget === '' ? 'bg-neutral5 ring-1 ring-inset ring-neutral2' : ''}`}>
                 {unscheduled.map(renderTask)}{renderPlacement('')}
-                {!unscheduled.length && <p className='py-2 text-xs text-neutral2'>Drop tasks here to unschedule.</p>}
                 <button type='button' onClick={(event) => { event.stopPropagation(); openNewTask('', event.currentTarget) }} className='flex w-full cursor-pointer items-center gap-1.5 rounded-lg px-2 py-2 text-xs text-neutral2 transition-[background-color] duration-150 hover:bg-neutral5'><FaPlus className='text-[10px]' />Add task</button>
             </CalendarDropZone>
         </div>

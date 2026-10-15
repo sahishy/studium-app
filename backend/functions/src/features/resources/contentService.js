@@ -99,7 +99,11 @@ const loadAuthors = async (ownerIds = []) => {
                 displayName: profile.displayName || 'Student',
                 avatar: profile.avatar ?? null,
                 profilePicture: profile.profilePicture ?? null,
+                flair: profile.flair ?? null,
+                title: profile.title ?? null,
             },
+            progress: { level: user.data()?.progress?.level ?? 1 },
+            primaryCircleId: user.data()?.primaryCircleId ?? null,
         }]
     }))
 }

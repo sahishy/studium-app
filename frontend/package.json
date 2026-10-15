@@ -14,7 +14,9 @@
 		"preview": "vite preview",
 		"predeploy": "npm run build",
 		"deploy": "gh-pages -d dist",
-		"test:onboarding": "node --test src/features/courses/utils/featuredCourses.test.js src/features/onboarding/onboardingBridge.test.js"
+		"test:onboarding": "node --test src/features/courses/utils/featuredCourses.test.js src/features/onboarding/onboardingBridge.test.js",
+		"test:courses": "node --test src/features/courses/utils/randomReviews.test.js",
+		"test:economy": "node --test src/features/economy/utils/*.test.js"
 	},
 	"dependencies": {
 		"@dnd-kit/core": "^6.3.1",

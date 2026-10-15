@@ -92,7 +92,7 @@ export default function Spotlight({step:incomingStep,busy,error,onNext,onRetry,v
         : fitsAbove ? r.y-gap-height
         : Math.max(12,Math.min(innerHeight-height-12,(r?(r.y+r.bottom)/2:innerHeight/2)-height/2))
     const mask=`fixed bg-black/70 ${visible?'pointer-events-auto':'pointer-events-none'}`
-    return <div className="fixed inset-0 z-[180] pointer-events-none transition-opacity duration-500 motion-reduce:transition-none" style={{opacity:visible?1:0}} aria-hidden={!visible} inert={!visible} onTransitionEnd={event=>{if(changing && event.target===event.currentTarget && event.propertyName==='opacity')setStep(incomingRef.current)}}>
+    return <div className="fixed inset-0 z-[180] pointer-events-none transition-opacity duration-500" style={{opacity:visible?1:0}} aria-hidden={!visible} inert={!visible} onTransitionEnd={event=>{if(changing && event.target===event.currentTarget && event.propertyName==='opacity')setStep(incomingRef.current)}}>
         {r?<><div className={mask} style={{top:0,left:0,right:0,height:r.y}} /><div className={mask} style={{top:r.bottom,left:0,right:0,bottom:0}} /><div className={mask} style={{top:r.y,left:0,width:r.x,height:r.bottom-r.y}} /><div className={mask} style={{top:r.y,left:r.right,right:0,height:r.bottom-r.y}} /></>:<div className={mask+" inset-0"} />}
         <div ref={cardRef} tabIndex={-1} role="dialog" aria-label="Tutorial guidance" aria-live="polite" className={`${visible?'pointer-events-auto':'pointer-events-none'} fixed bg-neutral5 text-neutral0 border border-neutral3 rounded-2xl p-4 shadow-xl flex flex-col gap-3`} style={{top,left,width:isInfo?width:'max-content',maxWidth}}>
             <div className="flex items-start gap-2">

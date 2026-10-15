@@ -6,7 +6,7 @@ import ColorSwatch from './ColorSwatch'
 import Title from '../../profile/components/Title'
 import { describeTitle } from '../../profile/utils/titleUtils'
 import { AVATAR_FACES } from '../../profile/utils/avatarUtils'
-import { RARITY_SURFACE_INK, describeFace, formatColorName, getRarityStyle, getRaritySurface } from '../utils/rarityUtils'
+import { describeFace, formatColorName, getRarityStyle, getRaritySurface } from '../utils/rarityUtils'
 import { RARITY_EFFECT_COLORS } from '../utils/crateInteraction'
 import { getWindowRoot } from '../../../shared/utils/windowLayerUtils'
 
@@ -123,19 +123,18 @@ const CrateRevealOverlay = ({ result, onExitStart, onClose }) => {
                     ${animate ? 'opacity-100 scale-100 duration-250' : 'opacity-0 scale-90 duration-[400ms]'}`}
             >
                 {isTitle ? (
-                    // A filled plate, not an outlined one: the border read as a stray white
-                    // edge against the blurred backdrop, and a 10% tint let the backdrop show
-                    // through where a card should be. The surface carries the rarity instead,
-                    // and the ink is pinned because that surface stays light in both themes -
-                    // a Common title's own text-neutral1 would vanish into it otherwise.
+                    // Common uses the locker's theme-aware surface and tint so Title can
+                    // keep its own text color. Higher tiers retain their rarity surfaces.
                     <div
                         className='relative flex size-36 items-center justify-center overflow-hidden rounded-xl p-3 shadow-xl shadow-shadow'
-                        style={{ backgroundColor: getRaritySurface(item.rarity), '--rarity-ink': RARITY_SURFACE_INK }}
+                        style={{ backgroundColor: item.rarity === 'Common'
+                            ? 'color-mix(in srgb, var(--color-neutral2) 10%, var(--color-neutral6))'
+                            : getRaritySurface(item.rarity) }}
                     >
                         <Title
                             titleId={item.id}
                             size='md'
-                            className='relative text-center leading-tight [&.text-neutral1]:text-[color:var(--rarity-ink)]'
+                            className='relative text-center leading-tight'
                         />
                     </div>
                 ) : isFace ? (

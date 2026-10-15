@@ -1,3 +1,4 @@
+import { initializeGameplayTelemetry, recordGameplayAction } from "./gameplay-telemetry";
 import { changedAction, unchangedAction, type GameContext, type GameEngine, type StoredGame } from "./contracts";
 import {
   buildReviewQuestionsById,
@@ -292,6 +293,10 @@ const passCurrentRing = (game: StoredGame, context: GameContext) => {
   const index = Number(game.state.flutterRingIndex) || 0;
   const center = ringCenter(game, index);
   const missed = game.players.filter((player) => !clearsRing(player, center));
+  // Count actual clears before resolving an opponent's miss; a shield is not a clear.
+  for (const player of game.players) {
+    if (!missed.includes(player)) recordGameplayAction(game, player.userId, "flutterRingsCleared");
+  }
   const unprotectedMisses = missed.filter((player) => {
     if (!player.state.flutterShieldAvailable) return true;
     player.state.flutterShieldAvailable = false;
@@ -337,6 +342,7 @@ const publicState = (game: StoredGame) => {
 
 export const createFlutterGame = (): GameEngine => ({
   initialize(game, questions, context) {
+    initializeGameplayTelemetry(game);
     const selected = questions.slice(0, MAX_QUESTIONS);
     const ids = selected.map((question) => question.id);
     game.privateState.questionsById = Object.fromEntries(selected.map((question) => [question.id, question]));

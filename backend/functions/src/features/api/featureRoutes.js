@@ -1,6 +1,7 @@
 import { getOnlineEvents, acknowledgeEvent, startOnboarding, reserveArtifact, advanceOnboarding, answerPractice, completeOnboarding, openTutorialCrate, resetOnboardingForTesting } from '../onboarding/onboardingService.js'
 import { listJoinedCircles, mutateMembership, setPrimaryCircle, editCircleIdentity, circleActivity, claimCircleGrandQuest } from '../socials/circleApi.js'
 import { Router } from 'express'
+import { toggleReviewHeart, removeCourseReview } from '../courses/reviewHeartService.js'
 import { auth, db } from '../../lib/firebaseAdmin.js'
 import { deliverFeedback, validateFeedback } from '../feedback/feedbackService.js'
 import { submitWithCooldown } from '../feedback/feedbackSubmission.js'
@@ -79,6 +80,8 @@ router.get('/resources/:id', route((req) => getResource(req.params.id, req.ident
 router.post('/resources', route((req) => saveResource(req.identity.uid, req.body)))
 router.delete('/resources/:id', route((req) => removeResource(req.identity.uid, req.params.id)))
 router.post('/resources/:id/heart', route((req) => toggleHeart(req.identity.uid, req.params.id)))
+router.post('/course-reviews/:id/heart', route((req) => toggleReviewHeart(req.identity.uid, req.params.id)))
+router.delete('/course-reviews/:id', route((req) => removeCourseReview(req.identity.uid, req.params.id)))
 router.post('/resources/:id/report', route((req) => reportResource(req.identity.uid, req.params.id, req.body.reason)))
 
 router.get('/college-posts', route((req) => listCollegePosts(req.identity.uid)))

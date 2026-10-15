@@ -1,9 +1,10 @@
-import { readCircleContexts } from '../socials/circleGoals.js'
+import { readCircleContexts, contributeCircleTask, writeCircleContextMigrations } from '../socials/circleGoals.js'
+import { ensureMembershipIndex } from '../socials/circleMemberships.js'
 import { db } from '../../lib/firebaseAdmin.js'
 import { FieldValue } from 'firebase-admin/firestore'
 import { readAccount, writeAccount } from '../economy/economyService.js'
-import { grantXp, localDayKey, TASK_DAILY_LIMIT, TASK_XP } from '../economy/progression.js'
-import { applyQuestProgress, questDayRef } from '../quests/questService.js'
+import { localDayKey, TASK_DAILY_LIMIT, TASK_XP } from '../economy/progression.js'
+import { applyQuestProgress, circleQuestInstances, questDayRef } from '../quests/questService.js'
 
 const VALID_STATUSES = new Set(['Incomplete', 'In Progress', 'Completed'])
 const circleIdOf = (task) => task?.circleId || task?.title?.segments?.find((segment) => segment?.widgetType === 'circle')?.value?.circleId || null
@@ -53,6 +54,7 @@ const loadTaskTree = async (transaction, taskRef) => {
 const setTaskStatus = async ({ userId, taskId, status, timeZone = 'UTC' }) => {
     if(!VALID_STATUSES.has(status)) throw new Error('Invalid task status.')
     if(!taskId || typeof taskId !== 'string') throw new Error('Task ID required.')
+    if(status === 'Completed') await ensureMembershipIndex(userId)
     return db.runTransaction(async (transaction) => {
         const tree = await loadTaskTree(transaction, db.collection('tasks').doc(taskId))
         const circleId = circleIdOf(tree.root)
@@ -73,17 +75,23 @@ const setTaskStatus = async ({ userId, taskId, status, timeZone = 'UTC' }) => {
         const dayRef = db.collection('taskRewardDays').doc(`${userId}_${dayKey}`)
         const eventRef = db.collection('rewardEvents').doc(`task_${taskId}`)
         const questRef = questDayRef(userId, dayKey)
+        const migratingCounter = account.wallet.taskRewards?.version !== 1
         const [daySnap, eventSnap, questSnap] = await Promise.all([
-            transaction.get(dayRef),
+            migratingCounter ? transaction.get(dayRef) : null,
             transaction.get(eventRef),
             transaction.get(questRef),
         ])
-        const circleContexts = await readCircleContexts(transaction, [userId])
         const previousStatus = tree.target.status || 'Incomplete'
         const firstCompletion = status === 'Completed' && previousStatus !== 'Completed' && !eventSnap.exists && !tree.target.alreadyCompleted && !tree.target.tutorialRunId
-        const used = Math.min(TASK_DAILY_LIMIT, Number(daySnap.data()?.count) || 0)
+        const currentCount = migratingCounter ? daySnap.data()?.count
+            : account.wallet.taskRewards.dayKey === dayKey ? account.wallet.taskRewards.count : 0
+        const used = Math.max(0, Math.min(TASK_DAILY_LIMIT, Math.floor(Number(currentCount) || 0)))
         const xp = firstCompletion && used < TASK_DAILY_LIMIT ? TASK_XP : 0
         const nextCount = used + (xp > 0 ? 1 : 0)
+        const questInstances = circleQuestInstances(userId, dayKey, questSnap, 'task_completed')
+        const circleContexts = firstCompletion && ((circleId && xp) || questInstances.length)
+            ? await readCircleContexts(transaction, [userId], { questInstances }) : []
+        writeCircleContextMigrations(transaction, circleContexts)
 
         const statuses = new Map([[taskId, status]])
         for(const ancestor of tree.ancestors) {
@@ -100,7 +108,6 @@ const setTaskStatus = async ({ userId, taskId, status, timeZone = 'UTC' }) => {
                 const original = tree.byId.get(id)
                 if(original?.status !== nextStatus) transaction.update(db.collection('tasks').doc(id), { status: nextStatus, updatedAt: new Date(), ...(id === taskId && status === 'Completed' ? { alreadyCompleted: true } : {}) })
             }
-            if(firstCompletion && previousStatus === status) transaction.update(db.collection('tasks').doc(taskId), { alreadyCompleted: true })
         }
         if(firstCompletion) {
             transaction.create(eventRef, { userId, taskId, type: 'task', xp, dayKey, createdAt: new Date() })
@@ -114,6 +121,7 @@ const setTaskStatus = async ({ userId, taskId, status, timeZone = 'UTC' }) => {
                 }
             }
         }
+        if (circleId && xp > 0) contributeCircleTask(transaction, circleContexts, { userId })
         // Quests count every genuine first completion, even past the five daily XP slots.
         const quests = firstCompletion
             ? applyQuestProgress(transaction, { userId, dayKey, daySnap: questSnap, metric: 'task_completed', circleContexts })
@@ -121,8 +129,8 @@ const setTaskStatus = async ({ userId, taskId, status, timeZone = 'UTC' }) => {
         const { progress, wallet } = writeAccount(transaction, {
             ...account,
             progress: { ...account.progress, timeZone: savedZone, tasksCompleted: (Number(account.progress.tasksCompleted) || 0) + (firstCompletion ? 1 : 0) },
-        }, { xp: xp + quests.reward.xp, lumen: quests.reward.lumen, crates: quests.reward.crates ?? 0, counter: xp ? 'rewardedTasks' : null })
-        if(xp) transaction.set(dayRef, { userId, dayKey, count: nextCount, updatedAt: new Date() }, { merge: true })
+        }, { xp: xp + quests.reward.xp, lumen: quests.reward.lumen, crates: quests.reward.crates ?? 0, counter: xp ? 'rewardedTasks' : null,
+            walletPatch: { taskRewards: { version: 1, dayKey, count: nextCount } } })
         if(circleId && xp) {
             const circleRef = db.collection('circles').doc(circleId)
             // Circle rewards remain separate from the student's five daily personal XP slots.

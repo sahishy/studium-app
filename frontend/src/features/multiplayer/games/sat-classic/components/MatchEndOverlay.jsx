@@ -18,9 +18,9 @@ const RankSection = ({ progression, winnerUserId, eloDelta }) => {
     if(progression.placement && !progression.placement.placed) {
         const { gamesPlayed, required } = progression.placement
         return <div className='w-full max-w-xl mt-9 mb-8 flex flex-col gap-4'>
-            <div className='flex items-center justify-center gap-4'>
+            <div className='flex items-center justify-center'>
                 <img src={progression.rankInfo.imageSrc} alt='Unranked icon' className='w-20 h-20 object-cover' />
-                <div className='text-center'><h2 className='text-2xl font-semibold'>Unranked</h2><p className='text-sm text-neutral1'>Finding your starting rank</p></div>
+                <div className='text-center'><h2 className='text-2xl font-semibold'>Unranked</h2></div>
             </div>
             <p className='text-center text-sm text-neutral1'>{Math.min(gamesPlayed, required)}/{required} placements completed</p>
             <ProgressBar value={gamesPlayed} max={required} />

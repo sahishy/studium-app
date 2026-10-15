@@ -30,8 +30,8 @@ const Socials = () => {
     const primaryCircle = circles.find(circle => circle.uid === profile.primaryCircleId)
     const otherCircles = circles.filter(circle => circle.uid !== primaryCircle?.uid)
     const [primaryBusy, setPrimaryBusy] = useState(false)
-    const [primaryError,setPrimaryError] = useState('')
-    
+    const [primaryError, setPrimaryError] = useState('')
+
     const { friends, incomingRequests, friendsLoading, incomingRequestsLoading } = useFriends()
     const [visibleFriendCount, setVisibleFriendCount] = useState(FRIENDS_PAGE_SIZE)
 
@@ -91,7 +91,7 @@ const Socials = () => {
                     <div className='relative w-full'>
                         <div className='w-full overflow-x-auto no-scrollbar'>
                             <div className='flex items-start gap-4 min-w-max pb-2'>
-                                <button 
+                                <button
                                     onClick={handleAddFriend}
                                     className='flex flex-col gap-2 cursor-pointer group'
                                 >
@@ -143,7 +143,7 @@ const Socials = () => {
                             <>
                                 {primaryError && <p role="alert" className="text-sm text-red-400">{primaryError}</p>}
                                 {primaryCircle && <div className="flex flex-col items-center gap-3 py-8 sm:py-10">
-                                    <div className="circle-primary-float w-full max-w-lg">
+                                    <div className="circle-primary-float w-full max-w-md">
                                         <CircleTile featured circle={primaryCircle} primaryCircleId={profile.primaryCircleId} busy={primaryBusy} onPrimary={handlePrimary} />
                                     </div>
                                     <div aria-hidden="true" className="circle-primary-shadow h-2 w-32 rounded-full bg-neutral0/5 blur-sm mt-2" />

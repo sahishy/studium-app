@@ -36,8 +36,8 @@ const Courses = () => {
         <div ref={scrollRef} className='flex flex-col h-full overflow-scroll'>
             <Topbar profile={profile} />
 
-            <div className='w-full flex-1 flex flex-col gap-4 px-24 pb-24 pt-2'>
-                <div className='flex justify-between items-start'>
+            <div className='w-full flex-1 flex flex-col gap-4 px-4 sm:px-8 lg:px-16 xl:px-24 pb-24 pt-2'>
+                <div className='flex flex-wrap gap-4 justify-between items-start'>
 
                     {onOverviewPage ? (
                         <Button

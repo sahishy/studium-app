@@ -18,7 +18,7 @@ const NumberSkeleton = ({ className = 'w-8', label }) => (
     <span
         role='status'
         aria-label={`Loading ${label}`}
-        className={`inline-block h-5 sm:h-6 rounded-md bg-current/20 animate-pulse motion-reduce:animate-none ${className}`}
+        className={`inline-block h-5 sm:h-6 rounded-md bg-current/20 animate-pulse ${className}`}
     />
 )
 

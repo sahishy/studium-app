@@ -12,6 +12,7 @@ import MatchRewardWatcher from '../components/MatchRewardWatcher'
 import { subscribeToGameErrors } from '../services/realtimeSocketService'
 import ErrorState from '../../../shared/components/ui/ErrorState'
 import LoadingState from '../../../shared/components/ui/LoadingState'
+import GameFocusBlur from '../components/GameFocusBlur'
 
 const MatchRoom = () => {
     
@@ -130,6 +131,9 @@ const MatchRoom = () => {
 
     return (
         <div className='relative flex flex-col h-full overflow-hidden'>
+            {room?.status === 'active' && !isGameFinished && !roomLoading && !roomError ? (
+                <GameFocusBlur />
+            ) : null}
             {!isSpectating ? (
                 <MatchRewardWatcher roomId={roomId} userId={profile?.uid} />
             ) : null}

@@ -20,7 +20,7 @@ const StatusChip = ({ status, interactive = false, isOpen = false }) => {
     return <span className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs text-neutral1 transition ${interactive ? 'hover:bg-neutral5' : ''} ${isOpen ? 'bg-neutral5' : ''}`}><Icon className={`text-[10px] ${className}`} />{status}</span>
 }
 
-const BoardTask = ({ task, groupId, groupBy = 'status', freezeLayout = false, childrenById, circles, courses, courseColor, hideCircleWidgets, onUpdate, onDelete, onAddSubtask }) => {
+const BoardTask = ({ task, autoFocusTitle = false, groupId, groupBy = 'status', freezeLayout = false, childrenById, circles, courses, courseColor, hideCircleWidgets, onUpdate, onDelete, onAddSubtask }) => {
     const cardRef = useRef(null)
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: task.uid,
@@ -54,7 +54,7 @@ const BoardTask = ({ task, groupId, groupBy = 'status', freezeLayout = false, ch
         >
             <article className={`group/card relative flex flex-col gap-2 rounded-xl border p-3 transition-colors ${isDragging ? 'invisible border-transparent' : 'border-neutral4/70 bg-neutral6 hover:border-neutral3 focus-within:border-neutral3'}`}>
                 <div className='flex min-w-0 items-start gap-2'>
-                    <TaskTitleEditor task={task} circles={circles} courses={courses} hideCircleWidgets={hideCircleWidgets} onUpdate={onUpdate} className={`min-w-0 flex-1 ${complete ? 'line-through text-neutral1' : ''}`} />
+                    <TaskTitleEditor task={task} autoFocus={autoFocusTitle} circles={circles} courses={courses} hideCircleWidgets={hideCircleWidgets} onUpdate={onUpdate} className={`min-w-0 flex-1 ${complete ? 'line-through text-neutral1' : ''}`} />
                     <button
                         type='button'
                         aria-label='Drag task'

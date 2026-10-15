@@ -5,13 +5,12 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { FaCheckCircle, FaClock, FaDotCircle, FaBook, FaCalendar } from 'react-icons/fa'
 import { FaPlus } from 'react-icons/fa6'
 import BoardTask, { BoardTaskGhost } from '../components/BoardTask'
-import TaskParsingInput from '../components/TaskParsingInput'
 import ViewOptionsButton from '../components/ViewOptionsButton'
 import { useTasks } from '../contexts/TasksContext'
 import { useCircles } from '../../socials/contexts/CirclesContext'
 import { useCourses } from '../../courses/contexts/CoursesContext'
 import { MAX_USER_TASKS } from '../utils/taskUtils'
-import { extractTaskTitleMetadata, flattenTaskTitle } from '../utils/naturalLanguage'
+import { extractTaskTitleMetadata, flattenTaskTitle, normalizeTaskTitle } from '../utils/naturalLanguage'
 import { buildTaskTree, deriveTreeStatuses, filterVisibleTasks, sortBoardTasks } from '../utils/taskViewUtils'
 import { buildCourseWidgetSegment, buildScheduleWidgetSegment, removeWidget, upsertWidget } from '../utils/taskWidgetControlUtils'
 import { insertBoardTask, commitBoardMove } from '../utils/boardPresentationUtils'
@@ -100,9 +99,8 @@ const BoardDropSlot = ({ groupId, children }) => {
     return <div ref={setNodeRef} role='status' aria-label='Task placement preview' className='shrink-0'>{children}</div>
 }
 
-const AddBoardTask = ({ label, disabled, circles, courses, onAdd }) => {
-    const ref = useRef(null)
-    return <div className={`rounded-xl px-3 py-2.5 transition-colors focus-within:bg-neutral6 ${disabled ? 'pointer-events-none opacity-50' : 'hover:bg-neutral6'}`}><div className='flex items-center gap-2 text-neutral1'><FaPlus className='text-xs' /><TaskParsingInput inputRef={ref} title='' circles={circles} courses={courses} className='min-w-0 flex-1' placeholder={disabled ? 'Task limit reached' : `Add to ${label.toLowerCase()}`} clearOnEnter keepFocusOnEnter commitOnBlur={false} onCommit={onAdd} /></div></div>
+const AddBoardTask = ({ label, disabled, onAdd }) => {
+    return <button type='button' disabled={disabled} onClick={onAdd} className='flex w-full shrink-0 cursor-pointer items-center gap-2 rounded-xl px-3 py-2.5 text-left text-sm text-neutral2 transition-colors enabled:hover:bg-neutral5 focus-visible:outline-2 focus-visible:outline-neutral2 disabled:cursor-not-allowed disabled:opacity-50'><FaPlus className='shrink-0 text-xs' /><span>{disabled ? 'Task limit reached' : `Add task into ${label.toLowerCase()}`}</span></button>
 }
 
 const BoardTab = () => {
@@ -117,6 +115,7 @@ const BoardTab = () => {
     const [activeId, setActiveId] = useState(null)
     const [placement, setPlacement] = useState(null)
     const [dragSize, setDragSize] = useState(null)
+    const [newTaskId, setNewTaskId] = useState(null)
     const columnsRef = useRef([])
     const keyboardCoordinates = useCallback((event, { context, currentCoordinates }) => {
         if(!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) return
@@ -156,14 +155,19 @@ const BoardTab = () => {
 
     columnsRef.current = columns
 
-    const createTask = useCallback((column, payload, parentTaskId = null) => {
+    const createTask = useCallback((column, payload, parentTaskId = null, allowEmpty = false) => {
         let title = titleForGroup(payload.title, groupBy, column.id, courses)
         if(isCircleView) title = forceCircleWidget?.(title) || title
-        if(!flattenTaskTitle(title).trim()) return
-        const siblings = parentTaskId ? childrenById.get(parentTaskId) || [] : roots.filter((task) => groupKey(task, groupBy) === column.id)
+        if(!allowEmpty && !flattenTaskTitle(title).trim()) return
+        const siblings = parentTaskId ? childrenById.get(parentTaskId) || [] : columns.find((entry) => entry.id === column.id)?.tasks || []
+        // Normalize existing positions so legacy and sparse indices also append correctly.
+        if(!parentTaskId) siblings.forEach((task, boardIndex) => {
+            if(task.boardIndex !== boardIndex) commitTaskPatch(task.uid, { boardIndex }).catch(console.error)
+        })
         const { taskId } = createTaskOptimistic({ title, userId: profile.uid, status: 'Incomplete', type: payload.metadata?.taskType || 'assignment', parentTaskId, siblingIndex: siblings.length, boardIndex: parentTaskId ? -1 : siblings.length, listIndex: tasks.length })
         if(taskId && groupBy === 'status' && column.id === 'In Progress') commitTaskPatch(taskId, { status: 'In Progress' }).catch(console.error)
-    }, [childrenById, commitTaskPatch, courses, createTaskOptimistic, forceCircleWidget, groupBy, isCircleView, profile.uid, roots, tasks.length])
+        if(taskId && !parentTaskId) setNewTaskId(taskId)
+    }, [childrenById, columns, commitTaskPatch, courses, createTaskOptimistic, forceCircleWidget, groupBy, isCircleView, profile.uid, tasks.length])
     const deleteTree = useCallback(async (taskId) => {
         await deleteTaskOptimistic(taskId)
     }, [deleteTaskOptimistic])
@@ -210,7 +214,7 @@ const BoardTab = () => {
     }, [handleDragCancel, moveTask])
     const activeTask = useMemo(() => effectiveRoots.find((task) => task.uid === activeId) || null, [activeId, effectiveRoots])
 
-    const renderTask = (task, column) => <BoardTask key={task.uid} task={task} groupId={column.id} groupBy={groupBy} freezeLayout={Boolean(activeId)} childrenById={childrenById} circles={circles} courses={courses} courseColor={colorForTask(task)} hideCircleWidgets={hideCircleWidgetControl} onUpdate={commitTaskPatch} onDelete={deleteTree} onAddSubtask={(parent, payload) => createTask({ id: groupKey(parent, groupBy) }, payload, parent.uid)} />
+    const renderTask = (task, column) => <BoardTask key={task.uid} task={task} autoFocusTitle={task.uid === newTaskId} groupId={column.id} groupBy={groupBy} freezeLayout={Boolean(activeId)} childrenById={childrenById} circles={circles} courses={courses} courseColor={colorForTask(task)} hideCircleWidgets={hideCircleWidgetControl} onUpdate={commitTaskPatch} onDelete={deleteTree} onAddSubtask={(parent, payload) => createTask({ id: groupKey(parent, groupBy) }, payload, parent.uid)} />
 
     return <div className='flex h-full min-h-0 w-full flex-col gap-3'>
         <div className='flex h-11 shrink-0 items-center justify-end'><ViewOptionsButton view='board' preferences={agendaPreferences} onSave={saveAgendaPreferences} /></div>
@@ -225,7 +229,7 @@ const BoardTab = () => {
                             ? <BoardDropSlot key='placement' groupId={column.id}><BoardTaskGhost task={groupBy === 'status' ? { ...task, status: column.id } : { ...task, title: titleForGroup(task.title, groupBy, column.id, courses) }} courseColor={colorForTask(task)} groupBy={groupBy} placeholder height={dragSize?.height} /></BoardDropSlot>
                             : renderTask(task, column))}
                         {activeTask && column.tasks.some((task) => task.uid === activeId) && renderTask(activeTask, column)}
-                        {!(groupBy === 'status' && column.id === 'Completed') && <AddBoardTask label={column.label} circles={circles} courses={courses} disabled={user.length >= MAX_USER_TASKS} onAdd={(payload) => createTask(column, payload)} />}
+                        {!(groupBy === 'status' && column.id === 'Completed') && <AddBoardTask label={column.label} disabled={user.length >= MAX_USER_TASKS} onAdd={() => createTask(column, { title: normalizeTaskTitle('') }, null, true)} />}
                     </BoardColumn>
                 })}
             </div>

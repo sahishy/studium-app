@@ -6,6 +6,7 @@ import { MAX_USER_TASKS } from '../utils/taskUtils'
 import { extractTaskTitleMetadata } from '../utils/naturalLanguage'
 import { post } from '../../../shared/services/apiService'
 import { deriveTreeStatuses } from '../utils/taskViewUtils'
+import { pendingPatchAfterCreate } from '../utils/taskOptimisticUtils'
 import { useRewardFx } from '../../economy/RewardFxContext'
 import { useQuests } from '../../quests/QuestContext'
 import { tutorialTaskCreationError, tutorialSignal } from '../../onboarding/onboardingBridge'
@@ -205,15 +206,22 @@ const TasksProvider = ({ profile, children }) => {
 
         if (!pendingCreateIdsRef.current.size) return
 
-        const serverIds = new Set([...user, ...circle].map((task) => task.uid))
+        const serverTasks = new Map([...user, ...circle].map((task) => [task.uid, task]))
 
         for (const taskId of [...pendingCreateIdsRef.current]) {
-            if (!serverIds.has(taskId)) continue
+            const serverTask = serverTasks.get(taskId)
+            if (!serverTask) continue
             pendingCreateIdsRef.current.delete(taskId)
-            clearLocal(taskId)
+            setLocalTasks((previous) => {
+                const patch = pendingPatchAfterCreate(serverTask, previous[taskId])
+                const next = { ...previous }
+                if(Object.keys(patch).length) next[taskId] = patch
+                else delete next[taskId]
+                return next
+            })
         }
 
-    }, [circle, clearLocal, user])
+    }, [circle, user])
 
     useEffect(() => {
         if(!locallyDeletedTaskIds.size) return

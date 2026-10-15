@@ -68,10 +68,10 @@ const streakSnapshot = (account, dayKey) => {
     }
 }
 
-const getStreakBoard = async (userId, timeZone = 'UTC') => db.runTransaction(async (transaction) => {
-    const account = await readAccount(transaction, userId)
+const getStreakBoard = async (userId, timeZone = 'UTC') => {
+    const account = await readAccount({ get: ref => ref.get() }, userId)
     return streakSnapshot(account, resolveDayKey(account, timeZone))
-})
+}
 
 // Idempotent through the stored claim key rather than an operation id: there is only ever one
 // streak reward per local day, so the day itself is the natural guard against a double claim.
@@ -87,12 +87,8 @@ const claimStreakReward = async (userId, timeZone = 'UTC') => db.runTransaction(
     const { progress, wallet } = writeAccount(transaction, account, {
         lumen: reward.lumen,
         crates: reward.crates,
-        progressPatch: { lastStreakClaimDay: reward.day },
+        walletPatch: { lastStreakClaim: { dayKey, streakDay: reward.day, claimedAt: new Date() } },
     })
-
-    transaction.set(account.walletRef, {
-        lastStreakClaim: { dayKey, streakDay: reward.day, claimedAt: new Date() },
-    }, { merge: true })
 
     return {
         reward,

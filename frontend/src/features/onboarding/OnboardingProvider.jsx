@@ -144,6 +144,6 @@ export default function OnboardingProvider({profile,children}){
 
         {run && !step && error && <div role="alert" className="fixed inset-0 z-[190] bg-black/75 flex flex-col gap-4 items-center justify-center text-neutral0"><p>{error}</p><Button onClick={complete}>Retry completion</Button></div>}
         {reward && <div ref={rewardRef} role="dialog" aria-modal="true" aria-label="Tutorial complete" className="fixed inset-0 z-[190] bg-black/75 flex items-center justify-center p-6"><div className="bg-neutral5 rounded-2xl p-8 flex flex-col items-center gap-4 text-neutral0"><h2 className="text-2xl font-bold">You’re ready!</h2><p>{reward.xp ? `Welcome to Studium! You earned ${reward.xp} XP.` : 'Tutorial complete. You’ve already collected its XP reward.'}</p><Button type="primary" className='mt-4 w-full py-4' onClick={()=>setReward(null)}>Explore Studium</Button></div></div>}
-        {!state && error && <div role="alert" className="fixed bottom-4 right-4 z-[190] rounded-xl p-4 bg-neutral5">Could not load tutorials. <Button onClick={()=>setRetry(n=>n+1)}>Retry</Button></div>}
+        {/* {!state && error && <div role="alert" className="fixed bottom-4 right-4 z-[190] rounded-xl p-4 bg-neutral5">Could not load tutorials. <Button onClick={()=>setRetry(n=>n+1)}>Retry</Button></div>} */}
     </Context.Provider>
 }

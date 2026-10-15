@@ -12,7 +12,7 @@ test('emulator: resumable Both, practice validation, cleanup ownership and lifet
         assert.equal((await getOnlineEvents(uid)).pending[0].type,'onboarding')
         let session=await startOnboarding(uid,'both'),run=session.active
         await assert.rejects(completeOnboarding(uid,{runId:run.id}),/Reach the end/)
-        const parserSource=await readFile(new URL('../../../../../frontend/src/features/agenda/utils/naturalLanguage.jsx',import.meta.url),'utf8')
+        const parserSource=(await readFile(new URL('../../../../../frontend/src/features/agenda/utils/naturalLanguage.jsx',import.meta.url),'utf8')).replace("'./taskCircleUtils'",JSON.stringify(new URL('../../../../../frontend/src/features/agenda/utils/taskCircleUtils.js',import.meta.url).href))
         const {parseTextToTaskTitle}=await import(`data:text/javascript;base64,${Buffer.from(parserSource).toString('base64')}`)
         while(session.active.index<session.steps.length){
             const step=session.steps[session.active.index]
@@ -33,7 +33,7 @@ test('emulator: resumable Both, practice validation, cleanup ownership and lifet
             if(step.event==='task-one' || step.event==='task-two'){
                 const ref=step.event==='task-one'?one:two
                 await reserveArtifact(uid,{runId:run.id,kind:step.event,recordId:ref.id})
-                const text=step.event==='task-one'?'Finish homework tomorrow':'apush test tomorrow'
+                const text=step.event==='task-one'?'Finish homework tomorrow':'apush test in 2 days'
                 await ref.set({userId:uid,tutorialRunId:run.id,tutorialKind:step.event,title:parseTextToTaskTitle(text,{courses:[{courseId:'LCPS-750100',title:'AP US History',subject:'History',alias:[]}]}).title})
             }
             if(step.event==='course-added'){
@@ -65,16 +65,20 @@ test('emulator: contributions reach all Circles, snapshot eligibility, and concu
     const {db}=await import('../../lib/firebaseAdmin.js')
     const {mutateMembership,setPrimaryCircle,claimCircleGrandQuest,editCircleIdentity}=await import('../socials/circleApi.js')
     const {readCircleContexts,contributeQuests}=await import('../socials/circleGoals.js')
+    const {grandQuestRound}=await import('../socials/circlePolicy.js')
     const prefix=`circle_qa_${randomUUID()}`,uids=[prefix+'_a',prefix+'_b',prefix+'_c'],ids=[]
     try{
         for(const uid of uids){await db.collection('users').doc(uid).set({progress:{level:1,xp:0,curveVersion:3},primaryCircleId:null});await db.collection('userStats').doc(uid).set({play:{'sat-classic':{placed:true,elo:100}}})}
         const profile={title:'Tutorial QA',flair:'Team',banner:{bgColor:'#9ca3af33',iconColor:'#9ca3af',iconIndex:0}}
         ids.push((await mutateMembership(uids[0],{action:'create',profile})).circleId,(await mutateMembership(uids[0],{action:'create',profile})).circleId)
         await Promise.all(ids.map(circleId=>mutateMembership(uids[1],{action:'join',circleId})))
-        const record=async(completed)=>db.runTransaction(async tx=>{const contexts=await readCircleContexts(tx,[uids[0]]);contributeQuests(tx,contexts,{userId:uids[0],dayKey:'2026-10-12',completed})})
-        await record(Array.from({length:10},(_,i)=>({id:`q${i}`,instanceId:`q${i}:0`})))
-        await record(Array.from({length:10},(_,i)=>({id:`q${i}`,instanceId:`q${i}:0`})))
-        for(const id of ids){const circle=await db.collection('circles').doc(id).get();assert.equal(circle.data().totalElo,200);const goal=await circle.ref.collection('goals').doc('grandQuest').get();assert.equal(goal.data().count,10);assert.deepEqual((await circle.ref.collection('grandQuestRounds').doc('1').get()).data().eligible.sort(),uids.slice(0,2).sort())}
+        const record=async(completed)=>{const {ensureMembershipIndex}=await import('../socials/circleMemberships.js');await ensureMembershipIndex(uids[0]);return db.runTransaction(async tx=>{const contexts=await readCircleContexts(tx,[uids[0]],{questInstances:completed.map(q=>({userId:uids[0],dayKey:'2026-10-12',instanceId:q.instanceId}))});contributeQuests(tx,contexts,{userId:uids[0],dayKey:'2026-10-12',completed})})}
+        await setPrimaryCircle(uids[0],ids[0])
+        await setPrimaryCircle(uids[1],ids[1])
+        const amount=Math.max(...ids.map(id=>grandQuestRound(id,1).target))
+        await record(Array.from({length:amount},(_,i)=>({id:`q${i}`,instanceId:`q${i}:0`})))
+        await record(Array.from({length:amount},(_,i)=>({id:`q${i}`,instanceId:`q${i}:0`})))
+        for(const id of ids){const circle=await db.collection('circles').doc(id).get();assert.equal(circle.data().totalElo,200);const goal=await circle.ref.collection('goals').doc('grandQuest').get();assert.equal(goal.data().count,amount);assert.deepEqual((await circle.ref.collection('grandQuestRounds').doc('1').get()).data().eligible.sort(),[id===ids[0]?uids[0]:uids[1]])}
         const {saveRealtimeResult}=await import('../realtime/realtimeService.js')
         const {computeTotalElo}=await import('../leaderboards/leaderboardService.js')
         const result={gameId:prefix,modeId:'sat-classic',ranked:true,playerIds:uids.slice(0,2),winnerUserId:uids[0],roundsPlayed:2,endReason:'max_questions',participationByUserId:{[uids[0]]:2,[uids[1]]:2},startedAt:Date.now()-120000,endedAt:Date.now()}
@@ -90,8 +94,8 @@ test('emulator: contributions reach all Circles, snapshot eligibility, and concu
         await assert.rejects(editCircleIdentity(uids[0],ids[0],{flair:'fuck'}),/appropriate/)
         await setPrimaryCircle(uids[0],ids[0])
         const claims=await Promise.all([claimCircleGrandQuest(uids[0],ids[0],1),claimCircleGrandQuest(uids[0],ids[0],1)])
-        assert.equal(claims.reduce((sum,r)=>sum+r.reward.xp,0),150)
-        await setPrimaryCircle(uids[0],ids[1]);assert.equal((await claimCircleGrandQuest(uids[0],ids[1],1)).reward.xp,150)
+        assert.equal(claims.reduce((sum,r)=>sum+r.reward.xp,0),grandQuestRound(ids[0],1).reward.xp)
+        await setPrimaryCircle(uids[0],ids[1]);await assert.rejects(claimCircleGrandQuest(uids[0],ids[1],1),/not available/)
         await mutateMembership(uids[0],{action:'leave',circleId:ids[1]});assert.equal((await db.collection('users').doc(uids[0]).get()).data().primaryCircleId,null)
     }finally{
         await db.collection('gameResults').doc(prefix).delete()

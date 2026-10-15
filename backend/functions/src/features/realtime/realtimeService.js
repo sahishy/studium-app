@@ -1,4 +1,5 @@
-import { readCircleContexts } from '../socials/circleGoals.js'
+import { readCircleContexts, writeCircleContextMigrations } from '../socials/circleGoals.js'
+import { ensureMembershipIndex } from '../socials/circleMemberships.js'
 import { auth, db } from '../../lib/firebaseAdmin.js'
 import { getRandomQuestions } from '../games/questionsService.js'
 import { placementOpponentElo } from '../games/satClassicUtils.js'
@@ -8,7 +9,8 @@ import { describeMasteryBoard, foldMastery } from '../mastery/masteryService.js'
 import { sanitizeRealtimeResult } from './resultUtils.js'
 import { eligibleMatchReward, performanceScore } from '../economy/progression.js'
 import { readAccount, writeAccount } from '../economy/economyService.js'
-import { applyQuestProgress, questDayRef, resolveDayKey } from '../quests/questService.js'
+import { applyQuestProgress, circleQuestInstances, questDayRef, resolveDayKey } from '../quests/questService.js'
+import { buildMatchQuestEvents } from '../quests/matchQuestEvents.js'
 
 // Matches that already paid out today, used to taper a long session's rewards. Stored per day on
 // the stats document, so a stale key from a previous day reads as zero rather than carrying over.
@@ -66,6 +68,7 @@ const saveRealtimeResult = async (result = {}) => {
         humanPlayerIds,
         persistedResult,
         performanceByUserId,
+        gameplayByUserId,
         opponentEloByUserId,
     } = sanitizeRealtimeResult(result)
     if(!gameId || !modeId || !humanPlayerIds.length) {
@@ -73,6 +76,7 @@ const saveRealtimeResult = async (result = {}) => {
     }
 
     const resultRef = db.collection('gameResults').doc(gameId)
+    await Promise.all(humanPlayerIds.map(ensureMembershipIndex))
     return db.runTransaction(async (transaction) => {
         const existing = await transaction.get(resultRef)
         if(existing.exists) return {
@@ -88,7 +92,10 @@ const saveRealtimeResult = async (result = {}) => {
         const accounts = await Promise.all(humanPlayerIds.map((userId) => readAccount(transaction, userId)))
         const questDayKeys = accounts.map((account) => resolveDayKey(account))
         const questSnaps = await Promise.all(humanPlayerIds.map((userId, index) => transaction.get(questDayRef(userId, questDayKeys[index]))))
-        const circleContexts = await readCircleContexts(transaction, humanPlayerIds)
+        const circleContexts = await readCircleContexts(transaction, humanPlayerIds, {
+            questInstances: humanPlayerIds.flatMap((uid, i) => circleQuestInstances(uid, questDayKeys[i], questSnaps[i])),
+        })
+        writeCircleContextMigrations(transaction, circleContexts)
         const circleEloDeltas = new Map()
         const eloDeltaByUserId = {}
         const rewardsByUserId = {}
@@ -179,11 +186,7 @@ const saveRealtimeResult = async (result = {}) => {
                     dayKey: questDayKeys[index],
                     daySnap: questSnaps[index],
                     circleContexts,
-                    events: [
-                        { metric: 'match_played', amount: 1 },
-                        { metric: `mode:${modeId}`, amount: 1 },
-                        ...(result.winnerUserId === userId ? [{ metric: 'match_won', amount: 1 }] : []),
-                    ],
+                    events: buildMatchQuestEvents(result, userId, performance ?? {}, gameplayByUserId[userId]),
                 })
                 : { reward: { xp: 0, lumen: 0, crates: 0 }, completed: [], quests: [] }
             questsByUserId[userId] = { quests: questResult.quests, completed: questResult.completed, reward: questResult.reward }
@@ -212,13 +215,11 @@ const saveRealtimeResult = async (result = {}) => {
                     },
                 } : {}),
             })
-            transaction.create(db.collection('rewardEvents').doc(`match_${gameId}_${userId}`), {
-                type: 'ranked_match', gameId, userId, ...reward, createdAt: new Date(),
-            })
         })
 
         for (const context of circleContexts) {
-            transaction.update(context.ref, {totalElo:context.totalElo + (circleEloDeltas.get(context.ref.id) || 0)})
+            const delta = circleEloDeltas.get(context.ref.id) || 0
+            if(delta) transaction.update(context.ref, {totalElo:context.totalElo + delta})
         }
 
         transaction.create(resultRef, {

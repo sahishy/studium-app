@@ -60,6 +60,35 @@ const enterTimber = (fixture, firstResponse = "A", secondResponse = "B") => {
   assert.equal(fixture.game.state.phase, "timber_active");
 };
 
+test("quest telemetry counts safe chops, excludes head starts and rejects, and keeps stuns across rounds", () => {
+  const fixture = setup();
+  enterTimber(fixture);
+  const game = fixture.game;
+  const tally = game.privateState.gameplayByUserId.p1;
+  assert.equal(game.players[0].state.timberProgress, 10);
+  assert.equal(tally.timberLogsChopped, 0);
+  const chop = (side) => fixture.engine.handleAction(game, "p1", { type: "game.chop", payload: { side } }, fixture.context());
+  fixture.game.privateState.branchSequence = [null, "left", "right"];
+  fixture.setNow(Number(game.state.timberRoundStartedAt) + 100);
+  chop("left");
+  chop("right"); // Rate limited.
+  assert.equal(tally.timberLogsChopped, 1);
+  fixture.setNow(fixture.context().now + 100);
+  chop("left"); // Branch collision.
+  chop("right"); // Stunned.
+  assert.equal(tally.stuns, 1);
+  assert.equal(tally.timberLogsChopped, 1);
+  fixture.setNow(Number(game.state.phaseDeadlineAt));
+  fixture.engine.handleDeadline(game, fixture.context());
+  fixture.setNow(Number(game.state.phaseDeadlineAt));
+  fixture.engine.handleDeadline(game, fixture.context());
+  assert.equal(game.state.phase, "question_active");
+  assert.equal(game.privateState.gameplayByUserId.p1.stuns, 1);
+  fixture.engine.handleForfeit(game, "p2", fixture.context());
+  assert.equal(game.result.gameplayByUserId.p1.stuns, 1);
+  assert.equal(fixture.engine.publicState(game).gameplayByUserId, undefined);
+});
+
 test("initializes ten questions with a two-minute SAT deadline and private answers", () => {
   const { game, engine } = setup();
   assert.equal(game.state.phase, "question_active");

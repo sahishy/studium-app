@@ -4,6 +4,7 @@ import { FaMagnifyingGlass } from 'react-icons/fa6'
 import Button from '../../../shared/components/ui/Button'
 import CourseCommandPalette from '../components/commandPalettes/CourseCommandPalette'
 import AllCoursesCard from '../components/AllCoursesCard'
+import StudentReviewsSection from '../components/StudentReviewsSection'
 import { getAllCourses, getCourseSubjects, searchCourses } from '../services/courseService'
 import { getAverageScoreByCourseIds } from '../services/reviewService'
 import { createCacheKey, resolveCachedRecordsByIds, setCachedRecordsById } from '../../../shared/services/cacheService'
@@ -220,6 +221,7 @@ const AllCoursesTab = () => {
                         </button>
                     </div>
 
+                    <StudentReviewsSection />
                     <section className="w-full mb-8" aria-label="Daily featured courses">
                         <h2 className="text-xl font-semibold mb-4">Discover something new</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{featured.map(course => <AllCoursesCard key={course.courseId} course={course} score={scoreMap[course.courseId]} featured onOpen={() => openCourse(course.courseId)} />)}</div>

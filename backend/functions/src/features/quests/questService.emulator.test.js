@@ -2,6 +2,45 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { randomUUID } from 'node:crypto'
 
+test('match results apply new quest metrics once and preserve clean-win requirements', { skip: process.env.USE_FIREBASE_EMULATORS !== 'true' }, async () => {
+    const { db } = await import('../../lib/firebaseAdmin.js')
+    const { saveRealtimeResult } = await import('../realtime/realtimeService.js')
+    const userId = `quest_match_${randomUUID()}`
+    const gameIds = Array.from({ length: 4 }, () => `quest_match_${randomUUID()}`)
+    const boardRef = db.collection('questBoards').doc(userId)
+    const userRef = db.collection('users').doc(userId)
+    const cleanup = [userRef, boardRef, db.collection('userStats').doc(userId), db.collection('wallets').doc(userId),
+        ...gameIds.flatMap((id) => [db.collection('gameResults').doc(id), db.collection('rewardEvents').doc(`match_${id}_${userId}`)])]
+    try {
+        await userRef.set({ progress: { level: 1, xp: 0, timeZone: 'America/New_York' } })
+        await boardRef.set({ userId, questIds: ['timber-logs-150', 'timber-clean-wins-2', 'correct-15'], progress: {}, completed: {} })
+        const match = (index, patch = {}) => ({
+            gameId: gameIds[index], modeId: 'sat-timber', ranked: true, playerIds: [userId, 'bot'], botPlayerIds: ['bot'],
+            winnerUserId: userId, roundsPlayed: 3, endReason: 'first_to_three', participationByUserId: { [userId]: 3 },
+            startedAt: Date.now() - 120000, endedAt: Date.now(),
+            performanceByUserId: { [userId]: { faced: 3, answered: 3, correct: 3, roundsWon: 3, avgAnswerMs: 10000,
+                byDomain: { Algebra: { answered: 3, correct: 3 } }, byDifficulty: {} } },
+            gameplayByUserId: { [userId]: { trackedFromStart: true, stuns: 0, timberLogsChopped: 45 } },
+            ...patch,
+        })
+        const first = match(0)
+        await saveRealtimeResult(first)
+        const afterFirst = (await boardRef.get()).data().progress
+        assert.deepEqual(afterFirst, { 'timber-logs-150': 45, 'timber-clean-wins-2': 1, 'correct-15': 3 })
+        assert.equal((await saveRealtimeResult(first)).duplicate, true)
+        assert.deepEqual((await boardRef.get()).data().progress, afterFirst)
+        await saveRealtimeResult(match(1, { gameplayByUserId: { [userId]: { trackedFromStart: true, stuns: 1, timberLogsChopped: 40 } } }))
+        assert.deepEqual((await boardRef.get()).data().progress, { 'timber-logs-150': 85, 'timber-clean-wins-2': 1, 'correct-15': 6 })
+        await saveRealtimeResult(match(2, { ranked: false }))
+        assert.equal((await boardRef.get()).data().progress['timber-logs-150'], 85)
+        await saveRealtimeResult(match(3))
+        assert.equal((await boardRef.get()).data().progress['timber-clean-wins-2'], 2)
+        assert.equal((await boardRef.get()).data().completed['timber-clean-wins-2'], true)
+    } finally {
+        await Promise.allSettled(cleanup.map((ref) => ref.delete()))
+    }
+})
+
 test('continuous quests claim rewards once under concurrent requests and preserve other slots', { skip: process.env.USE_FIREBASE_EMULATORS !== 'true' }, async () => {
     const { db } = await import('../../lib/firebaseAdmin.js')
     const { claimQuest, getQuestBoard, recordQuestEvent, rerollQuest } = await import('./questService.js')

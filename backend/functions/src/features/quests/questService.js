@@ -1,4 +1,5 @@
-import { readCircleContexts, contributeQuests } from '../socials/circleGoals.js'
+import { readCircleContexts, contributeQuests, writeCircleContextMigrations } from '../socials/circleGoals.js'
+import { ensureMembershipIndex } from '../socials/circleMemberships.js'
 import { randomInt } from 'node:crypto'
 import { db } from '../../lib/firebaseAdmin.js'
 import { readAccount, writeAccount } from '../economy/economyService.js'
@@ -30,7 +31,7 @@ const QUEST_RARITY_WEIGHTS = Object.freeze({
 const RARITY_LADDER = Object.freeze(['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary'])
 
 // Every quest's metric has to be something the app actually emits: task_completed,
-// resource_published, heart_given, match_played, match_won, or mode:<modeId>. A quest wired to a
+// resource_published, heart_given, or the match metrics from buildMatchQuestEvents. A quest wired to a
 // metric nothing fires can never be completed, which is a dead slot on the student's board.
 const QUEST_CATALOG = Object.freeze([
     { id: 'tasks-1', group: 'study', rarity: 'Common', label: 'Complete 1 task', metric: 'task_completed', target: 1 },
@@ -50,6 +51,58 @@ const QUEST_CATALOG = Object.freeze([
     { id: 'matches-6', group: 'play', rarity: 'Rare', label: 'Play 6 ranked matches', metric: 'match_played', target: 6 },
     { id: 'win-3', group: 'play', rarity: 'Epic', label: 'Win 3 ranked matches', metric: 'match_won', target: 3 },
     { id: 'win-5', group: 'play', rarity: 'Legendary', label: 'Win 5 ranked matches', metric: 'match_won', target: 5 },
+
+    { id: 'rounds-1', group: 'play', rarity: 'Common', label: 'Win 1 round', metric: 'round_won', target: 1 },
+    { id: 'rounds-3', group: 'play', rarity: 'Uncommon', label: 'Win 3 rounds', metric: 'round_won', target: 3 },
+    { id: 'rounds-6', group: 'play', rarity: 'Rare', label: 'Win 6 rounds', metric: 'round_won', target: 6 },
+    { id: 'rounds-10', group: 'play', rarity: 'Epic', label: 'Win 10 rounds', metric: 'round_won', target: 10 },
+    { id: 'rounds-15', group: 'play', rarity: 'Legendary', label: 'Win 15 rounds', metric: 'round_won', target: 15 },
+
+    { id: 'correct-3', group: 'play', rarity: 'Common', label: 'Answer 3 questions correctly', metric: 'question_correct', target: 3 },
+    { id: 'correct-8', group: 'play', rarity: 'Uncommon', label: 'Answer 8 questions correctly', metric: 'question_correct', target: 8 },
+    { id: 'correct-15', group: 'play', rarity: 'Rare', label: 'Answer 15 questions correctly', metric: 'question_correct', target: 15 },
+    { id: 'correct-25', group: 'play', rarity: 'Epic', label: 'Answer 25 questions correctly', metric: 'question_correct', target: 25 },
+    { id: 'correct-40', group: 'play', rarity: 'Legendary', label: 'Answer 40 questions correctly', metric: 'question_correct', target: 40 },
+
+    { id: 'math-correct-2', group: 'play', rarity: 'Common', label: 'Answer 2 math questions correctly', metric: 'math_question_correct', target: 2 },
+    { id: 'math-correct-4', group: 'play', rarity: 'Uncommon', label: 'Answer 4 math questions correctly', metric: 'math_question_correct', target: 4 },
+    { id: 'math-correct-8', group: 'play', rarity: 'Rare', label: 'Answer 8 math questions correctly', metric: 'math_question_correct', target: 8 },
+    { id: 'math-correct-12', group: 'play', rarity: 'Epic', label: 'Answer 12 math questions correctly', metric: 'math_question_correct', target: 12 },
+    { id: 'math-correct-20', group: 'play', rarity: 'Legendary', label: 'Answer 20 math questions correctly', metric: 'math_question_correct', target: 20 },
+
+    { id: 'reading-correct-2', group: 'play', rarity: 'Common', label: 'Answer 2 english questions correctly', metric: 'reading_question_correct', target: 2 },
+    { id: 'reading-correct-4', group: 'play', rarity: 'Uncommon', label: 'Answer 4 english questions correctly', metric: 'reading_question_correct', target: 4 },
+    { id: 'reading-correct-8', group: 'play', rarity: 'Rare', label: 'Answer 8 english questions correctly', metric: 'reading_question_correct', target: 8 },
+    { id: 'reading-correct-12', group: 'play', rarity: 'Epic', label: 'Answer 12 english questions correctly', metric: 'reading_question_correct', target: 12 },
+    { id: 'reading-correct-20', group: 'play', rarity: 'Legendary', label: 'Answer 20 english questions correctly', metric: 'reading_question_correct', target: 20 },
+
+    { id: 'flutter-rings-5', group: 'play', rarity: 'Common', label: 'Clear 5 rings in Flutter', metric: 'flutter_ring_cleared', target: 5 },
+    { id: 'flutter-rings-15', group: 'play', rarity: 'Uncommon', label: 'Clear 15 rings in Flutter', metric: 'flutter_ring_cleared', target: 15 },
+    { id: 'flutter-rings-30', group: 'play', rarity: 'Rare', label: 'Clear 30 rings in Flutter', metric: 'flutter_ring_cleared', target: 30 },
+    { id: 'flutter-rings-50', group: 'play', rarity: 'Epic', label: 'Clear 50 rings in Flutter', metric: 'flutter_ring_cleared', target: 50 },
+    { id: 'flutter-rings-80', group: 'play', rarity: 'Legendary', label: 'Clear 80 rings in Flutter', metric: 'flutter_ring_cleared', target: 80 },
+
+    { id: 'timber-logs-25', group: 'play', rarity: 'Common', label: 'Chop 100 times in Timber', metric: 'timber_log_chopped', target: 100 },
+    { id: 'timber-logs-75', group: 'play', rarity: 'Uncommon', label: 'Chop 150 times in Timber', metric: 'timber_log_chopped', target: 150 },
+    { id: 'timber-logs-150', group: 'play', rarity: 'Rare', label: 'Chop 200 times in Timber', metric: 'timber_log_chopped', target: 200 },
+    { id: 'timber-logs-250', group: 'play', rarity: 'Epic', label: 'Chop 400 times in Timber', metric: 'timber_log_chopped', target: 400 },
+    { id: 'timber-logs-400', group: 'play', rarity: 'Legendary', label: 'Chop 600 times in Timber', metric: 'timber_log_chopped', target: 600 },
+
+    { id: 'puncture-pins-5', group: 'play', rarity: 'Common', label: 'Place 5 pins in Puncture', metric: 'puncture_pin_placed', target: 5 },
+    { id: 'puncture-pins-15', group: 'play', rarity: 'Uncommon', label: 'Place 15 pins in Puncture', metric: 'puncture_pin_placed', target: 15 },
+    { id: 'puncture-pins-30', group: 'play', rarity: 'Rare', label: 'Place 30 pins in Puncture', metric: 'puncture_pin_placed', target: 30 },
+    { id: 'puncture-pins-50', group: 'play', rarity: 'Epic', label: 'Place 50 pins in Puncture', metric: 'puncture_pin_placed', target: 50 },
+    { id: 'puncture-pins-80', group: 'play', rarity: 'Legendary', label: 'Place 80 pins in Puncture', metric: 'puncture_pin_placed', target: 80 },
+
+    { id: 'puncture-clean-wins-1', group: 'play', rarity: 'Uncommon', label: 'Win a game of Puncture without getting stunned', metric: 'puncture_clean_win', target: 1 },
+    { id: 'puncture-clean-wins-2', group: 'play', rarity: 'Rare', label: 'Win 2 games of Puncture without getting stunned', metric: 'puncture_clean_win', target: 2 },
+    { id: 'puncture-clean-wins-4', group: 'play', rarity: 'Epic', label: 'Win 4 games of Puncture without getting stunned', metric: 'puncture_clean_win', target: 4 },
+    { id: 'puncture-clean-wins-6', group: 'play', rarity: 'Legendary', label: 'Win 6 games of Puncture without getting stunned', metric: 'puncture_clean_win', target: 6 },
+
+    { id: 'timber-clean-wins-1', group: 'play', rarity: 'Uncommon', label: 'Win a game of Timber without getting stunned', metric: 'timber_clean_win', target: 1 },
+    { id: 'timber-clean-wins-2', group: 'play', rarity: 'Rare', label: 'Win 2 games of Timber without getting stunned', metric: 'timber_clean_win', target: 2 },
+    { id: 'timber-clean-wins-4', group: 'play', rarity: 'Epic', label: 'Win 4 games of Timber without getting stunned', metric: 'timber_clean_win', target: 4 },
+    { id: 'timber-clean-wins-6', group: 'play', rarity: 'Legendary', label: 'Win 6 games of Timber without getting stunned', metric: 'timber_clean_win', target: 6 },
 
     { id: 'hearts-1', group: 'share', rarity: 'Common', label: 'Heart 1 resource', metric: 'heart_given', target: 1 },
     { id: 'hearts-3', group: 'share', rarity: 'Uncommon', label: 'Heart 3 resources', metric: 'heart_given', target: 3 },
@@ -143,6 +196,17 @@ const describeQuest = (quest, progress = {}, completed = {}, cycles = {}) => {
 }
 
 const questDayRef = (userId) => db.collection('questBoards').doc(String(userId))
+
+// At most the current board's slots can complete in an event. Read only these
+// receipts before writes, never the Circle's lifetime contribution history.
+export const circleQuestInstances = (userId, dayKey, daySnap, metric = null) => {
+    const stored = daySnap?.data() ?? {}
+    return pickDailyQuests(userId, dayKey, stored.questIds)
+        .filter(quest => !stored.completed?.[quest.id] && (!metric || quest.metric === metric))
+        .map(quest => ({
+        userId, dayKey, instanceId: `${quest.id}:${stored.cycles?.[quest.id] || 0}`,
+    }))
+}
 
 const resolveDayKey = (account, requestedZone = 'UTC') => {
     const candidate = account.user?.preferences?.timeZone || account.progress?.timeZone || requestedZone
@@ -354,13 +418,18 @@ const claimQuest = async (userId, questId, instanceId, timeZone = 'UTC') => db.r
 })
 
 // Standalone entry point for events that are not already inside a transaction.
-const recordQuestEvent = async (userId, metric, { amount = 1, timeZone = 'UTC' } = {}) => db.runTransaction(async (transaction) => {
+const recordQuestEvent = async (userId, metric, { amount = 1, timeZone = 'UTC' } = {}) => {
+    await ensureMembershipIndex(userId)
+    return db.runTransaction(async (transaction) => {
 
     const account = await readAccount(transaction, userId)
     const dayKey = resolveDayKey(account, timeZone)
     const daySnap = await transaction.get(questDayRef(userId, dayKey))
 
-    const circleContexts = await readCircleContexts(transaction, [userId])
+    const questInstances = circleQuestInstances(userId, dayKey, daySnap, metric)
+    const circleContexts = questInstances.length
+        ? await readCircleContexts(transaction, [userId], { questInstances }) : []
+    writeCircleContextMigrations(transaction, circleContexts)
     const result = applyQuestProgress(transaction, { userId, dayKey, daySnap, metric, amount, circleContexts })
     const { progress, wallet } = writeAccount(transaction, account, {
         xp: result.reward.xp,
@@ -369,7 +438,8 @@ const recordQuestEvent = async (userId, metric, { amount = 1, timeZone = 'UTC' }
     })
 
     return { ...result, progress, wallet }
-})
+    })
+}
 
 export {
     DAILY_QUEST_COUNT, DAILY_REROLLS, QUEST_CATALOG, QUEST_RARITY_REWARDS, QUEST_RARITY_WEIGHTS,

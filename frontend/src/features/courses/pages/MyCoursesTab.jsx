@@ -8,7 +8,6 @@ import { getCourseSubjects, searchCourses } from '../services/courseService'
 import { FaArrowUp, FaMagnifyingGlass } from 'react-icons/fa6'
 import { useModal } from '../../../shared/contexts/ModalContext'
 import AddCourseModal from '../components/modals/AddCourseModal'
-import { useUserStats } from '../../profile/contexts/UserStatsContext'
 import { getAverageScoreByCourseIds } from '../services/reviewService'
 import LoadingState from '../../../shared/components/ui/LoadingState'
 import { createCacheKey, resolveCachedRecordsByIds, setCachedRecordsById } from '../../../shared/services/cacheService'
@@ -28,7 +27,6 @@ const MyCoursesTab = () => {
 
     const { profile } = useOutletContext()
     const { step: tutorial } = useOnboarding()
-    const { userStats } = useUserStats()
     const { openModal, closeModal } = useModal()
     const { enrollments = [], selectedCourses = [], courseIds = [], loading: coursesLoading = false } = useCourses()
     const loadingCourseId = null
@@ -222,8 +220,6 @@ const MyCoursesTab = () => {
             <AddCourseModal
                 profile={profile}
                 course={course}
-                schoolId={userStats?.academic?.schoolId ?? null}
-                schoolAffiliations={userStats?.academic?.schoolAffiliations ?? []}
                 closeModal={closeModal}
             />
         )

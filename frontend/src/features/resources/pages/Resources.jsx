@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOutletContext } from 'react-router-dom'
-import { FaBookOpen, FaHeart, FaLink, FaPlus, FaWandMagicSparkles } from 'react-icons/fa6'
+import { FaBookOpen, FaLink, FaPlus, FaWandMagicSparkles } from 'react-icons/fa6'
 import { HiSelector } from 'react-icons/hi'
 import Topbar from '../../../shared/components/ui/Topbar'
 import PageHeader from '../../../shared/components/ui/PageHeader'
@@ -11,14 +11,15 @@ import TextTabSelector from '../../../shared/components/ui/TextTabSelector'
 import TextField from '../../../shared/components/ui/TextField'
 import LoadingState from '../../../shared/components/ui/LoadingState'
 import ErrorState from '../../../shared/components/ui/ErrorState'
+import ComingSoon from '../../../shared/components/ui/ComingSoon'
 import Select from '../../../shared/components/popovers/Select'
 import AvatarPicture from '../../../shared/components/avatar/AvatarPicture'
 import { formatRelativeTime } from '../../../shared/utils/formatters'
 import Modal from '../../../shared/components/modals/Modal'
 import { useQuests } from '../../quests/QuestContext'
-import CollegePanel from '../components/CollegePanel'
 import ResourceCreateModal from '../components/ResourceCreateModal'
-import LinkPreview from '../components/LinkPreview'
+import LinkResourceCard from '../components/LinkResourceCard'
+import HeartButton from '../../../shared/components/ui/HeartButton'
 import Dropdown from '../../../shared/components/popovers/Dropdown'
 import { listResources, toggleHeart } from '../services/resourceService'
 
@@ -51,6 +52,8 @@ const Resources = () => {
     const [query, setQuery] = useState('')
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const pendingHearts = useRef(new Set())
+    const [heartPendingIds, setHeartPendingIds] = useState(new Set())
 
     const load = async () => {
 
@@ -90,7 +93,9 @@ const Resources = () => {
     }), [resources, type, query, profile.uid])
 
     const heart = async (id) => {
-
+        if(pendingHearts.current.has(id)) return
+        pendingHearts.current.add(id)
+        setHeartPendingIds(new Set(pendingHearts.current))
         try {
             const result = await toggleHeart(id)
             reportQuestProgress(result)
@@ -101,6 +106,9 @@ const Resources = () => {
 
         } catch(heartError) {
             setError(heartError.message)
+        } finally {
+            pendingHearts.current.delete(id)
+            setHeartPendingIds(new Set(pendingHearts.current))
         }
 
     }
@@ -131,7 +139,8 @@ const Resources = () => {
                 </div>
 
                 {tab === 'college' ? (
-                    <CollegePanel />
+                    // Temporarily paused: <CollegePanel />
+                    <ComingSoon description='Explore college stats and student admissions experiences.' />
                 ) : (
                     <>
                         <div className='flex flex-wrap items-center gap-3'>
@@ -161,11 +170,12 @@ const Resources = () => {
 
                             <Dropdown
                                 options={[
-                                    { label: 'Lesson', icon: <FaWandMagicSparkles className='text-sm' /> },
                                     { label: 'Link', icon: <FaLink className='text-sm' /> },
+                                    { label: 'Lesson', icon: <FaWandMagicSparkles className='text-sm' />, disabled: true, badge: 'Coming soon' },
                                 ]}
-                                // A lesson goes straight to the builder; only a link needs a form.
-                                onSelect={(option) => (option.label === 'Lesson' ? navigate('/resources/build') : setEditor({ type: 'link' }))}
+                                onSelect={(option) => {
+                                    if(option.label === 'Link') setEditor({ type: 'link' })
+                                }}
                                 align='end'
                             >
                                 {() => (
@@ -182,8 +192,10 @@ const Resources = () => {
                         ) : loading ? (
                             <LoadingState className='flex-1' />
                         ) : shown.length ? (
-                            <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-3'>
-                                {shown.map((resource) => (
+                            <div className='grid gap-x-4 gap-y-10 md:grid-cols-2 xl:grid-cols-3'>
+                                {shown.map((resource) => resource.type === 'link' ? (
+                                    <LinkResourceCard key={resource.id} resource={resource} pending={heartPendingIds.has(resource.id)} onHeart={() => heart(resource.id)} />
+                                ) : (
                                     <Card
                                         key={resource.id}
                                         hoverable
@@ -196,7 +208,6 @@ const Resources = () => {
                                         }}
                                         className='gap-3'
                                     >
-                                        {resource.type === 'link' && resource.url ? <LinkPreview resource={resource} /> : null}
                                         <div className='flex items-start justify-between gap-3'>
 
                                             <div className='flex items-center gap-2 text-xs font-semibold text-neutral1'>
@@ -207,17 +218,13 @@ const Resources = () => {
                                                 ) : null}
                                             </div>
 
-                                            <button
-                                                type='button'
+                                            <HeartButton
                                                 onClick={(event) => { event.stopPropagation(); heart(resource.id) }}
-                                                disabled={resource.status !== 'published'}
-                                                aria-label={`${resource.hearted ? 'Remove heart from' : 'Heart'} ${resource.title}`}
-                                                className={`flex items-center gap-1.5 text-xs font-semibold transition-colors cursor-pointer
-                                                    disabled:opacity-40 disabled:cursor-not-allowed
-                                                    ${resource.hearted ? 'text-red-400' : 'text-neutral1 hover:text-red-400'}`}
-                                            >
-                                                <FaHeart /> {resource.heartsCount || 0}
-                                            </button>
+                                                disabled={heartPendingIds.has(resource.id) || resource.status !== 'published'}
+                                                active={resource.hearted}
+                                                count={resource.heartsCount}
+                                                label={resource.title}
+                                            />
 
                                         </div>
 
