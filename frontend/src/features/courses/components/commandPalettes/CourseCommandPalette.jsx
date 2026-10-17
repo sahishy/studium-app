@@ -19,7 +19,6 @@ const CourseCommandPalette = ({
     onLoadMoreSearch,
     onLoadMoreSubject,
     scoreMap = {},
-    getScoreLoading = () => false,
     getIsTaking = () => false,
     getIsLoading = () => false,
     onSelectCourse,
@@ -62,14 +61,14 @@ const CourseCommandPalette = ({
                     )}
                 </div>
             ) : (
-                <div className='h-full flex min-h-0 bg-neutral6'>
-                    <aside className='w-64 shrink-0 p-3 overflow-y-auto'>
-                        <div className='flex flex-col gap-1'>
+                <div className='h-full flex flex-col lg:flex-row min-h-0 min-w-0 bg-neutral6'>
+                    <aside className='w-full lg:w-64 shrink-0 p-3 overflow-x-auto lg:overflow-y-auto border-b lg:border-b-0 border-neutral4'>
+                        <div className='flex lg:flex-col gap-1'>
                             {subjects.map((subject) => (
                                 <button
                                     key={subject}
                                     onClick={() => onSubjectChange?.(subject)}
-                                    className={`text-left rounded-xl px-3 py-2 text-sm transition-colors cursor-pointer ${activeSubject === subject
+                                    className={`shrink-0 whitespace-nowrap lg:whitespace-normal text-left rounded-xl px-3 py-2 text-sm transition-colors cursor-pointer ${activeSubject === subject
                                         ? 'bg-neutral5 text-neutral0'
                                         : 'text-neutral1 hover:bg-neutral5 hover:text-neutral0'
                                         }`}
@@ -80,9 +79,9 @@ const CourseCommandPalette = ({
                         </div>
                     </aside>
 
-                    <div className='flex-1 min-h-0 overflow-y-auto p-4'>
+                    <div className='flex-1 min-w-0 min-h-0 overflow-y-auto p-3 sm:p-4'>
                         <h3 className='text-sm text-neutral1 mb-3'>{activeSubject || 'Courses'}</h3>
-                        <div className='grid grid-cols-2 gap-3'>
+                        <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
                             {visibleSubjectCourses.map((course) => (
                                 <CoursePaletteGridCard
                                     key={course.courseId}

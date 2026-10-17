@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { PiStarFourFill } from "react-icons/pi";
-import { FaBoxOpen, FaCheck, FaCopy, FaFire, FaFlask, FaRightFromBracket } from "react-icons/fa6";
+import { FaBoxOpen, FaCheck, FaCopy, FaFire, FaFlask, FaHouse, FaRightFromBracket } from "react-icons/fa6";
 import StreakTooltip from "../../../features/profile/components/tooltips/StreakTooltip";
 import LevelTooltip from "../../../features/profile/components/tooltips/LevelTooltip";
 import Button from './Button'
@@ -49,8 +49,10 @@ const Topbar = ({
     onReturnHome = null,
     gameActionLabel = null,
     gameActionType = null,
+    gameActionExtras = null,
 }) => {
 
+    const resolvedGameActionLabel = gameActionLabel ?? (isGameFinished ? 'Return home' : 'Leave game')
     const streak = profile?.progress?.streak ?? 0
     const level = profile?.progress?.level ?? 1
     const xp = profile?.progress?.xp ?? 0
@@ -126,13 +128,20 @@ const Topbar = ({
             <div className='text-neutral0 w-full m-auto px-4 sm:px-8 lg:px-16 xl:px-24 pb-4 pt-6 flex justify-between items-center'>
 
                 {showGameAction ? (
-                    <Button
-                        type={gameActionType ?? (isGameFinished ? 'secondary' : 'negative')}
-                        onClick={isGameFinished ? onReturnHome : onLeaveGame}
-                        data-onboarding={isGameFinished ? 'match:return-home' : undefined}
-                    >
-                        {gameActionLabel ?? (isGameFinished ? 'Return home' : 'Leave game')}
-                    </Button>
+                    <div className='game-topbar-actions flex items-center gap-2 shrink-0'>
+                        <Button
+                            type={gameActionType ?? (isGameFinished ? 'secondary' : 'negative')}
+                            onClick={isGameFinished ? onReturnHome : onLeaveGame}
+                            data-onboarding={isGameFinished ? 'match:return-home' : undefined}
+                            aria-label={resolvedGameActionLabel}
+                        >
+                            <span className='lg:hidden' aria-hidden='true'>
+                                {isGameFinished ? <FaHouse /> : <FaRightFromBracket />}
+                            </span>
+                            <span className='hidden lg:inline'>{resolvedGameActionLabel}</span>
+                        </Button>
+                        {gameActionExtras}
+                    </div>
                 ) : party?.id ? (
                     <div className='flex items-center gap-3 shrink-0'>
                         <Button
@@ -181,44 +190,46 @@ const Topbar = ({
                         />
                     ) : null}
 
-                    <LumenTooltip balance={lumenBalance} placement='bottom'>
-                        <RewardCounter kind='lumen' className='flex items-center gap-4 px-4 text-sky-500'>
-                            <LumenIcon className='size-6' />
-                            {snapshot?.wallet?.balance == null
-                                ? <NumberSkeleton label='Lumen' className='w-12' />
-                                : <h2>{displayedLumen}</h2>}
-                        </RewardCounter>
-                    </LumenTooltip>
+                    <div className='topbar-player-stats flex items-center gap-2 sm:gap-6'>
+                        <LumenTooltip balance={lumenBalance} placement='bottom'>
+                            <RewardCounter kind='lumen' className='flex items-center gap-4 px-4 text-sky-500'>
+                                <LumenIcon className='size-6' />
+                                {snapshot?.wallet?.balance == null
+                                    ? <NumberSkeleton label='Lumen' className='w-12' />
+                                    : <h2>{displayedLumen}</h2>}
+                            </RewardCounter>
+                        </LumenTooltip>
 
-                    <StreakTooltip
-                        streak={streak}
-                        board={streakBoard}
-                        claiming={claimingStreak}
-                        onClaim={claimStreakReward}
-                    >
-                        <div className={`flex items-center gap-4 px-4 ${streak > 0 ? 'text-orange-400' : 'text-neutral1'}`}>
-                            <div className='relative'>
-                                <FaFire className="text-2xl" />
-                                {/* Same treatment as the sidebar's unread dot, but outlined against
-                                    the Topbar's own background rather than the sidebar's. */}
-                                {streakBoard?.claimable ? (
-                                    <span className='absolute -top-0.5 -right-0.5 size-2 rounded-full border-2 border-neutral6 bg-sky-400' />
-                                ) : null}
+                        <StreakTooltip
+                            streak={streak}
+                            board={streakBoard}
+                            claiming={claimingStreak}
+                            onClaim={claimStreakReward}
+                        >
+                            <div className={`flex items-center gap-4 px-4 ${streak > 0 ? 'text-orange-400' : 'text-neutral1'}`}>
+                                <div className='relative'>
+                                    <FaFire className="text-2xl" />
+                                    {/* Same treatment as the sidebar's unread dot, but outlined against
+                                        the Topbar's own background rather than the sidebar's. */}
+                                    {streakBoard?.claimable ? (
+                                        <span className='absolute -top-0.5 -right-0.5 size-2 rounded-full border-2 border-neutral6 bg-sky-400' />
+                                    ) : null}
+                                </div>
+                                {profile?.progress?.streak == null
+                                    ? <NumberSkeleton label='streak' />
+                                    : <h2>{streak}</h2>}
                             </div>
-                            {profile?.progress?.streak == null
-                                ? <NumberSkeleton label='streak' />
-                                : <h2>{streak}</h2>}
-                        </div>
-                    </StreakTooltip>
+                        </StreakTooltip>
 
-                    <LevelTooltip level={level} xp={xp} placement="bottom">
-                        <RewardCounter kind='xp' className="flex items-center gap-4 px-4 text-yellow-400">
-                            <PiStarFourFill className="text-2xl" />
-                            {profile?.progress?.level == null
-                                ? <NumberSkeleton label='level' className='w-12' />
-                                : <h2>Lv. {level}</h2>}
-                        </RewardCounter>
-                    </LevelTooltip>
+                        <LevelTooltip level={level} xp={xp} placement="bottom">
+                            <RewardCounter kind='xp' className="flex items-center gap-4 px-4 text-yellow-400">
+                                <PiStarFourFill className="text-2xl" />
+                                {profile?.progress?.level == null
+                                    ? <NumberSkeleton label='level' className='w-12' />
+                                    : <h2>Lv. {level}</h2>}
+                            </RewardCounter>
+                        </LevelTooltip>
+                    </div>
 
 
                 </div>

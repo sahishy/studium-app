@@ -1,3 +1,9 @@
+.html-content math {
+    /* Scroll the surrounding content, not individual MathML expressions.
+       Native math layout can otherwise produce tiny platform scrollbars. */
+    overflow: visible;
+}
+
 /* Question HTML includes legacy border attributes and publisher-specific classes.
    Supply the grid explicitly because the CSS reset removes default borders. */
 .html-content table:not(.table_Borderless):not([border='0']),

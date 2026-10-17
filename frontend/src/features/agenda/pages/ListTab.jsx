@@ -479,11 +479,11 @@ const ListTab = () => {
         <>
             <div className='w-full h-full flex flex-col items-center gap-6'>
 
-                <div className='relative flex w-full h-11 items-center justify-end'>
+                <div className='relative flex w-full min-w-0 gap-2 h-11 items-center justify-end'>
                     {agendaPreferences?.list?.layout !== 'table' && <div data-onboarding="agenda:editor"
-                        className={`absolute left-1/2 top-1/2 -translate-1/2
-                                bg-neutral5 rounded-full flex gap-3 items-center w-96 transition-all
-                                ${isTaskLimitReached ? 'opacity-60 cursor-not-allowed' : 'cursor-text hover:w-104 focus-within:w-104'}
+                        className={`relative min-w-0 flex-1 sm:flex-none sm:absolute sm:left-1/2 sm:top-1/2 sm:-translate-1/2
+                                bg-neutral5 rounded-full flex gap-3 items-center sm:w-96 sm:max-w-[calc(100%-6rem)] transition-all
+                                ${isTaskLimitReached ? 'opacity-60 cursor-not-allowed' : 'cursor-text sm:hover:w-104 sm:focus-within:w-104'}
                             `}
                         tabIndex={isTaskLimitReached ? -1 : undefined}
                         onClick={() => {
@@ -495,7 +495,7 @@ const ListTab = () => {
                             title=''
                             circles={circles}
                             courses={courses}
-                            className={`w-full h-full px-4 py-3 ${isTaskLimitReached && 'pointer-events-none'}`}
+                            className={`w-full min-w-0 h-full px-4 py-3 ${isTaskLimitReached && 'pointer-events-none'}`}
                             placeholder={isTaskLimitReached ? 'Task limit reached' : 'Add a task'}
                             clearOnEnter
                             keepFocusOnEnter

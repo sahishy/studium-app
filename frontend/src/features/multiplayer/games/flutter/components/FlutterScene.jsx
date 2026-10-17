@@ -1,3 +1,4 @@
+import useMobileView from '../../../../../shared/utils/useMobileView'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Stars, useAnimations, useGLTF } from '@react-three/drei'
 import { memo, Suspense, useEffect, useMemo, useRef, useState } from 'react'
@@ -29,13 +30,17 @@ const SNAP_DISTANCE = 2.5
 const RING_RETIRE_Z = 0.5
 
 const FlutterCamera = () => {
-    const { camera } = useThree()
+    const { camera, size } = useThree()
+    const mobile = useMobileView()
 
     useEffect(() => {
+        // Keep the full horizontal flight bounds visible in narrow portrait arenas.
+        const aspect = size.width / Math.max(1, size.height)
+        camera.fov = mobile ? THREE.MathUtils.radToDeg(2 * Math.atan(Math.max(Math.tan(THREE.MathUtils.degToRad(22)), 6.2 / (11.5 * aspect)))) : 44
         camera.position.set(0, 2.1, 11.5)
         camera.lookAt(0, 0.3, -18)
         camera.updateProjectionMatrix()
-    }, [camera])
+    }, [camera, mobile, size.width, size.height])
 
     return null
 }

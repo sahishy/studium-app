@@ -22,7 +22,7 @@ const ChoiceButton = ({ choice, isSelected, isDisabled, isCorrectAnswer = false,
                 type='button'
                 onClick={() => onSelect(choice.id)}
                 disabled={isDisabled}
-                className={`w-full flex items-start gap-3 rounded-xl px-3 py-2 border cursor-pointer transition-all duration-300
+                className={`question-choice-button w-full flex items-start gap-3 rounded-xl px-3 py-2 border cursor-pointer transition-all duration-300
                     not-disabled:hover:bg-neutral5 disabled:cursor-not-allowed ${answerState ? '' : 'disabled:opacity-50'}
                     ${visibleAnswerState === 'correct' ? `border-green-500 bg-green-50 dark:border-green-500 dark:bg-green-500/15 ${isSelected ? 'ring-1 ring-green-500' : ''}` : ''}
                     ${visibleAnswerState === 'incorrect' ? `border-red-500 bg-red-50 dark:border-red-500 dark:bg-red-500/15 ${isSelected ? 'ring-1 ring-red-500' : ''}` : ''}
@@ -50,7 +50,7 @@ const ChoiceButton = ({ choice, isSelected, isDisabled, isCorrectAnswer = false,
                 <AvatarStack
                     users={answeringPlayers}
                     overlapClassName='-space-x-4'
-                    className='absolute left-full top-1/2 ml-2 -translate-y-1/2 z-10'
+                    className='question-answer-avatars absolute left-full top-1/2 ml-2 -translate-y-1/2 z-10'
                 />
             ) : null}
         </div>

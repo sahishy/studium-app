@@ -1,5 +1,8 @@
+import OpponentPreview from '../../components/OpponentPreview'
+import { canChop } from '../../utils/touchControls'
+import { FaArrowLeft, FaArrowRight } from 'react-icons/fa6'
 import { getMatchCountdown } from '../../utils/matchIntroTiming'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getGameServerNow, recordGameVisualCorrection, sendGameMessage, subscribeToGameActionResults, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
 import QuestionPane from '../sat-classic/components/QuestionPane'
 import MatchEndOverlay from '../sat-classic/components/MatchEndOverlay'
@@ -39,8 +42,8 @@ const formatClock = (milliseconds = 0) => {
 const ScorePanel = ({ player, align = 'start' }) => {
     const isEndAligned = align === 'end'
     return (
-        <div className={`flex-1 max-w-xs ${isEndAligned ? 'items-end' : ''}`}>
-            <div className={`flex items-center gap-3 ${isEndAligned ? 'flex-row-reverse' : ''}`}>
+        <div className={`mp-player flex-1 min-w-0 max-w-xs ${isEndAligned ? 'items-end' : ''}`}>
+            <div className={`mp-player-summary flex items-center gap-3 ${isEndAligned ? 'flex-row-reverse' : ''}`}>
                 <AvatarPicture
                     profile={{ profile: { profilePicture: player?.profilePicture ?? null } }}
                     avatar={player?.avatar}
@@ -76,7 +79,7 @@ const TimberHeader = ({ localPlayer, opponent, remainingMs }) => {
     }, [])
 
     return (
-        <div className='w-full flex items-center justify-between gap-6'>
+        <div className='mp-header w-full flex items-center justify-between gap-6'>
             <ScorePanel player={localPlayer} />
             <div className='flex flex-col items-center justify-center'>
                 <p className={`text-2xl font-semibold tabular-nums transform transition-all duration-150 ${isLowTime ? 'text-red-500' : ''} ${isPopping ? 'scale-110' : 'scale-100'}`}>
@@ -549,27 +552,33 @@ const TimberGame = ({ roomId, userId, readOnly = false, spectatorName = null, ma
     // pattern - see PunctureGame.jsx). A3+B1 already bound real bursts to a handful of actions per
     // coalesced update, so the benefit wasn't worth that regression - render raw.
 
+    const performChop = useCallback((side) => {
+        const chopAt = getGameServerNow(roomId)
+        const inputs = predictionInputsRef.current
+        if(!inputs || !canChop({ active: phase === 'timber_active', readOnly, now: chopAt, stunnedUntil: inputs.stunnedUntil, lastChopAt: lastLocalChopAtRef.current, interval: MIN_CHOP_INTERVAL_MS })) return
+        lastLocalChopAtRef.current = chopAt
+        const { hit } = predictChop({ branches: inputs.branches, index: inputs.pendingCount, side })
+        inputs.pendingCount += 1
+        if(hit) inputs.stunnedUntil = Math.max(inputs.stunnedUntil, chopAt + STUN_MS)
+        const clientActionId = `chop_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+        setPendingChops((current) => [...current, { clientActionId, side, sentAt: chopAt, actualChops: null }])
+        shake(hit ? 'impact' : 'subtle')
+        sendGameMessage(roomId, 'game.chop', { clientActionId, side })
+    }, [phase, readOnly, roomId, shake])
+
     useEffect(() => {
         if(phase !== 'timber_active' || readOnly) return () => {}
         const onKeyDown = (event) => {
-            if(event.repeat || ['INPUT', 'TEXTAREA'].includes(event.target?.tagName)) return
+            if(event.repeat || event.target?.isContentEditable || ['INPUT', 'TEXTAREA'].includes(event.target?.tagName)) return
             const key = String(event.key).toLowerCase()
             const side = key === 'a' || key === 'arrowleft' ? 'left' : (key === 'd' || key === 'arrowright' ? 'right' : null)
             if(!side) return
             event.preventDefault()
-            const chopAt = getGameServerNow(roomId)
-            const inputs = predictionInputsRef.current
-            if(chopAt < inputs.stunnedUntil || chopAt - lastLocalChopAtRef.current < MIN_CHOP_INTERVAL_MS) return
-            lastLocalChopAtRef.current = chopAt
-            const { hit } = predictChop({ branches: inputs.branches, index: inputs.pendingCount, side })
-            const clientActionId = `chop_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
-            setPendingChops((current) => [...current, { clientActionId, side, sentAt: chopAt, actualChops: null }])
-            shake(hit ? 'impact' : 'subtle')
-            sendGameMessage(roomId, 'game.chop', { clientActionId, side })
+            performChop(side)
         }
         window.addEventListener('keydown', onKeyDown)
         return () => window.removeEventListener('keydown', onKeyDown)
-    }, [phase, readOnly, roomId, shake])
+    }, [phase, readOnly, performChop])
 
     const questionRemaining = Math.max(0, Number(state?.currentQuestionDeadlineAt || 0) - now)
     const timberRemaining = Math.max(0, Number(state?.timberRoundDeadlineAt || 0) - now)
@@ -589,7 +598,7 @@ const TimberGame = ({ roomId, userId, readOnly = false, spectatorName = null, ma
         : state.lastTimberResult?.winnerUserId
 
     return (
-        <div ref={screenShakeRef} className={`w-full h-full min-h-[420px] flex flex-col will-change-transform ${phase === 'question_active' ? 'gap-12' : 'gap-4'}`}>
+        <div ref={screenShakeRef} className={`mp-game w-full h-full min-h-[420px] flex flex-col will-change-transform ${phase === 'question_active' ? 'gap-12' : 'gap-4'}`}>
             <TimberHeader
                 localPlayer={localPlayer}
                 opponent={opponent}
@@ -630,7 +639,8 @@ const TimberGame = ({ roomId, userId, readOnly = false, spectatorName = null, ma
                     ) : null}
                 </div>
             ) : (
-                <div className='relative flex-1 min-h-0 flex justify-center gap-5'>
+                <div className='mp-arena relative flex-1 min-h-0 flex justify-center gap-5'>
+                    <div className='local-arena'>
                     <TimberBoard
                         player={isRoundHold ? localPlayer : predicted.player}
                         branches={isRoundHold ? (state.visibleBranchesByUserId?.[localPlayer.userId] ?? EMPTY_BRANCHES) : predicted.branches}
@@ -640,7 +650,8 @@ const TimberGame = ({ roomId, userId, readOnly = false, spectatorName = null, ma
                         resultAnimation={isRoundHold && resolvedWinnerUserId ? (resolvedWinnerUserId === localPlayer.userId ? 'Victory' : 'Defeat') : null}
                         resultAnimationKey={state.timberRoundIndex}
                     />
-                    <TimberBoard
+                    </div>
+                    <OpponentPreview><TimberBoard
                         player={opponent}
                         branches={state.visibleBranchesByUserId?.[opponent.userId] ?? EMPTY_BRANCHES}
                         requiredChops={state.requiredChops}
@@ -648,7 +659,13 @@ const TimberGame = ({ roomId, userId, readOnly = false, spectatorName = null, ma
                         now={now}
                         resultAnimation={isRoundHold && resolvedWinnerUserId ? (resolvedWinnerUserId === opponent.userId ? 'Victory' : 'Defeat') : null}
                         resultAnimationKey={state.timberRoundIndex}
-                    />
+                    /></OpponentPreview>
+
+                    {!readOnly && phase === 'timber_active' ? <div className='mobile-timber-controls'>
+                        {['left', 'right'].map((side) => <button key={side} type='button' aria-label={`Chop ${side}`} onPointerDown={(event) => { if(event.button !== 0) return; event.preventDefault(); performChop(side) }} onClick={(event) => { if(event.detail === 0) performChop(side) }}>
+                            {side === 'left' ? <FaArrowLeft /> : <FaArrowRight />}
+                        </button>)}
+                    </div> : null}
 
                     {phase === 'timber_countdown' ? (
                         <TimberTransitionOverlay
@@ -664,7 +681,7 @@ const TimberGame = ({ roomId, userId, readOnly = false, spectatorName = null, ma
             )}
 
             {!readOnly && (phase === 'timber_active' || isRoundHold) ? (
-                <div className='flex items-center justify-center gap-2 text-sm text-neutral1'>
+                <div className='mp-control-hint flex items-center justify-center gap-2 text-sm text-neutral1'>
                     <kbd className='min-w-8 rounded-lg bg-neutral5 px-2 py-1 text-center font-semibold text-neutral1'>A</kbd>
                     <kbd className='min-w-8 rounded-lg bg-neutral5 px-2 py-1 text-center font-semibold text-neutral1'>D</kbd>
                     <span className='mx-1'>or</span>

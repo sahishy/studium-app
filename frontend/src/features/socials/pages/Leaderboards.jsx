@@ -1,3 +1,5 @@
+import FittedAvatarStage from '../../../shared/components/avatar/FittedAvatarStage'
+import useMobileView from '../../../shared/utils/useMobileView'
 import { useEffect, useMemo, useState } from 'react'
 import { useOutletContext, useSearchParams } from 'react-router-dom'
 import { FaTrophy } from 'react-icons/fa6'
@@ -48,6 +50,15 @@ const getEloForLeaderboard = (entry, leaderboardId) => {
 // actually drives data/podium rendering — while keeping the tab highlight itself instant — means a
 // flurry of clicks only causes one remount once the user settles on a tab, not one per click.
 const TAB_SWITCH_DEBOUNCE_MS = 200
+
+const LeaderboardStage = ({ children }) => {
+    const mobile = useMobileView()
+    return mobile ? (
+        <FittedAvatarStage minWidth={48} minHeight={42} className='h-64 w-full shrink-0 overflow-hidden'>
+            {children}
+        </FittedAvatarStage>
+    ) : children
+}
 
 const Leaderboards = () => {
     const { profile } = useOutletContext()
@@ -118,54 +129,59 @@ const Leaderboards = () => {
     const topThree = useMemo(() => entries.slice(0, 3), [entries])
 
     return (
-        <div className='flex flex-col h-full overflow-hidden'>
+        <div className='flex flex-col h-full overflow-y-auto lg:overflow-hidden'>
             <Topbar profile={profile} />
 
-            <div className='w-full flex-1 flex flex-col gap-4 px-24 pb-0 pt-2 min-h-0'>
+            <div className='w-full flex-1 flex flex-col gap-4 px-4 sm:px-8 lg:px-24 pb-0 pt-2 lg:min-h-0'>
 
-                <div className='flex justify-between items-start w-full'>
+                <div className='flex flex-col lg:flex-row gap-3 lg:justify-between items-start w-full'>
                     <PageHeader text='Leaderboards' icon={FaTrophy} />
 
-                    <IconTabSelector
-                        tabs={TABS}
-                        currentIndex={currentTabIndex}
-                        onSelect={(tab) => setSelectedTab(tab.name)}
-                    />
+                    <div className='max-w-full overflow-x-auto lg:overflow-visible self-center lg:self-auto'>
+                        <IconTabSelector
+                            tabs={TABS}
+                            currentIndex={currentTabIndex}
+                            onSelect={(tab) => setSelectedTab(tab.name)}
+                        />
+                    </div>
                 </div>
 
-                <div className='flex-1 flex gap-5 xl:gap-7 items-stretch min-h-0 overflow-visible'>
+                <div className='flex-1 flex flex-col lg:flex-row gap-5 xl:gap-7 items-stretch lg:min-h-0'>
 
-                    <div className='relative flex-1 min-w-0 min-h-0 flex items-end justify-center px-1 pb-12 overflow-visible'>
-                        <div className='relative z-10 w-full grid grid-cols-[minmax(9rem,1fr)_minmax(16rem,1.25fr)_minmax(9rem,1fr)] items-end'>
-                            {PODIUM_SLOTS.map((slot) => {
-                                const entry = topThree[slot.rank - 1]
-                                const podiumProfile = entry ? (usersByUid[entry.uid] ?? null) : null
+                    <LeaderboardStage>
+                        <div className='relative h-full lg:h-auto flex-1 min-w-0 min-h-0 flex items-end justify-center px-1 pb-12 overflow-visible'>
+                            <div className='relative z-10 w-full grid grid-cols-[minmax(9rem,1fr)_minmax(16rem,1.25fr)_minmax(9rem,1fr)] items-end'>
+                                {PODIUM_SLOTS.map((slot) => {
+                                    const entry = topThree[slot.rank - 1]
+                                    const podiumProfile = entry ? (usersByUid[entry.uid] ?? null) : null
 
-                                const member = {
-                                    userId: entry?.uid ?? `empty-podium-${slot.rank}`,
-                                    displayName: podiumProfile?.profile?.displayName ?? 'Unknown user',
-                                    profilePicture: podiumProfile?.profile?.profilePicture ?? null,
-                                    avatar: podiumProfile?.profile?.avatar ?? null,
-                                    ready: false,
-                                }
+                                    const member = {
+                                        userId: entry?.uid ?? `empty-podium-${slot.rank}`,
+                                        displayName: podiumProfile?.profile?.displayName ?? 'Unknown user',
+                                        profilePicture: podiumProfile?.profile?.profilePicture ?? null,
+                                        avatar: podiumProfile?.profile?.avatar ?? null,
+                                        ready: false,
+                                    }
 
-                                return (
-                                    <PlayerSpot
-                                        key={slot.rank}
-                                        member={member}
-                                        currentProfile={podiumProfile}
-                                        focus={slot.rank === 1}
-                                        showLabel={false}
-                                        showAvatar={Boolean(podiumProfile)}
-                                        showPodiumShadow={slot.rank === 1}
-                                        className={slot.className}
-                                    />
-                                )
-                            })}
+                                    return (
+                                        <PlayerSpot
+                                            key={slot.rank}
+                                            member={member}
+                                            currentProfile={podiumProfile}
+                                            focus={slot.rank === 1}
+                                            showLabel={false}
+                                            showAvatar={Boolean(podiumProfile)}
+                                            showPodiumShadow={slot.rank === 1}
+                                            className={slot.className}
+                                        />
+                                    )
+                                })}
+                            </div>
                         </div>
-                    </div>
 
-                    <div className='w-full max-w-[22rem] flex flex-col gap-4 min-w-0 min-h-0 overflow-y-auto pb-8'>
+                    </LeaderboardStage>
+
+                    <div className='w-full lg:max-w-[22rem] flex flex-col gap-4 min-w-0 lg:min-h-0 lg:overflow-y-auto pb-8'>
                         {loading ? (
                             <LoadingState />
                         ) : entries.length === 0 ? (
@@ -181,13 +197,12 @@ const Leaderboards = () => {
                                     const entryElo = getEloForLeaderboard(entry, leaderboardId)
                                     const entryRankIcon = getRankInfoFromElo(entryElo)
                                     return (
-                                        <div className='flex items-center'>
+                                        <div key={entry.uid} className='flex min-w-0 items-center'>
                                             <span className='text-sm font-semibold text-neutral2 w-8 shrink-0'>#{index + 1}</span>
                                             <Card
-                                                key={entry.uid}
                                                 className={`flex-1 flex-row items-center gap-3 py-2 px-4 ${PODIUM_CARD_CLASSES[index] ?? (isSelf ? 'border-neutral2' : '')}`}
                                             >
-                                                <AvatarPicture profile={entryProfile} className='w-10 h-10' />
+                                                <AvatarPicture profile={entryProfile} className='w-10 h-10 shrink-0' />
                                                 <span className='text-sm font-semibold text-neutral0 truncate flex-1'>
                                                     {entryProfile?.profile?.displayName ?? 'Unknown user'}
                                                 </span>

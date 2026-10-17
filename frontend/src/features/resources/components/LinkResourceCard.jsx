@@ -7,7 +7,7 @@ import Card from '../../../shared/components/ui/Card'
 
 const LinkResourceCard = ({ resource, onHeart, pending }) => (
     <div className='flex min-w-0 flex-col gap-4'>
-        <LinkPreviewTooltip resource={resource} placement='bottom' className='flex-1'>
+        <LinkPreviewTooltip resource={resource} placement='cursor' className='flex-1'>
             <Card hoverable showArrow={false} className='h-full gap-3!'
                 onClick={() => {
                     if(resource.url) window.open(resource.url, '_blank', 'noopener,noreferrer')

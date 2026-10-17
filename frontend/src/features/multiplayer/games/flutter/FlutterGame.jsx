@@ -1,3 +1,6 @@
+import MobileJoystick from '../../components/controls/MobileJoystick'
+import useCoarsePointer from '../../../../shared/utils/useCoarsePointer'
+import { createDirectionalInput } from '../../utils/touchControls'
 import { getMatchCountdown } from '../../utils/matchIntroTiming'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getGameServerNow, recordGameVisualCorrection, sendGameMessage, subscribeToGameReconnect, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
@@ -38,8 +41,8 @@ const formatClock = (milliseconds = 0) => {
 const ScorePanel = ({ player, align = 'start' }) => {
     const end = align === 'end'
     return (
-        <div className={`flex-1 max-w-xs ${end ? 'items-end' : ''}`}>
-            <div className={`flex items-center gap-3 ${end ? 'flex-row-reverse' : ''}`}>
+        <div className={`mp-player flex-1 min-w-0 max-w-xs ${end ? 'items-end' : ''}`}>
+            <div className={`mp-player-summary flex items-center gap-3 ${end ? 'flex-row-reverse' : ''}`}>
                 <AvatarPicture profile={{ profile: { profilePicture: player?.profilePicture ?? null } }} avatar={player?.avatar} className='w-12 h-12' />
                 <div className={`min-w-0 ${end ? 'text-right' : ''}`}>
                     <p className='text-sm truncate'>{player?.displayName || 'Waiting...'}</p>
@@ -75,7 +78,7 @@ const FlutterHeader = ({ localPlayer, opponent, phase, questionRemaining, ringIn
     }, [])
 
     return (
-        <div className='w-full flex items-center justify-between gap-6'>
+        <div className='mp-header w-full flex items-center justify-between gap-6'>
             <ScorePanel player={localPlayer} />
             <div className='shrink-0 min-w-28 text-center'>
                 {isQuestion ? (
@@ -265,6 +268,7 @@ const keyDirection = (key) => {
 }
 
 const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null, matchIntro = null }) => {
+    const touchControls = useCoarsePointer()
     const [snapshot, setSnapshot] = useState(null)
     const [response, setResponse] = useState('')
     const [calculatorOpen, setCalculatorOpen] = useState(false)
@@ -374,6 +378,14 @@ const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null, m
         sendGameMessage(roomId, 'game.flutterInput', { sequence, ...next })
     }, [roomId])
 
+    const directionalInput = useMemo(() => createDirectionalInput((next) => {
+        inputRef.current = next
+        sendInput(next)
+    }), [sendInput])
+    const onJoystickInput = useCallback((next) => {
+        if(phase === 'flutter_active' && !readOnly) directionalInput.set('joystick', next)
+    }, [phase, readOnly, directionalInput])
+
     // An acknowledged input is baked into the authoritative position the server just published,
     // so replaying it on top of that position would double-apply it.
     useEffect(() => {
@@ -385,6 +397,7 @@ const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null, m
 
     useEffect(() => {
         if(phase !== 'flutter_active' || readOnly) {
+            directionalInput.reset()
             inputRef.current = EMPTY_INPUT
             // The engine resets every player's flight state at each round boundary, so nothing
             // queued against the previous round may be replayed into the next one.
@@ -394,8 +407,7 @@ const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null, m
         const pressed = new Set()
         const update = () => {
             const next = { up: pressed.has('up'), down: pressed.has('down'), left: pressed.has('left'), right: pressed.has('right') }
-            inputRef.current = next
-            sendInput(next)
+            directionalInput.set('keyboard', next)
         }
         const onKeyDown = (event) => {
             if(['INPUT', 'TEXTAREA'].includes(event.target?.tagName)) return
@@ -410,7 +422,7 @@ const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null, m
             event.preventDefault()
             if(pressed.delete(direction)) update()
         }
-        const onBlur = () => { if(pressed.size) { pressed.clear(); update() } }
+        const onBlur = () => { pressed.clear(); directionalInput.reset() }
         const onVisibilityChange = () => { if(document.hidden) onBlur() }
         window.addEventListener('keydown', onKeyDown)
         window.addEventListener('keyup', onKeyUp)
@@ -418,12 +430,13 @@ const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null, m
         document.addEventListener('visibilitychange', onVisibilityChange)
         update()
         return () => {
+            directionalInput.reset()
             window.removeEventListener('keydown', onKeyDown)
             window.removeEventListener('keyup', onKeyUp)
             window.removeEventListener('blur', onBlur)
             document.removeEventListener('visibilitychange', onVisibilityChange)
         }
-    }, [phase, readOnly, sendInput])
+    }, [phase, readOnly, directionalInput])
 
     useEffect(() => subscribeToGameReconnect(roomId, () => {
         if(!readOnly && phase === 'flutter_active') sendInput(inputRef.current)
@@ -441,7 +454,7 @@ const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null, m
     if(phase === 'finished' || snapshot?.room?.status === 'finished') return <FlutterMatchEnd snapshot={snapshot} userId={userId} startedAt={state.startedAt} spectatorName={readOnly ? (spectatorName || localPlayer.displayName) : null} />
 
     return (
-        <div ref={screenShakeRef} className={`w-full h-full min-h-[420px] flex flex-col will-change-transform ${phase === 'question_active' ? 'gap-12' : 'gap-4'}`}>
+        <div ref={screenShakeRef} className={`mp-game w-full h-full min-h-[420px] flex flex-col will-change-transform ${phase === 'question_active' ? 'gap-12' : 'gap-4'}`}>
             <FlutterHeader localPlayer={localPlayer} opponent={opponent} phase={phase} questionRemaining={questionCountdown > 0 ? QUESTION_DURATION_MS : Math.floor(questionRemaining / 1000) * 1000} ringIndex={state.flutterRingIndex} />
 
             {phase === 'question_active' || isQuestionRevealActive ? (
@@ -468,7 +481,7 @@ const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null, m
                     {questionCountdown > 0 && !isQuestionRevealActive ? <TransitionOverlay remainingMs={questionCountdownRemainingMs} countdown={questionCountdown} title='Get ready...' /> : null}
                 </div>
             ) : (
-                <Card className='relative flex-1 min-h-[460px] overflow-hidden p-0!'>
+                <Card className='mp-flight-arena relative flex-1 min-h-[460px] overflow-hidden p-0!'>
                     <FlutterScene
                         localPlayer={localPlayer}
                         opponent={opponent}
@@ -481,6 +494,7 @@ const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null, m
                         serverNow={serverNow}
                         onVisualCorrection={onVisualCorrection}
                     />
+                    {touchControls && !readOnly && phase === 'flutter_active' ? <MobileJoystick key={`${state.flutterRoundIndex}-${state.flutterAttempt}`} onInput={onJoystickInput} /> : null}
                     {phase === 'flutter_countdown' ? (
                         <TransitionOverlay
                             remainingMs={countdownRemainingMs}
@@ -492,7 +506,7 @@ const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null, m
             )}
 
             {!readOnly && (phase === 'flutter_active' || isResult) ? (
-                <div className='flex items-center justify-center gap-2 text-sm text-neutral1'>
+                <div className='mp-control-hint flex items-center justify-center gap-2 text-sm text-neutral1'>
                     {['W', 'A', 'S', 'D'].map((key) => <kbd key={key} className='min-w-8 rounded-lg bg-neutral5 px-2 py-1 text-center font-semibold text-neutral1'>{key}</kbd>)}
                     <span className='mx-1'>or</span>
                     {['↑', '←', '↓', '→'].map((key) => <kbd key={key} className='min-w-8 rounded-lg bg-neutral5 px-2 py-1 text-center font-semibold text-neutral1'>{key}</kbd>)}

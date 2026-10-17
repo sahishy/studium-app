@@ -77,9 +77,9 @@ const Agenda = () => {
             <Topbar profile={profile} />
             <div data-onboarding="agenda:content" className={`w-full min-h-0 flex-1 flex flex-col items-start gap-4 px-4 sm:px-8 lg:px-16 xl:px-24 pt-2 mx-auto ${isCanvasView ? 'pb-4' : 'pb-8'}`}>
 
-                <div className='flex justify-between items-start w-full'>
+                <div className='flex flex-col items-center gap-4 sm:flex-row sm:justify-between sm:items-start w-full'>
 
-                    <PageHeader text={'Agenda'} icon={FaBookOpen} />
+                    <div className='self-start'><PageHeader text={'Agenda'} icon={FaBookOpen} /></div>
 
                     <IconTabSelector onboardingPrefix="agenda"
                         tabs={tabs}

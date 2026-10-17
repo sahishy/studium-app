@@ -28,10 +28,10 @@ const GameModeTab = ({ modes = [], selectedModeId, onSelectMode, onBack }) => {
     }, [modes, activeTab])
 
     return (
-        <div className='w-full flex-1 flex flex-col px-8 xl:px-24 pb-12 pt-2'>
+        <div className='w-full flex-1 flex flex-col px-4 sm:px-8 xl:px-24 pb-12 pt-2'>
             <div className='w-full max-w-6xl mx-auto flex-1 flex flex-col gap-8 min-h-full'>
 
-                <div className='relative flex items-center justify-between gap-6'>
+                <div className='relative flex flex-col items-center gap-4 sm:flex-row sm:justify-between sm:gap-6'>
                     <Button onClick={onBack} aria-label='Back to lobby'>
                         <FaArrowLeft />
                         Back
@@ -41,17 +41,17 @@ const GameModeTab = ({ modes = [], selectedModeId, onSelectMode, onBack }) => {
                         tabs={TABS}
                         currentIndex={Math.max(0, activeTabIndex)}
                         onSelect={(tab) => setActiveTab(tab.name)}
-                        className='absolute left-1/2 -translate-x-1/2 w-full max-w-xs'
+                        className='w-full max-w-xs sm:absolute sm:left-1/2 sm:-translate-x-1/2'
                     />
 
-                    <div className='w-24' aria-hidden='true' />
+                    <div className='hidden sm:block w-24' aria-hidden='true' />
                 </div>
 
                 {/* Singleplayer mode selection is temporarily paused; keep the shared grid for multiplayer. */}
                 {activeTab === 'singleplayer' ? (
                     <ComingSoon description='Singleplayer modes will be available in a future update.' />
                 ) : (
-                <div className='grid grid-cols-3 gap-8'>
+                <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-8'>
                     {visibleModes.map((mode) => {
                         const isSelected = mode.id === selectedModeId
                         const ModeIcon = mode.icon

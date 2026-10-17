@@ -1,5 +1,5 @@
 import OnboardingProvider from '../../onboarding/OnboardingProvider'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useMatch } from 'react-router-dom'
 import Sidebar from '../../../shared/components/ui/Sidebar'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../auth/contexts/AuthContext'
@@ -21,16 +21,30 @@ import { FaBars, FaXmark } from 'react-icons/fa6'
 
 const MainScreenLayout = ({ profile }) => {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const matchRoute = useMatch('/play/game/:roomId')
+    const practiceRoute = useMatch('/play/tutorial/:runId')
+    const isGameScreen = Boolean(matchRoute || practiceRoute)
 
-    useEffect(() => { const open=()=>setMobileMenuOpen(true); const close=()=>setMobileMenuOpen(false);window.addEventListener('onboarding:open-navigation',open);window.addEventListener('onboarding:close-navigation',close);return()=>{window.removeEventListener('onboarding:open-navigation',open);window.removeEventListener('onboarding:close-navigation',close)} },[])
+    useEffect(() => {
+        if(isGameScreen) setMobileMenuOpen(false)
+        const open = () => { if(!isGameScreen) setMobileMenuOpen(true) }
+        const close = () => setMobileMenuOpen(false)
+        window.addEventListener('onboarding:open-navigation', open)
+        window.addEventListener('onboarding:close-navigation', close)
+        return () => {
+            window.removeEventListener('onboarding:open-navigation', open)
+            window.removeEventListener('onboarding:close-navigation', close)
+        }
+    }, [isGameScreen])
+
     return (
         <>
             <div className="flex min-h-screen">
 
                 <Sidebar key={profile.uid} profile={profile} />
 
-                <button type='button' aria-label='Open navigation' onClick={() => setMobileMenuOpen(true)} className='fixed left-4 top-5 z-50 rounded-lg bg-neutral5 p-2 text-neutral1 lg:hidden'><FaBars /></button>
-                {mobileMenuOpen && <div className='fixed inset-0 z-[60] lg:hidden'><button type='button' aria-label='Close navigation' onClick={() => setMobileMenuOpen(false)} className='absolute inset-0 bg-black/35' /><div className='relative h-full w-56'><Sidebar key={profile.uid} profile={profile} mobile onNavigate={() => setMobileMenuOpen(false)} /><button type='button' aria-label='Close navigation' onClick={() => setMobileMenuOpen(false)} className='absolute right-2 top-2 rounded-lg p-2 text-neutral1'><FaXmark /></button></div></div>}
+                {!isGameScreen && <button type='button' aria-label='Open navigation' onClick={() => setMobileMenuOpen(true)} className='fixed left-4 top-5 z-50 rounded-lg bg-neutral5 p-2 text-neutral1 lg:hidden'><FaBars /></button>}
+                {!isGameScreen && mobileMenuOpen && <div className='fixed inset-0 z-[60] lg:hidden'><button type='button' aria-label='Close navigation' onClick={() => setMobileMenuOpen(false)} className='absolute inset-0 bg-black/35' /><div className='relative h-full w-56'><Sidebar key={profile.uid} profile={profile} mobile onNavigate={() => setMobileMenuOpen(false)} /><button type='button' aria-label='Close navigation' onClick={() => setMobileMenuOpen(false)} className='absolute right-2 top-2 rounded-lg p-2 text-neutral1'><FaXmark /></button></div></div>}
 
                 <main data-onboarding="main:screen" className="relative min-w-0 flex-1 h-screen max-w-[2560px] mx-auto overflow-x-hidden">
 

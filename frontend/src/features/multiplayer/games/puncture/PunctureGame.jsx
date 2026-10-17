@@ -1,3 +1,6 @@
+import OpponentPreview from '../../components/OpponentPreview'
+import useCoarsePointer from '../../../../shared/utils/useCoarsePointer'
+import { isArenaTap } from '../../utils/touchControls'
 import { getMatchCountdown } from '../../utils/matchIntroTiming'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { TbSpace } from 'react-icons/tb'
@@ -57,8 +60,8 @@ const formatClock = (milliseconds = 0) => {
 const ScorePanel = ({ player, align = 'start' }) => {
     const isEndAligned = align === 'end'
     return (
-        <div className={`flex-1 max-w-xs ${isEndAligned ? 'items-end' : ''}`}>
-            <div className={`flex items-center gap-3 ${isEndAligned ? 'flex-row-reverse' : ''}`}>
+        <div className={`mp-player flex-1 min-w-0 max-w-xs ${isEndAligned ? 'items-end' : ''}`}>
+            <div className={`mp-player-summary flex items-center gap-3 ${isEndAligned ? 'flex-row-reverse' : ''}`}>
                 <AvatarPicture
                     profile={{ profile: { profilePicture: player?.profilePicture ?? null } }}
                     avatar={player?.avatar}
@@ -94,7 +97,7 @@ const PunctureHeader = ({ localPlayer, opponent, remainingMs }) => {
     }, [])
 
     return (
-        <div className='w-full flex items-center justify-between gap-6'>
+        <div className='mp-header w-full flex items-center justify-between gap-6'>
             <ScorePanel player={localPlayer} />
             <p className={`text-2xl font-semibold tabular-nums transition-all duration-150 ${isLowTime ? 'text-red-500' : ''} ${isPopping ? 'scale-110' : 'scale-100'}`}>
                 {formatClock(remainingMs)}
@@ -317,6 +320,7 @@ const PunctureMatchEnd = ({ snapshot, userId, startedAt, spectatorName = null })
 }
 
 const PunctureGame = ({ roomId, userId, readOnly = false, spectatorName = null, matchIntro = null }) => {
+    const touchControls = useCoarsePointer()
     const [snapshot, setSnapshot] = useState(null)
     const [response, setResponse] = useState('')
     const [calculatorOpen, setCalculatorOpen] = useState(false)
@@ -556,12 +560,12 @@ const PunctureGame = ({ roomId, userId, readOnly = false, spectatorName = null, 
         }
 
         window.addEventListener('keydown', onKeyDown)
-        window.addEventListener('mousedown', onMouseDown)
+        if(!touchControls) window.addEventListener('mousedown', onMouseDown)
         return () => {
             window.removeEventListener('keydown', onKeyDown)
             window.removeEventListener('mousedown', onMouseDown)
         }
-    }, [phase, readOnly, fireShot])
+    }, [phase, readOnly, fireShot, touchControls])
 
     useEffect(() => {
         if(phase === 'puncture_active') return
@@ -588,7 +592,7 @@ const PunctureGame = ({ roomId, userId, readOnly = false, spectatorName = null, 
     const resolvedWinnerUserId = phase === 'match_result' ? state.matchResultWinnerUserId : state.lastPunctureResult?.winnerUserId
 
     return (
-        <div ref={screenShakeRef} className={`w-full h-full min-h-[420px] flex flex-col will-change-transform ${phase === 'question_active' ? 'gap-12' : 'gap-4'}`}>
+        <div ref={screenShakeRef} className={`mp-game w-full h-full min-h-[420px] flex flex-col will-change-transform ${phase === 'question_active' ? 'gap-12' : 'gap-4'}`}>
             <PunctureHeader localPlayer={localPlayer} opponent={opponent} remainingMs={activeTimer} />
 
             {phase === 'question_active' || isQuestionRevealActive ? (
@@ -617,7 +621,12 @@ const PunctureGame = ({ roomId, userId, readOnly = false, spectatorName = null, 
                     ) : null}
                 </div>
             ) : (
-                <div className='relative flex-1 min-h-0 flex flex-col md:flex-row justify-center gap-5'>
+                <div className='mp-arena relative flex-1 min-h-0 flex flex-col md:flex-row justify-center gap-5'>
+                    <div className='local-arena' data-touch-active={touchControls && phase === 'puncture_active' && !readOnly ? true : undefined} onPointerDown={(event) => {
+                        if(!touchControls || readOnly || phase !== 'puncture_active' || !isArenaTap(event)) return
+                        event.preventDefault()
+                        fireShot()
+                    }}>
                     <PunctureBoard
                         player={isRoundHold ? localPlayer : predictedLocalPlayer}
                         gameState={state}
@@ -628,7 +637,8 @@ const PunctureGame = ({ roomId, userId, readOnly = false, spectatorName = null, 
                         playbackResetKey={playbackResetKey}
                         serverNow={serverNow}
                     />
-                    <PunctureBoard
+                    </div>
+                    <OpponentPreview><PunctureBoard
                         player={opponent}
                         gameState={state}
                         isFaded={isRoundHold && Boolean(resolvedWinnerUserId) && resolvedWinnerUserId !== opponent.userId}
@@ -637,7 +647,7 @@ const PunctureGame = ({ roomId, userId, readOnly = false, spectatorName = null, 
                         shotEvents={opponentShotEvents}
                         playbackResetKey={playbackResetKey}
                         serverNow={serverNow}
-                    />
+                    /></OpponentPreview>
                     {phase === 'puncture_countdown' ? (
                         <TransitionOverlay
                             remainingMs={punctureCountdownRemainingMs}
@@ -651,7 +661,7 @@ const PunctureGame = ({ roomId, userId, readOnly = false, spectatorName = null, 
             )}
 
             {!readOnly && (phase === 'puncture_active' || isRoundHold) ? (
-                <div className='flex items-center justify-center gap-2 text-sm text-neutral1'>
+                <div className='mp-control-hint flex items-center justify-center gap-2 text-sm text-neutral1'>
                     <kbd className='min-w-8 rounded-lg bg-neutral5 px-2 py-1 text-center font-semibold text-neutral1'>W</kbd>
                     <span className='mx-1'>or</span>
                     <kbd className='min-w-8 rounded-lg bg-neutral5 px-2 py-1 text-center font-semibold text-neutral1'>↑</kbd>
