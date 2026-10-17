@@ -164,7 +164,7 @@ const LogInModal = ({ onSwitchToSignUp }) => {
                 <h1 className='text-3xl font-bold'>{isResettingPassword ? (resetSent ? 'Check your email' : 'Reset password') : 'Welcome back'}</h1>
                 <p role={resetSent ? 'status' : undefined} className='max-w-sm text-sm text-center text-neutral1'>
                     {isResettingPassword
-                        ? (resetSent ? 'You should receive a password reset link. Follow the instructions to reset your password.' : 'Enter your email and we’ll send you a reset link.')
+                        ? (resetSent ? 'You should receive an email within the next few minutes. Follow the instructions to reset your password!' : 'Enter your email and we’ll send you a reset link.')
                         : 'Pick up where you left off and keep your streak going.'}
                 </p>
             </div>
