@@ -20,12 +20,17 @@ const QUESTIONS=[
     {module:'math',questionType:'spr',difficulty:'Easy',prompt:'A notebook costs $8. What do three notebooks cost?',choices:[]},
 ]
 const calculatorStep={id:'practice-calculator',kind:'action',target:'practice:calculator',text:'Try the calculator. Open it and enter 8 × 3.'}
+const returnHomeStep={id:'practice-return-home',kind:'action',target:'match:return-home',text:'Great job! Return back to the lobby'}
 // Local presentation only. The authenticated tutorial endpoint owns the two answers;
 // no room, matchmaking, game results, or normal progression services are involved.
 export default function PracticeMatch({run,profile,onAnswer,onReturn}){
     const round=run.practiceRound || 0,health=SAT_CLASSIC_INITIAL_HEALTH
     const [response,setResponse]=useState(''),[calculator,setCalculator]=useState(false),[opened,setOpened]=useState(false),[hint,setHint]=useState(''),[busy,setBusy]=useState(false)
     const [now,setNow]=useState(Date.now),[roundStart,setRoundStart]=useState(()=>Date.now()),[result,setResult]=useState(null)
+    const [showReturnGuidance,setShowReturnGuidance]=useState(false)
+    const [returning,setReturning]=useState(false)
+    const onReturnRef=useRef(onReturn)
+    onReturnRef.current=onReturn
     const timing=useRef(readTiming(run.id))
     const endedAt=useRef(timing.current.endedAt || null)
     const startedAt=useRef(timing.current.startedAt),introEndsAt=useRef(round===0?Date.now()+3500:0)
@@ -46,6 +51,22 @@ export default function PracticeMatch({run,profile,onAnswer,onReturn}){
     // Otherwise the previous round's timestamp briefly makes it visible early.
     const math=round===1 && !result
     const finished=round>=2 && !resultActive
+    useEffect(()=>{
+        if(!finished)return
+        const timer=setTimeout(()=>setShowReturnGuidance(true),10000)
+        return()=>clearTimeout(timer)
+    },[finished])
+    useEffect(()=>{
+        if(!returning)return
+        const delay=window.matchMedia('(prefers-reduced-motion: reduce)').matches?0:534
+        const timer=setTimeout(()=>void onReturnRef.current(),delay)
+        return()=>clearTimeout(timer)
+    },[returning])
+    const returnHome=()=>{
+        if(returning)return
+        if(showReturnGuidance)setReturning(true)
+        else void onReturn()
+    }
     const question=QUESTIONS[resultActive?result.questionIndex:Math.min(round,1)]
     const submit=async()=>{
         if(busy || resultActive || showCountdown)return
@@ -65,7 +86,7 @@ export default function PracticeMatch({run,profile,onAnswer,onReturn}){
     }
     const rounds=QUESTIONS.map((question,index)=>({id:`practice-${index}`,kind:'question',title:`Question ${index+1}`,question,submittedResponse:index===0?'B':'24',correctAnswer:index===0?'B':'24',isCorrect:true,winnerUserIds:[profile.uid]}))
     return <div className="relative flex flex-col h-full overflow-hidden" role="region" aria-label="SAT Classic match">
-        <Topbar profile={profile} showGameAction={finished} isGameFinished={finished} onReturnHome={onReturn} />
+        <Topbar profile={profile} showGameAction={finished} isGameFinished={finished} onReturnHome={returnHome} />
         <div className="w-full flex-1 min-h-0 px-8 xl:px-12 pb-8 pt-2 flex items-center justify-center">
             <div className="relative w-full max-w-[88rem] h-full min-h-[420px] flex flex-col gap-2">
                 {finished ? <MatchEndOverlay userId={profile.uid} winnerUserId={profile.uid} modeId="sat-classic" localPlayer={localPlayer} opponent={opponent} players={players} rounds={rounds} matchDurationSeconds={((endedAt.current || startedAt.current)-startedAt.current)/1000} questionsAnswered={2} reasonLabel="You bested your opponent." showSkillComparison={false} showRankSection={false} /> : <div className="w-full h-full min-h-[420px] flex flex-col gap-12">
@@ -80,6 +101,7 @@ export default function PracticeMatch({run,profile,onAnswer,onReturn}){
             </div>
         </div>
         <CalculatorWindow isOpen={calculator} onClose={()=>setCalculator(false)} />
-        {math && !opened && !showCountdown && !resultActive && <Spotlight step={calculatorStep} visible={now>=countdownEnd+1000} onRetry={()=>{}} />}
+        {math && !showCountdown && !resultActive && <Spotlight step={calculatorStep} visible={!opened && now>=countdownEnd+1000} onRetry={()=>{}} />}
+        {finished && <Spotlight step={returnHomeStep} visible={showReturnGuidance && !returning} onRetry={()=>{}} />}
     </div>
 }

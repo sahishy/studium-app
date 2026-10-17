@@ -319,7 +319,7 @@ const Locker = () => {
                                             const described = describeColor(color, item)
 
                                             return (
-                                                <CosmeticTooltip
+                                                <CosmeticTooltip placement='cursor'
                                                     key={color}
                                                     name={described.name}
                                                     rarity={described.rarity}
@@ -352,7 +352,7 @@ const Locker = () => {
 
                                     <div className='flex flex-wrap gap-4'>
                                         {lockedColors.map((item) => (
-                                            <CosmeticTooltip key={item.id} locked rarity={item.rarity}>
+                                            <CosmeticTooltip placement='cursor' key={item.id} locked rarity={item.rarity}>
                                                 <div className='relative w-20 h-20 flex items-center justify-center overflow-hidden rounded-xl bg-neutral5'>
                                                     <div className={`absolute inset-0 ${getRarityStyle(item.rarity).tint}`} />
                                                     <FaLock className='relative text-neutral0/10 text-lg' />
@@ -379,7 +379,7 @@ const Locker = () => {
                                             const described = describeFace(faceIndex, faceCatalog.find((entry) => entry.value === faceIndex))
 
                                             return (
-                                                <CosmeticTooltip
+                                                <CosmeticTooltip placement='cursor'
                                                     key={faceIndex}
                                                     name={described.name}
                                                     rarity={described.rarity}
@@ -413,7 +413,7 @@ const Locker = () => {
 
                                     <div className='flex flex-wrap gap-4'>
                                         {lockedFaces.map((item) => (
-                                            <CosmeticTooltip key={item.id} locked rarity={item.rarity}>
+                                            <CosmeticTooltip placement='cursor' key={item.id} locked rarity={item.rarity}>
                                                 <div className='relative w-20 h-20 flex items-center justify-center overflow-hidden rounded-xl bg-neutral5'>
                                                     <div className={`absolute inset-0 ${getRarityStyle(item.rarity).tint}`} />
                                                     <FaLock className='relative text-neutral0/10 text-lg' />
@@ -453,7 +453,7 @@ const Locker = () => {
 
                                     <div className='flex flex-wrap gap-4'>
                                         {unlockedTitles.map((item) => (
-                                            <CosmeticTooltip key={item.id} name={item.name} rarity={item.rarity}>
+                                            <CosmeticTooltip placement='cursor' key={item.id} name={item.name} rarity={item.rarity}>
                                                 <button
                                                     onClick={() => handleTitleSelect(item.id)}
                                                     className={`relative w-20 h-20 flex items-center justify-center overflow-hidden rounded-xl border p-2 transition-all cursor-pointer
@@ -480,7 +480,7 @@ const Locker = () => {
 
                                     <div className='flex flex-wrap gap-4'>
                                         {lockedTitles.map((item) => (
-                                            <CosmeticTooltip
+                                            <CosmeticTooltip placement='cursor'
                                                 key={item.id}
                                                 locked
                                                 rarity={item.rarity}

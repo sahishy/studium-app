@@ -5,21 +5,31 @@
    stops applying the moment the pointer leaves, so the card snapped back instead of easing. */
 .quest-idle button:not(:disabled) { transition: transform 180ms ease, color 150ms, background-color 150ms, border-color 150ms; }
 .quest-idle button:not(:disabled):hover { transform: rotate(calc(-1 * var(--quest-tilt))) scale(1.035); }
-.quest-ready { animation: quest-ready 2.2s ease-in-out infinite; }
+.quest-ready {
+    box-shadow:
+        0 0 0 4px color-mix(in srgb, var(--quest-color) 9%, transparent),
+        0 0 22px color-mix(in srgb, var(--quest-color) 14%, transparent);
+}
+.quest-ready::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border: 2px solid var(--quest-color);
+    border-radius: inherit;
+    pointer-events: none;
+    animation: quest-ready-ring 1.8s ease-out infinite;
+}
+/* Equal inset offsets keep the gap uniform regardless of the card's proportions.
+   Grow the corner radius by the same distance to keep the rounded outline parallel. */
+@keyframes quest-ready-ring {
+    0% { inset: -1px; border-radius: .75rem; opacity: .6; }
+    75%, 100% { inset: -17px; border-radius: calc(.75rem + 16px); opacity: 0; }
+}
 .quest-collapse { animation: quest-collapse 180ms ease-in both; }
 .quest-charge { animation: quest-charge var(--quest-duration) cubic-bezier(.4, 0, .7, 1) both; }
 .quest-reveal { animation: quest-reveal 650ms cubic-bezier(.16, 1, .3, 1) both; }
 .quest-burst { animation: quest-burst 600ms ease-out both; border: 2px solid var(--quest-color); pointer-events: none; }
 @keyframes quest-collapse { to { transform: scale(.88); opacity: .25; filter: grayscale(1); } }
-/* Rides on --quest-color so a claimable card pulses in its own rarity rather than a fixed hue. */
-@keyframes quest-ready {
-    0%, 100% { box-shadow: 0 0 0 0 transparent, 0 4px 12px rgb(0 0 0 / .06); }
-    50% {
-        box-shadow:
-            0 0 0 4px color-mix(in srgb, var(--quest-color) 9%, transparent),
-            0 0 22px color-mix(in srgb, var(--quest-color) 14%, transparent);
-    }
-}
 @keyframes quest-charge {
     0% { transform: scale(1) rotate(0); }
     15% { transform: scale(calc(1 - (1 - var(--quest-shrink)) * .03)) rotate(-1deg); }

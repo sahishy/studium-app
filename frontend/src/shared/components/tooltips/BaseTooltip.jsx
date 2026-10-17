@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 
 // `interactive` turns the tooltip into something the pointer can enter and click. A plain tooltip
@@ -12,14 +12,19 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
 
     const tooltipRef = useRef(null);
     const triggerRef = useRef(null);
+    const cursorRef = useRef(null);
     const showTimeoutRef = useRef(null);
     const hideTimeoutRef = useRef(null);
     const isControlled = typeof open === 'boolean';
 
-    const calculatePosition = (triggerRect, tooltipRect) => {
+    const calculatePosition = useCallback((triggerRect, tooltipRect) => {
         let top, left;
 
-        if (placement === 'top') {
+        if (placement === 'cursor' && cursorRef.current) {
+            const offset = Math.max(12, gap);
+            top = cursorRef.current.y + offset;
+            left = cursorRef.current.x + offset;
+        } else if (placement === 'top') {
             top = triggerRect.top - tooltipRect.height - gap;
             left = triggerRect.left + (triggerRect.width / 2) - (tooltipRect.width / 2);
         } else if (placement === 'bottom') {
@@ -43,7 +48,7 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
         top = Math.max(gap, Math.min(top, window.innerHeight - tooltipRect.height - gap));
 
         return { top, left };
-    };
+    }, [placement, gap]);
 
     useLayoutEffect(() => {
         if (phase !== 'measuring' || !tooltipRef.current || !triggerRef.current) return;
@@ -53,7 +58,18 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
 
         setTooltipPosition(calculatePosition(triggerRect, tooltipRect));
         setPhase('visible');
-    }, [phase]);
+    }, [phase, calculatePosition]);
+
+    const trackCursor = (event) => {
+        if (placement !== 'cursor') return;
+        cursorRef.current = { x: event.clientX, y: event.clientY };
+        if (phase !== 'hidden' && tooltipRef.current && triggerRef.current) {
+            setTooltipPosition(calculatePosition(
+                triggerRef.current.getBoundingClientRect(),
+                tooltipRef.current.getBoundingClientRect(),
+            ));
+        }
+    };
 
     const showTooltip = () => {
         if (disabled) return;
@@ -132,9 +148,16 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
             <div
                 ref={triggerRef}
                 className='w-full h-full'
-                onMouseEnter={isControlled ? undefined : showTooltip}
+                onMouseEnter={(event) => {
+                    trackCursor(event);
+                    if (!isControlled) showTooltip();
+                }}
+                onMouseMove={placement === 'cursor' ? trackCursor : undefined}
                 onMouseLeave={isControlled ? undefined : scheduleHide}
-                onFocus={isControlled ? undefined : showTooltip}
+                onFocus={(event) => {
+                    if (event.target.matches(':focus-visible')) cursorRef.current = null;
+                    if (!isControlled) showTooltip();
+                }}
                 onBlur={isControlled ? undefined : scheduleHide}
             >
                 {children}
@@ -148,7 +171,7 @@ const BaseTooltip = ({ children, content, className = '', delay = 0, placement =
                     className={`
                         absolute z-[9999]
                         ${interactive ? '' : 'pointer-events-none select-none'}
-                        transition duration-150 ease-out
+                        ${placement === 'cursor' ? 'transition-[opacity,transform]' : 'transition'} duration-150 ease-out
                         ${phase === 'visible' ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
                     `}
                     style={{

@@ -4,6 +4,7 @@ import QuestionPane from '../sat-classic/components/QuestionPane'
 import CalculatorWindow from '../../components/windows/CalculatorWindow'
 import LoadingState from '../../../../shared/components/ui/LoadingState'
 import Card from '../../../../shared/components/ui/Card'
+import MatchEndConfetti from '../../components/MatchEndConfetti'
 
 const formatDurationMmSsMs = (milliseconds = 0) => {
     const safe = Math.max(0, Number(milliseconds) || 0)
@@ -46,6 +47,7 @@ const BlitzGame = ({ roomId }) => {
     if(state.phase === 'finished') {
         return (
             <div className='w-full h-full min-h-[420px] flex flex-col items-center gap-6 overflow-y-auto py-10'>
+                <MatchEndConfetti />
                 <div className='text-center'>
                     <h1 className='text-5xl font-bold text-sat0'>Blitz Complete</h1>
                     <p className='text-3xl font-semibold tabular-nums mt-3'>{formatDurationMmSsMs(state.score)}</p>

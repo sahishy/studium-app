@@ -1,13 +1,13 @@
 import TextTooltip from '../../../shared/components/tooltips/TextTooltip'
 import { MODE_THUMBNAILS } from '../utils/modeThumbnails'
 
-const GameModeThumbnail = ({ mode, disabled = false, onClick }) => {
+const GameModeThumbnail = ({ mode, disabled = false, disabledReason = 'Party Leader Only', onClick }) => {
     const ModeIcon = mode.icon
     const thumbnail = MODE_THUMBNAILS[mode.id]
     const artworkClass = `relative z-10 w-full rounded-xl border border-neutral4 shadow-lg shadow-shadow opacity-70 transition-[translate,opacity] duration-400 ease-in-out  ${disabled ? '' : 'group-hover:-translate-y-2 group-hover:opacity-100 group-has-[.gamemode-trigger:hover]/mode:-translate-y-2 group-has-[.gamemode-trigger:hover]/mode:opacity-100 group-has-[.gamemode-trigger:focus-visible]/mode:-translate-y-2 group-has-[.gamemode-trigger:focus-visible]/mode:opacity-100 group-focus-visible:-translate-y-2 group-focus-visible:opacity-100'}`
 
     return (
-        <TextTooltip text={disabled ? 'Party Leader Only' : 'Change gamemode'} placement='top' gap={16} className='relative z-0 block w-[80%] mx-auto -mb-10 -translate-y-4'>
+        <TextTooltip text={disabled ? disabledReason : 'Change gamemode'} placement='top' gap={16} className='relative z-0 block w-[80%] mx-auto -mb-10 -translate-y-4'>
             <button
                 type='button'
                 aria-label='Change gamemode'

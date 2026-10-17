@@ -238,6 +238,7 @@ const Sidebar = ({ profile, mobile = false, onNavigate }) => {
                         <button
                             type='button'
                             aria-label='Submit Feedback'
+                            data-onboarding='feedback:submit'
                             disabled={navigationDisabled}
                             onClick={handleFeedback}
                             className='size-9 flex items-center justify-center rounded-full text-neutral2 transition hover:text-neutral0 cursor-pointer disabled:cursor-not-allowed disabled:hover:text-neutral2'

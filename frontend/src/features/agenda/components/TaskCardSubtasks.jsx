@@ -23,11 +23,11 @@ const NestedTask = ({ task, childrenById, circles, courses, hideCircleWidgets, o
     )
 }
 
-const TaskCardSubtasks = ({ task, childrenById, circles, courses, hideCircleWidgets, onUpdate, onDelete, onAddSubtask }) => {
+const TaskCardSubtasks = ({ task, childrenById, circles, courses, hideCircleWidgets, onUpdate, onDelete, onAddSubtask, deleteButtonClassName = '' }) => {
     const [expanded, setExpanded] = useState(false)
     const children = childrenById.get(task.uid) || []
     const completed = children.filter((child) => child.status === 'Completed').length
-    const deleteButton = <button type='button' aria-label='Delete task' onClick={() => onDelete(task.uid)} className='shrink-0 p-1 text-neutral2 transition hover:text-red-400 focus-visible:opacity-100'><FaTrash className='text-xs' /></button>
+    const deleteButton = <button type='button' aria-label='Delete task' onClick={() => onDelete(task.uid)} className={`shrink-0 p-1 text-neutral2 transition hover:text-red-400 focus-visible:opacity-100 ${deleteButtonClassName}`}><FaTrash className='text-xs' /></button>
     return <>
         {(children.length > 0 || expanded) && <div className='border-t border-neutral4/60 pt-2'>
             <div className='flex items-center gap-2'>

@@ -135,7 +135,7 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
         <>
             {isSprQuestion ? (
                 <>
-                    <div className={`relative flex-1 min-h-0 h-full overflow-y-auto pr-3 `}>
+                    <div className={`relative flex-1 min-h-0 h-full overflow-y-auto pr-3 pb-[40vh] `}>
                         <FreeResponseDirections />
                     </div>
 
@@ -156,7 +156,7 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
                 )
             ) : currentQuestion?.paragraph ? (
                 <>
-                    <div className={`relative flex-1 min-h-0 h-full overflow-y-auto pr-3 `}>
+                    <div className={`relative flex-1 min-h-0 h-full overflow-y-auto pr-3 pb-[40vh] `}>
                         <HtmlContent html={currentQuestion?.paragraph} />
                     </div>
 

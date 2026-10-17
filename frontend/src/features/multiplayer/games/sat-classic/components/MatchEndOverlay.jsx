@@ -12,6 +12,7 @@ import ChoiceButton from './ChoiceButton'
 import { FreeResponseDirections } from './QuestionPane'
 import SkillWeb from '../../../../progress/components/SkillWeb'
 import useMatchMastery from '../../../../progress/useMatchMastery'
+import MatchEndConfetti from '../../../components/MatchEndConfetti'
 
 const RankSection = ({ progression, winnerUserId, eloDelta }) => {
     if(!progression) return <p className='text-sm text-neutral1 mt-6 mb-8'>Private match · ELO unchanged</p>
@@ -75,7 +76,7 @@ const QuestionReviewModal = ({ round, perspectiveName = null }) => {
                 <p className={`mt-1 text-sm font-semibold ${round.isCorrect ? 'text-green-500' : (submitted ? 'text-red-400' : 'text-neutral1')}`}>{round.isCorrect ? 'Correct' : (submitted ? 'Incorrect' : 'Unanswered')}</p>
             </div>
             <div className={`min-h-0 flex-1 grid gap-6 ${hasLeftPane ? 'md:grid-cols-2' : 'grid-cols-1'}`}>
-                {hasLeftPane ? <div className='min-h-0 overflow-y-auto pr-3'>{isSpr ? <FreeResponseDirections /> : <HtmlContent html={question?.paragraph} />}</div> : null}
+                {hasLeftPane ? <div className='min-h-0 overflow-y-auto pr-3 pb-[40vh]'>{isSpr ? <FreeResponseDirections /> : <HtmlContent html={question?.paragraph} />}</div> : null}
                 <div className={`min-h-0 overflow-y-auto ${hasLeftPane ? 'border-t pt-5 md:border-l md:border-t-0 md:pl-6 md:pt-0 border-neutral2' : 'mx-auto w-full max-w-2xl'}`}>
                     <div className='flex flex-col gap-6'>
                         {question?.body ? <HtmlContent html={question.body} /> : null}
@@ -105,6 +106,7 @@ const MatchEndOverlay = ({ winnerUserId, userId, modeId, gameId, matchSettled = 
     const openReview = (round) => round.question && openModal({ content: <QuestionReviewModal round={round} perspectiveName={spectatorName} />, maxWidthClass: 'max-w-6xl mx-4' })
     return (
         <div className='w-full h-full min-h-[420px] flex flex-col items-center px-4 sm:px-6 py-10 overflow-y-auto'>
+            <MatchEndConfetti />
             <div className='text-center mb-4'>
                 <p className={`text-5xl font-bold ${isDraw ? 'text-neutral1' : isMyWin ? 'text-sat0' : 'text-red-400'} leading-none mb-2`}>{title}</p>
                 {reasonLabel ? <p className='text-sm text-neutral1'>{reasonLabel}</p> : null}
