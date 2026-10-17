@@ -18,7 +18,7 @@ export const PLAY_STEPS = [
 ]
 export const STUDY_STEPS = [
     action('task-one','/agenda/list','agenda:editor','Type “Finish homework tomorrow” and press Enter','task-one'),
-    info('task-date','/agenda/list','agenda:sample-one','Studium recognized “tomorrow” and added a due date.'),
+    info('task-date','/agenda/list','agenda:sample-one','Studium recognized “tomorrow” and added a due date'),
     action('to-board','/agenda/list','agenda:board','Try the Board view','navigate','/agenda/board'),
     info('board','/agenda/board','agenda:content','Studium has different views for organizing your tasks'),
     action('to-calendar','/agenda/board','agenda:calendar','Try the Calendar view','navigate','/agenda/calendar'),
@@ -39,7 +39,8 @@ const baseStepsFor = (path,run) => {
     // Version 2 included a Lobby introduction. Preserve its saved step indices;
     // new runs and original version 1 runs begin with ranked play.
     const play=run.id && run.stepsVersion===2 ? [info('lobby','/play','main:screen','This is the Lobby. Online matches and private games with friends take place here.'),...PLAY_STEPS] : PLAY_STEPS
-    return path === 'play' ? play : path === 'study' ? STUDY_STEPS : [...play,info('transition','/play','lobby:play','Nice work! Let’s try Study next.'),...STUDY_STEPS]
+    const steps=path === 'play' ? play : path === 'study' ? STUDY_STEPS : [...play,info('transition','/play','lobby:play','Nice work! Let’s try Study next.'),...STUDY_STEPS]
+    return [...steps,{...info('feedback',path === 'play' ? '/play' : '/resources','feedback:submit','Lastly, send your feedback and suggestions to Studium here!'),allowInteraction:true}]
 }
 export const rewardFor = (path, rewarded = []) => (path === 'both' ? ['play','study'] : [path]).filter(t => !rewarded.includes(t))
 export const ONLINE_EVENTS = [{id:'onboarding:v1',type:'onboarding',order:0}]

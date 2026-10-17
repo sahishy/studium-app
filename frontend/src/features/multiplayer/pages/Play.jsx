@@ -33,6 +33,7 @@ import ChatBox from '../components/ChatBox'
 import JoinPartyModal from '../components/modals/JoinPartyModal'
 import LoadingState from '../../../shared/components/ui/LoadingState'
 import BottomFade from '../../../shared/components/ui/BottomFade'
+import { useOnboarding } from '../../onboarding/OnboardingContext'
 
 const SELECTED_MODE_STORAGE_KEY = 'play:lastSelectedModeId'
 
@@ -54,10 +55,12 @@ const Play = () => {
     const { friends } = useFriends()
     const { toastStack, showToast, updateToast, hideToast } = useToast()
     const { openModal, closeModal } = useModal()
+    const { active: tutorial } = useOnboarding()
 
     const [selectedModeId, setSelectedModeId] = useState(getStoredSelectedModeId)
     const scrollRef = useRef(null)
     const [activePlayTab, setActivePlayTab] = useState('lobby')
+    const showModePicker = activePlayTab === 'modes' && !tutorial
     const [matchCountdownSeconds, setMatchCountdownSeconds] = useState(MATCH_JOIN_DELAY_SECONDS)
     const [isQueueingOptimistic, setIsQueueingOptimistic] = useState(false)
     const matchmakingToastIdRef = useRef(null)
@@ -103,6 +106,7 @@ const Play = () => {
     const isInParty = Boolean(session?.partyId)
     const isPartyLoading = isInParty && (!party || party.id !== session.partyId)
     const isPartyLeader = party?.leaderUserId === profile?.uid
+    const modeSelectionDisabled = Boolean(tutorial) || (isInParty && !isPartyLeader)
     const partyPlayerCount = selectedMode?.playerCount ?? 1
     const partyOverCapacity = (party?.members?.length ?? 0) > partyPlayerCount
     const currentPartyMember = party?.members?.find((member) => member.userId === profile?.uid)
@@ -204,7 +208,14 @@ const Play = () => {
         })
     }
 
+    // Keep the tutorial's lobby targets mounted, including between spotlights.
+    const openModePicker = () => {
+        if(modeSelectionDisabled)return
+        setActivePlayTab('modes')
+    }
+
     const selectGameMode = (modeId) => {
+        if(modeSelectionDisabled)return
         if(isInParty) sendPartyMessage('party.selectMode', { modeId })
         else setSelectedModeId(modeId)
         setActivePlayTab('lobby')
@@ -215,7 +226,7 @@ const Play = () => {
     // container, so the lobby stayed shifted up with no way to scroll back.
     useLayoutEffect(() => {
         if(scrollRef.current) scrollRef.current.scrollTop = 0
-    }, [activePlayTab])
+    }, [showModePicker])
 
     useEffect(() => {
         if (queueStateForMode !== 'idle') {
@@ -389,7 +400,7 @@ const Play = () => {
     return (
         <div
             ref={scrollRef}
-            className={`flex flex-col h-full overflow-x-hidden ${activePlayTab === 'modes' ? 'overflow-y-auto' : 'overflow-hidden'}`}
+            className={`flex flex-col h-full overflow-x-hidden ${showModePicker ? 'overflow-y-auto' : 'overflow-hidden'}`}
         >
             <Topbar
                 profile={profile}
@@ -399,7 +410,7 @@ const Play = () => {
 
             <PlayBackground />
 
-            {activePlayTab === 'modes' ? (
+            {showModePicker ? (
                 <GameModeTab
                     modes={isInParty ? GAME_MODES.filter((mode) => mode.supportsPartyGames) : GAME_MODES}
                     selectedModeId={activeModeId}
@@ -426,8 +437,9 @@ const Play = () => {
                     <div data-onboarding="lobby:game-card" className='group/mode relative isolate mt-10 shrink-0'>
                         <div data-onboarding="lobby:modes"><GameModeThumbnail
                             mode={selectedMode}
-                            disabled={isInParty && !isPartyLeader}
-                            onClick={() => setActivePlayTab('modes')}
+                            disabled={modeSelectionDisabled}
+                            disabledReason={tutorial ? 'Finish the tutorial to change gamemodes' : undefined}
+                            onClick={openModePicker}
                         /></div>
                     <Card className='z-10 max-w-8xl p-5! gap-2! items-center'>
                         <div className='absolute -top-7 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10'>
@@ -442,7 +454,7 @@ const Play = () => {
                                 </button>
                             </TextTooltip>
                             <button type='button' className='gamemode-trigger rounded-xl cursor-pointer disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral2'
-                                disabled={isInParty && !isPartyLeader} onClick={() => setActivePlayTab('modes')} aria-label='Change gamemode'>
+                                disabled={modeSelectionDisabled} onClick={openModePicker} aria-label='Change gamemode'>
                             <Card className='font-semibold flex-row! items-center gap-3! whitespace-nowrap'>
                                 <ModeIcon className='text-lg' />
                                 {selectedMode.name}

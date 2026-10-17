@@ -4,7 +4,7 @@ import { stepsFor, rewardFor, ONLINE_EVENTS } from './steps.js'
 import { canClaimGrandQuest } from '../socials/circlePolicy.js'
 test('Both transitions from the practice match into Study, with a single final payout',()=>{
     const ids=stepsFor('both').map(s=>s.id)
-    assert.equal(stepsFor('play').at(-1).id,'practice')
+    assert.equal(stepsFor('play').at(-2).id,'practice')
     assert.equal(ids.indexOf('practice')+1,ids.indexOf('transition'))
     assert.ok(ids.indexOf('transition')<ids.indexOf('task-one'))
     assert.ok(!ids.includes('play-end'))

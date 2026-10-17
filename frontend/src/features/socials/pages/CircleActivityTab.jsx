@@ -75,7 +75,7 @@ export const CircleActivityContent = ({ board, profile, circleId, members, circl
                 <div className={`shrink-0 flex items-center justify-center gap-3 mt-3 text-sm font-semibold ${isPrimary ? "text-neutral0" : "text-neutral2"}`}>
                     <span role="img" aria-label={`${board.reward.xp} XP`} className={`flex items-center gap-1 ${isPrimary ? "text-yellow-400" : "text-neutral2"}`}><PiStarFourFill />{board.reward.xp}</span>
                     <span role="img" aria-label={`${board.reward.lumen} Lumen`} className={`flex items-center gap-1 ${isPrimary ? "text-sky-500" : "text-neutral2"}`}><LumenIcon className={`size-4 ${isPrimary ? "" : "grayscale opacity-50"}`} />{board.reward.lumen}</span>
-                    {<TextTooltip placement="top" text={<span className="block max-w-60 leading-relaxed">To earn a Grand Quest reward, this must be your primary Circle when the goal finishes and when you claim.</span>}>
+                    {<TextTooltip placement="top" text={<span className="block max-w-60 leading-relaxed">To earn a Grand Quest reward, this circle must be your primary Circle.</span>}>
                         <button type="button" aria-label="Why Grand Quest rewards are unavailable" className="flex items-center justify-center text-neutral2 hover:text-neutral1">
                             <IoMdInformationCircleOutline className="text-lg" />
                         </button>

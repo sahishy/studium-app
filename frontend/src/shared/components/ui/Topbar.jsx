@@ -129,6 +129,7 @@ const Topbar = ({
                     <Button
                         type={gameActionType ?? (isGameFinished ? 'secondary' : 'negative')}
                         onClick={isGameFinished ? onReturnHome : onLeaveGame}
+                        data-onboarding={isGameFinished ? 'match:return-home' : undefined}
                     >
                         {gameActionLabel ?? (isGameFinished ? 'Return home' : 'Leave game')}
                     </Button>

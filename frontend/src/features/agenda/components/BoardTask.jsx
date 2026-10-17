@@ -74,7 +74,7 @@ const BoardTask = ({ task, autoFocusTitle = false, groupId, groupBy = 'status', 
                             : <TaskStatusInput key={type} status={task.status} setStatus={(status) => onUpdate(task.uid, { status })} renderTrigger={({ isOpen }) => <button type='button' aria-label={`Change status: ${task.status}`}><StatusChip status={task.status} interactive isOpen={isOpen} /></button>} />
                     })}
                 </div>
-                <TaskCardSubtasks task={task} childrenById={childrenById} circles={circles} courses={courses} hideCircleWidgets={hideCircleWidgets} onUpdate={onUpdate} onDelete={onDelete} onAddSubtask={onAddSubtask} />
+                <TaskCardSubtasks deleteButtonClassName='opacity-0 group-hover/card:opacity-100 group-focus-within/card:opacity-100 pointer-coarse:opacity-100' task={task} childrenById={childrenById} circles={circles} courses={courses} hideCircleWidgets={hideCircleWidgets} onUpdate={onUpdate} onDelete={onDelete} onAddSubtask={onAddSubtask} />
             </article>
         </div>
     )

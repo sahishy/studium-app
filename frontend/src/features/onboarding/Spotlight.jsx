@@ -2,14 +2,17 @@ import { useEffect, useRef, useState } from 'react'
 import { IoMdInformationCircleOutline } from 'react-icons/io'
 import { BsHandIndexThumbFill } from 'react-icons/bs'
 import Button from '../../shared/components/ui/Button'
+import useFadeIn from './useFadeIn'
 const selector=target=>`[data-onboarding="${CSS.escape(target)}"]`
-const stepKey=step=>JSON.stringify([step.id,step.target,step.route,step.recordId,step.kind,step.event,step.text])
+const stepKey=step=>step?JSON.stringify([step.id,step.target,step.route,step.recordId,step.kind,step.event,step.text,step.allowInteraction]):null
 export default function Spotlight({step:incomingStep,busy,error,onNext,onRetry,visible:requestedVisible=true}){
     const [step,setStep]=useState(incomingStep)
     const incomingRef=useRef(incomingStep)
-    incomingRef.current=incomingStep
-    const incomingKey=stepKey(incomingStep),changing=stepKey(step)!==incomingKey
-    const visible=requestedVisible && !changing
+    if(incomingStep)incomingRef.current=incomingStep
+    const entered=useFadeIn()
+    const incomingKey=stepKey(incomingStep || step),changing=stepKey(step)!==incomingKey
+    const visible=entered && !!incomingStep && requestedVisible && !changing
+    const targetInteractive=step?.kind!=='info' || step?.allowInteraction===true
     const visibleRef=useRef(visible)
     visibleRef.current=visible
     useEffect(()=>{
@@ -53,12 +56,12 @@ export default function Spotlight({step:incomingStep,busy,error,onNext,onRetry,v
         window.addEventListener('resize',measure);window.addEventListener('scroll',measure,true)
         const interval=setInterval(measure,500)
         return()=>{clearTimeout(timer);clearInterval(interval);observer.disconnect();cardObserver.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('scroll',measure,true)}
-    },[step.id,step.target,step.event,step.kind,step.recordId,visible])
+    },[step?.id,step?.target,step?.event,step?.kind,step?.recordId,visible])
     useEffect(()=>{
         const onKey=e=>{
             if(e.key!=='Tab' || !visible)return
             const selector='a[href],button:not([disabled]),input:not([disabled]),[contenteditable="true"]'
-            const target=targetRef.current
+            const target=targetInteractive?targetRef.current:null
             const focusable=[...(target?.matches(selector)?[target]:[]),...(target?.querySelectorAll(selector)||[]),...(cardRef.current?.querySelectorAll(selector)||[])].filter(n=>n.getBoundingClientRect().width)
             if(!focusable.length)return
             e.preventDefault()
@@ -66,7 +69,8 @@ export default function Spotlight({step:incomingStep,busy,error,onNext,onRetry,v
             focusable[next].focus()
         }
         document.addEventListener('keydown',onKey,true);return()=>document.removeEventListener('keydown',onKey,true)
-    },[visible])
+    },[visible,targetInteractive])
+    if(!step)return null
     const r=rect
     const isInfo=step.kind==='info', ExplanationIcon=isInfo?IoMdInformationCircleOutline:BsHandIndexThumbFill
     let maxWidth=Math.min(340,innerWidth-24)
@@ -91,9 +95,15 @@ export default function Spotlight({step:incomingStep,busy,error,onNext,onRetry,v
     const top=fitsBelow ? r.bottom+gap
         : fitsAbove ? r.y-gap-height
         : Math.max(12,Math.min(innerHeight-height-12,(r?(r.y+r.bottom)/2:innerHeight/2)-height/2))
-    const mask=`fixed bg-black/70 ${visible?'pointer-events-auto':'pointer-events-none'}`
-    return <div className="fixed inset-0 z-[180] pointer-events-none transition-opacity duration-500" style={{opacity:visible?1:0}} aria-hidden={!visible} inert={!visible} onTransitionEnd={event=>{if(changing && event.target===event.currentTarget && event.propertyName==='opacity')setStep(incomingRef.current)}}>
+    const radius=r?Math.min(16,(r.right-r.x)/2,(r.bottom-r.y)/2):0
+    const cutout=r?`M ${r.x+radius} ${r.y} H ${r.right-radius} A ${radius} ${radius} 0 0 1 ${r.right} ${r.y+radius} V ${r.bottom-radius} A ${radius} ${radius} 0 0 1 ${r.right-radius} ${r.bottom} H ${r.x+radius} A ${radius} ${radius} 0 0 1 ${r.x} ${r.bottom-radius} V ${r.y+radius} A ${radius} ${radius} 0 0 1 ${r.x+radius} ${r.y} Z`:''
+    const mask=`fixed ${visible?'pointer-events-auto':'pointer-events-none'}`
+    return <div className="fixed inset-0 z-[180] pointer-events-none transition-opacity duration-500 motion-reduce:transition-none" style={{opacity:visible?1:0}} aria-hidden={!visible} inert={!visible} onTransitionEnd={event=>{if(changing && event.target===event.currentTarget && event.propertyName==='opacity')setStep(incomingRef.current)}}>
+        <svg aria-hidden="true" className="fixed inset-0 size-full pointer-events-none">
+            <path fill="rgb(0 0 0 / 0.7)" fillRule="evenodd" d={`M 0 0 H ${innerWidth} V ${innerHeight} H 0 Z ${cutout}`} />
+        </svg>
         {r?<><div className={mask} style={{top:0,left:0,right:0,height:r.y}} /><div className={mask} style={{top:r.bottom,left:0,right:0,bottom:0}} /><div className={mask} style={{top:r.y,left:0,width:r.x,height:r.bottom-r.y}} /><div className={mask} style={{top:r.y,left:r.right,right:0,height:r.bottom-r.y}} /></>:<div className={mask+" inset-0"} />}
+        {r && !targetInteractive && <div aria-hidden="true" className={`fixed ${visible?'pointer-events-auto':'pointer-events-none'}`} style={{top:r.y,left:r.x,width:r.right-r.x,height:r.bottom-r.y}} />}
         <div ref={cardRef} tabIndex={-1} role="dialog" aria-label="Tutorial guidance" aria-live="polite" className={`${visible?'pointer-events-auto':'pointer-events-none'} fixed bg-neutral5 text-neutral0 border border-neutral3 rounded-2xl p-4 shadow-xl flex flex-col gap-3`} style={{top,left,width:isInfo?width:'max-content',maxWidth}}>
             <div className="flex items-start gap-2">
                 <ExplanationIcon className="size-4 shrink-0 mt-0.5 text-neutral1" aria-hidden="true" />

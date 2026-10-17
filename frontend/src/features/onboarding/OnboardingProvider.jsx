@@ -11,6 +11,7 @@ import { useCourses } from '../courses/contexts/CoursesContext'
 import { setTutorialBridge } from './onboardingBridge'
 import Spotlight from './Spotlight'
 import useDialogFocus from './useDialogFocus'
+import useFadeIn from './useFadeIn'
 import { getOnlineEventRenderer } from './eventRegistry'
 import Button from '../../shared/components/ui/Button'
 import { OnboardingContext as Context } from './OnboardingContext'
@@ -77,12 +78,15 @@ export default function OnboardingProvider({profile,children}){
         if(location.pathname!==step.route)navigate(step.route,{replace:true})
     },[step,run?.id,run?.practiceRound,practice,guidanceReady,blocked,location.pathname,advance,navigate])
     useEffect(()=>{
-        if(!step || blocked || !guidanceReady)return
-        const updateNavigation=()=>window.dispatchEvent(new Event(step.target.startsWith('nav:') && innerWidth<1024 ? 'onboarding:open-navigation' : 'onboarding:close-navigation'))
+        if(!step || blocked || !guidanceReady || isOpen)return
+        const updateNavigation=()=>window.dispatchEvent(new Event((step.target.startsWith('nav:') || step.target==='feedback:submit') && innerWidth<1024 ? 'onboarding:open-navigation' : 'onboarding:close-navigation'))
         updateNavigation()
         window.addEventListener('resize',updateNavigation)
-        return()=>window.removeEventListener('resize',updateNavigation)
-    },[step,blocked,guidanceReady])
+        return()=>{
+            window.removeEventListener('resize',updateNavigation)
+            if(step.target==='feedback:submit')window.dispatchEvent(new Event('onboarding:close-navigation'))
+        }
+    },[step,blocked,guidanceReady,isOpen])
     useEffect(()=>{
         if(!step || blocked)return
         const action=e=>{
@@ -118,7 +122,14 @@ export default function OnboardingProvider({profile,children}){
         try{await progressQueue.current;const saved=stateRef.current;if(saved?.active?.id!==run.id || saved.active.index!==saved.steps.length)return;const next=await post('/v1/onboarding/complete',{runId:run.id});setState(next);setReward(next.reward);celebrateReward(next.reward);await refresh();setError('')}
         catch(err){setError(err.message)}finally{setBusy(false);busyRef.current=false}
     },[run,refresh,celebrateReward])
-    useEffect(()=>{if(run && !step && !blocked)complete()},[run,step,blocked,complete])
+    const completeRef=useRef(complete)
+    completeRef.current=complete
+    const completionRunId=run && !step ? run.id : null
+    useEffect(()=>{
+        if(!completionRunId || blocked)return
+        const timer=setTimeout(()=>void completeRef.current(),2000)
+        return()=>clearTimeout(timer)
+    },[completionRunId,blocked])
     const crateOffer=step?.event==='tutorial-crate' ? {
         purchase:async()=>{const result=await post('/v1/onboarding/crate',{runId:run.id});await refresh();return result},
         onOpening:setCrateOpening,
@@ -128,6 +139,7 @@ export default function OnboardingProvider({profile,children}){
     const canPresent=!!pendingEvent && !run && !blocked && !isOpen && !reward
     const showChoice=canPresent && pendingEvent.type==='onboarding'
     const choiceRef=useRef(null), rewardRef=useRef(null)
+    const rewardVisible=useFadeIn(!!reward)
     useDialogFocus(choiceRef,showChoice)
     useDialogFocus(rewardRef,!!reward)
     const EventRenderer=canPresent ? getOnlineEventRenderer(pendingEvent.type) : null
@@ -140,10 +152,10 @@ export default function OnboardingProvider({profile,children}){
     return <Context.Provider value={{start,active:run,step,ready:!!state,rewarded:state?.rewarded || [],crateOffer,practiceActions:{onAnswer:async(answer,calculatorOpened)=>{await progressQueue.current;setState(await post('/v1/onboarding/practice',{runId:run.id,answer,calculatorOpened}))},onReturn:async()=>{await advance('practice');setPractice(false);navigate('/play')}},sidebarGroup:blocked?null:sidebarGroup}}>{children}
         {EventRenderer && <EventRenderer event={pendingEvent} onAcknowledge={acknowledge} error={error} />}
         {showChoice && <PathChoice dialogRef={choiceRef} busy={busy} error={error} onStart={start} onSkip={acknowledge} />}
-        {run && step && !blocked && !practice && !location.pathname.startsWith('/play/tutorial/') && !crateOpening && !isOpen && <Spotlight step={{...step,recordId:step.target==='agenda:sample-one'?run.artifacts?.['task-one']:step.target==='agenda:sample-two'?run.artifacts?.['task-two']:undefined}} visible={guidanceReady && location.pathname===step.route} busy={busy} error={error} onNext={()=>advance()} onRetry={()=>{setError('');setRetry(n=>n+1)}} />}
+        {run && !blocked && !practice && !location.pathname.startsWith('/play/tutorial/') && !crateOpening && !isOpen && <Spotlight step={step?{...step,recordId:step.target==='agenda:sample-one'?run.artifacts?.['task-one']:step.target==='agenda:sample-two'?run.artifacts?.['task-two']:undefined}:null} visible={!!step && guidanceReady && location.pathname===step.route} busy={busy} error={error} onNext={()=>advance()} onRetry={()=>{setError('');setRetry(n=>n+1)}} />}
 
         {run && !step && error && <div role="alert" className="fixed inset-0 z-[190] bg-black/75 flex flex-col gap-4 items-center justify-center text-neutral0"><p>{error}</p><Button onClick={complete}>Retry completion</Button></div>}
-        {reward && <div ref={rewardRef} role="dialog" aria-modal="true" aria-label="Tutorial complete" className="fixed inset-0 z-[190] bg-black/75 flex items-center justify-center p-6"><div className="bg-neutral5 rounded-2xl p-8 flex flex-col items-center gap-4 text-neutral0"><h2 className="text-2xl font-bold">You’re ready!</h2><p>{reward.xp ? `Welcome to Studium! You earned ${reward.xp} XP.` : 'Tutorial complete. You’ve already collected its XP reward.'}</p><Button type="primary" className='mt-4 w-full py-4' onClick={()=>setReward(null)}>Explore Studium</Button></div></div>}
+        {reward && <div ref={rewardRef} role="dialog" aria-modal="true" aria-label="Tutorial complete" className="fixed inset-0 z-[190] bg-black/75 flex items-center justify-center p-6 transition-opacity duration-500 motion-reduce:transition-none" style={{opacity:rewardVisible?1:0}}><div className="bg-neutral5 rounded-2xl p-8 flex flex-col items-center gap-4 text-neutral0"><h2 className="text-2xl font-bold">You’re ready!</h2><p>{reward.xp ? `Welcome to Studium! You earned ${reward.xp} XP.` : 'Tutorial complete. You’ve already collected its XP reward.'}</p><Button type="primary" className='mt-4 w-full py-4' onClick={()=>setReward(null)}>Explore Studium</Button></div></div>}
         {/* {!state && error && <div role="alert" className="fixed bottom-4 right-4 z-[190] rounded-xl p-4 bg-neutral5">Could not load tutorials. <Button onClick={()=>setRetry(n=>n+1)}>Retry</Button></div>} */}
     </Context.Provider>
 }
