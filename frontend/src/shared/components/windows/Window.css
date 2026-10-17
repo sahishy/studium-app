@@ -1,0 +1,5 @@
+.window-drag-handle { touch-action: none; }
+.mobile-floating-window { display: flex; flex-direction: column; }
+.mobile-floating-window > :first-child { flex-shrink: 0; }
+.mobile-floating-window .window-content { flex: 1; min-height: 0; height: auto; overflow: auto; }
+.mobile-floating-window .window-drag-handle, .mobile-floating-window .window-close button { min-width: 32px; min-height: 32px; display: flex; align-items: center; justify-content: center; }

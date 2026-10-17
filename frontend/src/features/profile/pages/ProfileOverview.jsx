@@ -302,7 +302,7 @@ const ProfileOverview = () => {
         <div className='flex flex-col h-full overflow-scroll'>
             <Topbar profile={currentUserProfile} />
 
-            <div className='w-full flex-1 flex flex-col gap-4 px-24 pb-24 pt-2'>
+            <div className='w-full flex-1 flex flex-col gap-4 px-4 sm:px-8 lg:px-16 xl:px-24 pb-24 pt-2'>
 
                 {loading ? <LoadingState /> : null}
 
@@ -338,80 +338,83 @@ const ProfileOverview = () => {
                             </div>
                         </div>
 
-                        <div className={`flex justify-end gap-3 mt-3`}>
-                            {isCurrentUser ? (
-                                <>
-                                    {isEditMode ? (
-                                        <Button type='primary' onClick={handleCancelEditMode}>Done</Button>
-                                    ) : (
-                                        <Button onClick={() => setIsEditMode(true)}>
-                                            Edit Profile
-                                        </Button>
-                                    )}
-                                    <Button
-                                        onClick={() => navigate('/settings')}
-                                        className='p-3!'
-                                    >
-                                        <FaGear />
-                                    </Button>
-                                </>
-                            ) : (
-                                <>
-                                    {spectateAvailability.visible ? (
+                        <div className='flex flex-col sm:block'>
+                            <div className='order-2 flex flex-wrap sm:justify-end gap-3 mt-4 sm:mt-3'>
+                                {isCurrentUser ? (
+                                    <>
+                                        {isEditMode ? (
+                                            <Button type='primary' onClick={handleCancelEditMode}>Done</Button>
+                                        ) : (
+                                            <Button onClick={() => setIsEditMode(true)}>
+                                                Edit Profile
+                                            </Button>
+                                        )}
                                         <Button
-                                            type='primary'
-                                            disabled={spectateAvailability.disabled}
-                                            aria-description={spectateAvailability.disabled ? 'Leave matchmaking before spectating.' : `Spectate ${displayedProfile?.profile?.displayName ?? 'this player'}`}
-                                            onClick={() => navigate(`/play/game/${encodeURIComponent(spectateAvailability.roomId)}?spectate=${encodeURIComponent(targetUserId)}`)}
+                                            onClick={() => navigate('/settings')}
+                                            className='p-3!'
                                         >
-                                            Spectate
+                                            <FaGear />
                                         </Button>
-                                    ) : null}
-                                    {!isFriend ? (
+                                    </>
+                                ) : (
+                                    <>
+                                        {spectateAvailability.visible ? (
+                                            <Button
+                                                type='primary'
+                                                disabled={spectateAvailability.disabled}
+                                                aria-description={spectateAvailability.disabled ? 'Leave matchmaking before spectating.' : `Spectate ${displayedProfile?.profile?.displayName ?? 'this player'}`}
+                                                onClick={() => navigate(`/play/game/${encodeURIComponent(spectateAvailability.roomId)}?spectate=${encodeURIComponent(targetUserId)}`)}
+                                            >
+                                                Spectate
+                                            </Button>
+                                        ) : null}
+                                        {!isFriend ? (
+                                            <Button
+                                                disabled={hasOutgoingFriendRequest}
+                                                onClick={handleSendFriendRequest}
+                                            >
+                                                {!hasOutgoingFriendRequest ? 'Add Friend' : 'Request Sent'}
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                onClick={handleUnfriend}
+                                            >
+                                                Remove Friend
+                                            </Button>
+                                        )}
                                         <Button
-                                            disabled={hasOutgoingFriendRequest}
-                                            onClick={handleSendFriendRequest}
+                                            disabled={true}
                                         >
-                                            {!hasOutgoingFriendRequest ? 'Add Friend' : 'Request Sent'}
+                                            Report
                                         </Button>
-                                    ) : (
-                                        <Button
-                                            onClick={handleUnfriend}
-                                        >
-                                            Remove Friend
-                                        </Button>
-                                    )}
-                                    <Button
-                                        disabled={true}
-                                    >
-                                        Report
-                                    </Button>
-                                </>
-                            )}
-                        </div>
-
-                        <div className='flex flex-col'>
-                            <div className='flex items-center gap-3'>
-                                <DisplayName className={'text-2xl font-semibold'} targetProfile={displayedProfile} />
-                                {isCurrentUser && isEditMode && (
-                                    <button
-                                        type='button'
-                                        onClick={openEditFlairModal}
-                                        className='p-2 rounded-lg text-neutral1 hover:text-neutral0 hover:bg-neutral5 transition cursor-pointer'
-                                    >
-                                        <FaEdit className='text-sm' />
-                                    </button>
+                                    </>
                                 )}
                             </div>
 
-                            {/* Sits directly under the name, which is also where it appears on the
-                                match intro banner, so a title reads the same in both places. */}
-                            <Title titleId={displayedProfile?.profile?.title} size='md' className='mt-0.5' />
+                            <div className='order-1 flex flex-col mt-16 sm:mt-0'>
+                                <div className='flex flex-wrap items-center gap-3'>
+                                    <DisplayName className={'text-2xl font-semibold'} targetProfile={displayedProfile} />
+                                    {isCurrentUser && isEditMode && (
+                                        <button
+                                            type='button'
+                                            onClick={openEditFlairModal}
+                                            className='p-2 rounded-lg text-neutral1 hover:text-neutral0 hover:bg-neutral5 transition cursor-pointer'
+                                        >
+                                            <FaEdit className='text-sm' />
+                                        </button>
+                                    )}
+                                </div>
 
-                            <div className='flex items-center gap-3 text-sm font-semibold text-neutral1 mt-1'>
-                                <p>{combinedRankedElo} <span className='text-[0.625rem] font-medium'>SAT</span></p>
-                                <PlayerLevel level={displayedProfile?.progress?.level} />
+                                {/* Sits directly under the name, which is also where it appears on the
+                                    match intro banner, so a title reads the same in both places. */}
+                                <Title titleId={displayedProfile?.profile?.title} size='md' className='mt-0.5' />
+
+                                <div className='flex items-center gap-3 text-sm font-semibold text-neutral1 mt-1'>
+                                    <p>{combinedRankedElo} <span className='text-[0.625rem] font-medium'>SAT</span></p>
+                                    <PlayerLevel level={displayedProfile?.progress?.level} />
+                                </div>
                             </div>
+
                         </div>
 
                         {saveError ? (
@@ -500,7 +503,7 @@ const ProfileOverview = () => {
 
                                     <p className='text-lg font-semibold text-neutral1 z-1'>GPA</p>
 
-                                    <div className='flex justify-center gap-24'>
+                                    <div className='flex flex-wrap justify-center gap-8 sm:gap-24'>
 
                                         <div className='relative flex flex-col gap-1 items-center w-32 h-24'>
                                             <div className='flex gap-3'>

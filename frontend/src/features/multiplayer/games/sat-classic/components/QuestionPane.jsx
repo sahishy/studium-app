@@ -1,3 +1,5 @@
+import useMobileView from '../../../../../shared/utils/useMobileView'
+import './QuestionPane.css'
 import HtmlContent from '../../../../../shared/components/ui/HtmlContent'
 import ChoiceButton from './ChoiceButton'
 import AvatarStack from '../../../../../shared/components/avatar/AvatarStack'
@@ -7,6 +9,8 @@ const DASHES = Array.from({ length: 12 }, (_, i) => i)
 
 const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQuestion, isCalculatorOpen, onToggleCalculator, isBusy, hasAnswered, onChoiceSelect, onResponseChange, onSubmit, answerReveal = null, readOnly = false, submitDisabled = false }) => {
 
+    const mobile = useMobileView()
+    const questionKey = currentQuestion?.id ?? currentQuestion?.questionId ?? gameState?.questionIndex ?? 0
     const normalizedResponse = String(submittedResponse ?? '').trim()
     const normalizedResponseUpper = normalizedResponse.toUpperCase()
     const module = String(currentQuestion?.module ?? '').toLowerCase()
@@ -33,7 +37,7 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
     }, new Map())
 
     const contentSection = (
-        <div className={`flex-1 flex flex-col min-h-0 ${isSprQuestion || currentQuestion?.paragraph ? 'pl-6' : ''}`}>
+        <div className={`question-content-section flex-1 flex flex-col min-h-0 ${isSprQuestion || currentQuestion?.paragraph ? 'pl-6' : ''}`}>
             <div className={`flex flex-col ${isMathMcq && !isCalculatorOpen ? 'items-center text-center' : 'items-start'} bg-neutral5`}>
                 <div className='w-full h-full flex justify-between'>
                     <div className='bg-neutral0 text-neutral6 px-2 py-1'>
@@ -59,8 +63,9 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
                 </div>
             </div>
 
-            <div className='relative flex-1 min-h-0'>
-                <div className={`h-full overflow-y-auto overflow-x-visible px-1 flex flex-col gap-6 py-6 ${isMathMcq && !isCalculatorOpen ? 'items-center text-center' : ''}`}>
+            <div className='question-scroll-container relative flex-1 min-h-0'>
+                <div key={mobile ? questionKey : 'desktop'} className={`question-scroll h-full overflow-y-auto overflow-x-visible px-1 flex flex-col gap-6 py-6 ${isMathMcq && !isCalculatorOpen ? 'items-center text-center' : ''}`}>
+                    {mobile && currentQuestion?.paragraph ? <HtmlContent html={currentQuestion.paragraph} /> : null}
                     {currentQuestion?.body ? (
                         <HtmlContent html={currentQuestion.body} />
                     ) : null}
@@ -76,7 +81,7 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
                                 value={submittedResponse ?? ''}
                                 onChange={(event) => onResponseChange?.(event.target.value)}
                                 disabled={isBusy || readOnly}
-                                className={`text-center w-full rounded-xl border bg-neutral6 p-3 text-neutral0 focus:outline-none focus:ring-2 focus:ring-sat0 disabled:opacity-60 transition-colors duration-300 ${isAnswerReveal ? (isRevealCorrect ? 'border-green-500 bg-green-50 dark:bg-green-500/15' : 'border-red-500 bg-red-50 dark:bg-red-500/15') : 'border-neutral0'}`}
+                                className={`question-response text-center w-full rounded-xl border bg-neutral6 p-3 text-neutral0 focus:outline-none focus:ring-2 focus:ring-sat0 disabled:opacity-60 transition-colors duration-300 ${isAnswerReveal ? (isRevealCorrect ? 'border-green-500 bg-green-50 dark:bg-green-500/15' : 'border-red-500 bg-red-50 dark:bg-red-500/15') : 'border-neutral0'}`}
                             />   
                             <hr className='absolute bottom-2 w-18 border-neutral0'/>                         
                         </div>
@@ -96,7 +101,7 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
                         </div>
 
                     ) : (
-                        <div className={`flex flex-col gap-3 w-full ${isAnswerReveal ? 'pr-16' : ''}`}>
+                        <div className={`question-choices flex flex-col gap-3 w-full ${isAnswerReveal ? 'pr-16' : ''}`}>
                             {(currentQuestion?.choices ?? []).map((choice) => {
                                 const answeringPlayers = isAnswerReveal ? playersForAnswer(choice.id) : []
                                 return (
@@ -124,12 +129,14 @@ const QuestionPane = ({ gameState, currentQuestion, submittedResponse, isSprQues
                 type='button'
                 onClick={onSubmit}
                 disabled={!hasValidResponse || isBusy || readOnly || submitDisabled}
-                className='w-full rounded-full bg-sat0 text-white p-3 font-semibold cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed hover:not-disabled:bg-sat1'
+                className='question-submit w-full rounded-full bg-sat0 text-white p-3 font-semibold cursor-pointer transition disabled:opacity-50 disabled:cursor-not-allowed hover:not-disabled:bg-sat1'
             >
                 {readOnly ? 'Spectating' : (hasAnswered ? 'Waiting for opponent...' : 'Submit')}
             </button>
         </div >
     )
+
+    if(mobile) return <div className='mobile-question-pane'>{contentSection}</div>
 
     return (
         <>

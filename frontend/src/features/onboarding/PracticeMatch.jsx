@@ -1,3 +1,6 @@
+import '../multiplayer/components/mobileGames.css'
+import useMobileView from '../../shared/utils/useMobileView'
+import useVisualViewport from '../../shared/utils/useVisualViewport'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import QuestionPane from '../multiplayer/games/sat-classic/components/QuestionPane'
 import GameHeader from '../multiplayer/games/sat-classic/components/GameHeader'
@@ -24,6 +27,8 @@ const returnHomeStep={id:'practice-return-home',kind:'action',target:'match:retu
 // Local presentation only. The authenticated tutorial endpoint owns the two answers;
 // no room, matchmaking, game results, or normal progression services are involved.
 export default function PracticeMatch({run,profile,onAnswer,onReturn}){
+    const mobile = useMobileView()
+    const viewport = useVisualViewport()
     const round=run.practiceRound || 0,health=SAT_CLASSIC_INITIAL_HEALTH
     const [response,setResponse]=useState(''),[calculator,setCalculator]=useState(false),[opened,setOpened]=useState(false),[hint,setHint]=useState(''),[busy,setBusy]=useState(false)
     const [now,setNow]=useState(Date.now),[roundStart,setRoundStart]=useState(()=>Date.now()),[result,setResult]=useState(null)
@@ -85,11 +90,11 @@ export default function PracticeMatch({run,profile,onAnswer,onReturn}){
         }catch(err){setHint(err.message)}finally{setBusy(false)}
     }
     const rounds=QUESTIONS.map((question,index)=>({id:`practice-${index}`,kind:'question',title:`Question ${index+1}`,question,submittedResponse:index===0?'B':'24',correctAnswer:index===0?'B':'24',isCorrect:true,winnerUserIds:[profile.uid]}))
-    return <div className="relative flex flex-col h-full overflow-hidden" role="region" aria-label="SAT Classic match">
+    return <div style={mobile ? {height:viewport.height} : undefined} className="mp-room relative flex flex-col h-full overflow-hidden" role="region" aria-label="SAT Classic match">
         <Topbar profile={profile} showGameAction={finished} isGameFinished={finished} onReturnHome={returnHome} />
-        <div className="w-full flex-1 min-h-0 px-8 xl:px-12 pb-8 pt-2 flex items-center justify-center">
-            <div className="relative w-full max-w-[88rem] h-full min-h-[420px] flex flex-col gap-2">
-                {finished ? <MatchEndOverlay userId={profile.uid} winnerUserId={profile.uid} modeId="sat-classic" localPlayer={localPlayer} opponent={opponent} players={players} rounds={rounds} matchDurationSeconds={((endedAt.current || startedAt.current)-startedAt.current)/1000} questionsAnswered={2} reasonLabel="You bested your opponent." showSkillComparison={false} showRankSection={false} /> : <div className="w-full h-full min-h-[420px] flex flex-col gap-12">
+        <div className="mp-room-content w-full flex-1 min-h-0 px-8 xl:px-12 pb-8 pt-2 flex items-center justify-center">
+            <div className="mp-room-game relative w-full max-w-[88rem] h-full min-h-[420px] flex flex-col gap-2">
+                {finished ? <MatchEndOverlay userId={profile.uid} winnerUserId={profile.uid} modeId="sat-classic" localPlayer={localPlayer} opponent={opponent} players={players} rounds={rounds} matchDurationSeconds={((endedAt.current || startedAt.current)-startedAt.current)/1000} questionsAnswered={2} reasonLabel="You bested your opponent." showSkillComparison={false} showRankSection={false} /> : <div className="mp-game w-full h-full min-h-[420px] flex flex-col gap-12">
                     <GameHeader healthBoard={{leftPlayer:{...localPlayer,health},rightPlayer:{...opponent,health:Math.max(0,health*(1-round/2))}}} damageIndicators={{left:null,right:result?{amount:health/2,startedAtMs:result.startedAtMs}:null}} elapsedSeconds={Math.min(120,Math.max(0,120-Math.floor((now-countdownEnd)/1000)))} currentRoundMultiplier={1} nowMs={now} />
                     <div className="relative flex-1 flex min-h-0">
                         <QuestionPane currentQuestion={question} gameState={{questionIndex:resultActive?result.questionIndex:round}} submittedResponse={response} isSprQuestion={question.questionType==='spr'} isCalculatorOpen={calculator} onToggleCalculator={()=>{setCalculator(v=>!v);setOpened(true)}} onChoiceSelect={choice=>{setResponse(typeof choice==='string'?choice:choice.id);setHint('')}} onResponseChange={value=>{setResponse(value);setHint('')}} onSubmit={submit} isBusy={busy || resultActive || showCountdown} submitDisabled={math && !opened} />

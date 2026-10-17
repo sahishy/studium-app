@@ -1,0 +1,52 @@
+/* Desktop keeps its authored arenas and input hints. */
+.local-arena { display: contents; }
+.mobile-timber-controls, .mobile-flight-joystick { display: none; }
+
+@media (width < 1024px) {
+    .mp-room { min-height: 0; }
+    .mp-room > .sticky { flex-shrink: 0; }
+    .mp-room > .sticky > div { padding: 12px; gap: 8px; }
+    .mp-room-content { padding: 4px 12px 12px; }
+    .mp-room-game, .mp-game { min-height: 0; min-width: 0; gap: 12px; }
+    .mp-header { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 8px; flex-shrink: 0; }
+    .mp-header > :nth-child(2) { min-width: 0; }
+    .mp-header > p, .mp-header > :nth-child(2) p { font-size: 18px; line-height: 1.2; }
+    .mp-header > :nth-child(2) p + p { font-size: 10px; }
+    .mp-player { width: 100%; min-width: 0; }
+    .mp-player > .mp-player-summary { gap: 6px; margin-bottom: 4px; }
+    .mp-player > .mp-player-summary > :first-child { width: 28px; height: 28px; flex-shrink: 0; }
+    .mp-player p { font-size: 12px; }
+    .mp-player p.tabular-nums { font-size: 18px; line-height: 1.2; }
+    .mp-player > .mp-player-summary > div > div { gap: 4px; flex-wrap: wrap; }
+    .mp-arena { gap: 0; flex-direction: row; isolation: isolate; }
+    .local-arena { display: flex; flex: 1; min-width: 0; min-height: 0; }
+    .local-arena > div { min-height: 0; max-width: none; }
+    .opponent-arena { position: absolute; top: 8px; right: 8px; width: min(30%, 112px); aspect-ratio: 4 / 5; z-index: 20; overflow: hidden; border: 1px solid var(--color-neutral4); border-radius: 8px; pointer-events: auto; }
+    .mp-flight-arena { min-height: 0; }
+
+}
+@media (width < 1024px) {
+    .mp-room > .sticky > div { flex-wrap: wrap; }
+    .mp-room .game-topbar-actions > button { width: 44px; height: 44px; min-width: 44px; padding: 0; font-size: 18px; }
+    .mp-room > .sticky > div > div:last-child { gap: 4px; margin-left: auto; font-size: 11px; }
+    .mp-room > .sticky .px-4 { padding-inline: 4px; gap: 4px; }
+    .mp-room > .sticky svg, .mp-room > .sticky img { width: 18px; height: 18px; }
+}
+@media (width < 1024px) {
+    .mp-match-end { min-height: 0; padding: 16px 0; }
+    .mp-match-end > * { flex-shrink: 0; }
+}
+
+@media (width < 640px) {
+    .mp-room .topbar-player-stats { display: none; }
+}
+
+@media (pointer: coarse) {
+    .mp-control-hint { display: none; }
+    .local-arena[data-touch-active] > div { touch-action: none; }
+    .mobile-timber-controls { display: flex; gap: 4px; position: absolute; inset-inline: -12px; bottom: calc(env(safe-area-inset-bottom, 0px) - 12px); z-index: 25; pointer-events: none; }
+    .mobile-timber-controls button { display: flex; flex: 1; align-items: center; justify-content: center; height: clamp(88px, 18dvh, 128px); border: 0; border-radius: 12px; background: rgb(128 128 128 / 13%); color: var(--color-neutral1); font-size: 28px; touch-action: none; user-select: none; pointer-events: auto; }
+    .mobile-timber-controls button:active { background: rgb(128 128 128 / 22%); }
+    .mobile-flight-joystick { display: flex; align-items: center; justify-content: center; position: absolute; width: 176px; height: 176px; bottom: max(12px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); border: 0; border-radius: 50%; background: rgb(128 128 128 / 13%); z-index: 25; touch-action: none; user-select: none; }
+    .mobile-joystick-thumb { position: absolute; width: 64px; height: 64px; border-radius: 50%; background: rgb(128 128 128 / 25%); pointer-events: none; }
+}

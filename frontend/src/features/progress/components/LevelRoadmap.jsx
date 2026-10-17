@@ -66,6 +66,16 @@ const LevelRoadmap = ({ level = 1, xp = 0, profile }) => {
     const { snapshot, claimLevel } = useEconomy()
     const { celebrateReward } = useRewardFx()
 
+    const [compact, setCompact] = useState(() => typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches)
+
+    useEffect(() => {
+        const query = window.matchMedia('(max-width: 1023px)')
+        const updateCompact = () => setCompact(query.matches)
+        updateCompact()
+        query.addEventListener('change', updateCompact)
+        return () => query.removeEventListener('change', updateCompact)
+    }, [])
+
     const [claiming, setClaiming] = useState(false)
     const [error, setError] = useState('')
     const [characterBounds, setCharacterBounds] = useState(null)
@@ -77,21 +87,23 @@ const LevelRoadmap = ({ level = 1, xp = 0, profile }) => {
     const frameRef = useRef(null)
     const tweenRef = useRef(null)
 
-    const nodes = buildRoadmap({ level, claimedLevels: snapshot?.wallet?.claimedLevels })
+    const roadmap = buildRoadmap({ level, claimedLevels: snapshot?.wallet?.claimedLevels })
+    const nodes = compact ? roadmap.filter((node) => Math.abs(node.level - level) <= 1) : roadmap
     const xpNeeded = getXpToNextLevel(level)
 
-    const contentHeight = ((MAX_PATH_LEVEL - 1) * NODE_SPACING) + (PATH_PADDING * 2)
+    const contentHeight = compact ? 320 : ((MAX_PATH_LEVEL - 1) * NODE_SPACING) + (PATH_PADDING * 2)
 
+    const waveScale = characterBounds ? Math.min(1, Math.max(0, (characterBounds.pathWidth - 104) / (148 * 2))) : 1
     const currentNode = nodes.find((node) => node.level === level) ?? nodes[0]
 
     // Prefer the left of the dot, but keep the full avatar inside the viewport.
     // Measure both elements so this also adapts to resizing and font-size changes.
-    let characterOffset = (currentNode?.offset ?? 0) - CHARACTER_OFFSET
+    let characterOffset = ((currentNode?.offset ?? 0) * waveScale) - CHARACTER_OFFSET
 
     if(characterBounds) {
         const { pathWidth, characterWidth } = characterBounds
         const halfWidth = characterWidth / 2
-        const nodeCenter = (pathWidth / 2) + (currentNode?.offset ?? 0)
+        const nodeCenter = (pathWidth / 2) + ((currentNode?.offset ?? 0) * waveScale)
         const leftCenter = nodeCenter - CHARACTER_OFFSET
         const rightCenter = nodeCenter + CHARACTER_OFFSET
         const fits = (center) => center >= halfWidth && center <= pathWidth - halfWidth
@@ -129,7 +141,9 @@ const LevelRoadmap = ({ level = 1, xp = 0, profile }) => {
 
     // Distance from the top of the path. Level 1 sits at the bottom and the
     // origin never moves, so a node's position depends only on its level.
-    const centerFromTop = (nodeLevel) => ((MAX_PATH_LEVEL - nodeLevel) * NODE_SPACING) + PATH_PADDING
+    const centerFromTop = useCallback((nodeLevel) => compact
+        ? 160 + ((level - nodeLevel) * 96)
+        : ((MAX_PATH_LEVEL - nodeLevel) * NODE_SPACING) + PATH_PADDING, [compact, level])
 
     const scrollTargetFor = useCallback((nodeLevel) => {
 
@@ -142,7 +156,7 @@ const LevelRoadmap = ({ level = 1, xp = 0, profile }) => {
             contentHeight - container.clientHeight,
         ))
 
-    }, [contentHeight])
+    }, [contentHeight, centerFromTop])
 
     const startTween = useCallback((target) => {
 
@@ -163,6 +177,13 @@ const LevelRoadmap = ({ level = 1, xp = 0, profile }) => {
         const container = scrollRef.current
 
         if(!container) return undefined
+
+        if(compact) {
+            container.scrollTop = 0
+            hasAnchoredRef.current = false
+            tweenRef.current = null
+            return undefined
+        }
 
         if(!hasAnchoredRef.current) {
             container.scrollTop = scrollTargetFor(level)
@@ -196,17 +217,17 @@ const LevelRoadmap = ({ level = 1, xp = 0, profile }) => {
 
         return () => cancelAnimationFrame(frameRef.current)
 
-    }, [contentHeight, level, scrollTargetFor, startTween])
+    }, [compact, contentHeight, level, scrollTargetFor, startTween])
 
     // A level gained while watching takes the view with it, even mid-scroll.
     useEffect(() => {
 
-        if(!hasAnchoredRef.current) return
+        if(compact || !hasAnchoredRef.current) return
 
         lastInteractionRef.current = 0
         startTween(scrollTargetFor(level))
 
-    }, [level, scrollTargetFor, startTween])
+    }, [compact, level, scrollTargetFor, startTween])
 
     const markInteraction = () => {
         lastInteractionRef.current = Date.now()
@@ -235,7 +256,7 @@ const LevelRoadmap = ({ level = 1, xp = 0, profile }) => {
     return (
         <div className='relative flex-1 min-h-0 flex flex-col'>
 
-            <div className='pointer-events-none absolute inset-x-0 top-0 h-16 z-10 bg-gradient-to-b from-neutral6 to-transparent' />
+            <div className={`pointer-events-none absolute inset-x-0 top-0 ${compact ? 'h-4' : 'h-16'} z-10 bg-gradient-to-b from-neutral6 to-transparent`} />
 
             <div
                 ref={scrollRef}
@@ -243,7 +264,7 @@ const LevelRoadmap = ({ level = 1, xp = 0, profile }) => {
                 onPointerDown={markInteraction}
                 onTouchStart={markInteraction}
                 onKeyDown={markInteraction}
-                className='flex-1 min-h-0 overflow-y-auto no-scrollbar'
+                className={`flex-1 min-h-0 ${compact ? 'overflow-hidden' : 'overflow-y-auto no-scrollbar'}`}
             >
                 <div className='relative w-full' style={{ height: contentHeight }}>
 
@@ -257,7 +278,7 @@ const LevelRoadmap = ({ level = 1, xp = 0, profile }) => {
                                 className='absolute left-1/2 flex flex-col items-center gap-2'
                                 style={{
                                     top: centerFromTop(node.level),
-                                    transform: `translate(calc(-50% + ${node.offset}px), -50%)`,
+                                    transform: `translate(calc(-50% + ${node.offset * waveScale}px), -50%)`,
                                 }}
                             >
                                 <div className='relative flex items-center justify-center'>

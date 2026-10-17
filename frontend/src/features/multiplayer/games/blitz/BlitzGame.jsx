@@ -46,7 +46,7 @@ const BlitzGame = ({ roomId }) => {
 
     if(state.phase === 'finished') {
         return (
-            <div className='w-full h-full min-h-[420px] flex flex-col items-center gap-6 overflow-y-auto py-10'>
+            <div className='mp-game w-full h-full min-h-[420px] flex flex-col items-center gap-6 overflow-y-auto py-10'>
                 <MatchEndConfetti />
                 <div className='text-center'>
                     <h1 className='text-5xl font-bold text-sat0'>Blitz Complete</h1>
@@ -65,7 +65,7 @@ const BlitzGame = ({ roomId }) => {
     }
 
     return (
-        <div className='w-full h-full min-h-[420px] flex flex-col gap-8'>
+        <div className='mp-game w-full h-full min-h-[420px] flex flex-col gap-8'>
             <div className='text-center'>
                 <p className='text-2xl font-semibold tabular-nums'>{formatDurationMmSsMs(score)}</p>
                 <p className='text-sm text-neutral1'>Elapsed Time · Question {Number(state.questionIndex) + 1} / 10</p>

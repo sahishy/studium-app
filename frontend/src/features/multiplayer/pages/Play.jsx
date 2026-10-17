@@ -400,7 +400,7 @@ const Play = () => {
     return (
         <div
             ref={scrollRef}
-            className={`flex flex-col h-full overflow-x-hidden ${showModePicker ? 'overflow-y-auto' : 'overflow-hidden'}`}
+            className={`flex flex-col h-full overflow-x-hidden ${showModePicker ? 'overflow-y-auto' : 'overflow-y-auto lg:overflow-hidden'}`}
         >
             <Topbar
                 profile={profile}
@@ -418,7 +418,7 @@ const Play = () => {
                     onBack={() => setActivePlayTab('lobby')}
                 />
             ) : (
-                <div className='relative w-full flex-1 flex min-h-0 px-8 xl:px-16 pb-0 pt-2 gap-5 xl:gap-7'>
+                <div className='relative w-full flex-1 flex flex-col lg:flex-row min-h-0 px-4 sm:px-8 xl:px-16 pb-0 pt-2 gap-5 xl:gap-7'>
 
                     {isPartyLoading ? <LoadingState className='flex-1 min-h-0' /> : <>
 
@@ -432,10 +432,10 @@ const Play = () => {
                         showJoinParty={!isInParty}
                     />
 
-                <div className='w-full min-h-0 max-w-[19rem] gap-4 flex flex-col [justify-content:safe_center] overflow-y-auto no-scrollbar pt-2 pb-8'>
+                <div className='w-full min-h-0 max-w-sm lg:max-w-[19rem] self-center lg:self-stretch shrink-0 gap-4 flex flex-col lg:[justify-content:safe_center] lg:overflow-y-auto no-scrollbar pt-2 pb-8'>
 
                     <div data-onboarding="lobby:game-card" className='group/mode relative isolate mt-10 shrink-0'>
-                        <div data-onboarding="lobby:modes"><GameModeThumbnail
+                        <div className="hidden lg:block"><GameModeThumbnail
                             mode={selectedMode}
                             disabled={modeSelectionDisabled}
                             disabledReason={tutorial ? 'Finish the tutorial to change gamemodes' : undefined}
@@ -453,7 +453,7 @@ const Play = () => {
                                     <FaTrophy className='text-sm' />
                                 </button>
                             </TextTooltip>
-                            <button type='button' className='gamemode-trigger rounded-xl cursor-pointer disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral2'
+                            <button type='button' data-onboarding='lobby:modes' className='gamemode-trigger rounded-xl cursor-pointer disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral2'
                                 disabled={modeSelectionDisabled} onClick={openModePicker} aria-label='Change gamemode'>
                             <Card className='font-semibold flex-row! items-center gap-3! whitespace-nowrap'>
                                 <ModeIcon className='text-lg' />
@@ -512,7 +512,7 @@ const Play = () => {
                                             {nextTierThreshold ?
                                                 <span className='flex items-center gap-1'>
                                                     {eloToNextTier} to
-                                                    <div className='ml-1 mb-0.5 flex items-center justify-center w-4 h-4 opacity-60'><img src={nextTierIcon} alt={`${nextTierLabel} icon`} className='absolute w-7 h-7 object-cover'/></div>
+                                                    <span className='ml-1 mb-0.5 flex items-center justify-center w-4 h-4 opacity-60'><img src={nextTierIcon} alt={`${nextTierLabel} icon`} className='absolute w-7 h-7 object-cover'/></span>
                                                     {nextTierLabel}
                                                 </span>
                                             :

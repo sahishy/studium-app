@@ -372,7 +372,7 @@ const CourseOverview = () => {
     return (
         <div className='w-full flex flex-col gap-6 pb-12'>
 
-            <div className='flex gap-8'>
+            <div className='flex flex-col lg:flex-row gap-4 sm:gap-8'>
                 <Card className={'flex-2 p-2! overflow-hidden gap-0!'}>
                     <div
                         className='p-6 w-full h-48 flex items-center justify-center rounded-xl'
@@ -388,7 +388,7 @@ const CourseOverview = () => {
                         <p className='text-sm text-neutral1 mt-2'>{course.description || 'No description available.'}</p>
                     </div>
                 </Card>
-                <div className='flex-1 flex flex-col gap-6'>
+                <div className='min-w-0 flex-1 flex flex-col gap-6'>
 
                     <Card className='flex-1 justify-center p-6! gap-6!'>
                         <div className='flex items-center gap-6'>
@@ -453,7 +453,7 @@ const CourseOverview = () => {
                 <div className='flex flex-col gap-6'>
                     <h2 className='text-2xl font-semibold'>Reviews</h2>
 
-                    <Card className='p-12! flex flex-row justify-between items-center'>
+                    <Card className='p-5! sm:p-8! xl:p-12! flex flex-col! xl:flex-row! justify-between items-center gap-6!'>
                         <div>
                             <h2 className={`font-bold
                                 animate-shine bg-[length:200%_auto] 
@@ -466,7 +466,7 @@ const CourseOverview = () => {
                             </h2>
                             <p className='text-lg text-neutral1'>{reviewSummary.totalReviews} review{reviewSummary.totalReviews != 1 && 's'}</p>
                         </div>
-                        <div className='min-w-lg flex flex-col gap-4'>
+                        <div className='w-full min-w-0 xl:w-auto xl:min-w-lg flex flex-col gap-4'>
                             {reviewSummary.scoreBuckets.map((bucket) => {
 
                                 const Icon = bucket.icon
@@ -508,7 +508,7 @@ const CourseOverview = () => {
                                 className='w-full px-4 py-3 text-sm text-neutral0 focus:outline-none'
                             />
 
-                            <div className='flex justify-between p-3'>
+                            <div className='flex flex-wrap gap-3 justify-between p-3'>
                                 <div className='flex gap-2'>
                                     {SCORE_OPTIONS.map((option) => {
                                         const Icon = option.icon
@@ -555,7 +555,7 @@ const CourseOverview = () => {
                     <div data-onboarding="courses:reviews" className='grid grid-cols-1 md:grid-cols-3 gap-3'>
 
                         {sortedReviews.length === 0 ? (
-                            <div className='col-span-3 flex flex-col items-center py-16'>
+                            <div className='col-span-full flex flex-col items-center py-16'>
                                 <p className='text-neutral0 font-semibold'>
                                     Be the first to review
                                 </p>

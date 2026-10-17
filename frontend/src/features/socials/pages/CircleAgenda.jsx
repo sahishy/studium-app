@@ -70,7 +70,7 @@ const CircleAgenda = () => {
     return (
         <div className={`w-full flex flex-col gap-4 ${activeTabName === 'list' ? '' : 'h-[calc(100dvh-260px)] min-h-[420px]'}`}>
 
-            <div className='w-full flex justify-end'>
+            <div className='w-full flex justify-center sm:justify-end'>
                 <IconTabSelector
                     tabs={tabs}
                     currentIndex={currentTab >= 0 ? currentTab : 0}

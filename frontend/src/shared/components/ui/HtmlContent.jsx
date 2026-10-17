@@ -65,7 +65,6 @@ const HtmlContent = ({ html, className = '' }) => {
                 [&_td]:align-top
                 [&_td]:p-1 [&_th]:p-1
                 [&_math]:max-w-full
-                [&_math]:overflow-x-auto
                 [&_math]:vertical-align-middle
                 [&_math[display='block']]:display:block
                 [&_math[display='block']]:text-center

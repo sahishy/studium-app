@@ -31,7 +31,7 @@ const GameHeader = ({ healthBoard, damageIndicators, elapsedSeconds, currentRoun
 
         previousSecondRef.current = currentSecond
 
-    }, [elapsedSeconds])
+    }, [elapsedSeconds, isLowTime])
 
     useEffect(() => {
         return () => {
@@ -42,7 +42,7 @@ const GameHeader = ({ healthBoard, damageIndicators, elapsedSeconds, currentRoun
     }, [])
 
     return (
-        <div className='w-full flex items-center justify-between gap-3 sm:gap-6'>
+        <div className='mp-header w-full flex items-center justify-between gap-3 sm:gap-6'>
             <HealthPanel
                 player={healthBoard.leftPlayer}
                 damageIndicator={damageIndicators.left}

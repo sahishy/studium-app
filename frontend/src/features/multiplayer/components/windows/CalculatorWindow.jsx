@@ -1,3 +1,5 @@
+import useMobileView from '../../../../shared/utils/useMobileView'
+import useVisualViewport from '../../../../shared/utils/useVisualViewport'
 import Window from '../../../../shared/components/windows/Window'
 import { getCenteredWindowPosition } from '../../../../shared/utils/windowDragUtils'
 import { useMemo } from 'react'
@@ -6,10 +8,17 @@ const CALCULATOR_INITIAL_SIZE = { width: 780, height: 560 }
 
 const CalculatorWindow = ({ isOpen, onClose }) => {
 
-    const initialSize = useMemo(() => ({
-        width: Math.min(CALCULATOR_INITIAL_SIZE.width, window.innerWidth - 24),
-        height: Math.min(CALCULATOR_INITIAL_SIZE.height, window.innerHeight - 40),
-    }), [isOpen])
+    const mobile = useMobileView()
+    const viewport = useVisualViewport()
+    const mobileWidth = mobile ? viewport.width : null
+    const mobileHeight = mobile ? viewport.height : null
+    const initialSize = useMemo(() => {
+        if(!isOpen) return CALCULATOR_INITIAL_SIZE
+        return {
+            width: Math.min(CALCULATOR_INITIAL_SIZE.width, (mobileWidth ?? window.innerWidth) - 24),
+            height: Math.min(CALCULATOR_INITIAL_SIZE.height, (mobileHeight ?? window.innerHeight) - 40),
+        }
+    }, [isOpen, mobileWidth, mobileHeight])
     const resolvedInitialPosition = useMemo(() => {
         const centerPosition = getCenteredWindowPosition(initialSize)
         return {

@@ -385,7 +385,7 @@ const SatClassicGame = ({ roomId, userId, readOnly = false, spectatorName = null
     }
 
     return (
-        <div className='w-full h-full min-h-[420px] flex flex-col gap-12'>
+        <div className='mp-game w-full h-full min-h-[420px] flex flex-col gap-12'>
 
             <GameHeader
                 healthBoard={healthBoard}

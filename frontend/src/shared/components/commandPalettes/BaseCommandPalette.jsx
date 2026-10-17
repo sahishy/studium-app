@@ -75,18 +75,18 @@ const BaseCommandPalette = ({
     }
 
     return createPortal((
-        <div className={`fixed inset-0 z-50 flex items-center justify-center p-6 transition-all ${isTopmostLayer ? 'bg-backdrop' : 'bg-transparent'} ${animate && isTopmostLayer ? 'backdrop-blur-xs' : 'backdrop-blur-none'}`} style={{ zIndex }}>
+        <div className={`fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 transition-all ${isTopmostLayer ? 'bg-backdrop' : 'bg-transparent'} ${animate && isTopmostLayer ? 'backdrop-blur-xs' : 'backdrop-blur-none'}`} style={{ zIndex }}>
             <div className={`w-full ${maxWidthClass} h-[72vh] bg-neutral6 rounded-xl shadow-2xl
                 flex flex-col overflow-hidden transition-all transform will-change-transform will-change-opacity
                 ${animate ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}>
-                <div className='px-6 py-4 flex items-center gap-3'>
+                <div className='px-3 sm:px-6 py-4 flex items-center gap-2 sm:gap-3'>
                     <IoSearch className='text-lg text-neutral1 shrink-0'/>
                     <input
                         autoFocus
                         value={query}
                         onChange={(event) => onQueryChange?.(event.target.value)}
                         placeholder={placeholder}
-                        className='flex-1 bg-transparent text-neutral0 placeholder:text-neutral1 focus:outline-none'
+                        className='flex-1 min-w-0 bg-transparent text-neutral0 placeholder:text-neutral1 focus:outline-none'
                     />
                     <CloseButton onClick={onClose}/>
                 </div>

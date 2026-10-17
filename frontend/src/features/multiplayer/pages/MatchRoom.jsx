@@ -1,3 +1,8 @@
+import Button from '../../../shared/components/ui/Button'
+import { FaMessage } from 'react-icons/fa6'
+import useMobileView from '../../../shared/utils/useMobileView'
+import useVisualViewport from '../../../shared/utils/useVisualViewport'
+import '../components/mobileGames.css'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
@@ -15,6 +20,8 @@ import LoadingState from '../../../shared/components/ui/LoadingState'
 import GameFocusBlur from '../components/GameFocusBlur'
 
 const MatchRoom = () => {
+    const mobile = useMobileView()
+    const viewport = useVisualViewport()
     
     const { roomId } = useParams()
     const [searchParams] = useSearchParams()
@@ -23,6 +30,7 @@ const MatchRoom = () => {
     const { toastStack, hideToast } = useToast()
     const navigate = useNavigate()
 
+    const [chatOpen, setChatOpen] = useState(false)
     const [room, setRoom] = useState(null)
     const [roomLoading, setRoomLoading] = useState(true)
     const [players, setPlayers] = useState([])
@@ -80,6 +88,7 @@ const MatchRoom = () => {
 
         setRoomLoading(true)
         setRoomError(null)
+        setChatOpen(false)
         const unsubscribe = subscribeToRoomById(roomId, setRoom, setRoomLoading)
         const unsubscribePlayers = subscribeToRoomPlayers(roomId, setPlayers)
         const unsubscribeErrors = subscribeToGameErrors(roomId, setRoomError)
@@ -130,7 +139,7 @@ const MatchRoom = () => {
     }, [isSpectating, players, room, roomLoading, spectatedPlayer])
 
     return (
-        <div className='relative flex flex-col h-full overflow-hidden'>
+        <div className='mp-room relative flex flex-col h-full overflow-hidden' style={mobile ? { height: viewport.height } : undefined}>
             {room?.status === 'active' && !isGameFinished && !roomLoading && !roomError ? (
                 <GameFocusBlur />
             ) : null}
@@ -147,10 +156,15 @@ const MatchRoom = () => {
                 onReturnHome={isSpectating ? handleStopSpectating : handleReturnHome}
                 gameActionLabel={isSpectating ? (isGameFinished ? 'Return to profile' : 'Stop spectating') : null}
                 gameActionType={isSpectating ? 'secondary' : null}
+                gameActionExtras={mobile && !roomError ? (
+                    <Button aria-label='Open chat' aria-expanded={chatOpen} disabled={roomLoading} onClick={() => setChatOpen(true)}>
+                        <FaMessage className='text-neutral1' />
+                    </Button>
+                ) : null}
             />
 
-            <div className='w-full flex-1 min-h-0 px-8 xl:px-12 pb-8 pt-2 flex items-center justify-center'>
-                <div className='relative w-full max-w-[88rem] h-full min-h-[420px] flex flex-col gap-2'>
+            <div className='mp-room-content w-full flex-1 min-h-0 px-8 xl:px-12 pb-8 pt-2 flex items-center justify-center'>
+                <div className='mp-room-game relative w-full max-w-[88rem] h-full min-h-[420px] flex flex-col gap-2'>
                     {isSpectating && spectatedPlayer ? (
                         <p className='text-center text-sm font-semibold text-neutral1'>Spectating {spectatedPlayer.displayName}</p>
                     ) : null}
@@ -182,6 +196,10 @@ const MatchRoom = () => {
 
             {!roomError ? (
                 <ChatBox
+                    key={roomId}
+                    windowed={mobile}
+                    isOpen={chatOpen}
+                    onClose={() => setChatOpen(false)}
                     roomId={roomId}
                     userId={profile?.uid}
                     senderName={senderName}

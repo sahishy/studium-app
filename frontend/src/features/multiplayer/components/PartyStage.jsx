@@ -261,7 +261,7 @@ const PartyStage = ({ party, mode, currentProfile, friends = [], onInvite, onJoi
     })
 
     return (
-        <FittedAvatarStage minWidth={48} minHeight={roomy ? 46 : 42} className='flex-1'>
+        <FittedAvatarStage minWidth={48} minHeight={roomy ? 46 : 42} className='h-80 sm:h-96 shrink-0 lg:h-auto lg:flex-1'>
             <div className='relative h-full flex items-end justify-center px-1 pb-12'>
                 {backMembers.length ? (
                     <div className='absolute inset-x-0 bottom-60 z-5 h-48 opacity-70 pointer-events-none'>

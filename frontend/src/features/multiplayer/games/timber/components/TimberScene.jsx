@@ -141,7 +141,8 @@ const TimberWorld = ({ player, branches, actualChops, side, resultAnimation, res
 const TimberScene = memo(({ player, branches = [], actualChops = 0, side = 'left', resultAnimation = null, resultAnimationKey = 0 }) => (
     <Canvas
         className='absolute inset-0 h-full! w-full!'
-        shadows
+        resize={{ offsetSize: true }}
+        shadows="percentage"
         dpr={[1, 2]}
         camera={{ fov: 40 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}

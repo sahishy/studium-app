@@ -1,0 +1,15 @@
+@media (width < 1024px) {
+    .mobile-question-pane { display: flex; flex: 1; min-height: 0; min-width: 0; width: 100%; }
+    .mobile-question-pane .question-content-section { padding-left: 0; min-width: 0; gap: 8px; }
+    .mobile-question-pane .question-content-section > :first-child { flex-shrink: 0; }
+    .mobile-question-pane .question-scroll { overscroll-behavior: contain; overflow-x: hidden; align-items: stretch; text-align: left; gap: 16px; padding: 12px 2px 16px; }
+    .mobile-question-pane .question-scroll > * { flex-shrink: 0; min-width: 0; }
+    .mobile-question-pane .question-scroll-container > .pointer-events-none { display: none; }
+    .mobile-question-pane .html-content { font-size: 14px; overflow-wrap: anywhere; max-width: 100%; overflow-x: auto; pointer-events: auto; }
+    .mobile-question-pane .html-content table { display: block; width: max-content; max-width: 100%; overflow-x: auto; overflow-wrap: normal; }
+    .mobile-question-pane .question-response { font-size: 16px; }
+    .mobile-question-pane .question-choices { padding-right: 0; }
+    .mobile-question-pane .question-choice-button { min-height: 44px; }
+    .mobile-question-pane .question-answer-avatars { position: static; transform: none; margin: 6px 0 0; justify-content: flex-end; }
+    .mobile-question-pane .question-submit { flex-shrink: 0; min-height: 44px; margin-bottom: env(safe-area-inset-bottom, 0px); }
+}

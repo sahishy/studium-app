@@ -44,6 +44,16 @@ export default function Spotlight({step:incomingStep,busy,error,onNext,onRetry,v
                     node.closest('[data-onboarding="agenda:scroll"]')?.scrollTo({top:0,behavior:'instant'})
                 }
             }
+            // Locker is a scrolling page on mobile. Its sticky topbar can cover a
+            // target even after scrollIntoView, and the guidance mask blocks recovery.
+            if(step.target==='locker:crates'){
+                const container=node.closest('[data-onboarding="locker:scroll"]')
+                const bounds=node.getBoundingClientRect()
+                const headerBottom=container?.querySelector(':scope > .sticky')?.getBoundingClientRect().bottom ?? 0
+                if(container && (!scrolled || bounds.top<headerBottom+6 || bounds.bottom>innerHeight-6)){
+                    container.scrollTo({top:0,behavior:'instant'})
+                }
+            }
             if(!scrolled && visible){node.scrollIntoView({block:'nearest',inline:'nearest',behavior:'instant'});scrolled=true; const focus=step.kind==='info'?cardRef.current:node.matches('a,button,input,[contenteditable]')?node:node.querySelector('a,button,input,[contenteditable]');focus?.focus({preventScroll:true})}
             const r=node.getBoundingClientRect(), pad=6
             setRect({x:Math.max(0,r.left-pad),y:Math.max(0,r.top-pad),right:Math.min(innerWidth,r.right+pad),bottom:Math.min(innerHeight,r.bottom+pad),cardHeight:cardRef.current?.offsetHeight || 160,cardWidth:cardRef.current?.offsetWidth})
@@ -98,7 +108,9 @@ export default function Spotlight({step:incomingStep,busy,error,onNext,onRetry,v
     const radius=r?Math.min(16,(r.right-r.x)/2,(r.bottom-r.y)/2):0
     const cutout=r?`M ${r.x+radius} ${r.y} H ${r.right-radius} A ${radius} ${radius} 0 0 1 ${r.right} ${r.y+radius} V ${r.bottom-radius} A ${radius} ${radius} 0 0 1 ${r.right-radius} ${r.bottom} H ${r.x+radius} A ${radius} ${radius} 0 0 1 ${r.x} ${r.bottom-radius} V ${r.y+radius} A ${radius} ${radius} 0 0 1 ${r.x+radius} ${r.y} Z`:''
     const mask=`fixed ${visible?'pointer-events-auto':'pointer-events-none'}`
-    return <div className="fixed inset-0 z-[180] pointer-events-none transition-opacity duration-500 motion-reduce:transition-none" style={{opacity:visible?1:0}} aria-hidden={!visible} inert={!visible} onTransitionEnd={event=>{if(changing && event.target===event.currentTarget && event.propertyName==='opacity')setStep(incomingRef.current)}}>
+    // Inert also removes hidden guidance from the accessibility tree and handles
+    // retained focus, without aria-hidden hiding a still-focused Continue button.
+    return <div className="fixed inset-0 z-[180] pointer-events-none transition-opacity duration-500 motion-reduce:transition-none" style={{opacity:visible?1:0}} inert={!visible} onTransitionEnd={event=>{if(changing && event.target===event.currentTarget && event.propertyName==='opacity')setStep(incomingRef.current)}}>
         <svg aria-hidden="true" className="fixed inset-0 size-full pointer-events-none">
             <path fill="rgb(0 0 0 / 0.7)" fillRule="evenodd" d={`M 0 0 H ${innerWidth} V ${innerHeight} H 0 Z ${cutout}`} />
         </svg>
@@ -107,7 +119,7 @@ export default function Spotlight({step:incomingStep,busy,error,onNext,onRetry,v
         <div ref={cardRef} tabIndex={-1} role="dialog" aria-label="Tutorial guidance" aria-live="polite" className={`${visible?'pointer-events-auto':'pointer-events-none'} fixed bg-neutral5 text-neutral0 border border-neutral3 rounded-2xl p-4 shadow-xl flex flex-col gap-3`} style={{top,left,width:isInfo?width:'max-content',maxWidth}}>
             <div className="flex items-start gap-2">
                 <ExplanationIcon className="size-4 shrink-0 mt-0.5 text-neutral1" aria-hidden="true" />
-                <p className="text-sm min-w-0">{r?step.text:missing?'This part of the page could not load. Try again.':'Loading the next activity…'}</p>
+                <p className="text-sm min-w-0">{r?step.text:missing?'You ran into a weird issue with the tutorial. Try again.':'Loading...'}</p>
             </div>
             {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
             {r && step.kind==='info' && <Button type="primary" onClick={onNext} disabled={busy}>Continue</Button>}

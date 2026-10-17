@@ -43,8 +43,8 @@ const Friends = () => {
         <div className='flex flex-col h-full overflow-scroll'>
             <Topbar profile={profile} />
 
-            <div className='w-full flex-1 flex flex-col gap-4 px-24 pb-24 pt-2'>
-                <div className='flex justify-between items-start'>
+            <div className='w-full flex-1 flex flex-col gap-4 px-4 sm:px-8 lg:px-16 xl:px-24 pb-24 pt-2'>
+                <div className='flex flex-col gap-4 sm:flex-row sm:justify-between items-start'>
 
                     {/* <Button
                         onClick={() => navigate('/socials')}
@@ -55,7 +55,7 @@ const Friends = () => {
 
                     <PageHeader text={'Friends'} icon={FaUserPlus} />
 
-                    <div className='flex items-center gap-3'>
+                    <div className='flex flex-wrap self-center justify-center sm:self-auto items-center gap-3'>
                         <Button type='secondary' onClick={handleAddFriend}>Add Friend</Button>
                         <TextTabSelector
                             tabs={tabs}

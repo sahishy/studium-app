@@ -199,27 +199,28 @@ const Locker = () => {
             : 'Save Changes'
 
     return (
-        <div ref={lockerRef} className='relative flex flex-col h-full overflow-hidden'>
+        <div ref={lockerRef} data-onboarding='locker:scroll' className='relative flex flex-col h-full overflow-y-auto lg:overflow-hidden'>
             <Topbar profile={profile} alwaysShowCrates={showingCrates} />
 
-            <div className='w-full flex-1 min-h-0 flex flex-col gap-4 px-4 pb-8 pt-2 sm:px-8 lg:px-16 xl:px-24'>
-                <div className='flex justify-between items-start'>
+            <div className='w-full flex-1 lg:min-h-0 flex flex-col gap-4 px-4 pb-8 pt-2 sm:px-8 lg:px-16 xl:px-24'>
+                <div className='flex flex-col gap-4 sm:flex-row sm:justify-between items-start'>
 
                     <PageHeader text={'Locker'} icon={FaChild} />
 
-                    <div className='flex items-center gap-2'>
+                    <div className='flex w-full min-w-0 self-center justify-center sm:w-auto sm:self-auto items-center gap-1 sm:gap-2'>
                         <TextTabSelector
+                            className='min-w-0 flex-1 sm:flex-none [&_button]:px-2 sm:[&_button]:px-4'
                             tabs={tabs}
                             currentIndex={showingCrates ? -1 : tabs.findIndex((tab) => tab.name === activeTab)}
                             onSelect={(tab) => navigate(`/locker/${tab.name}`)}
                         />
 
-                        <div className='p-1 bg-neutral5 rounded-full'>
+                        <div className='shrink-0 p-1 bg-neutral5 rounded-full'>
                             <button
                                 type='button'
                                 data-onboarding="locker:crates"
                                 onClick={() => navigate('/locker/crates')}
-                                className={`px-4 py-2 rounded-full text-sm transition-colors cursor-pointer
+                                className={`px-3 sm:px-4 py-2 rounded-full text-sm transition-colors cursor-pointer
                                     ${showingCrates
                                         ? 'bg-neutral6 text-neutral0'
                                         : 'text-neutral1 hover:text-neutral0'}`}
@@ -234,10 +235,10 @@ const Locker = () => {
                 {avatarLoading ? (
                     <LoadingState className='flex-1' />
                 ) : (
-                    <div data-onboarding={showingCrates ? 'locker:crate-shop' : 'locker:customize'} className='flex-1 min-h-0 flex flex-col gap-8 lg:flex-row'>
+                    <div data-onboarding={showingCrates ? 'locker:crate-shop' : 'locker:customize'} className='flex-1 lg:min-h-0 flex flex-col gap-8 lg:flex-row'>
 
-                        <div className={`relative min-h-[320px] flex-1 rounded-xl flex justify-center lg:min-h-0
-                            ${showingCrates ? '' : 'bg-neutral6 overflow-hidden'}`}
+                        <div className={`relative min-h-0 rounded-xl flex justify-center lg:flex-1
+                            ${showingCrates ? 'min-h-[320px] flex-1 lg:min-h-0' : 'h-56 shrink-0 lg:h-auto bg-neutral6 overflow-hidden'}`}
                         >
                             {!showingCrates ? (
                                 <>
@@ -269,7 +270,7 @@ const Locker = () => {
                                     </FittedAvatarStage>
 
                                     <div className={`
-                                            z-3 absolute bottom-0 w-full flex justify-center gap-3 py-12 bg-gradient-to-t from-neutral6 to-transparent
+                                            z-3 absolute bottom-0 w-full flex justify-center gap-3 py-4 lg:py-12 bg-gradient-to-t from-neutral6 to-transparent
                                             transition-all
                                             ${hasUnsavedChanges ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-3 pointer-events-none'}
                                         `}
@@ -300,7 +301,7 @@ const Locker = () => {
                             ${showingCrates ? 'w-full lg:max-w-[16rem]' : 'flex-1'}
                             ${isOpeningCrate ? 'opacity-0 translate-x-8 pointer-events-none' : 'opacity-100 translate-x-0'}`}
                         >
-                        <Card className={`flex flex-col p-6! gap-6 ${showingCrates ? '' : 'flex-1 min-h-0 p-8! overflow-y-auto'}`}>
+                        <Card className={`flex flex-col p-6! gap-6 ${showingCrates ? '' : 'flex-1 min-h-0 p-4! sm:p-8! lg:overflow-y-auto'}`}>
 
                             {showingCrates && <CrateDropTable />}
 
