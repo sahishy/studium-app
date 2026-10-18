@@ -38,7 +38,7 @@ const CourseReviewCard = ({ review, reviewer, showCourse = false, canManage = fa
                     <FaBook className='shrink-0 mt-0.5' /> <span>{course.title}</span>
                 </p> : null}
                 <p className='text-sm whitespace-pre-wrap break-words'>{review.review || 'Loading...'}</p>
-                <div className='flex justify-between translate-y-2'>
+                <div className='mt-auto flex justify-between translate-y-2'>
                     <div className='text-sm font-semibold text-neutral1 flex items-center gap-2'>
                         {ScoreIcon ? <ScoreIcon /> : null} Rated {scoreName}
                     </div>
