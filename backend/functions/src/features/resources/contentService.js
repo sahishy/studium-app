@@ -59,9 +59,11 @@ const validateResource = (input) => {
     if(!title) throw new Error('Add a title.')
     const base = { type, title, description: cleanText(input.description, 1200), subject: cleanText(input.subject, 80), status: input.status === 'published' ? 'published' : 'draft' }
     if(type === 'link') {
-        const url = validExternalUrl(input.url)
+        const rawUrl = String(input.url ?? '').trim()
+        const hasScheme = /^[a-z][a-z\d+.-]*:/i.test(rawUrl)
+        const url = validExternalUrl(rawUrl && !hasScheme ? `http://${rawUrl}` : rawUrl)
         if((!url && !(base.status === 'draft' && !input.url)) || !LINK_TYPES.has(input.linkType)) throw new Error('Choose a link type and a valid URL.')
-        return { ...base, url: url || '', linkType: input.linkType }
+        return { ...base, description: '', courseId: cleanText(input.courseId, 120), url: url || '', linkType: input.linkType }
     }
     // A lesson is a sequence of pages the reader steps through, not one long scroll.
     const pages = (Array.isArray(input.pages) ? input.pages : []).slice(0, MAX_PAGES).map((page) => {

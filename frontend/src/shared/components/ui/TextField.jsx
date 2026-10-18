@@ -12,12 +12,13 @@ const TextField = ({
     maxLength,
     className = '',
     autoFocus = false,
+    inputClassName = '',
 }) => {
 
     const isMultiline = rows > 0
 
     const sharedClass = `w-full bg-neutral5 px-4 py-3 text-sm text-neutral0 outline-neutral3 transition-colors
-        placeholder:text-neutral2 ${isMultiline ? 'rounded-2xl resize-none' : 'rounded-full'}`
+        placeholder:text-neutral2 ${isMultiline ? 'rounded-2xl resize-none' : 'rounded-full'} ${inputClassName}`
 
     return (
         <label className={`flex flex-col gap-1.5 ${className}`}>

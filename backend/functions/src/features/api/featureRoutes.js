@@ -81,6 +81,11 @@ router.post('/economy/tips', route((req) => tipResource(req.identity.uid, req.bo
 router.post('/tasks/:id/status', route((req) => setTaskStatus({ userId: req.identity.uid, taskId: req.params.id, status: req.body.status, timeZone: req.body.timeZone })))
 router.post('/tasks/:id/reconcile', route((req) => reconcileTaskTree({ userId: req.identity.uid, taskId: req.params.id })))
 
+router.get('/courses/:courseId/resource-count', route(async (req) => {
+    const snap = await db.collection('resources').where('courseId', '==', req.params.courseId).select('status').get()
+    return { count: snap.docs.filter(doc => doc.data().status === 'published').length }
+}))
+
 router.get('/resources', route((req) => listResources(req.identity.uid, req.query.mine === 'true')))
 router.get('/resources/:id', route((req) => getResource(req.params.id, req.identity.uid)))
 router.post('/resources', route((req) => saveResource(req.identity.uid, req.body)))

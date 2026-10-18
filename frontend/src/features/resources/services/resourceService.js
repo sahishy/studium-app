@@ -12,3 +12,5 @@ const deleteCollegePost = (id) => remove(`/v1/college-posts/${encodeURIComponent
 const reportCollegePost = (id, reason) => post(`/v1/college-posts/${encodeURIComponent(id)}/report`, { reason })
 
 export { deleteCollegePost, deleteResource, getResource, listCollegePosts, listResources, reportCollegePost, reportResource, saveCollegePost, saveResource, toggleHeart }
+
+export const getCourseResourceCount = (courseId) => request({ path: `/v1/courses/${encodeURIComponent(courseId)}/resource-count` })
