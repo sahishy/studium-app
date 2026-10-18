@@ -150,3 +150,27 @@ test('a wallet that only moves after the icons land still wins', () => {
     state = nextArrivalState(state, { serverValue: 100, pending: 0, credited: 40 })
     assert.equal(state.display, 140)
 })
+
+
+test('a duplicate refund already in the wallet is not credited twice after a paid crate', () => {
+    let state = createArrivalState({ display: 134, serverValue: 134 })
+    // Spend 100 and receive a duplicate refund of 50 before the reveal.
+    state = nextArrivalState(state, { serverValue: 84 })
+    assert.equal(state.display, 84)
+    state = nextArrivalState(state, { serverValue: 84, pending: 50, confirmedPending: 50 })
+    assert.equal(state.display, 34)
+    state = nextArrivalState(state, { serverValue: 84, pending: 25, confirmedPending: 25, credited: 25 })
+    assert.equal(state.display, 59)
+    state = nextArrivalState(state, { serverValue: 84, credited: 50 })
+    assert.equal(state.display, 84, 'matches the balance used to enable purchases')
+    state = nextArrivalState(state, { serverValue: 84, credited: 50 })
+    assert.equal(state.display, 84)
+})
+
+test('a confirmed refund respects a subsequent spend during its animation', () => {
+    let state = createArrivalState({ display: 184, serverValue: 184 })
+    state = nextArrivalState(state, { serverValue: 184, pending: 50, confirmedPending: 50 })
+    state = nextArrivalState(state, { serverValue: 84, pending: 25, confirmedPending: 25, credited: 25 })
+    state = nextArrivalState(state, { serverValue: 84, credited: 50 })
+    assert.equal(state.display, 84)
+})

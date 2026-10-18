@@ -76,7 +76,7 @@ const useCrateOpening = (offer = null) => {
             } else if(phase === 'bursting') {
                 changePhase('flashing')
             } else if(phase === 'flashing') {
-                if(result?.refund) celebrateReward({ lumen: result.refund })
+                if(result?.refund) celebrateReward({ lumen: result.refund, confirmed: true })
                 changePhase('revealed')
             }
         }, delay)

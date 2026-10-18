@@ -29,7 +29,7 @@ const createArrivalState = ({ display = 0, credited = 0, serverValue = null } = 
     burst: null,
 })
 
-const nextArrivalState = (state, { serverValue = null, pending = 0, credited = 0, followServer = true } = {}) => {
+const nextArrivalState = (state, { serverValue = null, pending = 0, confirmedPending = 0, credited = 0, followServer = true } = {}) => {
 
     const serverChanged = serverValue !== state.lastServer
     const landed = credited - state.seenCredits
@@ -42,9 +42,13 @@ const nextArrivalState = (state, { serverValue = null, pending = 0, credited = 0
 
     // A burst opens on the first pass that sees something in flight, and its
     // baseline is whatever the counter was already showing.
-    const burst = (pending > 0 && !state.burst)
+    let burst = (pending > 0 && !state.burst)
         ? { baseline: state.display, credited: credited - landed, serverMoved: false }
         : (state.burst && serverChanged ? { ...state.burst, serverMoved: true } : state.burst)
+
+    // A confirmed reward is already included in the wallet before takeoff.
+    // Its particles reveal that balance; they must never credit it again.
+    if(burst && confirmedPending > 0) burst = { ...burst, serverMoved: true }
 
     if(burst) {
         // Closed on the same pass that drains it, so the last icon's landing

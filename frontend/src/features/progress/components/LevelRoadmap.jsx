@@ -243,7 +243,7 @@ const LevelRoadmap = ({ level = 1, xp = 0, profile }) => {
             const result = await claimLevel(nodeLevel)
 
             if(result.reward.lumen) {
-                celebrateReward({ lumen: result.reward.lumen })
+                celebrateReward({ lumen: result.reward.lumen, confirmed: true })
             }
         } catch(claimError) {
             setError(claimError.message)
