@@ -110,6 +110,10 @@ const searchCourses = (queryText = '', options = {}) => {
         })
         .filter(Boolean)
         .sort((a, b) => {
+            if(query) {
+                const aclPriority = Number(a.course.tags?.includes('ACL') ?? false) - Number(b.course.tags?.includes('ACL') ?? false)
+                if(aclPriority !== 0) return aclPriority
+            }
             if(query && b.rank !== a.rank) {
                 return b.rank - a.rank
             }
