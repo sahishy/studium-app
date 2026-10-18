@@ -9,6 +9,7 @@ const RewardFxContext = createContext({
     pulses: EMPTY_TALLY,
     credits: EMPTY_TALLY,
     inFlight: EMPTY_TALLY,
+    confirmedInFlight: EMPTY_TALLY,
 })
 
 const FLIGHT_DURATION_MS = 760
@@ -32,6 +33,7 @@ const RewardFxProvider = ({ children }) => {
     const [pulses, setPulses] = useState(EMPTY_TALLY)
     const [credits, setCredits] = useState(EMPTY_TALLY)
     const [inFlight, setInFlight] = useState(EMPTY_TALLY)
+    const [confirmedInFlight, setConfirmedInFlight] = useState(EMPTY_TALLY)
 
     useEffect(() => {
 
@@ -61,13 +63,14 @@ const RewardFxProvider = ({ children }) => {
 
     // An icon landing is what credits the counter, so the number climbs in step
     // with the animation instead of jumping to the final total up front.
-    const land = useCallback((kind, amount) => {
+    const land = useCallback((kind, amount, confirmed = false) => {
+        if(confirmed) setConfirmedInFlight(current => ({ ...current, [kind]: Math.max(0, (current[kind] ?? 0) - amount) }))
         setPulses((current) => ({ ...current, [kind]: (current[kind] ?? 0) + 1 }))
         setCredits((current) => ({ ...current, [kind]: (current[kind] ?? 0) + amount }))
         setInFlight((current) => ({ ...current, [kind]: Math.max(0, (current[kind] ?? 0) - amount) }))
     }, [])
 
-    const celebrateReward = useCallback(({ xp = 0, lumen = 0, crates = 0, origin = null, scatter = false } = {}) => {
+    const celebrateReward = useCallback(({ xp = 0, lumen = 0, crates = 0, origin = null, scatter = false, confirmed = false } = {}) => {
 
         const entries = [['xp', Number(xp) || 0], ['lumen', Number(lumen) || 0], ['crates', Number(crates) || 0]]
             .filter(([, amount]) => amount > 0)
@@ -134,12 +137,13 @@ const RewardFxProvider = ({ children }) => {
                 durationMs: FLIGHT_DURATION_MS + (Math.random() * 180),
             }))
 
+            if(confirmed) setConfirmedInFlight(current => ({ ...current, [kind]: (current[kind] ?? 0) + amount }))
             setInFlight((current) => ({ ...current, [kind]: (current[kind] ?? 0) + amount }))
             setFlights((current) => [...current, ...spawned])
 
             spawned.forEach((flight) => {
                 window.setTimeout(() => {
-                    land(kind, flight.amount)
+                    land(kind, flight.amount, confirmed)
                     setFlights((current) => current.filter((item) => item.id !== flight.id))
                 }, flight.delayMs + flight.holdMs + flight.durationMs)
             })
@@ -154,7 +158,8 @@ const RewardFxProvider = ({ children }) => {
         pulses,
         credits,
         inFlight,
-    }), [celebrateReward, credits, inFlight, pulses, registerRewardTarget])
+        confirmedInFlight,
+    }), [celebrateReward, credits, inFlight, confirmedInFlight, pulses, registerRewardTarget])
 
     return (
         <RewardFxContext.Provider value={value}>

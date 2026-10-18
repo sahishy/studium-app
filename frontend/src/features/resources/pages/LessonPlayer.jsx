@@ -7,7 +7,6 @@ import Select from '../../../shared/components/popovers/Select'
 import TextTooltip from '../../../shared/components/tooltips/TextTooltip'
 import LumenIcon from '../../economy/components/LumenIcon'
 import { useEconomy } from '../../economy/EconomyContext'
-import { useRewardFx } from '../../economy/RewardFxContext'
 import LessonPage from '../components/LessonPage'
 import VariableControls from '../components/VariableControls'
 import { getResource, reportResource, toggleHeart } from '../services/resourceService'
@@ -22,7 +21,6 @@ const LessonPlayer = () => {
     const navigate = useNavigate()
     const { profile } = useOutletContext()
     const { tip } = useEconomy()
-    const { celebrateReward } = useRewardFx()
 
     const [resource, setResource] = useState(null)
     const [index, setIndex] = useState(0)
@@ -81,7 +79,6 @@ const LessonPlayer = () => {
 
         try {
             await tip(resource.id, tipAmount)
-            celebrateReward({ lumen: tipAmount })
             setMessage(`Sent ${tipAmount} Lumen.`)
         } catch (failure) {
             setMessage(failure.message)

@@ -195,7 +195,7 @@ const Leaderboards = () => {
                                     const entryProfile = usersByUid[entry.uid] ?? null
                                     const isSelf = profile?.uid && entry.uid === profile.uid
                                     const entryElo = getEloForLeaderboard(entry, leaderboardId)
-                                    const entryRankIcon = getRankInfoFromElo(entryElo)
+                                    const entryRankIcon = leaderboardId === 'total' ? null : getRankInfoFromElo(entryElo)
                                     return (
                                         <div key={entry.uid} className='flex min-w-0 items-center'>
                                             <span className='text-sm font-semibold text-neutral2 w-8 shrink-0'>#{index + 1}</span>
@@ -207,13 +207,13 @@ const Leaderboards = () => {
                                                     {entryProfile?.profile?.displayName ?? 'Unknown user'}
                                                 </span>
                                                 <div className='flex items-center gap-1 shrink-0'>
-                                                    <div className='relative flex items-center justify-center w-4 h-4'>
+                                                    {entryRankIcon && <div className='relative flex items-center justify-center w-4 h-4'>
                                                         <img
                                                             src={entryRankIcon.imageSrc}
                                                             alt={`${entryRankIcon.tierName} rank icon`}
                                                             className='absolute w-6 h-6 object-cover'
                                                         />
-                                                    </div>
+                                                    </div>}
                                                     <span className='text-sm font-semibold text-neutral0'>
                                                         {entryElo}
                                                         <span className='ml-1 text-[10px] text-neutral1 font-medium'>SAT</span>
