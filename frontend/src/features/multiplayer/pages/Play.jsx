@@ -36,6 +36,26 @@ import BottomFade from '../../../shared/components/ui/BottomFade'
 import { useOnboarding } from '../../onboarding/OnboardingContext'
 
 const SELECTED_MODE_STORAGE_KEY = 'play:lastSelectedModeId'
+const PLAYER_COUNT_WINDOW_MS = 15 * 1000
+const PLAYER_COUNT_MODES = {
+    'sat-classic': { seed: 173, multiplier: 1.2 },
+    'sat-timber': { seed: 359, multiplier: 1.1 },
+    'sat-puncture': { seed: 541, multiplier: 1.1 },
+    'sat-flutter': { seed: 727, multiplier: 1.0 },
+}
+
+// A shared, time-based display count, rather than a live presence measurement.
+const getDisplayPlayerCount = (modeId, time = Date.now()) => {
+    const mode = PLAYER_COUNT_MODES[modeId] ?? { seed: 911, multiplier: 1.0 }
+    const tick = Math.floor(time / PLAYER_COUNT_WINDOW_MS)
+    const phase = mode.seed * Math.PI / 180
+    // Blend 20- and 7-minute waves for gradual, predictable movement.
+    const wave = 0.75 * Math.sin(tick * 2 * Math.PI / 40 + phase)
+        + 0.25 * Math.sin(tick * 2 * Math.PI / 14 + phase)
+    // Leave room for the 1.2x multiplier while keeping every mode in 150–200.
+    const baseCount = 150 + ((wave + 1) / 2) * (200 / 1.2 - 150)
+    return Math.round(baseCount * mode.multiplier)
+}
 
 const getStoredSelectedModeId = () => {
     try {
@@ -58,6 +78,25 @@ const Play = () => {
     const { active: tutorial } = useOnboarding()
 
     const [selectedModeId, setSelectedModeId] = useState(getStoredSelectedModeId)
+    const [playerCountTime, setPlayerCountTime] = useState(Date.now)
+
+    useEffect(() => {
+        let timeoutId
+        const updateCount = () => {
+            setPlayerCountTime(Date.now())
+            timeoutId = window.setTimeout(updateCount, PLAYER_COUNT_WINDOW_MS - (Date.now() % PLAYER_COUNT_WINDOW_MS))
+        }
+        updateCount()
+        window.addEventListener('focus', updateCountOnFocus)
+        function updateCountOnFocus() {
+            window.clearTimeout(timeoutId)
+            updateCount()
+        }
+        return () => {
+            window.clearTimeout(timeoutId)
+            window.removeEventListener('focus', updateCountOnFocus)
+        }
+    }, [])
     const scrollRef = useRef(null)
     const [activePlayTab, setActivePlayTab] = useState('lobby')
     const showModePicker = activePlayTab === 'modes' && !tutorial
@@ -70,6 +109,7 @@ const Play = () => {
     const [partyError, setPartyError] = useState(null)
 
     const activeModeId = party?.modeId ?? selectedModeId
+    const displayPlayerCount = getDisplayPlayerCount(activeModeId, playerCountTime)
     const selectedMode = useMemo(() => getModeById(activeModeId), [activeModeId])
     const isSelectedModeMultiplayer = selectedMode?.type === 'multiplayer'
 
@@ -533,7 +573,7 @@ const Play = () => {
                     </Card>
                     </div>
 
-                    <div className='flex gap-3 shrink-0'>
+                    <div className='flex flex-col gap-3 shrink-0'>
                         <Button
                             type='primary'
                             className='p-4! text-xl! font-bold! w-full'
@@ -546,6 +586,10 @@ const Play = () => {
                                 ? (currentPartyMember?.ready ? 'UNREADY' : 'READY')
                                 : (effectiveQueueState === 'queueing' ? 'QUEUEING' : effectiveQueueState === 'matched' ? 'JOINING' : 'PLAY')}
                         </Button>
+                        <p className='flex items-center justify-center gap-1.5 text-xs text-neutral1'>
+                            <span aria-hidden='true' className='size-1.5 rounded-full bg-green-400' />
+                            {displayPlayerCount} players online
+                        </p>
                     </div>
 
                     {realtimeError || partyError ? <p className='text-sm text-red-400 text-center'>{partyError || realtimeError.message}</p> : null}
