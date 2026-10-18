@@ -16,6 +16,8 @@ import LoadingState from '../../../shared/components/ui/LoadingState'
 import { MAX_USER_COURSES } from '../utils/courseUtils'
 import { hexToRgba } from '../../../shared/utils/colorUtils'
 
+import { getCourseResourceCount } from '../../resources/services/resourceService'
+
 const REVIEW_PAGE_SIZE = 9
 const DEFAULT_SCORE = 0.9
 
@@ -50,6 +52,15 @@ const CourseOverview = () => {
     const { openModal, closeModal } = useModal()
 
     const course = getCourseById(courseId)
+    const [resourceCount, setResourceCount] = useState(null)
+    useEffect(() => {
+        let cancelled = false
+        setResourceCount(null)
+        getCourseResourceCount(courseId).then(result => {
+            if(!cancelled) setResourceCount(result.count)
+        }).catch(error => console.error('Unable to load course resource count', error))
+        return () => { cancelled = true }
+    }, [courseId])
     const [reviews, setReviews] = useState([])
     const [reviewsLoading, setReviewsLoading] = useState(false)
     const [reviewsCursor, setReviewsCursor] = useState(null)
@@ -412,7 +423,7 @@ const CourseOverview = () => {
                         <div className='flex items-center gap-6'>
                             <FaBoxArchive className='text-3xl text-neutral2' />
                             <div className='flex flex-col'>
-                                <h2 className='font-bold text-2xl leading-5'>0</h2>
+                                <h2 className='font-bold text-2xl leading-5'>{resourceCount ?? '—'}</h2>
                                 <p className='text-sm text-neutral1'>resources for this course</p>
                             </div>
                         </div>

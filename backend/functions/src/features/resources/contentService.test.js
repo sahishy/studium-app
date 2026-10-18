@@ -43,3 +43,13 @@ test('every block carries a frame on its page, clamped to stay inside it', () =>
     assert.deepEqual(clamped.frame, { x: 60, y: 60, w: 40, h: 40 })
     assert.equal(fallback.frame.w > 0 && fallback.frame.h > 0, true)
 })
+
+
+test('resource links add HTTP when the protocol is omitted and still reject invalid URLs', () => {
+    const link = { type: 'link', title: 'Reference', status: 'published', linkType: 'website' }
+    assert.equal(validateResource({ ...link, url: ' example.com/calculus?q=prep ' }).url, 'http://example.com/calculus?q=prep')
+    assert.equal(validateResource({ ...link, url: 'https://example.com/video' }).url, 'https://example.com/video')
+    assert.throws(() => validateResource({ ...link, url: 'not a valid link' }), /valid URL/)
+    assert.throws(() => validateResource({ ...link, url: 'javascript:alert(1)' }), /valid URL/)
+    assert.throws(() => validateResource({ ...link, url: 'ftp://example.com' }), /valid URL/)
+})

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOutletContext } from 'react-router-dom'
-import { FaBookOpen, FaLink, FaPlus, FaWandMagicSparkles } from 'react-icons/fa6'
+import { FaBookOpen, FaFileLines, FaGlobe, FaLink, FaPlus, FaVideo, FaWandMagicSparkles } from 'react-icons/fa6'
 import { HiSelector } from 'react-icons/hi'
 import Topbar from '../../../shared/components/ui/Topbar'
 import PageHeader from '../../../shared/components/ui/PageHeader'
@@ -30,8 +30,9 @@ const TABS = [
 
 const TYPE_OPTIONS = [
     { value: 'all', label: 'All types' },
-    { value: 'link', label: 'Links', icon: <FaLink /> },
-    { value: 'lesson', label: 'Lessons', icon: <FaWandMagicSparkles /> },
+    { value: 'document', label: 'Document', icon: <FaFileLines /> },
+    { value: 'video', label: 'Video', icon: <FaVideo /> },
+    { value: 'website', label: 'Website', icon: <FaGlobe /> },
 ]
 
 const TYPE_ICONS = {
@@ -80,7 +81,7 @@ const Resources = () => {
         const isMine = resource.ownerId === profile.uid
 
         if(!isMine && resource.status !== 'published') return false
-        if(type !== 'all' && resource.type !== type) return false
+        if(type !== 'all' && (resource.type !== 'link' || resource.linkType !== type)) return false
 
         const search = `${resource.title} ${resource.description || ''} ${resource.subject || ''}`.toLowerCase()
         return search.includes(query.trim().toLowerCase())

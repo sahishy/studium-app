@@ -13,7 +13,7 @@ const ChoiceCard = ({ icon, title, description, selected = false, onClick, class
         >
             {icon ? (
                 <div className={`shrink-0 p-3 rounded-xl text-lg transition-colors
-                    ${selected ? 'bg-sky-500/15 text-sky-500' : 'bg-neutral5 text-neutral1 group-hover:text-neutral0'}`}
+                    ${selected ? 'bg-sky-500/15 text-sky-500' : 'bg-neutral5 text-neutral1'}`}
                 >
                     {icon}
                 </div>
