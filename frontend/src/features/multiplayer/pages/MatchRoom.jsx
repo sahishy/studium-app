@@ -7,8 +7,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom'
 import Topbar from '../../../shared/components/ui/Topbar'
 import { useMultiplayer } from '../contexts/MultiplayerContext'
-import { useToast } from '../../../shared/contexts/ToastContext'
-import MatchmakingToast from '../components/toasts/MatchmakingToast'
 import ChatBox from '../components/ChatBox'
 import { leaveRoom, subscribeToRoomById, subscribeToRoomPlayers } from '../services/roomService'
 import GameHandler from '../games/GameHandler'
@@ -27,8 +25,7 @@ const MatchRoom = () => {
     const { roomId } = useParams()
     const [searchParams] = useSearchParams()
     const { profile } = useOutletContext()
-    const { session } = useMultiplayer()
-    const { toastStack, hideToast } = useToast()
+    const { session, pendingMatch } = useMultiplayer()
     const navigate = useNavigate()
 
     const [chatOpen, setChatOpen] = useState(false)
@@ -75,14 +72,6 @@ const MatchRoom = () => {
     }
 
     useEffect(() => {
-        toastStack.forEach((toastEntry) => {
-            if(toastEntry.component === MatchmakingToast) {
-                hideToast(toastEntry.id, { force: true })
-            }
-        })
-    }, [toastStack, hideToast])
-
-    useEffect(() => {
         if(!roomId) {
             setRoom(null)
             setRoomLoading(false)
@@ -122,7 +111,7 @@ const MatchRoom = () => {
         }
 
         if(isSpectating) {
-            if(session.status === 'in_room' && session.currentRoomId) {
+            if(session.status === 'in_room' && session.currentRoomId && pendingMatch?.roomId !== session.currentRoomId) {
                 navigate(`/play/game/${session.currentRoomId}`, { replace: true })
             }
             return
@@ -131,7 +120,7 @@ const MatchRoom = () => {
         if(shouldReturnToPlay({ session, roomId, roomLoading, playersLoading, isGameFinished, players, userId: profile?.uid })) {
             navigate('/play', { replace: true })
         }
-    }, [session, isGameFinished, isSpectating, roomId, roomLoading, playersLoading, players, profile?.uid, navigate])
+    }, [session, pendingMatch, isGameFinished, isSpectating, roomId, roomLoading, playersLoading, players, profile?.uid, navigate])
 
     useEffect(() => {
         if(isSpectating && !roomLoading && room && players.length && !spectatedPlayer) {

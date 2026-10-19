@@ -106,7 +106,7 @@ const MatchEndOverlay = ({ winnerUserId, userId, modeId, gameId, matchSettled = 
     const openReview = (round) => round.question && openModal({ content: <QuestionReviewModal round={round} perspectiveName={spectatorName} />, maxWidthClass: 'max-w-6xl mx-4' })
     return (
         <div className='mp-match-end w-full h-full min-h-[420px] flex flex-col items-center px-4 sm:px-6 py-10 overflow-y-auto'>
-            <MatchEndConfetti />
+            {!isDraw && isMyWin && !spectatorName ? <MatchEndConfetti /> : null}
             <div className='text-center mb-4'>
                 <p className={`text-5xl font-bold ${isDraw ? 'text-neutral1' : isMyWin ? 'text-sat0' : 'text-red-400'} leading-none mb-2`}>{title}</p>
                 {reasonLabel ? <p className='text-sm text-neutral1'>{reasonLabel}</p> : null}

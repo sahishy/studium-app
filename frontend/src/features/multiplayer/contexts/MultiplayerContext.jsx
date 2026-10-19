@@ -1,14 +1,17 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { configureRealtimeProfile, createSocket, message, preconnectGame } from '../services/realtimeSocketService'
 import { useUserStats } from '../../profile/contexts/UserStatsContext'
 import { useToast } from '../../../shared/contexts/ToastContext'
 import PartyInviteToast from '../components/toasts/PartyInviteToast'
+import MatchmakingToastController from '../components/MatchmakingToastController'
+import { initialMatchEntryState, matchEntryReducer } from '../utils/matchEntryState'
+import { getModeById, MATCH_JOIN_DELAY_SECONDS } from '../utils/multiplayerUtils'
 
 const MultiplayerContext = createContext(null)
 const IDLE_DISCONNECT_MS = 2 * 60_000
 
 const MultiplayerProvider = ({ userId, profile = null, children }) => {
-    const [session, setSession] = useState(null)
+    const [{ session, pendingMatch }, dispatchMatchEntry] = useReducer(matchEntryReducer, initialMatchEntryState)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const socketRef = useRef(null)
@@ -30,7 +33,13 @@ const MultiplayerProvider = ({ userId, profile = null, children }) => {
                 const incoming = JSON.parse(event.data)
                 if(incoming.type === 'session.snapshot') {
                     if(incoming.payload?.currentRoomId) preconnectGame(incoming.payload.currentRoomId, incoming.payload.gameAdmission)
-                    setSession(incoming.payload)
+                    dispatchMatchEntry({
+                        type: 'snapshot',
+                        session: incoming.payload,
+                        delayEntry: getModeById(incoming.payload?.modeId)?.type === 'multiplayer',
+                        now: Date.now(),
+                        delayMs: MATCH_JOIN_DELAY_SECONDS * 1000,
+                    })
                     setLoading(false)
                     setError(null)
                 } else if(incoming.type === 'error') {
@@ -147,8 +156,12 @@ const MultiplayerProvider = ({ userId, profile = null, children }) => {
         })
     }, [session?.partyId, session?.invitations, sendCommand, showToast, hideToast])
 
+    const completeMatchEntry = useCallback((roomId) => dispatchMatchEntry({ type: 'entered', roomId }), [])
+
     const value = useMemo(() => ({
         session,
+        pendingMatch,
+        completeMatchEntry,
         matchmaking: session?.status === 'queue' ? { modeId: session.modeId, queuedAt: new Date(session.queuedAt || Date.now()) } : null,
         loading,
         error,
@@ -159,9 +172,9 @@ const MultiplayerProvider = ({ userId, profile = null, children }) => {
         createPartyAndInvite: async ({ userId: targetUserId }) => sendCommand('party.createAndInvite', { userId: targetUserId }),
         joinParty: async ({ partyId }) => sendCommand('party.join', { partyId }),
         leaveParty: async () => sendCommand('party.leave'),
-    }), [session, loading, error, sendCommand])
+    }), [session, pendingMatch, completeMatchEntry, loading, error, sendCommand])
 
-    return <MultiplayerContext.Provider value={value}>{children}</MultiplayerContext.Provider>
+    return <MultiplayerContext.Provider value={value}><MatchmakingToastController />{children}</MultiplayerContext.Provider>
 }
 
 const useMultiplayer = () => useContext(MultiplayerContext)
