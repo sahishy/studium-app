@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { configureRealtimeProfile, createSocket, message } from '../services/realtimeSocketService'
+import { configureRealtimeProfile, createSocket, message, preconnectGame } from '../services/realtimeSocketService'
 import { useUserStats } from '../../profile/contexts/UserStatsContext'
 import { useToast } from '../../../shared/contexts/ToastContext'
 import PartyInviteToast from '../components/toasts/PartyInviteToast'
@@ -29,6 +29,7 @@ const MultiplayerProvider = ({ userId, profile = null, children }) => {
             try {
                 const incoming = JSON.parse(event.data)
                 if(incoming.type === 'session.snapshot') {
+                    if(incoming.payload?.currentRoomId) preconnectGame(incoming.payload.currentRoomId, incoming.payload.gameAdmission)
                     setSession(incoming.payload)
                     setLoading(false)
                     setError(null)

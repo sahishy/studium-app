@@ -1,0 +1,57 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "studium-realtime-staging",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-16",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "logs": {
+      "enabled": true,
+      "invocation_logs": false
+    }
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "USER",
+        "class_name": "UserServer"
+      },
+      {
+        "name": "PARTY",
+        "class_name": "SocialPartyServer"
+      },
+      {
+        "name": "MATCHMAKER",
+        "class_name": "MatchmakerServer"
+      },
+      {
+        "name": "GAME",
+        "class_name": "GameServer"
+      },
+      {
+        "name": "BOTCHAT",
+        "class_name": "BotChatServer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "UserServer",
+        "SocialPartyServer",
+        "MatchmakerServer",
+        "GameServer",
+        "BotChatServer"
+      ]
+    }
+  ],
+  "vars": {
+    "REALTIME_V4_PERCENT": "100",
+    "REALTIME_METRICS_PERCENT": "100",
+    "STAGING_TEST_ENABLED": "1",
+    "BACKEND_API_BASE_URL": "",
+    "BUILD_ID": "staging"
+  }
+}

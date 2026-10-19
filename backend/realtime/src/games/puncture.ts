@@ -361,13 +361,14 @@ export const createPunctureGame = (): GameEngine => ({
         return unchangedAction(shotReply(clientActionId, false, { reason: "duplicate" }));
       }
     }
-    if (context.now < Number(player.state.stunnedUntil || 0)) return unchangedAction(shotReply(clientActionId, false, { reason: "stunned" }));
+    const gateAt = game.privateState.netcodeVersion >= 4 ? context.nowCompensated : context.now;
+    if (gateAt < Number(player.state.stunnedUntil || 0)) return unchangedAction(shotReply(clientActionId, false, { reason: "stunned" }));
     const lastShotAt = Number(player.state.lastShotAt || 0);
-    if (lastShotAt && context.now - lastShotAt < MIN_SHOT_INTERVAL_MS) return unchangedAction(shotReply(clientActionId, false, { reason: "rate_limited" }));
+    if (lastShotAt && gateAt - lastShotAt < MIN_SHOT_INTERVAL_MS) return unchangedAction(shotReply(clientActionId, false, { reason: "rate_limited" }));
 
     const serverShotAt = context.nowCompensated ?? context.now;
     const clientShotAt = Number((message.payload as any)?.shotAt);
-    const shotAt = Number.isFinite(clientShotAt)
+    const shotAt = game.privateState.netcodeVersion >= 4 ? serverShotAt : Number.isFinite(clientShotAt)
       ? Math.min(serverShotAt + CLIENT_SHOT_AT_CLAMP_MS, Math.max(serverShotAt - CLIENT_SHOT_AT_CLAMP_MS, clientShotAt))
       : serverShotAt;
     const shotImpactAt = shotAt + SHOT_TRAVEL_MS;
@@ -381,7 +382,7 @@ export const createPunctureGame = (): GameEngine => ({
     const collidedAngle = existingAngles.find((angle) => angularDistance(Number(angle), attachedAngle) <= PUNCTURE_COLLISION_DEGREES);
     const hit = collidedAngle != null;
 
-    player.state.lastShotAt = context.now;
+    player.state.lastShotAt = gateAt;
     player.state.lastClientActionId = clientActionId;
     player.state.lastShotHit = hit;
     player.state.punctureShotCount = (Number(player.state.punctureShotCount) || 0) + 1;
@@ -401,7 +402,7 @@ export const createPunctureGame = (): GameEngine => ({
     ].slice(-RECENT_SHOT_LIMIT);
     if (hit) {
       recordGameplayAction(game, userId, "stuns");
-      player.state.stunnedUntil = context.now + STUN_MS;
+      player.state.stunnedUntil = gateAt + STUN_MS;
       return changedAction(shotReply(clientActionId, true, { shot }));
     }
 

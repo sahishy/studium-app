@@ -41,6 +41,7 @@ jobs:
           VITE_BACKEND_API_BASE_URL: ${{ secrets.VITE_BACKEND_API_BASE_URL }}
           VITE_FIREBASE_DATABASE_URL: ${{ secrets.VITE_FIREBASE_DATABASE_URL }}
           VITE_REALTIME_HOST: ${{ secrets.VITE_REALTIME_HOST }}
+          VITE_BUILD_ID: ${{ github.sha }}
         run: npm run build
 
       - name: Install backend functions deps
@@ -55,18 +56,32 @@ jobs:
         working-directory: backend/realtime
         run: npm run check
 
+      - name: Test realtime Worker
+        working-directory: backend/realtime
+        run: npm test && npm run test:worker && npm run test:rollout
+
+      - name: Test multiplayer client
+        working-directory: frontend
+        run: npm run test:multiplayer
+
       - name: Deploy realtime Worker to Cloudflare
         working-directory: backend/realtime
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           BACKEND_API_BASE_URL: ${{ secrets.VITE_BACKEND_API_BASE_URL }}
           REALTIME_ACTIVITY_SECRET: ${{ secrets.REALTIME_ACTIVITY_SECRET }}
+          GAME_ADMISSION_SECRET: ${{ secrets.GAME_ADMISSION_SECRET }}
+          REALTIME_V4_PERCENT: ${{ vars.REALTIME_V4_PERCENT || '0' }}
+          BUILD_ID: ${{ github.sha }}
         run: |
           test -n "$BACKEND_API_BASE_URL"
           test -n "$REALTIME_ACTIVITY_SECRET"
           printf '%s' "$BACKEND_API_BASE_URL" | npx wrangler secret put BACKEND_API_BASE_URL
           printf '%s' "$REALTIME_ACTIVITY_SECRET" | npx wrangler secret put REALTIME_ACTIVITY_SECRET
-          npm run deploy
+          if [ -n "$GAME_ADMISSION_SECRET" ]; then
+            printf '%s' "$GAME_ADMISSION_SECRET" | npx wrangler secret put GAME_ADMISSION_SECRET
+          fi
+          npx wrangler deploy --var "REALTIME_V4_PERCENT:$REALTIME_V4_PERCENT" --var "BUILD_ID:$BUILD_ID"
 
       - name: Install Firebase CLI
         run: npm install -g firebase-tools

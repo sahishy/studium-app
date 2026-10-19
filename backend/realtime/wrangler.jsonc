@@ -31,5 +31,10 @@
         "BotChatServer"
       ]
     }
-  ]
+  ],
+  "vars": {
+    "REALTIME_V4_PERCENT": "0",
+    "REALTIME_METRICS_PERCENT": "10",
+    "BUILD_ID": "development"
+  }
 }

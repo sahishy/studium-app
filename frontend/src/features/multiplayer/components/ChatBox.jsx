@@ -11,6 +11,7 @@ const ChatBox = ({ roomId, userId, senderName, isSpectator = false, messages = n
     const [chatMessages, setChatMessages] = useState([])
     const [pendingMessages, setPendingMessages] = useState([])
     const [chatInput, setChatInput] = useState('')
+    const [sendError, setSendError] = useState(null)
     const chatMessagesContainerRef = useRef(null)
     const chatInputRef = useRef(null)
 
@@ -84,6 +85,7 @@ const ChatBox = ({ roomId, userId, senderName, isSpectator = false, messages = n
             ...(isSpectator ? { senderRole: 'spectator' } : {}),
         }
 
+        setSendError(null)
         setPendingMessages((previous) => [...previous, optimisticMessage])
         setChatInput('')
         chatInputRef.current?.focus()
@@ -93,6 +95,8 @@ const ChatBox = ({ roomId, userId, senderName, isSpectator = false, messages = n
             if(onSendMessage) await onSendMessage(outgoingMessage)
             else await sendRoomChatMessage({ roomId, ...outgoingMessage })
         } catch {
+            setSendError('Chat is reconnecting. Please try again.')
+            setChatInput(trimmedInput)
             setPendingMessages((previous) => previous.filter((message) => message.clientMessageId !== clientMessageId))
         }
     }
@@ -130,6 +134,7 @@ const ChatBox = ({ roomId, userId, senderName, isSpectator = false, messages = n
                 })}
             </div>
 
+            {sendError ? <p role='status' className='text-xs text-neutral1'>{sendError}</p> : null}
             <form className={windowed ? 'flex shrink-0 items-center gap-2' : undefined} onSubmit={(event) => { event.preventDefault(); handleSendMessage() }}>
                 <input
                     ref={chatInputRef}

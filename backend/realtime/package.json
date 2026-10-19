@@ -6,18 +6,29 @@
     "dev": "wrangler dev --port 8787",
     "deploy": "wrangler deploy",
     "build": "wrangler deploy --dry-run",
-    "typegen": "wrangler types --env-file .typegen.vars",
+    "typegen": "wrangler types --env-file .typegen.vars --strict-vars=false",
     "check": "npm run typegen && tsc --noEmit",
-    "simulate": "node --import tsx scripts/simulate-matchmaking.ts"
+    "simulate": "node --import tsx scripts/simulate-matchmaking.ts",
+    "test": "node --import tsx --test src/*.test.js src/games/*.test.js src/bots/*.test.js src/servers/*.test.js",
+    "test:worker": "vitest run",
+    "test:proxy": "node --import tsx --test scripts/impairment-proxy.test.ts",
+    "test:rollout": "node --test scripts/check-rollout.test.mjs",
+    "staging:dev": "node scripts/local-staging.mjs",
+    "staging:deploy": "node scripts/deploy-staging.mjs",
+    "staging:proxy": "node --import tsx scripts/impairment-proxy.ts",
+    "staging:load": "node --import tsx scripts/load-realtime.ts",
+    "rollout:check": "node scripts/check-rollout.mjs"
   },
   "dependencies": {
     "partyserver": "^0.5.10"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.21.3",
+    "@types/ws": "^8.18.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",
     "vitest": "^4.1.0",
-    "wrangler": "^4.0.0"
+    "wrangler": "^4.0.0",
+    "ws": "^8.22.0"
   }
 }

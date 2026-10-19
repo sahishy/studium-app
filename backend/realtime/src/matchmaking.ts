@@ -1,3 +1,4 @@
+import { regionDistance } from "./network";
 import type { QueueEntry } from "./types";
 
 const BASE_ELO_RANGE = 60;
@@ -34,7 +35,7 @@ export const nextEloWideningAt = (joinedAt: number, now = Date.now()): number | 
   return Math.min(joinedAt + nextStepIndex * ELO_RANGE_STEP_MS, joinedAt + UNRESTRICTED_AFTER_MS);
 };
 
-type Combination = { entries: QueueEntry[]; ratingDifference: number; joinedAtTotal: number };
+type Combination = { entries: QueueEntry[]; ratingDifference: number; joinedAtTotal: number; regionPenalty: number; distance: number };
 
 export const findMatch = (queue: QueueEntry[], playerCount: number, now = Date.now()): QueueEntry[] | null => {
   if (playerCount < 1 || queue.length === 0) return null;
@@ -53,6 +54,8 @@ export const findMatch = (queue: QueueEntry[], playerCount: number, now = Date.n
       const weightedAverage = entries.reduce((sum, entry) => sum + entry.averageElo * entry.userIds.length, 0) / playerCount;
       matches.push({
         entries,
+        regionPenalty: entries.slice(1).reduce((sum, entry) => sum + Number(Boolean(anchor.networkRegion && entry.networkRegion && entry.networkRegion !== anchor.networkRegion)), 0),
+        distance: entries.slice(1).reduce((sum, entry) => sum + regionDistance(anchor.networkRegion, entry.networkRegion), 0),
         ratingDifference: entries.reduce((sum, entry) => sum + Math.abs(entry.averageElo - weightedAverage) * entry.userIds.length, 0) / playerCount,
         joinedAtTotal: entries.reduce((sum, entry) => sum + entry.joinedAt * entry.userIds.length, 0) / playerCount,
       });
@@ -68,7 +71,7 @@ export const findMatch = (queue: QueueEntry[], playerCount: number, now = Date.n
   };
 
   visit(0, [], anchor.userIds.length);
-  matches.sort((a, b) => a.ratingDifference - b.ratingDifference || a.joinedAtTotal - b.joinedAtTotal);
+  matches.sort((a, b) => a.regionPenalty - b.regionPenalty || a.distance - b.distance || a.ratingDifference - b.ratingDifference || a.joinedAtTotal - b.joinedAtTotal);
   return matches[0]?.entries ?? null;
 };
 

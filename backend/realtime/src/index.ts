@@ -1,3 +1,4 @@
+import { stagingRequest } from "./staging";
 import { routePartykitRequest } from "partyserver";
 import { verifyConnection } from "./utils";
 
@@ -10,13 +11,15 @@ export { BotChatServer } from "./servers/bot-chat";
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    const staging = await stagingRequest(request, env);
+    if (staging) return staging;
     if (request.method === "GET" && url.pathname === "/health") {
       const activityPublishingConfigured = Boolean(env.BACKEND_API_BASE_URL && env.REALTIME_ACTIVITY_SECRET);
       return Response.json({
-        ok: activityPublishingConfigured,
+        ok: activityPublishingConfigured || env.STAGING_TEST_ENABLED === "1",
         service: "studium-realtime",
         activityPublishingConfigured,
-      }, { status: activityPublishingConfigured ? 200 : 503 });
+      }, { status: activityPublishingConfigured || env.STAGING_TEST_ENABLED === "1" ? 200 : 503 });
     }
 
     const response = await routePartykitRequest(request, env, {

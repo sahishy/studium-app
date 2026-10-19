@@ -14,10 +14,11 @@ import { leaveRoom, subscribeToRoomById, subscribeToRoomPlayers } from '../servi
 import GameHandler from '../games/GameHandler'
 import MatchIntroOverlay from '../components/MatchIntroOverlay'
 import MatchRewardWatcher from '../components/MatchRewardWatcher'
-import { subscribeToGameErrors } from '../services/realtimeSocketService'
+import { subscribeToGameErrors, subscribeToGameConnection } from '../services/realtimeSocketService'
 import ErrorState from '../../../shared/components/ui/ErrorState'
 import LoadingState from '../../../shared/components/ui/LoadingState'
 import GameFocusBlur from '../components/GameFocusBlur'
+import { shouldReturnToPlay } from '../utils/matchRoomNavigation'
 
 const MatchRoom = () => {
     const mobile = useMobileView()
@@ -34,7 +35,9 @@ const MatchRoom = () => {
     const [room, setRoom] = useState(null)
     const [roomLoading, setRoomLoading] = useState(true)
     const [players, setPlayers] = useState([])
+    const [playersLoading, setPlayersLoading] = useState(true)
     const [roomError, setRoomError] = useState(null)
+    const [connectionState, setConnectionState] = useState('connecting')
 
     const hasRoomId = useMemo(() => Boolean(roomId), [roomId])
     const spectatedUserId = searchParams.get('spectate')
@@ -87,15 +90,18 @@ const MatchRoom = () => {
         }
 
         setRoomLoading(true)
+        setPlayersLoading(true)
         setRoomError(null)
         setChatOpen(false)
         const unsubscribe = subscribeToRoomById(roomId, setRoom, setRoomLoading)
-        const unsubscribePlayers = subscribeToRoomPlayers(roomId, setPlayers)
+        const unsubscribePlayers = subscribeToRoomPlayers(roomId, setPlayers, setPlayersLoading)
         const unsubscribeErrors = subscribeToGameErrors(roomId, setRoomError)
+        const unsubscribeConnection = subscribeToGameConnection(roomId, setConnectionState)
         return () => {
             unsubscribe()
             unsubscribePlayers()
             unsubscribeErrors()
+            unsubscribeConnection()
         }
     }, [roomId])
 
@@ -122,15 +128,10 @@ const MatchRoom = () => {
             return
         }
 
-        if(isGameFinished) return
-
-        const isCurrentRoom = session.currentRoomId === roomId
-        const inRoomState = session.status === 'in_room'
-
-        if(!inRoomState || !isCurrentRoom) {
+        if(shouldReturnToPlay({ session, roomId, roomLoading, playersLoading, isGameFinished, players, userId: profile?.uid })) {
             navigate('/play', { replace: true })
         }
-    }, [session, isGameFinished, isSpectating, roomId, navigate])
+    }, [session, isGameFinished, isSpectating, roomId, roomLoading, playersLoading, players, profile?.uid, navigate])
 
     useEffect(() => {
         if(isSpectating && !roomLoading && room && players.length && !spectatedPlayer) {
@@ -165,6 +166,7 @@ const MatchRoom = () => {
 
             <div className='mp-room-content w-full flex-1 min-h-0 px-8 xl:px-12 pb-8 pt-2 flex items-center justify-center'>
                 <div className='mp-room-game relative w-full max-w-[88rem] h-full min-h-[420px] flex flex-col gap-2'>
+                    {!roomLoading && !roomError && connectionState !== 'ready' ? <p role='status' className='text-center text-sm text-neutral1'>Reconnecting…</p> : null}
                     {isSpectating && spectatedPlayer ? (
                         <p className='text-center text-sm font-semibold text-neutral1'>Spectating {spectatedPlayer.displayName}</p>
                     ) : null}

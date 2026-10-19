@@ -1,7 +1,10 @@
+import type { NetworkRegion } from "./network";
+
 export type RealtimeMessage<T = unknown> = { id: string; type: string; payload?: T };
 
 export type PlayerIdentity = {
   userId: string;
+  networkRegion?: NetworkRegion;
   displayName: string;
   profilePicture: unknown;
   avatar?: Record<string, unknown> | null;
@@ -32,6 +35,7 @@ export type QueueEntry = {
   joinedAt: number;
   /** Server-assigned deadline for falling back to a bot opponent. */
   botFillAt?: number;
+  networkRegion?: NetworkRegion;
 };
 
 export type GameResult = {
@@ -82,6 +86,8 @@ export type ConnectionState = PlayerIdentity & {
   connectedAt: number;
   protocolVersion: number;
   rttMs?: number;
+  jitterMs?: number;
+  admissionOnly?: boolean;
   /** Assigned by the room server after it checks whether this user is a participant. */
   connectionRole?: ConnectionRole;
 };
@@ -91,5 +97,8 @@ declare global {
     BACKEND_API_BASE_URL: string;
     REALTIME_ACTIVITY_SECRET?: string;
     OPENAI_API_KEY?: string;
+    GAME_ADMISSION_SECRET?: string;
+    STAGING_TEST_ENABLED?: string;
+    STAGING_TEST_SECRET?: string;
   }
 }

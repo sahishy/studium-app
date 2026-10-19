@@ -27,3 +27,7 @@ yarn-error.log*
 /.env.*
 */default-rules.md
 .clinerules
+
+# Browser acceptance artifacts
+/frontend/test-results/
+/frontend/playwright-report/

@@ -3,7 +3,7 @@ import useCoarsePointer from '../../../../shared/utils/useCoarsePointer'
 import { createDirectionalInput } from '../../utils/touchControls'
 import { getMatchCountdown } from '../../utils/matchIntroTiming'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getGameServerNow, recordGameVisualCorrection, sendGameMessage, subscribeToGameReconnect, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
+import { getGameServerNow, recordGameVisualCorrection, sendGameMessage, subscribeToGameReconnect, subscribeToGameDisconnect, subscribeToGameActionResults, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
 import QuestionPane from '../sat-classic/components/QuestionPane'
 import MatchEndOverlay from '../sat-classic/components/MatchEndOverlay'
 import { buildMatchEndRounds, countAnsweredQuestions } from '../sat-classic/utils/matchEndUtils'
@@ -293,6 +293,10 @@ const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null, m
     const onVisualCorrection = useCallback((distance) => recordGameVisualCorrection(roomId, distance), [roomId])
 
     useEffect(() => subscribeToGameSnapshot(roomId, setSnapshot), [roomId])
+    useEffect(() => subscribeToGameDisconnect(roomId, () => { pendingInputsRef.current = [] }), [roomId])
+    useEffect(() => subscribeToGameActionResults(roomId, (result) => {
+        if(result.action === 'game.flutterInput' && !result.accepted) pendingInputsRef.current = pendingInputsRef.current.filter((entry) => entry.sequence !== result.sequence)
+    }), [roomId])
 
     const state = snapshot?.room?.state ?? null
     const players = snapshot?.players ?? EMPTY_PLAYERS
@@ -369,13 +373,16 @@ const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null, m
 
     const sendInput = useCallback((next) => {
         inputSequenceRef.current += 1
-        const sequence = inputSequenceRef.current
+        let sequence = inputSequenceRef.current
         const at = getGameServerNow(roomId)
+        const result = sendGameMessage(roomId, 'game.flutterInput', { sequence, occurredAt: at, ...next })
+        if(!result.sent) return
+        sequence = result.payload.sequence ?? sequence
+        inputSequenceRef.current = sequence
         pendingInputsRef.current = [
             ...pendingInputsRef.current.filter((entry) => at - entry.at <= MAX_PENDING_INPUT_AGE_MS),
             { sequence, at, input: next },
         ]
-        sendGameMessage(roomId, 'game.flutterInput', { sequence, ...next })
     }, [roomId])
 
     const directionalInput = useMemo(() => createDirectionalInput((next) => {
@@ -438,9 +445,11 @@ const FlutterGame = ({ roomId, userId, readOnly = false, spectatorName = null, m
         }
     }, [phase, readOnly, directionalInput])
 
-    useEffect(() => subscribeToGameReconnect(roomId, () => {
-        if(!readOnly && phase === 'flutter_active') sendInput(inputRef.current)
-    }), [phase, readOnly, roomId, sendInput])
+    useEffect(() => subscribeToGameReconnect(roomId, (fresh) => {
+        if(readOnly || fresh?.room?.state?.phase !== 'flutter_active') return
+        const sameRound = !fresh.room.state.roundToken || fresh.room.state.roundToken === state?.roundToken
+        sendInput(sameRound ? inputRef.current : EMPTY_INPUT)
+    }), [state?.roundToken, readOnly, roomId, sendInput])
 
     const isResult = phase === 'flutter_result' || phase === 'match_result'
     const resultWinnerUserId = phase === 'match_result' ? state?.matchResultWinnerUserId : state?.lastFlutterResult?.winnerUserId

@@ -8,7 +8,7 @@
 		"dev": "vite",
 		"build": "vite build",
 		"lint": "eslint .",
-		"test:multiplayer": "node --test src/features/progress/utils/masteryUtils.test.js src/features/progress/components/SkillWeb.test.js src/features/profile/utils/statsUtils.test.js src/features/multiplayer/services/serverClock.test.js src/features/multiplayer/services/gameViewPatch.test.js src/features/multiplayer/services/replayBuffer.test.js src/features/multiplayer/services/realtimeMetrics.test.js src/features/multiplayer/games/puncture/punctureShotLedger.test.js src/features/multiplayer/games/timber/timberPrediction.test.js src/features/multiplayer/games/sat-classic/utils/satClassicGameUtils.test.js src/features/multiplayer/games/sat-classic/utils/matchEndUtils.test.js src/features/multiplayer/utils/matchIntroTiming.test.js src/features/multiplayer/utils/chatPresentation.test.js src/features/multiplayer/utils/multiplayerUtils.test.js src/shared/utils/playerActivity.test.js",
+		"test:multiplayer": "node --test src/features/progress/utils/masteryUtils.test.js src/features/progress/components/SkillWeb.test.js src/features/profile/utils/statsUtils.test.js src/features/multiplayer/services/serverClock.test.js src/features/multiplayer/services/gameViewPatch.test.js src/features/multiplayer/services/replayBuffer.test.js src/features/multiplayer/services/realtimeMetrics.test.js src/features/multiplayer/games/puncture/punctureShotLedger.test.js src/features/multiplayer/games/timber/timberPrediction.test.js src/features/multiplayer/games/sat-classic/utils/satClassicGameUtils.test.js src/features/multiplayer/games/sat-classic/utils/matchEndUtils.test.js src/features/multiplayer/utils/matchRoomNavigation.test.js src/features/multiplayer/utils/matchIntroTiming.test.js src/features/multiplayer/utils/chatPresentation.test.js src/features/multiplayer/utils/multiplayerUtils.test.js src/shared/utils/playerActivity.test.js src/features/multiplayer/services/gameConnection.test.js src/features/multiplayer/games/puncture/puncturePlayback.test.js",
 		"test:mobile": "node --test src/features/multiplayer/utils/touchControls.test.js src/shared/utils/mobileWindowUtils.test.js",
 		"test:agenda": "node --test src/features/agenda/utils/taskScheduleUtils.test.js src/features/agenda/utils/taskViewUtils.test.js src/features/agenda/utils/boardPresentationUtils.test.js src/features/agenda/utils/taskDragDropUtils.test.js src/features/agenda/utils/taskCircleUtils.test.js",
 		"test:resources": "node --test src/features/resources/utils/elementExpr.test.js src/features/resources/utils/elementDefaults.test.js src/features/resources/utils/editHistory.test.js",
@@ -18,7 +18,8 @@
 		"test:onboarding": "node --test src/features/courses/utils/featuredCourses.test.js src/features/onboarding/onboardingBridge.test.js",
 		"test:courses": "node --test src/features/courses/utils/randomReviews.test.js",
 		"test:cache": "node --test src/shared/services/gamificationCache.test.js src/features/economy/utils/snapshotRefresh.test.js",
-		"test:economy": "node --test src/features/economy/utils/*.test.js"
+		"test:economy": "node --test src/features/economy/utils/*.test.js",
+		"test:multiplayer:browser": "playwright test"
 	},
 	"dependencies": {
 		"@dnd-kit/core": "^6.3.1",
@@ -48,6 +49,7 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.21.0",
+		"@playwright/test": "^1.64.1",
 		"@types/react": "^19.0.10",
 		"@types/react-dom": "^19.0.4",
 		"@vitejs/plugin-react": "^4.3.4",
