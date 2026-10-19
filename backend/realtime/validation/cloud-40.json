@@ -1,0 +1,33 @@
+{
+  "generatedAt": "2026-10-19T23:25:43.244Z",
+  "environment": "https://studium-realtime-staging.durgamsahish.workers.dev",
+  "rooms": 100,
+  "connections": 210,
+  "completedMatches": 100,
+  "seconds": 20,
+  "profile": {
+    "rttMs": 40,
+    "jitterMs": 0
+  },
+  "sent": 9251,
+  "accepted": 8143,
+  "rejections": {
+    "stunned": 389,
+    "stale_round": 703,
+    "phase_or_action": 16
+  },
+  "transportErrors": 0,
+  "invalidTimeAges": null,
+  "p95RttMs": 126.55962499999987,
+  "p95AckMs": 152.90737500000068,
+  "p95UpdateMs": 178.04716700000063,
+  "p95ProcessingMs": 0,
+  "p95DeadlineLatenessMs": 0,
+  "alarmWrites": 764,
+  "checkpointWrites": 1137,
+  "workerVersion": "5f4e0366-d878-4618-8578-1ca7d3f3086a",
+  "protocolVersion": 4,
+  "fixtureSettlement": true,
+  "productionBaselineCompared": false,
+  "browserAcceptancePassed": true
+}

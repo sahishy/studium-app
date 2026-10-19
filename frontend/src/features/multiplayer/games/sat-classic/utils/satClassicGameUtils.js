@@ -14,7 +14,9 @@ const getCurrentQuestion = (gameState = {}) => {
     const questionId = getCurrentQuestionId(gameState)
     return {
         questionId,
-        question: gameState?.questionsById?.[questionId] ?? null,
+        question: gameState?.questionsById?.[questionId]
+            ?? gameState?.reviewQuestionsById?.[questionId]
+            ?? null,
     }
 }
 

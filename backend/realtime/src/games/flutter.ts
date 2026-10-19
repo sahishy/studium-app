@@ -252,6 +252,38 @@ const integratePlayerTo = (player: StoredGame["players"][number], at: number) =>
   player.state.flutterLastUpdatedAt = target;
 };
 
+type FlightState = { x: number; y: number; velocityX: number; velocityY: number; input: FlutterInput };
+type FlightHistory = { at: number; state: FlightState; controls: Array<{ at: number; input: FlutterInput }>; committedAt: number };
+const flightState = (player: StoredGame["players"][number]): FlightState => ({
+  x: Number(player.state.flutterX) || 0, y: Number(player.state.flutterY) || 0,
+  velocityX: Number(player.state.flutterVelocityX) || 0, velocityY: Number(player.state.flutterVelocityY) || 0,
+  input: (player.state.flutterInput as FlutterInput) ?? { ...EMPTY_INPUT },
+});
+const sampleFlight = (history: FlightHistory, target: number): FlightState => {
+  let state = { ...history.state }, cursor = history.at;
+  for (const control of history.controls) {
+    if (control.at > target) break;
+    state = { ...integrateFlutterMotion(state, Math.max(0, control.at - cursor)), input: control.input };
+    cursor = Math.max(cursor, control.at);
+  }
+  return { ...integrateFlutterMotion(state, Math.max(0, target - cursor)), input: state.input };
+};
+const historyFor = (game: StoredGame, player: StoredGame["players"][number]): FlightHistory => {
+  const histories = game.privateState.flutterHistories ??= {};
+  return histories[player.userId] ??= { at: Number(player.state.flutterLastUpdatedAt), state: flightState(player), controls: [], committedAt: Number(player.state.flutterLastUpdatedAt) };
+};
+const publishFlight = (player: StoredGame["players"][number], state: FlightState, at: number) => {
+  Object.assign(player.state, { flutterX: state.x, flutterY: state.y, flutterVelocityX: state.velocityX,
+    flutterVelocityY: state.velocityY, flutterInput: state.input, flutterLastUpdatedAt: at });
+};
+const trimFlight = (history: FlightHistory, now: number) => {
+  const cutoff = Math.max(history.at, now - 500);
+  history.state = sampleFlight(history, cutoff);
+  history.at = cutoff;
+  history.controls = history.controls.filter((input) => input.at > cutoff);
+};
+const ringGrace = (game: StoredGame) => game.privateState.netcodeVersion >= 4 ? Math.max(70, Math.min(200, Number(game.privateState.flutterGraceMs) || 100)) : RING_RESOLVE_GRACE_MS;
+
 const ringCenter = (game: StoredGame, index: number) => generateFlutterRingCenters(Number(game.state.flutterSeed), index + 1)[index];
 
 const clearsRing = (player: StoredGame["players"][number], center: { x: number; y: number }) => (
@@ -289,7 +321,15 @@ const resolveFlutterRound = (game: StoredGame, winnerUserId: string | null, reas
 
 const passCurrentRing = (game: StoredGame, context: GameContext) => {
   const passAt = Number(game.state.flutterCurrentRingPassAt) || context.now;
-  game.players.forEach((player) => integratePlayerTo(player, passAt));
+  const historical = game.privateState.netcodeVersion >= 4;
+  const present = new Map<string, number>();
+  game.players.forEach((player) => {
+    if (!historical) { integratePlayerTo(player, passAt); return; }
+    present.set(player.userId, Math.max(passAt, Number(player.state.flutterLastUpdatedAt)));
+    const history = historyFor(game, player);
+    publishFlight(player, sampleFlight(history, passAt), passAt);
+    history.committedAt = passAt;
+  });
   const index = Number(game.state.flutterRingIndex) || 0;
   const center = ringCenter(game, index);
   const missed = game.players.filter((player) => !clearsRing(player, center));
@@ -305,16 +345,28 @@ const passCurrentRing = (game: StoredGame, context: GameContext) => {
   });
 
   if (unprotectedMisses.length) {
+    if (historical) game.players.forEach((player) => {
+      const target = present.get(player.userId)!;
+      publishFlight(player, sampleFlight(historyFor(game, player), target), target);
+    });
     const survivors = game.players.filter((player) => !unprotectedMisses.includes(player));
     resolveFlutterRound(game, unprotectedMisses.length === 1 ? survivors[0]?.userId ?? null : null, unprotectedMisses.length === 1 ? "miss" : "simultaneous_miss", context);
     return;
   }
 
-  game.players.forEach((player) => { player.state.flutterRingsCleared = index + 1; });
+  game.players.forEach((player) => {
+    player.state.flutterRingsCleared = index + 1;
+    if (historical) {
+      const history = historyFor(game, player);
+      const target = present.get(player.userId)!;
+      publishFlight(player, sampleFlight(history, target), target);
+      trimFlight(history, target);
+    }
+  });
   const nextIndex = index + 1;
   game.state.flutterRingIndex = nextIndex;
   game.state.flutterCurrentRingPassAt = passAt + getFlutterRingIntervalMs(nextIndex);
-  game.state.phaseDeadlineAt = game.state.flutterCurrentRingPassAt + RING_RESOLVE_GRACE_MS;
+  game.state.phaseDeadlineAt = game.state.flutterCurrentRingPassAt + ringGrace(game);
 };
 
 const visibleRings = (game: StoredGame): FlutterRing[] => {
@@ -384,22 +436,21 @@ export const createFlutterGame = (): GameEngine => ({
     const sequence = Number(payload.sequence);
     if (!Number.isSafeInteger(sequence) || sequence <= Number(player.state.flutterInputSequence ?? -1)) return unchangedAction();
     if ([payload.up, payload.down, payload.left, payload.right].some((value) => typeof value !== "boolean")) return unchangedAction();
-    // Never carry a player past the ring that is still awaiting judgment. An input that arrives
-    // inside the grace window above but was made after the plane is applied at the plane instead:
-    // the position the ring is scored on stays exactly the one the player flew into it, and only
-    // the motion afterwards starts at most RING_RESOLVE_GRACE_MS early - which the next snapshot
-    // corrects. Without this clamp the input would advance flutterLastUpdatedAt past the ring and
-    // integratePlayerTo's monotonic clamp would then score the ring on a position from after it.
-    const pendingRingPassAt = Number(game.state.flutterCurrentRingPassAt);
+    const input = { up: payload.up as boolean, down: payload.down as boolean, left: payload.left as boolean, right: payload.right as boolean };
     const requestedAt = Number.isFinite(context.nowCompensated) ? context.nowCompensated : context.now;
-    integratePlayerTo(player, Number.isFinite(pendingRingPassAt) ? Math.min(requestedAt, pendingRingPassAt) : requestedAt);
+    if (game.privateState.netcodeVersion >= 4) {
+      const history = historyFor(game, player);
+      const at = Math.max(history.at, history.committedAt, requestedAt);
+      history.controls.push({ at, input });
+      const target = Math.max(context.now, at);
+      publishFlight(player, sampleFlight(history, target), target);
+      trimFlight(history, target);
+    } else {
+      const pendingRingPassAt = Number(game.state.flutterCurrentRingPassAt);
+      integratePlayerTo(player, Number.isFinite(pendingRingPassAt) ? Math.min(requestedAt, pendingRingPassAt) : requestedAt);
+      player.state.flutterInput = input;
+    }
     player.state.flutterInputSequence = sequence;
-    player.state.flutterInput = {
-      up: payload.up as boolean,
-      down: payload.down as boolean,
-      left: payload.left as boolean,
-      right: payload.right as boolean,
-    };
     return changedAction();
   },
   handleDeadline(game, context) {
@@ -410,8 +461,9 @@ export const createFlutterGame = (): GameEngine => ({
       game.state.flutterRoundStartedAt = context.now;
       game.state.flutterRingIndex = 0;
       game.state.flutterCurrentRingPassAt = context.now + FIRST_RING_DELAY_MS;
-      game.state.phaseDeadlineAt = game.state.flutterCurrentRingPassAt + RING_RESOLVE_GRACE_MS;
+      game.state.phaseDeadlineAt = game.state.flutterCurrentRingPassAt + ringGrace(game);
       game.players.forEach((player) => resetFlightPlayer(player, context.now));
+      game.privateState.flutterHistories = {};
     } else if (game.state.phase === "flutter_active") passCurrentRing(game, context);
     else if (game.state.phase === "flutter_result") {
       if (game.state.lastFlutterResult?.retry) startFlutterCountdown(game, context, true);

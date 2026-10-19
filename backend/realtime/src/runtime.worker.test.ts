@@ -1,3 +1,4 @@
+import { OrderedLink } from "../scripts/ordered-link";
 import { env, exports } from "cloudflare:workers";
 import { reset, runInDurableObject } from "cloudflare:test";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -106,61 +107,40 @@ describe("Worker routing", () => {
 });
 
 describe("Durable realtime state", () => {
-  it("measures action acknowledgements and coalesced updates for every ranked mode", async () => {
-    mockExternalServices(Array.from({ length: 10 }, (_, index) => ({ id: `benchmark-question-${index}`, prompt: "Choose A", questionType: "mcq", difficulty: "Medium", choices: [{ id: "A", label: "Answer" }], correctAnswer: "A" })));
-    const measurements: Array<{ mode: string; condition: string; ackMs: number; updates: number }> = [];
+  it("measures acknowledgements and authoritative updates over ordered impaired links", async () => {
+    mockExternalServices(Array.from({ length: 10 }, (_, index) => ({ id: `benchmark-q${index}`, prompt: "Choose A", questionType: "mcq", difficulty: "Medium", choices: [{ id: "A", label: "A" }], correctAnswer: "A" })));
+    const measurements: Array<Record<string, unknown>> = [];
     for (const mode of ["sat-classic", "sat-timber", "sat-puncture", "sat-flutter"]) {
-      for (const condition of ["normal", "impaired"]) {
-        const gameId = `latency-${mode}-${condition}`;
-        const stub = runtimeEnv.GAME.getByName(gameId);
-        const initialized = await stub.fetch(internalPost({
-          type: "game.initialize", modeId: mode, ranked: true,
-          players: [
-            { userId: "user-1", displayName: "Player One", profilePicture: null },
-            { userId: "user-2", displayName: "Player Two", profilePicture: null },
-          ],
-        }));
-        if(initialized.status !== 200) throw new Error(`${gameId}: ${initialized.status} ${await initialized.text()}`);
-        await runInDurableObject(stub, async (instance: GameServer) => {
-          instance.game!.state.currentQuestionActiveAt = Date.now() - 1_000;
-          // This measures action-to-ack latency, not the intro gate, so the pre-roll is expired
-          // the same way the question clock is backdated above.
-          instance.game!.state.introEndsAt = Date.now() - 1_000;
+      for (const profile of [{ rttMs: 40, jitterMs: 0 }, { rttMs: 120, jitterMs: 30 }, { rttMs: 250, jitterMs: 50 }]) {
+        const gameId = `latency-${mode}-${profile.rttMs}`, stub = runtimeEnv.GAME.getByName(gameId);
+        await stub.fetch(internalPost({ type: "game.initialize", modeId: mode, ranked: true,
+          players: ["user-1", "user-2"].map((userId) => ({ userId, displayName: userId, profilePicture: null })) }));
+        await runInDurableObject(stub, (instance: GameServer) => {
+          instance.game!.state.currentQuestionActiveAt = Date.now() - 1000;
+          instance.game!.state.introEndsAt = Date.now() - 1000;
         });
-        const connected = await exports.default.fetch(new Request(
-          `https://realtime.test/parties/game/${gameId}?token=valid&protocolVersion=3`,
-          { headers: { Upgrade: "websocket" } },
-        ));
-        expect(connected.status).toBe(101);
-        const socket = connected.webSocket!;
-        socket.accept();
-        const actionId = `answer-${mode}-${condition}`;
-        let updates = 0;
-        const ack = new Promise<{ accepted: boolean }>((resolve, reject) => {
-          const timer = setTimeout(() => reject(new Error(`No action acknowledgement for ${gameId}`)), 5_000);
-          socket.addEventListener("message", (event) => {
-            const payload = JSON.parse(String(event.data));
-            if(payload.type === "game.update") updates += 1;
-            if(payload.id !== actionId || payload.type !== "game.ack") return;
-            clearTimeout(timer);
-            resolve(payload.payload);
-          });
+        const response = await exports.default.fetch(new Request(`https://realtime.test/parties/game/${gameId}?token=valid&protocolVersion=3`, { headers: { Upgrade: "websocket" } }));
+        const socket = response.webSocket!; socket.accept();
+        const up = new OrderedLink(() => profile), down = new OrderedLink(() => profile);
+        const id = `answer-${mode}-${profile.rttMs}`, started = Date.now();
+        let ackMs: number | undefined, updateMs: number | undefined;
+        await new Promise<void>((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error(`No acknowledgement/update: ${gameId}`)), 3000);
+          socket.addEventListener("message", (event) => down.send(() => {
+            const m = JSON.parse(String(event.data));
+            if (m.id === id && m.type === "game.ack") { expect(m.payload.accepted).toBe(true); ackMs = Date.now() - started; }
+            if (m.type === "game.update" && m.payload.players?.["user-1"]?.answeredQuestionIds?.length) updateMs = Date.now() - started;
+            if (ackMs != null && updateMs != null) { clearTimeout(timeout); resolve(); }
+          }));
+          up.send(() => socket.send(JSON.stringify({ id, type: "game.answer", payload: { submittedResponse: "A" } })));
         });
-        const delay = condition === "impaired" ? 120 : 0;
-        const started = performance.now();
-        if(delay) await new Promise((resolve) => setTimeout(resolve, delay));
-        socket.send(JSON.stringify({ id: actionId, type: "game.answer", payload: { submittedResponse: "A" } }));
-        const result = await ack;
-        if(delay) await new Promise((resolve) => setTimeout(resolve, delay));
-        const ackMs = Math.round(performance.now() - started);
-        await new Promise((resolve) => setTimeout(resolve, 140));
-        measurements.push({ mode, condition, ackMs, updates });
-        expect(result.accepted).toBe(true);
-        expect(updates).toBeLessThanOrEqual(1);
-        socket.close(1000, "benchmark complete");
+        expect(ackMs!).toBeGreaterThanOrEqual(profile.rttMs - profile.jitterMs * 2 - 5);
+        expect(updateMs!).toBeLessThan(profile.rttMs + profile.jitterMs * 2 + 500);
+        measurements.push({ mode, ...profile, ackMs, updateMs });
+        up.close(); down.close(); socket.close(1000);
       }
     }
-    console.info("Ranked action-to-ack sample (local Worker; impaired adds 120 ms each direction):", measurements);
+    console.info("Ordered-link local Worker samples (real traffic delayed both directions)", measurements);
   });
 
   it("announces when a spectator starts and stops spectating", async () => {
@@ -232,6 +212,38 @@ describe("Durable realtime state", () => {
         userId: "user-1",
         activity: { state: "in_game", modeId: "sat-timber", roomId: "game-123" },
       }],
+    });
+  });
+
+  it("flushes final game results before releasing the player's session", async () => {
+    mockExternalServices();
+    const stub = runtimeEnv.GAME.getByName("finish-order");
+    await stub.fetch(internalPost({
+      type: "game.initialize",
+      modeId: "sat-classic",
+      ranked: false,
+      players: [
+        { userId: "user-1", displayName: "Human", profilePicture: null },
+        { userId: "bot", displayName: "Bot", profilePicture: null, isBot: true },
+      ],
+    }));
+
+    await runInDurableObject(stub, async (instance: GameServer) => {
+      const lifecycle = instance as unknown as {
+        forfeit(userId: string): void;
+        afterMutation(): Promise<void>;
+        releasePlayerSessions(): Promise<void>;
+        lastBroadcastView: { room: { status: string; phase: string } };
+        broadcastTimer: unknown;
+      };
+      const release = vi.spyOn(lifecycle, "releasePlayerSessions").mockImplementation(async () => {
+        expect(lifecycle.lastBroadcastView.room).toMatchObject({ status: "finished", phase: "finished" });
+        expect(lifecycle.broadcastTimer).toBeNull();
+      });
+      lifecycle.forfeit("bot");
+      await lifecycle.afterMutation();
+      expect(release).toHaveBeenCalledOnce();
+      expect(instance.game?.events.some((event) => event.type === "GAME_ENDED")).toBe(true);
     });
   });
 

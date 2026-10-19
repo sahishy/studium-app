@@ -1,3 +1,5 @@
+import { ARCADE_ACTIONS, InputValidator, syncInputState, upgradedRoom } from "../input-protocol";
+import { RoomLatency } from "../latency";
 import { Server, type Connection, type ConnectionContext, type WSMessage } from "partyserver";
 import { appendChatMessage, appendSystemChatMessage, type ChatMessage } from "../chat";
 import type { GameContext, StoredGame } from "../games/contracts";
@@ -27,7 +29,8 @@ const DISCONNECT_GRACE_MS = 30_000;
 // v3: game.update carries a generic room/players diff (see servers/game-view.ts) instead of the
 // old hand-rolled per-mode delta payloads, and broadcasts are coalesced (MIN_BROADCAST_INTERVAL_MS)
 // rather than sent once per mutation. Older connections still get full game.snapshot messages.
-const PROTOCOL_VERSION = 3;
+const PROTOCOL_VERSION = 4;
+const PATCH_PROTOCOL_VERSION = 3;
 const MAX_RECENT_SNAPSHOT_EVENTS = 200;
 /** Coalescing window for game.update broadcasts - multiple mutations within this window collapse
  * into a single broadcast instead of one per bot action. */
@@ -54,18 +57,13 @@ const STALE_BOT_ACTION_MS = 250;
 const MAX_BOT_ACTIONS_PER_TICK = 4;
 const MAX_DEADLINES_PER_TICK = 4;
 /** Fast-path in-memory tick, clamped to this range. Naturally lands near the lower bound during
- * active minigame phases (bot actions are >=90ms apart) and near the upper bound during the idle
- * 120s question phase. */
-const MIN_TICK_MS = 50;
+ * active minigame phases and near the upper bound during the idle question phase. */
+const MIN_TICK_MS = 1;
 const MAX_TICK_MS = 1_000;
 // A tick intentionally idling out to MAX_TICK_MS between actions is normal, not a stall - this
 // must stay comfortably above MAX_TICK_MS or every idle tick logs a false-positive warning.
 const STALL_WARN_MS = MAX_TICK_MS * 3;
-/** Durable-alarm safety net. When someone is connected this is refreshed on every tick purely as
- * a backstop in case the in-memory timer fails to fire (Durable Object timer reliability isn't
- * documented, so this is what keeps the design correct even if that assumption is wrong - see
- * armTick/scheduleNextAlarm). When no one is connected, the alarm instead targets the next
- * genuinely meaningful deadline directly (see computeActiveDeadlines). */
+/** A stable, persisted safety net renewed when it fires, independently of input volume. */
 const BACKSTOP_ALARM_MS = 5_000;
 /** Log a breakdown well before ctx.storage's 128 KiB per-value ceiling, so growth is visible early. */
 const STORAGE_VALUE_WARN_BYTES = 96 * 1024;
@@ -89,6 +87,14 @@ export class GameServer extends Server<Env> {
   /** Monotonic simulation clock. Never moves backwards, even if Date.now() does. */
   simNow = 0;
   tickTimer: ReturnType<typeof setTimeout> | null = null;
+  tickDueAt: number | null = null;
+  inputValidator = new InputValidator();
+  mutationTail: Promise<void> = Promise.resolve();
+  latency = new RoomLatency();
+  terminalWork: Promise<void> | null = null;
+  lastPublishedPhase: string | null = null;
+  lastCheckpointedScores = "";
+  lastClientMetricsAt = new Map<string, number>();
   timerTickCount = 0;
   alarmTickCount = 0;
   // Checkpoint throttling (A4): persistence decoupled from simulation.
@@ -104,12 +110,26 @@ export class GameServer extends Server<Env> {
   lastBroadcastAt = 0;
   broadcastTimer: ReturnType<typeof setTimeout> | null = null;
 
+  private enqueueMutation<T>(work: () => Promise<T>): Promise<T> {
+    const task = this.mutationTail.then(work);
+    this.mutationTail = task.then(() => {}, () => {});
+    return task;
+  }
+
   async onStart() {
     this.game = (await this.ctx.storage.get<StoredGame>("game")) ?? null;
     this.scheduledAlarmAt = await this.ctx.storage.getAlarm();
     this.questionsLoaded = false;
     if (!this.game) return;
 
+    if (this.game.privateState.netcodeVersion >= 4 && this.game.status === "active") {
+      this.inputValidator = new InputValidator();
+      this.game.privateState.inputEpoch = Number(this.game.privateState.inputEpoch || 1) + 1;
+      syncInputState(this.game);
+      for (const player of this.game.players) player.state.inputSequence = -1;
+      await this.ensureQuestionsLoaded();
+      await this.checkpoint(true);
+    }
     const embeddedQuestions = this.embeddedQuestions();
     if (embeddedQuestions.length && !this.game.privateState.questionStorageKeys) {
       // Migrate games created before questions were split out of the main game value.
@@ -156,13 +176,17 @@ export class GameServer extends Server<Env> {
     }
   }
 
-  async onConnect(connection: Connection, context: ConnectionContext) {
+  onConnect(connection: Connection, context: ConnectionContext) {
+    return this.enqueueMutation(() => this.connectPlayer(connection, context));
+  }
+
+  private async connectPlayer(connection: Connection, context: ConnectionContext) {
     const state = stateFromRequest(context.request);
     if (!this.game) return connection.close(1008, "Game not found");
     const player = this.game?.players.find((entry) => entry.userId === state.userId);
     const connectionRole = getGameConnectionRole(this.game, state.userId);
-    if (!connectionRole) return connection.close(1008, "This game cannot be spectated");
-    connection.setState({ ...state, connectionRole });
+    if (!connectionRole || (state.admissionOnly && !player && this.env.STAGING_TEST_ENABLED !== "1")) return connection.close(1008, "This game cannot be spectated");
+    connection.setState({ ...state, ...(state.admissionOnly ? player : {}), connectionRole, protocolVersion: state.protocolVersion });
     let spectatorStarted = false;
     if (connectionRole === "spectator") {
       const wasAlreadySpectating = [...this.getConnections<ConnectionState>()].some((candidate) => (
@@ -188,7 +212,12 @@ export class GameServer extends Server<Env> {
     this.armTick();
   }
 
-  async onMessage(connection: Connection, raw: WSMessage) {
+  onMessage(connection: Connection, raw: WSMessage) {
+    const receivedAt = Date.now();
+    return this.enqueueMutation(() => this.handleMessage(connection, raw, receivedAt));
+  }
+
+  private async handleMessage(connection: Connection, raw: WSMessage, receivedAt: number) {
     const message = parseMessage(raw);
     const identity = connection.state as ConnectionState;
     if (!message || !this.game || !identity?.userId) return;
@@ -198,19 +227,45 @@ export class GameServer extends Server<Env> {
     }
     if (message.type === "game.subscribe" || message.type === "game.resync") return this.emit(connection, message.id);
     if (message.type === "system.clockPing") {
-      const receivedAt = Date.now();
       return this.sendMessage(connection, "system.clockPong", {
         clientWallTime: Number((message.payload as any)?.clientWallTime) || 0,
         clientMonotonic: Number((message.payload as any)?.clientMonotonic) || 0,
         serverReceivedAt: receivedAt,
         serverSentAt: Date.now(),
+        samplingId: (message.payload as any)?.samplingId,
       }, message.id);
     }
     if (message.type === "system.rttReport") {
       const rttMs = Math.max(0, Math.min(MAX_RTT_MS, Number((message.payload as any)?.rttMs) || 0));
-      connection.setState({ ...(connection.state as ConnectionState), rttMs });
+      const jitterMs = Math.max(0, Math.min(100, Number((message.payload as any)?.jitterMs) || 0));
+      connection.setState({ ...(connection.state as ConnectionState), rttMs, jitterMs });
+      if (this.game.privateState.netcodeVersion >= 4) {
+        const participants = [...this.getConnections<ConnectionState>()].filter((c) => c.state?.connectionRole === "player");
+        this.game.privateState.flutterGraceMs = Math.min(200, Math.max(100, ...participants.map((c) => (c.state?.rttMs ?? 160) / 2 + (c.state?.jitterMs ?? 0) + 20)));
+        if (this.game.state.phase === "flutter_active") {
+          // A fresh delay sample may buy the current ring more grace, but never undo a verdict
+          // or bring its pending deadline forward.
+          this.game.state.phaseDeadlineAt = Math.max(this.game.state.phaseDeadlineAt, Number(this.game.state.flutterCurrentRingPassAt) + this.game.privateState.flutterGraceMs);
+          this.armTick();
+        }
+      }
+      this.latency.sample("rttMs", rttMs);
+      this.latency.sample("jitterMs", jitterMs);
       return;
     }
+    if (message.type === "system.metricsReport") {
+      const now = receivedAt;
+      if (now - (this.lastClientMetricsAt.get(identity.userId) ?? 0) < 25_000) return;
+      this.lastClientMetricsAt.set(identity.userId, now);
+      const metrics = (message.payload ?? {}) as Record<string, unknown>;
+      for (const field of ["p95AckMs", "p95UpdateMs", "p95VisualMs", "p95LocalVisualMs", "visualCorrections", "expiredActions", "resyncs"]) {
+        const value = metrics[field];
+        if (typeof value === "number" && value >= 0 && value <= 60_000) this.latency.sample(`client.${field}`, value);
+      }
+      this.reportLatency();
+      return;
+    }
+    this.latency.sample("queueWaitMs", Date.now() - receivedAt);
     let chatDispatches: BotChatDispatch[] = [];
     let changed = false;
     if (message.type === "chat.send" || message.type === "game.chat") {
@@ -222,46 +277,73 @@ export class GameServer extends Server<Env> {
     }
     else if (message.type === "game.leave") {
       this.forfeit(identity.userId);
-      await requestRoom(this.env.USER, identity.userId, { type: "game.finished", gameId: this.name });
       changed = true;
     }
-    else if (Date.now() < Number(this.game.state.introEndsAt || 0)) {
+    else if (receivedAt < Number(this.game.state.introEndsAt || 0)) {
       // The engine's clock has not started yet. Accepting an action here would be recorded as an
       // answer at zero elapsed time, which is the fastest possible - so the intro is also the
       // window in which an action has to be refused outright.
       this.sendMessage(connection, "game.ack", { accepted: false, reason: "intro" }, message.id);
     }
     else {
+      // Receipt time owns input eligibility/scoring even when an earlier checkpoint briefly
+      // occupied the mutation queue. Timers independently advance the live wall clock.
+      const now = receivedAt;
+      changed = await this.advanceTo(now);
+      if (!this.game) return;
+      syncInputState(this.game);
       const engine = this.engine();
-      const now = Date.now();
-      const deadline = engine?.nextDeadline(this.game) ?? null;
-      if (engine && deadline && now >= deadline) {
-        engine.handleDeadline(this.game, this.context(now));
-        this.sendMessage(connection, "game.ack", { accepted: false, reason: "deadline" }, message.id);
-        changed = true;
+      const isInput = ARCADE_ACTIONS.has(message.type) || message.type === "game.answer";
+      const v4 = this.game.privateState.netcodeVersion >= 4 && identity.protocolVersion >= 4 && isInput;
+      const validation = v4 ? this.inputValidator.validate(this.game, identity.userId, message, now) : null;
+      const payload = (message.payload ?? {}) as Record<string, any>;
+      if (validation && (validation.reason || validation.duplicate)) {
+        const reply = validation.duplicate ?? { action: message.type, clientActionId: payload.clientActionId, sequence: payload.sequence, accepted: false, reason: validation.reason, timeErrorMs: validation.timeErrorMs };
+        if (!validation.duplicate) this.inputValidator.remember(identity.userId, message, reply);
+        this.sendMessage(connection, "game.actionResult", reply, message.id);
+        this.latency.count(`rejected.${validation.reason ?? "duplicate"}`);
       } else {
         const before = { ...(this.game.players.find((player) => player.userId === identity.userId)?.state ?? {}) };
         const rttMs = Number((connection.state as ConnectionState)?.rttMs) || 0;
-        const nowCompensated = now - Math.min(MAX_COMPENSATION_MS, rttMs / 2);
-        const result = engine?.handleAction(this.game, identity.userId, message, this.context(now, nowCompensated));
-        if (result?.reply) this.sendMessage(connection, result.reply.type, result.reply.payload, message.id);
-        else this.sendMessage(connection, "game.ack", { accepted: Boolean(result?.changed) }, message.id);
-        changed = Boolean(result?.changed);
-        if (changed) {
+        const actionAt = validation?.at ?? now - Math.min(MAX_COMPENSATION_MS, rttMs / 2);
+        const result = engine?.handleAction(this.game, identity.userId, message, this.context(now, actionAt));
+        const actionChanged = Boolean(result?.changed);
+        const reply = { action: message.type, clientActionId: payload.clientActionId, sequence: payload.sequence,
+          accepted: actionChanged, reason: actionChanged ? undefined : "phase_or_action", ...result?.reply?.payload,
+          appliedAt: actionAt, serverReceivedAt: receivedAt, inputEpoch: this.game.state.inputEpoch, roundToken: this.game.state.roundToken };
+        if (v4) {
+          this.inputValidator.record(identity.userId, message, reply, actionAt);
+          const player = this.game.players.find((p) => p.userId === identity.userId);
+          if (player) player.state.inputSequence = payload.sequence;
+          changed = true;
+        }
+        if (actionChanged) {
           const counts = (this.game.privateState.participationByUserId ?? {}) as Record<string, number>;
           counts[identity.userId] = (Number(counts[identity.userId]) || 0) + 1;
           this.game.privateState.participationByUserId = counts;
           observeHumanAction(this.game, identity.userId, message, now, before);
+          changed = true;
+          if (message.type === "game.answer") {
+            syncInputState(this.game);
+            await this.checkpoint(true);
+          }
         }
+        this.sendMessage(connection, v4 ? "game.actionResult" : result?.reply?.type ?? "game.ack", v4 ? reply : result?.reply?.payload ?? { accepted: actionChanged }, message.id);
+        this.latency.count(actionChanged ? "actions.accepted" : `rejected.${reply.reason}`);
       }
+      this.latency.sample("processingMs", Date.now() - receivedAt);
     }
     if (!changed) return;
     ensureBotActions(this.game, Date.now());
     await this.afterMutation();
-    if (chatDispatches.length) await Promise.all(chatDispatches.map((dispatch) => this.dispatchBotChatJob(dispatch)));
+    if (chatDispatches.length) this.ctx.waitUntil(Promise.all(chatDispatches.map((dispatch) => this.dispatchBotChatJob(dispatch))));
   }
 
-  async onClose(connection: Connection) {
+  onClose(connection: Connection) {
+    return this.enqueueMutation(() => this.disconnectPlayer(connection));
+  }
+
+  private async disconnectPlayer(connection: Connection) {
     const identity = connection.state as ConnectionState;
     if (identity?.connectionRole === "spectator") {
       const isStillSpectating = [...this.getConnections<ConnectionState>()].some((candidate) => (
@@ -296,6 +378,30 @@ export class GameServer extends Server<Env> {
   async onRequest(request: Request) {
     if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
     const body = await request.json<any>();
+    return this.enqueueMutation(() => this.handleRequest(body));
+  }
+
+  private async handleRequest(body: any): Promise<Response> {
+    if (this.env.STAGING_TEST_ENABLED === "1" && body.type === "game.testCommand" && this.name.startsWith("load_") && this.game) {
+      if (body.command === "stats") return Response.json({ status: this.game.status, settled: Boolean(this.game.privateState.resultCommitted), state: this.game.state, players: this.game.players, counters: this.latency.counters, samples: this.latency.samples });
+      if (body.command === "dispose") {
+        this.clearTickTimer(); this.clearBroadcastTimer();
+        for (const connection of this.getConnections()) connection.close(1000, "Test complete");
+        await this.ctx.storage.deleteAll(); this.game = null;
+        return Response.json({ ok: true });
+      }
+      if (body.command === "flightWindow" && this.game.state.phase === "flutter_active") {
+        this.game.state.flutterCurrentRingPassAt = Date.now() + 20_000;
+        this.game.state.phaseDeadlineAt = this.game.state.flutterCurrentRingPassAt + 100;
+      }
+      if (body.command === "finish") this.forfeit(this.game.players[1].userId);
+      if (body.command === "deadline") {
+        this.engine()?.handleDeadline(this.game, this.context(Number(this.game.state.phaseDeadlineAt) || Date.now()));
+        syncInputState(this.game);
+      }
+      await this.afterMutation(true);
+      return Response.json({ ok: true });
+    }
     if (body.type === "bot.chatContext") {
       if (!this.game) return new Response("Game not found", { status: 404 });
       const result = beginBotChatGeneration(this.game, String(body.botUserId ?? ""), String(body.jobId ?? ""), Number(body.revision), Date.now());
@@ -341,11 +447,11 @@ export class GameServer extends Server<Env> {
     this.game = {
       gameId: this.name, modeId: mode.id, ranked: Boolean(body.ranked), status: "active",
       players: body.players.map((player: PlayerIdentity) => ({ ...player, state: {}, disconnectedAt: null })),
-      state: {}, privateState: {}, events: [], chat: [], startedAt: now, updatedAt: now,
+      state: {}, privateState: { netcodeVersion: upgradedRoom(this.name, this.env.REALTIME_V4_PERCENT) ? 4 : 3, inputEpoch: 1, locationHint: body.locationHint }, events: [], chat: [], startedAt: now, updatedAt: now,
     };
     let questions: any[];
     try {
-      questions = await this.fetchQuestions(mode.id, 10);
+      questions = this.env.STAGING_TEST_ENABLED === "1" && Array.isArray(body.testQuestions) ? body.testQuestions : await this.fetchQuestions(mode.id, 10);
     } catch (error) {
       this.game = null;
       return new Response(error instanceof Error ? error.message : "Unable to load questions", { status: 502 });
@@ -370,6 +476,15 @@ export class GameServer extends Server<Env> {
       player.userId,
       { placed: player.placementByMode?.[mode.id]?.placed ?? true },
     ]));
+    if (this.env.STAGING_TEST_ENABLED === "1" && body.testExercise) {
+      const testNow = Date.now();
+      this.game.state.introEndsAt = testNow - 1;
+      this.game.state.currentQuestionActiveAt = testNow - 1000;
+      for (const player of this.game.players) mode.createGame().handleAction(this.game, player.userId, { id: `test-${player.userId}`, type: "game.answer", payload: { submittedResponse: "A" } }, this.context(testNow));
+      this.game.state.phaseDeadlineAt = testNow;
+      mode.createGame().handleDeadline(this.game, this.context(testNow));
+    }
+    syncInputState(this.game);
     this.questionsLoaded = true;
     initializeBots(this.game);
     ensureBotActions(this.game, introEndsAt);
@@ -389,9 +504,14 @@ export class GameServer extends Server<Env> {
    * Shared by both tick sources (the durable alarm and the fast in-memory timer) so a caught
    * failure in either is handled identically.
    */
-  private async guardedTick(source: "alarm" | "timer") {
+  private guardedTick(source: "alarm" | "timer") {
+    return this.enqueueMutation(() => this.runGuardedTick(source));
+  }
+
+  private async runGuardedTick(source: "alarm" | "timer") {
+    if (source === "alarm") this.scheduledAlarmAt = null;
     if (source === "timer") this.timerTickCount += 1; else this.alarmTickCount += 1;
-    console.debug(`[GameServer:${this.name}] tick`, { source, timerTicks: this.timerTickCount, alarmTicks: this.alarmTickCount, phase: this.game?.state?.phase });
+    this.latency.count(`ticks.${source}`);
     try {
       await this.runAlarm();
     } catch (error) {
@@ -432,6 +552,7 @@ export class GameServer extends Server<Env> {
     if (this.tickTimer == null) return;
     clearTimeout(this.tickTimer);
     this.tickTimer = null;
+    this.tickDueAt = null;
   }
 
   /**
@@ -443,14 +564,19 @@ export class GameServer extends Server<Env> {
    * fixed ~200ms self-rescheduling alarm instead.
    */
   private armTick() {
-    this.clearTickTimer();
-    if (!this.shouldTick()) return;
+    if (!this.shouldTick()) { this.clearTickTimer(); return; }
     const deadlines = this.computeActiveDeadlines();
-    if (!deadlines.length) return;
+    if (!deadlines.length) { this.clearTickTimer(); return; }
     const dueAt = Math.min(...deadlines);
     const delay = Math.max(MIN_TICK_MS, Math.min(MAX_TICK_MS, dueAt - Date.now()));
+    const target = Date.now() + delay;
+    if (this.tickTimer != null && this.tickDueAt != null && this.tickDueAt <= target) return;
+    this.clearTickTimer();
+    this.tickDueAt = target;
     this.tickTimer = setTimeout(() => {
+      this.latency.sample("deadlineLatenessMs", Math.max(0, Date.now() - target));
       this.tickTimer = null;
+      this.tickDueAt = null;
       this.guardedTick("timer").catch((error) => console.error(`[GameServer:${this.name}] timer tick failed`, error));
     }, delay);
   }
@@ -462,20 +588,25 @@ export class GameServer extends Server<Env> {
    * from 0 to 49 chops and instantly won".
    */
   private async runAlarm() {
-    if (!this.game) return;
-    this.scheduledAlarmAt = null;
+    await this.advanceTo(Date.now());
+    await this.afterMutation();
+  }
+
+  private async advanceTo(wall: number): Promise<boolean> {
+    if (!this.game) return false;
+    let changed = false;
     if (this.game.status !== "active") {
-      if (this.game.result && !this.game.privateState.resultCommitted) await this.commitResult();
+      this.startTerminalWork();
       if (this.game.privateState.expiresAt && Date.now() >= this.game.privateState.expiresAt && (this.game.privateState.resultCommitted || !this.game.result)) {
         await this.ctx.storage.deleteAll();
         this.game = null;
-        return;
+        return false;
       }
-      return;
+      return false;
     }
 
-    const wall = Date.now();
-    const lateness = this.simNow ? wall - this.simNow : 0;
+    const due = this.computeActiveDeadlines();
+    const lateness = due.length ? Math.max(0, wall - Math.min(...due)) : 0;
     this.simNow = Math.max(this.simNow, wall);
     if (lateness > STALL_WARN_MS) {
       console.warn(`[GameServer:${this.name}] tick stalled ${lateness}ms (phase=${this.game.state.phase})`);
@@ -485,8 +616,7 @@ export class GameServer extends Server<Env> {
     const disconnected = this.game.players.find((player) => player.disconnectedAt && this.simNow - player.disconnectedAt >= DISCONNECT_GRACE_MS);
     if (disconnected) {
       this.forfeit(disconnected.userId);
-      await this.afterMutation();
-      return;
+      return true;
     }
 
     const engine = this.engine();
@@ -500,6 +630,8 @@ export class GameServer extends Server<Env> {
         const gameDeadline = engine.nextDeadline(this.game);
         if (gameDeadline == null || gameDeadline > this.simNow) break;
         engine.handleDeadline(this.game, this.context(count === 0 ? gameDeadline : this.simNow));
+        changed = true;
+        syncInputState(this.game);
         ensureBotActions(this.game, this.simNow);
         await this.ensureQuestionsLoaded();
       }
@@ -514,18 +646,20 @@ export class GameServer extends Server<Env> {
         if (botDeadline == null || botDeadline > this.simNow) break;
         if (botDeadline < this.simNow - STALE_BOT_ACTION_MS && dropNextBotGameAction(this.game, this.simNow)) {
           dropped += 1;
+          changed = true;
           continue;
         }
         if (executed >= MAX_BOT_ACTIONS_PER_TICK) break;
         if (!runNextBotAction(this.game, engine, this.context(botDeadline), this.simNow)) break;
         executed += 1;
+        changed = true;
       }
       if (dropped) {
         console.warn(`[GameServer:${this.name}] dropped ${dropped} stale bot action(s) after a ${lateness}ms stall`);
       }
     }
 
-    await this.afterMutation();
+    return changed;
   }
 
   private engine() { return this.game ? getGameMode(this.game.modeId)?.createGame() ?? null : null; }
@@ -590,7 +724,10 @@ export class GameServer extends Server<Env> {
         privateStateBytes: JSON.stringify(privateState).length,
       });
     }
+    this.latency.count("storage.checkpoint");
+    const started = Date.now();
     await this.ctx.storage.put("game", value);
+    this.latency.sample("storageMs", Date.now() - started);
   }
 
   private embeddedQuestions(): any[] {
@@ -608,43 +745,33 @@ export class GameServer extends Server<Env> {
   private async storeQuestions(questions: any[]) {
     if (!this.game) return;
     const questionStorageKeys: string[][] = [];
+    const values: Record<string, Uint8Array> = {};
     for (const [questionIndex, question] of questions.entries()) {
       const chunks = encodeQuestionChunks(question);
       const keys = chunks.map((_, chunkIndex) => `question:${questionIndex}:${chunkIndex}`);
-      await Promise.all(chunks.map((chunk, chunkIndex) => this.ctx.storage.put(keys[chunkIndex], chunk)));
+      chunks.forEach((chunk, index) => { values[keys[index]] = chunk; });
       questionStorageKeys.push(keys);
     }
+    // The provider is capped at ten questions; all chunk values commit together.
+    await this.ctx.storage.put(values);
     this.game.privateState.questionStorageKeys = questionStorageKeys;
   }
 
-  /**
-   * Called after every mutation (a human message, a tick's engine deadline or bot action). Does
-   * NOT write to storage or broadcast synchronously - persistence is throttled (checkpoint, A4)
-   * and broadcasts are coalesced to MIN_BROADCAST_INTERVAL_MS (scheduleBroadcast, B1), so this
-   * returning does not mean clients have been notified yet. Pass forceCheckpoint for state that
-   * must survive an eviction immediately (see onClose's disconnect branch).
-   */
+  /** Checkpoint semantic changes and publish independently of external settlement work. */
   private async afterMutation(forceCheckpoint = false) {
     if (!this.game) return;
     this.game.updatedAt = Date.now();
     if (this.game.status !== "active" && !this.game.privateState.expiresAt) this.game.privateState.expiresAt = Date.now() + 15 * 60_000;
-    // Outbound fetches are best-effort: a slow or failing backend must never abort the state
-    // write, the broadcast, or the alarm reschedule that follow.
-    try {
-      await this.releasePlayerSessions();
-    } catch (error) {
-      console.error(`[GameServer:${this.name}] releasePlayerSessions failed`, error);
-    }
     await this.ensureQuestionsLoaded();
+    syncInputState(this.game);
+    const phase = String(this.game.state.phase ?? "");
+    const immediate = this.lastPublishedPhase !== phase || this.game.status !== "active";
+    if (this.game.status !== "active") this.game.privateState.terminalRetryAt ??= Date.now() + 10_000;
     await this.checkpoint(forceCheckpoint);
     this.scheduleBroadcast();
-    if (this.game.result) {
-      try {
-        await this.commitResult();
-      } catch (error) {
-        console.error(`[GameServer:${this.name}] commitResult failed`, error);
-      }
-    }
+    if (immediate) { this.clearBroadcastTimer(); this.flushBroadcast(); }
+    if (this.game.status !== "active") this.startTerminalWork();
+    this.reportLatency();
     await this.scheduleNextAlarm();
     this.armTick();
   }
@@ -656,6 +783,7 @@ export class GameServer extends Server<Env> {
     if ((this.game.state.phase ?? null) !== this.lastCheckpointedPhase) return true;
     if (this.game.status !== this.lastCheckpointedStatus) return true;
     if (this.game.chat.length !== this.lastCheckpointedChatLength) return true;
+    if (JSON.stringify(this.game.players.map((p) => p.state.score)) !== this.lastCheckpointedScores) return true;
     const floor = String(this.game.state.phase ?? "").endsWith("_active") ? CHECKPOINT_INTERVAL_ACTIVE_MS : CHECKPOINT_INTERVAL_IDLE_MS;
     return now - this.lastCheckpointAt >= floor;
   }
@@ -669,6 +797,7 @@ export class GameServer extends Server<Env> {
     this.lastCheckpointedPhase = this.game.state.phase ?? null;
     this.lastCheckpointedStatus = this.game.status;
     this.lastCheckpointedChatLength = this.game.chat.length;
+    this.lastCheckpointedScores = JSON.stringify(this.game.players.map((p) => p.state.score));
   }
 
   private clearBroadcastTimer() {
@@ -681,7 +810,8 @@ export class GameServer extends Server<Env> {
     if (!this.game) return;
     this.broadcastDirty = true;
     if (this.broadcastTimer != null) return;
-    const delay = Math.max(0, MIN_BROADCAST_INTERVAL_MS - (Date.now() - this.lastBroadcastAt));
+    const interval = /^(timber|puncture|flutter)_active$/.test(String(this.game.state.phase)) ? 50 : MIN_BROADCAST_INTERVAL_MS;
+    const delay = Math.max(0, interval - (Date.now() - this.lastBroadcastAt));
     this.broadcastTimer = setTimeout(() => {
       this.broadcastTimer = null;
       this.flushBroadcast();
@@ -696,6 +826,8 @@ export class GameServer extends Server<Env> {
     if (!this.game || !this.broadcastDirty) return;
     this.broadcastDirty = false;
     this.lastBroadcastAt = Date.now();
+    this.lastPublishedPhase = String(this.game.state.phase ?? "");
+    this.latency.count("broadcasts");
     const view = buildGameView(this.game, this.engine());
     const patch = diffGameView(this.lastBroadcastView, view);
     const newEvents = this.game.events.filter((event) => Number(event.sequence) > this.lastBroadcastEventSequence);
@@ -707,7 +839,7 @@ export class GameServer extends Server<Env> {
     this.game.revision = (Number(this.game.revision) || 0) + 1;
     let cachedSnapshot: unknown;
     for (const connection of this.getConnections<PlayerIdentity & { protocolVersion?: number }>()) {
-      if (Number(connection.state?.protocolVersion) >= PROTOCOL_VERSION) {
+      if (Number(connection.state?.protocolVersion) >= PATCH_PROTOCOL_VERSION) {
         this.sendMessage(connection, "game.update", { room: patch?.room, players: patch?.players, events: newEvents, chat: newChat });
       } else {
         cachedSnapshot ??= this.snapshot();
@@ -716,10 +848,35 @@ export class GameServer extends Server<Env> {
     }
   }
 
+  private reportLatency(force = false) {
+    if (!this.game || !force && !upgradedRoom(this.name, this.env.REALTIME_METRICS_PERCENT ?? "10")) return;
+    this.latency.report(this.name, this.game.modeId, this.game.privateState.netcodeVersion ?? 3, this.env.BUILD_ID ?? "local", force, { status: this.game.status, settled: Boolean(this.game.privateState.resultCommitted), sessionsReleased: Boolean(this.game.privateState.playerSessionsReleased), endedAt: this.game.result?.endedAt, region: this.game.privateState.locationHint });
+  }
+
+  private startTerminalWork() {
+    if (!this.game || this.game.status === "active" || this.terminalWork) return;
+    if (this.game.privateState.playerSessionsReleased && (!this.game.result || this.game.privateState.resultCommitted)) return;
+    this.game.privateState.terminalRetryAt = Date.now() + 10_000;
+    const work = Promise.allSettled([this.releasePlayerSessions(), this.commitResult()]).then(async (results) => {
+      for (const result of results) if (result.status === "rejected") {
+        this.latency.count("terminal.failed");
+        console.warn(`[GameServer:${this.name}] settlement/release will retry`, result.reason instanceof Error ? result.reason.message : "request failed");
+      }
+      await this.enqueueMutation(async () => {
+        if (!this.game) return;
+        await this.save();
+        await this.scheduleNextAlarm();
+        this.reportLatency(true);
+      });
+    }).catch((error) => console.error("Terminal work failed", error)).finally(() => { this.terminalWork = null; });
+    this.terminalWork = work;
+    this.ctx.waitUntil(work);
+  }
+
   private async releasePlayerSessions() {
     if (!this.game || this.game.status === "active" || this.game.privateState.playerSessionsReleased) return;
     const results = await Promise.allSettled(this.game.players.filter((player) => !player.isBot).map(async (player) => {
-      const response = await requestRoom(this.env.USER, player.userId, { type: "game.finished", gameId: this.game!.gameId });
+      const response = await requestRoom(this.env.USER, player.userId, { type: "game.finished", gameId: this.game!.gameId }, undefined, 5_000);
       if (!response.ok) throw new Error(`Unable to release ${player.userId}: ${response.status}`);
     }));
     const failed = results.filter((result) => result.status === "rejected");
@@ -727,7 +884,7 @@ export class GameServer extends Server<Env> {
       console.warn("Unable to release one or more finished game sessions.", { gameId: this.game.gameId, failed: failed.length });
       return;
     }
-    this.game.privateState.playerSessionsReleased = true;
+    await this.enqueueMutation(async () => { if (this.game) this.game.privateState.playerSessionsReleased = true; });
   }
 
   private async scheduleNextAlarm() {
@@ -735,6 +892,7 @@ export class GameServer extends Server<Env> {
     let next: number | null;
     if (this.game.status === "active" && this.shouldTick()) {
       // The fast timer (armTick) is doing the real scheduling; this alarm is purely a backstop.
+      if (this.scheduledAlarmAt != null && this.scheduledAlarmAt > Date.now() && this.scheduledAlarmAt <= Date.now() + BACKSTOP_ALARM_MS) return;
       next = Date.now() + BACKSTOP_ALARM_MS;
     } else if (this.game.status === "active") {
       // No one connected to tick fast for - wake exactly when something could matter instead
@@ -742,13 +900,16 @@ export class GameServer extends Server<Env> {
       const deadlines = this.computeActiveDeadlines();
       next = deadlines.length ? Math.min(...deadlines) : null;
     } else {
-      const deadlines = [this.game.result && !this.game.privateState.resultCommitted ? Date.now() + 10_000 : null, this.game.privateState.expiresAt ?? null]
+      const deadlines = [(this.game.result && !this.game.privateState.resultCommitted) || !this.game.privateState.playerSessionsReleased ? (this.game.privateState.terminalRetryAt ?? Date.now() + 10_000) : null, this.game.privateState.expiresAt ?? null]
         .filter((value): value is number => Boolean(value));
       next = deadlines.length ? Math.min(...deadlines) : null;
     }
     if (next === this.scheduledAlarmAt) return;
     if (next == null) await this.ctx.storage.deleteAlarm();
-    else await this.ctx.storage.setAlarm(next);
+    else {
+      this.latency.count("storage.alarm");
+      await this.ctx.storage.setAlarm(next);
+    }
     this.scheduledAlarmAt = next;
   }
 
@@ -768,7 +929,9 @@ export class GameServer extends Server<Env> {
       response = null;
     }
     if (response?.ok || !this.game) return;
-    if (failBotChatGeneration(this.game, dispatch.botUserId, dispatch.jobId, dispatch.revision)) await this.afterMutation();
+    await this.enqueueMutation(async () => {
+      if (this.game && failBotChatGeneration(this.game, dispatch.botUserId, dispatch.jobId, dispatch.revision)) await this.afterMutation();
+    });
   }
 
   private forfeit(userId: string) {
@@ -792,6 +955,7 @@ export class GameServer extends Server<Env> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ modeId, count }),
+      signal: AbortSignal.timeout(5_000),
     });
     if (!response.ok) throw new Error(`Question provider failed (${response.status}): ${await response.text()}`);
     return (await response.json() as { questions?: any[] }).questions ?? [];
@@ -799,33 +963,37 @@ export class GameServer extends Server<Env> {
 
   private async commitResult() {
     if (!this.game?.result || this.game.privateState.resultCommitted) return;
-    if (!this.env.BACKEND_API_BASE_URL) return;
-    const response = await fetch(`${this.env.BACKEND_API_BASE_URL}/realtime/results`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${this.env.REALTIME_ACTIVITY_SECRET ?? ""}` },
-      body: JSON.stringify({ ...this.game.result, participationByUserId: this.game.privateState.participationByUserId ?? {}, botPlayerIds: this.game.players.filter((player) => player.isBot).map((player) => player.userId) }),
-    });
-    if (!response.ok) return;
-    const saved = await response.json() as {
-      eloDeltaByUserId?: Record<string, number>;
-      rewardsByUserId?: Record<string, { xp: number; lumen: number }>;
-      questsByUserId?: Record<string, unknown>;
-    };
-    const endedEvent = [...this.game.events].reverse().find((event) => event.type === "GAME_ENDED");
-    if (endedEvent) {
-      // The rewards the backend actually granted ride along on the end event so
-      // the client can animate exactly what was awarded.
-      endedEvent.data = {
-        ...endedEvent.data,
-        ...(saved.eloDeltaByUserId ? { eloDeltaByUserId: saved.eloDeltaByUserId } : {}),
-        ...(saved.rewardsByUserId ? { rewardsByUserId: saved.rewardsByUserId } : {}),
-        ...(saved.questsByUserId ? { questsByUserId: saved.questsByUserId } : {}),
-      };
+    let saved: { eloDeltaByUserId?: Record<string, number>; rewardsByUserId?: Record<string, { xp: number; lumen: number }>; questsByUserId?: Record<string, unknown> };
+    if (this.env.STAGING_TEST_ENABLED === "1") {
+      saved = { rewardsByUserId: Object.fromEntries(this.game.players.filter((p) => !p.isBot).map((p) => [p.userId, { xp: 0, lumen: 0 }])) };
+    } else {
+      if (!this.env.BACKEND_API_BASE_URL) return;
+      const response = await fetch(`${this.env.BACKEND_API_BASE_URL}/realtime/results`, {
+        method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.env.REALTIME_ACTIVITY_SECRET ?? ""}` },
+        signal: AbortSignal.timeout(5_000),
+        body: JSON.stringify({ ...this.game.result, participationByUserId: this.game.privateState.participationByUserId ?? {}, botPlayerIds: this.game.players.filter((player) => player.isBot).map((player) => player.userId) }),
+      });
+      if (!response.ok) { this.latency.count("terminal.failed"); console.warn("Result commit will retry", { status: response.status, roomId: this.name }); return; }
+      saved = await response.json();
     }
-    this.game.privateState.resultCommitted = true;
-    await this.save();
-    const snapshot = this.snapshot();
-    for (const connection of this.getConnections()) this.sendMessage(connection, "game.snapshot", snapshot);
+    await this.enqueueMutation(async () => {
+      if (!this.game) return;
+      const endedEvent = [...this.game.events].reverse().find((event) => event.type === "GAME_ENDED");
+      if (endedEvent) {
+        // The rewards the backend actually granted ride along on the end event so
+        // the client can animate exactly what was awarded.
+        endedEvent.data = {
+          ...endedEvent.data,
+          ...(saved.eloDeltaByUserId ? { eloDeltaByUserId: saved.eloDeltaByUserId } : {}),
+          ...(saved.rewardsByUserId ? { rewardsByUserId: saved.rewardsByUserId } : {}),
+          ...(saved.questsByUserId ? { questsByUserId: saved.questsByUserId } : {}),
+        };
+      }
+      this.game.privateState.resultCommitted = true;
+      await this.save();
+      const snapshot = this.snapshot();
+      for (const connection of this.getConnections()) this.sendMessage(connection, "game.snapshot", snapshot);
+    });
   }
 }
 

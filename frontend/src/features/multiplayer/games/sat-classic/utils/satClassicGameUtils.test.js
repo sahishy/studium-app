@@ -1,6 +1,16 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { getHealthBoard } from './satClassicGameUtils.js'
+import { getCurrentQuestion, getHealthBoard } from './satClassicGameUtils.js'
+
+test('the final round keeps its question available while showing answer feedback', () => {
+    const question = { id: 'last', prompt: 'Final question' }
+    assert.deepEqual(getCurrentQuestion({
+        phase: 'finished',
+        currentQuestionId: 'last',
+        questionsById: {},
+        reviewQuestionsById: { last: question },
+    }), { questionId: 'last', question })
+})
 
 test('getHealthBoard preserves generated avatars for bot players', () => {
     const botAvatar = { color: '#60a5fa', face: 2 }

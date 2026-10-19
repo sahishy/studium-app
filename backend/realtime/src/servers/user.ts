@@ -1,3 +1,5 @@
+import { issueAdmission } from "../admission";
+import { matchRegion } from "../network";
 import { Server, type Connection, type ConnectionContext, type WSMessage } from "partyserver";
 import { getGameMode } from "../games/registry";
 import type { PlayerIdentity, QueueEntry } from "../types";
@@ -41,8 +43,8 @@ export class UserServer extends Server<Env> {
         await requestRoom(this.env.PARTY, this.state.partyId, { type: "party.presence", userId: this.name, connected: true });
       }
     }
-    await this.publishOwnActivity();
-    this.emit(connection);
+    await this.emit(connection);
+    this.ctx.waitUntil(this.publishOwnActivity());
   }
 
   /**
@@ -95,7 +97,7 @@ export class UserServer extends Server<Env> {
       if (message.type === "party.leave") await this.leaveParty(identity);
       if (message.type === "party.invite.dismiss") this.dismissInvitation(message.payload as any);
       await this.saveAndBroadcast();
-      if (["queue.join", "game.startSolo", "party.createAndInvite", "party.join", "party.leave"].includes(message.type)) await this.publishOwnActivity();
+      if (["queue.join", "game.startSolo", "party.createAndInvite", "party.join", "party.leave"].includes(message.type)) this.ctx.waitUntil(this.publishOwnActivity());
     } catch (error) {
       send(connection, "error", { message: error instanceof Error ? error.message : "Request failed." }, message.id);
     }
@@ -128,18 +130,23 @@ export class UserServer extends Server<Env> {
       this.pruneInvitations();
     }
     await this.saveAndBroadcast();
-    if (["game.assigned", "game.finished", "party.joined", "party.left"].includes(body.type)) await this.publishOwnActivity();
+    if (["game.assigned", "game.finished", "party.joined", "party.left"].includes(body.type)) this.ctx.waitUntil(this.publishOwnActivity());
     return Response.json(this.state);
   }
 
-  private emit(connection: Connection, id = makeId()) {
+  private async snapshot() {
+    const gameAdmission = this.state.currentRoomId ? await issueAdmission(this.env.GAME_ADMISSION_SECRET, this.name, this.state.currentRoomId) : null;
+    return { ...this.state, gameAdmission };
+  }
+
+  private async emit(connection: Connection, id = makeId()) {
     this.pruneInvitations();
-    send(connection, "session.snapshot", this.state, id);
+    send(connection, "session.snapshot", await this.snapshot(), id);
   }
 
   private async saveAndBroadcast() {
     await this.ctx.storage.put("state", this.state);
-    this.broadcast(JSON.stringify({ id: makeId(), type: "session.snapshot", payload: this.state }));
+    this.broadcast(JSON.stringify({ id: makeId(), type: "session.snapshot", payload: await this.snapshot() }));
   }
 
   private async reconcileCurrentRoom() {
@@ -158,6 +165,7 @@ export class UserServer extends Server<Env> {
   }
 
   private async publishOwnActivity() {
+    if (this.env.STAGING_TEST_ENABLED === "1") return;
     if (this.state.status === "in_room" && this.state.modeId && this.state.currentRoomId) {
       await publishActivities(this.env, [{
         userId: this.name,
@@ -202,6 +210,7 @@ export class UserServer extends Server<Env> {
       players: [{ ...identity, elo: Number(payload.elo) || 0 }],
       averageElo: Number(payload.elo) || 0,
       joinedAt: Date.now(),
+      networkRegion: identity.networkRegion,
     };
     const response = await requestRoom(this.env.MATCHMAKER, payload.modeId, { type: "queue.join", entry, requesterUserId: this.name });
     if (!response.ok) throw new Error(await response.text());
@@ -231,7 +240,7 @@ export class UserServer extends Server<Env> {
     const mode = getGameMode(payload.modeId);
     if (!mode || mode.playerCount !== 1) throw new Error("This is not a solo mode.");
     const gameId = crypto.randomUUID();
-    const response = await requestRoom(this.env.GAME, gameId, { type: "game.initialize", modeId: mode.id, ranked: false, players: [identity] });
+    const response = await requestRoom(this.env.GAME, gameId, { type: "game.initialize", modeId: mode.id, ranked: false, players: [identity], locationHint: matchRegion([identity]) }, matchRegion([identity]));
     if (!response.ok) throw new Error(await response.text());
     this.state.status = "in_room";
     this.state.modeId = mode.id;

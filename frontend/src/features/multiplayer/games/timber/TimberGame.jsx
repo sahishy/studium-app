@@ -3,7 +3,7 @@ import { canChop } from '../../utils/touchControls'
 import { FaArrowLeft, FaArrowRight } from 'react-icons/fa6'
 import { getMatchCountdown } from '../../utils/matchIntroTiming'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getGameServerNow, recordGameVisualCorrection, sendGameMessage, subscribeToGameActionResults, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
+import { getGameServerNow, recordGameVisualCorrection, sendGameMessage, subscribeToGameActionResults, subscribeToGameDisconnect, subscribeToGameSnapshot } from '../../services/realtimeSocketService'
 import QuestionPane from '../sat-classic/components/QuestionPane'
 import MatchEndOverlay from '../sat-classic/components/MatchEndOverlay'
 import { buildMatchEndRounds, countAnsweredQuestions } from '../sat-classic/utils/matchEndUtils'
@@ -346,6 +346,10 @@ const TimberGame = ({ roomId, userId, readOnly = false, spectatorName = null, ma
     const { showToast } = useToast()
 
     useEffect(() => subscribeToGameSnapshot(roomId, setSnapshot), [roomId])
+    useEffect(() => subscribeToGameDisconnect(roomId, () => {
+        setPendingChops([])
+        lastLocalChopAtRef.current = 0
+    }), [roomId])
     useEffect(() => {
         const timer = setInterval(() => setNow(getGameServerNow(roomId)), 50)
         return () => clearInterval(timer)
@@ -420,7 +424,7 @@ const TimberGame = ({ roomId, userId, readOnly = false, spectatorName = null, ma
 
     useEffect(() => {
         if(phase !== 'timber_active') setPendingChops([])
-    }, [phase, state?.timberRoundIndex])
+    }, [phase, state?.timberRoundIndex, state?.inputEpoch])
 
     useEffect(() => {
         const events = snapshot?.events ?? []
@@ -556,14 +560,14 @@ const TimberGame = ({ roomId, userId, readOnly = false, spectatorName = null, ma
         const chopAt = getGameServerNow(roomId)
         const inputs = predictionInputsRef.current
         if(!inputs || !canChop({ active: phase === 'timber_active', readOnly, now: chopAt, stunnedUntil: inputs.stunnedUntil, lastChopAt: lastLocalChopAtRef.current, interval: MIN_CHOP_INTERVAL_MS })) return
+        const clientActionId = `chop_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+        if(!sendGameMessage(roomId, 'game.chop', { clientActionId, side, occurredAt: chopAt }).sent) return
         lastLocalChopAtRef.current = chopAt
         const { hit } = predictChop({ branches: inputs.branches, index: inputs.pendingCount, side })
         inputs.pendingCount += 1
         if(hit) inputs.stunnedUntil = Math.max(inputs.stunnedUntil, chopAt + STUN_MS)
-        const clientActionId = `chop_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
         setPendingChops((current) => [...current, { clientActionId, side, sentAt: chopAt, actualChops: null }])
         shake(hit ? 'impact' : 'subtle')
-        sendGameMessage(roomId, 'game.chop', { clientActionId, side })
     }, [phase, readOnly, roomId, shake])
 
     useEffect(() => {

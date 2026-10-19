@@ -12,6 +12,7 @@ import {
     sendGameMessage,
     subscribeToGameActionResults,
     subscribeToGameReconnect,
+    subscribeToGameDisconnect,
     subscribeToGameSnapshot,
 } from '../../services/realtimeSocketService'
 import QuestionPane from '../sat-classic/components/QuestionPane'
@@ -354,7 +355,8 @@ const PunctureGame = ({ roomId, userId, readOnly = false, spectatorName = null, 
             return next.length === current.length && next.every((entry, index) => entry === current[index]) ? current : next
         })
     }), [roomId])
-    useEffect(() => subscribeToGameReconnect(roomId, () => {
+    useEffect(() => subscribeToGameReconnect(roomId, () => setPlaybackResetKey((value) => value + 1)), [roomId])
+    useEffect(() => subscribeToGameDisconnect(roomId, () => {
         shotLedgerRef.current = []
         setShotLedger([])
         setPlaybackResetKey((value) => value + 1)
@@ -513,8 +515,9 @@ const PunctureGame = ({ roomId, userId, readOnly = false, spectatorName = null, 
             .filter((shot) => shot.hit)
             .reduce((latest, shot) => Math.max(latest, Number(shot.shotAt) + STUN_MS), 0)
         if(shotAt < Math.max(inputs.stunnedUntil, ledgerStunnedUntil) || shotAt - lastOptimisticShotAtRef.current < 50) return
-        lastOptimisticShotAtRef.current = shotAt
         const clientActionId = `shot_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+        if(!sendGameMessage(roomId, 'game.shoot', { clientActionId, shotAt, occurredAt: shotAt }).sent) return
+        lastOptimisticShotAtRef.current = shotAt
         const prediction = predictShot({
             shotAt,
             roundStartedAt: inputs.roundStartedAt,
@@ -536,7 +539,6 @@ const PunctureGame = ({ roomId, userId, readOnly = false, spectatorName = null, 
         shotLedgerRef.current = nextLedger
         setShotLedger(nextLedger)
         shake(prediction.hit ? 'impact' : 'subtle')
-        sendGameMessage(roomId, 'game.shoot', { clientActionId, shotAt })
     }, [roomId, shake])
 
     useEffect(() => {

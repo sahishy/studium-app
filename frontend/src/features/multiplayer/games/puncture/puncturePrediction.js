@@ -18,11 +18,7 @@ export const angularDistance = (first, second) => {
 }
 
 /**
- * @param {number} shotAt - the local synced-clock time the shot was fired (pre-travel).
- * @param {number} roundStartedAt - server's punctureRoundStartedAt.
- * @param {number} rotationTurnsPerSecond
- * @param {number[]} generatedPinAngles - the round's fixed obstacle pins.
- * @param {number[]} attachedPinAngles - this player's own previously-attached pins.
+ * @param {{shotAt: number, roundStartedAt: number, rotationTurnsPerSecond: number, generatedPinAngles?: number[], attachedPinAngles?: number[]}} options
  */
 export const predictShot = ({ shotAt, roundStartedAt, rotationTurnsPerSecond, generatedPinAngles = [], attachedPinAngles = [] }) => {
     const shotImpactAt = shotAt + SHOT_TRAVEL_MS

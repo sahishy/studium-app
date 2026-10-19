@@ -1,6 +1,7 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import SvgBurstParticles from '../../../../../shared/components/svg/SvgBurstParticles'
-import { getPlaybackView, shotKey } from '../punctureShotLedger'
+import { shotKey } from '../punctureShotLedger'
+import { flightProgress, reconcileFlights, visibleFlightPins } from '../puncturePlayback'
 
 const CENTER_X = 160
 const CENTER_Y = 145
@@ -48,27 +49,6 @@ const Pin = ({ angle, color, generated = false }) => {
     )
 }
 
-const ShotPulse = ({ color, target, isMoving, durationMs }) => {
-    const translateX = isMoving ? target.x - CENTER_X : 0
-    const translateY = isMoving ? target.y - 275 : 0
-    return (
-        <g style={{ color }}>
-            <circle
-                cx={CENTER_X}
-                cy='275'
-                r={PIN_BALL_RADIUS}
-                fill='currentColor'
-                stroke='none'
-                style={{
-                    transform: `translate(${translateX}px, ${translateY}px)`,
-                    transition: isMoving ? `transform ${durationMs}ms cubic-bezier(0.4, 0, 1, 1)` : 'none',
-                    willChange: 'transform',
-                }}
-            />
-        </g>
-    )
-}
-
 const UpcomingPinTower = ({ pinsRemaining, isLaunching, isMoving, durationMs, color }) => {
     const visiblePins = Math.min(MAX_VISIBLE_UPCOMING_PINS, Math.max(0, Number(pinsRemaining) || 0))
     const offset = isLaunching && !isMoving ? TOWER_BALL_SPACING : 0
@@ -101,107 +81,62 @@ const PunctureScene = ({
     playerColor = '#60a5fa',
     serverNow = Date.now,
 }) => {
-    const [queue, setQueue] = useState([])
-    const [activeLaunch, setActiveLaunch] = useState(null)
+    const [flights, setFlights] = useState([])
     const [lastImpact, setLastImpact] = useState(null)
     const rotationGroupRef = useRef(null)
+    const flightNodes = useRef(new Map())
+    const flightsRef = useRef(flights)
+    flightsRef.current = flights
     const seenShotKeysRef = useRef(new Set())
     const playbackIdentityRef = useRef(null)
     const timingRef = useRef(null)
     timingRef.current = { roundStartedAt, rotationTurnsPerSecond, slowdownStartedAt }
 
-    // Rotation is the only continuously changing visual. Updating the SVG transform directly
-    // avoids rendering both React scene trees on every animation frame.
+    useLayoutEffect(() => {
+        const identity = `${roundIndex}:${playbackResetKey}`
+        if(playbackIdentityRef.current !== identity) {
+            playbackIdentityRef.current = identity
+            seenShotKeysRef.current = new Set(shotEvents.map(shotKey).filter(Boolean))
+            setFlights([])
+            setLastImpact(null)
+            return
+        }
+        setFlights((current) => reconcileFlights(current, shotEvents, seenShotKeysRef.current, serverNow()))
+    }, [playbackResetKey, roundIndex, shotEvents, serverNow])
+
+    // Every shot follows its original timeline. Rendering a new receipt never restarts a flight.
     useEffect(() => {
-        let frameId = null
+        let frameId
         const animate = () => {
-            const degrees = rotationDegreesAt({ now: serverNow(), ...timingRef.current })
+            const now = serverNow()
+            const degrees = rotationDegreesAt({ now, ...timingRef.current })
             rotationGroupRef.current?.setAttribute('transform', `rotate(${degrees} ${CENTER_X} ${CENTER_Y})`)
+            const completed = []
+            for(const { key, shot } of flightsRef.current) {
+                const impactRotation = rotationDegreesAt({ now: Number(shot.impactAt), ...timingRef.current })
+                const target = pointAt(Number(shot.targetAngle) + impactRotation, PIN_HEAD_DISTANCE)
+                const progress = flightProgress(shot, now)
+                const eased = progress * progress
+                const node = flightNodes.current.get(key)
+                node?.setAttribute('cx', String(CENTER_X + (target.x - CENTER_X) * eased))
+                node?.setAttribute('cy', String(275 + (target.y - 275) * eased))
+                if(progress >= 1) {
+                    completed.push(key)
+                    if(shot.hit) setLastImpact({ key, startedAt: Number(shot.impactAt), target })
+                }
+            }
+            if(completed.length) {
+                flightsRef.current = flightsRef.current.filter(({ key }) => !completed.includes(key))
+                setFlights(flightsRef.current)
+            }
             frameId = window.requestAnimationFrame(animate)
         }
         frameId = window.requestAnimationFrame(animate)
         return () => window.cancelAnimationFrame(frameId)
     }, [serverNow])
 
-    // Receipts append once. Existing receipts on mount/reconnect become the baseline; an ack can
-    // replace a queued prediction by key without restarting its animation.
-    useLayoutEffect(() => {
-        const playbackIdentity = `${roundIndex}:${playbackResetKey}`
-        const currentByKey = new Map(shotEvents.map((shot) => [shotKey(shot), shot]).filter(([key]) => key))
-        if(playbackIdentityRef.current !== playbackIdentity) {
-            playbackIdentityRef.current = playbackIdentity
-            seenShotKeysRef.current = new Set(currentByKey.keys())
-            setQueue([])
-            setActiveLaunch(null)
-            setLastImpact(null)
-            return
-        }
-        setQueue((current) => {
-            let changed = false
-            const retained = current
-                .filter((entry) => currentByKey.has(entry.key))
-                .map((entry) => {
-                    const updatedShot = currentByKey.get(entry.key)
-                    if(updatedShot === entry.shot) return entry
-                    changed = true
-                    return { ...entry, shot: updatedShot }
-                })
-            if(retained.length !== current.length) changed = true
-            const incoming = []
-            shotEvents.forEach((shot) => {
-                const key = shotKey(shot)
-                if(!key || seenShotKeysRef.current.has(key)) return
-                seenShotKeysRef.current.add(key)
-                incoming.push({ key, shot })
-            })
-            return incoming.length || changed ? [...retained, ...incoming] : current
-        })
-        setActiveLaunch((current) => {
-            if(!current) return current
-            const updatedShot = currentByKey.get(current.key)
-            if(!updatedShot) return null
-            return updatedShot === current.shot ? current : { ...current, shot: updatedShot }
-        })
-    }, [playbackResetKey, roundIndex, shotEvents])
-
-    useLayoutEffect(() => {
-        if(activeLaunch || !queue.length) return
-        const [next, ...remaining] = queue
-        const visualImpactAt = serverNow() + LAUNCH_DURATION_MS
-        const rotationAtImpact = rotationDegreesAt({ now: visualImpactAt, ...timingRef.current })
-        const target = pointAt(Number(next.shot.targetAngle) + rotationAtImpact, PIN_HEAD_DISTANCE)
-        setQueue(remaining)
-        setActiveLaunch({ ...next, target, visualImpactAt, isMoving: false, durationMs: LAUNCH_DURATION_MS })
-    }, [activeLaunch, queue, serverNow])
-
-    // Completion depends only on the launch key. Ack replacement cannot cancel this timer and
-    // strand a pin between the tower and wheel.
-    useLayoutEffect(() => {
-        const launchKey = activeLaunch?.key
-        if(!launchKey) return () => {}
-        let timeoutId = null
-        const frameId = window.requestAnimationFrame(() => {
-            setActiveLaunch((current) => current?.key === launchKey ? { ...current, isMoving: true } : current)
-            timeoutId = window.setTimeout(() => {
-                setActiveLaunch((current) => {
-                    if(current?.key !== launchKey) return current
-                    if(current.shot.hit) setLastImpact({ key: launchKey, startedAt: serverNow(), target: current.target })
-                    return null
-                })
-            }, LAUNCH_DURATION_MS)
-        })
-        return () => {
-            window.cancelAnimationFrame(frameId)
-            if(timeoutId != null) window.clearTimeout(timeoutId)
-        }
-    }, [activeLaunch?.key, serverNow])
-
-    const { displayPinsRemaining, visibleAttachedPinAngles } = getPlaybackView({
-        pinsRemaining,
-        attachedPinAngles,
-        queuedShots: queue.map((entry) => entry.shot),
-        activeShot: activeLaunch?.shot,
-    })
+    const displayPinsRemaining = Math.max(0, Number(pinsRemaining) || 0)
+    const visibleAttachedPinAngles = visibleFlightPins(attachedPinAngles, flights)
 
     return (
         <svg className='absolute inset-0 h-full w-full' viewBox='0 0 320 320' role='img' aria-label='Rotating Puncture circle' preserveAspectRatio='xMidYMid meet'>
@@ -215,14 +150,15 @@ const PunctureScene = ({
 
             <UpcomingPinTower
                 pinsRemaining={displayPinsRemaining}
-                isLaunching={Boolean(activeLaunch)}
-                isMoving={Boolean(activeLaunch?.isMoving)}
-                durationMs={activeLaunch?.durationMs ?? LAUNCH_DURATION_MS}
+                isLaunching={false}
+                isMoving={false}
+                durationMs={LAUNCH_DURATION_MS}
                 color={playerColor}
             />
-            {activeLaunch ? (
-                <ShotPulse color={playerColor} target={activeLaunch.target} isMoving={Boolean(activeLaunch.isMoving)} durationMs={activeLaunch.durationMs} />
-            ) : null}
+            {flights.map(({ key }) => (
+                <circle key={key} data-shot-key={key} ref={(node) => { if(node) flightNodes.current.set(key, node); else flightNodes.current.delete(key) }}
+                    cx={CENTER_X} cy={275} r={PIN_BALL_RADIUS} fill={playerColor} stroke='none' />
+            ))}
             <SvgBurstParticles
                 burstKey={lastImpact?.key ?? 0}
                 startAt={lastImpact?.startedAt}

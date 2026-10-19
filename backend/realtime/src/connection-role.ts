@@ -11,6 +11,7 @@ const SPECTATOR_MESSAGE_TYPES = new Set([
   'game.resync',
   'system.clockPing',
   'system.rttReport',
+  'system.metricsReport',
   'chat.send',
   'game.chat',
 ])

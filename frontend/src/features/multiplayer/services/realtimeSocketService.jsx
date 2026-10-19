@@ -1,20 +1,22 @@
 import PartySocket from 'partysocket'
+import { GameConnection } from './gameConnection'
 import { getModeStats } from '../../profile/utils/statsUtils'
 import { auth } from '../../../lib/firebase'
 import { createServerClock, monotonicNow } from './serverClock'
 import { appendById, applyRoomPatch, applyStatePatch } from './gameViewPatch'
-import { createRealtimeMetrics, recordActionAck, recordActionSent, recordVisualCorrection, summary as summarizeRealtimeMetrics } from './realtimeMetrics'
+import { createRealtimeMetrics, recordActionAck, recordActionSent, recordVisualCorrection, recordAuthoritativeUpdate, recordVisualFrame, recordLocalVisual, summary as summarizeRealtimeMetrics } from './realtimeMetrics'
 
 const host = import.meta.env.VITE_REALTIME_HOST || 'localhost:8787'
 // v3: the server sends a generic room/players diff (game.update) instead of per-mode hand-rolled
 // delta messages, and coalesces broadcasts instead of sending one per mutation.
-const PROTOCOL_VERSION = 3
+const PROTOCOL_VERSION = 4
 const CHANNEL_CLOSE_GRACE_MS = 5_000
 const CLOCK_REFRESH_MS = 60_000
 const RESYNC_TIMEOUT_MS = 2_000
 let currentProfile = null
 let currentUserStats = null
 const gameChannels = new Map()
+const admissions = new Map()
 
 const configureRealtimeProfile = (profile, userStats = null) => {
     currentProfile = profile
@@ -56,7 +58,7 @@ const buildQuery = async () => {
     }
 }
 
-const createSocket = ({ party, room }) => new PartySocket({ host, party, room, query: buildQuery, maxRetries: 20 })
+const createSocket = ({ party, room }) => new PartySocket({ host, party, room, query: async () => ({ ...await buildQuery(), ...(party === 'game' && admissions.has(room) ? { admission: admissions.get(room) } : {}) }), maxRetries: 20 })
 
 const message = (type, payload = {}) => JSON.stringify({
     id: `${type}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -64,7 +66,15 @@ const message = (type, payload = {}) => JSON.stringify({
     payload,
 })
 
-const notify = (channel) => channel.listeners.forEach((listener) => listener(channel.snapshot))
+const notifyConnection = (channel) => channel.connectionListeners.forEach((listener) => listener(channel.control.state))
+
+const notify = (channel, full = false) => {
+    channel.control.receivedSnapshot(channel.snapshot, full)
+    recordAuthoritativeUpdate(channel.metrics, channel.snapshot, auth.currentUser?.uid || currentProfile?.uid, monotonicNow())
+    channel.listeners.forEach((listener) => listener(channel.snapshot))
+    window.requestAnimationFrame(() => recordVisualFrame(channel.metrics, monotonicNow()))
+    if(!channel.control.freshSnapshot) requestResync(channel)
+}
 
 // Debounced, never latched. The previous boolean was cleared ONLY on receiving a snapshot, so a
 // socket that dropped before the snapshot arrived left it stuck true forever - every later update
@@ -74,6 +84,7 @@ const requestResync = (channel) => {
     if(channel.socket.readyState !== WebSocket.OPEN) return
     const now = Date.now()
     if(channel.resyncRequestedAt && now - channel.resyncRequestedAt < RESYNC_TIMEOUT_MS) return
+    channel.control.beginSync()
     channel.resyncRequestedAt = now
     channel.metrics.resyncs += 1
     channel.socket.send(message('game.resync'))
@@ -105,24 +116,35 @@ const applyUpdate = (channel, incoming) => {
     notify(channel)
 }
 
+const finishClockWindow = (channel, samplingId) => {
+    if(channel.samplingId !== samplingId || !channel.sampling) return
+    channel.sampling = false
+    const rttMs = channel.clock.getBestRtt()
+    if(rttMs != null && channel.socket.readyState === WebSocket.OPEN) {
+        channel.control.receivedClock()
+        channel.socket.send(message('system.rttReport', { rttMs: Math.round(rttMs), jitterMs: Math.round(channel.clock.getJitter()) }))
+    }
+}
 const synchronizeClock = (channel) => {
-    if(channel.socket.readyState !== WebSocket.OPEN) return
+    if(channel.socket.readyState !== WebSocket.OPEN || channel.sampling) return
+    channel.lastClockRefresh = Date.now()
+    channel.sampling = true
+    channel.pongs = 0
+    const samplingId = ++channel.samplingId
     channel.clock.beginSamplingWindow()
     ;[0, 100, 250].forEach((delay) => {
         const timer = window.setTimeout(() => {
             channel.clockTimers.delete(timer)
-            if(channel.socket.readyState !== WebSocket.OPEN) return
-            channel.socket.send(message('system.clockPing', { clientWallTime: Date.now(), clientMonotonic: monotonicNow() }))
+            if(channel.socket.readyState !== WebSocket.OPEN || channel.samplingId !== samplingId) return
+            channel.socket.send(message('system.clockPing', { samplingId, clientWallTime: Date.now(), clientMonotonic: monotonicNow() }))
         }, delay)
         channel.clockTimers.add(timer)
     })
-    const rttTimer = window.setTimeout(() => {
-        channel.clockTimers.delete(rttTimer)
-        if(channel.socket.readyState !== WebSocket.OPEN) return
-        const rttMs = channel.clock.getBestRtt()
-        if(rttMs != null) channel.socket.send(message('system.rttReport', { rttMs: Math.round(rttMs) }))
-    }, 600)
-    channel.clockTimers.add(rttTimer)
+    const timer = window.setTimeout(() => {
+        channel.clockTimers.delete(timer)
+        finishClockWindow(channel, samplingId)
+    }, 1_500)
+    channel.clockTimers.add(timer)
 }
 
 const getGameChannel = (roomId) => {
@@ -137,25 +159,51 @@ const getGameChannel = (roomId) => {
         listeners: new Set(),
         actionResultListeners: new Set(),
         reconnectListeners: new Set(),
+        disconnectListeners: new Set(),
+        connectionListeners: new Set(),
+        pendingLeaveSince: null,
         errorListeners: new Set(),
         closeTimer: null,
         clock: createServerClock(),
         clockTimers: new Set(),
         clockInterval: null,
         hasOpened: false,
+        samplingId: 0, sampling: false, pongs: 0,
+        lastClockRefresh: 0,
+        lastMetricsReport: Date.now(),
         metrics: createRealtimeMetrics(),
     }
+    channel.control = new GameConnection({
+        isOpen: () => socket.readyState === WebSocket.OPEN,
+        now: () => channel.clock.now(),
+        userId: () => auth.currentUser?.uid || currentProfile?.uid,
+        transmit: (type, payload) => {
+            const wire = message(type, payload), id = JSON.parse(wire).id
+            if(['game.answer', 'game.chop', 'game.shoot', 'game.flutterInput'].includes(type)) recordActionSent(channel.metrics, id, type, monotonicNow(), payload)
+            socket.send(wire)
+            return id
+        },
+        onReady: () => { notifyConnection(channel); channel.reconnectListeners.forEach((listener) => listener(channel.snapshot)) },
+        onReset: () => { notifyConnection(channel); channel.disconnectListeners.forEach((listener) => listener()) },
+    })
     socket.addEventListener('message', (event) => {
         try {
             const incoming = JSON.parse(event.data)
             const receivedAt = monotonicNow()
             if(incoming.type === 'system.clockPong') {
+                if(!channel.sampling || incoming.payload?.samplingId != null && incoming.payload.samplingId !== channel.samplingId) return
                 channel.clock.recordPong(incoming.payload, receivedAt)
+                channel.pongs += 1
+                if(channel.pongs >= 3) finishClockWindow(channel, channel.samplingId)
                 return
             }
             if(incoming.type === 'game.actionResult') {
                 recordActionAck(channel.metrics, incoming.id, incoming.payload, receivedAt)
                 channel.actionResultListeners.forEach((listener) => listener(incoming.payload ?? {}))
+                if(incoming.payload?.accepted === false && ['stale_epoch', 'stale_round', 'stale_sequence', 'invalid_time'].includes(incoming.payload.reason)) {
+                    requestResync(channel)
+                    synchronizeClock(channel)
+                }
                 return
             }
             if(incoming.type === 'game.ack') {
@@ -173,7 +221,7 @@ const getGameChannel = (roomId) => {
                 channel.snapshot = incoming.payload
                 channel.revision = Number(incoming.payload?.revision ?? incoming.revision) || 0
                 channel.resyncRequestedAt = null
-                notify(channel)
+                notify(channel, true)
                 return
             }
             if(incoming.type === 'game.update') applyUpdate(channel, incoming)
@@ -184,27 +232,47 @@ const getGameChannel = (roomId) => {
     socket.addEventListener('open', () => {
         const reconnecting = channel.hasOpened
         channel.hasOpened = true
+        channel.control.opened()
+        notifyConnection(channel)
         channel.resyncRequestedAt = null
         synchronizeClock(channel)
         if(reconnecting) {
             requestResync(channel)
-            channel.reconnectListeners.forEach((listener) => listener())
         }
     })
     socket.addEventListener('close', (event) => {
+        channel.control.closed()
+        channel.clockTimers.forEach((timer) => clearTimeout(timer))
+        channel.clockTimers.clear()
+        channel.samplingId += 1
+        channel.sampling = false
         // Reset the resync gate so a reconnect can always ask again, and drop the revision base:
         // applying a post-reconnect delta on top of pre-disconnect state would corrupt it silently,
         // which is worse than the freeze this replaces.
         channel.resyncRequestedAt = null
         channel.revision = -1
         if(event.code === 1008) {
+            channel.control.pendingLeave = false;
             channel.error = new Error(event.reason || 'This match is no longer available.')
             channel.errorListeners.forEach((listener) => listener(channel.error))
         }
     })
-    channel.clockInterval = window.setInterval(() => synchronizeClock(channel), CLOCK_REFRESH_MS)
+    channel.clockInterval = window.setInterval(() => {
+        const active = /^(timber|puncture|flutter)_active$/.test(channel.snapshot?.room?.state?.phase || '')
+        const interval = active ? 15_000 : CLOCK_REFRESH_MS
+        if(Date.now() - channel.lastClockRefresh >= interval) {
+            channel.lastClockRefresh = Date.now()
+            synchronizeClock(channel)
+        }
+        if(socket.readyState === WebSocket.OPEN && Date.now() - channel.lastMetricsReport >= 30_000) {
+            channel.lastMetricsReport = Date.now()
+            socket.send(message('system.metricsReport', { ...getGameLatencyMetrics(roomId), build: import.meta.env.VITE_BUILD_ID || 'local', protocolVersion: PROTOCOL_VERSION }))
+        }
+    }, 15_000)
+    channel.onVisibility = () => { if(!document.hidden) synchronizeClock(channel) }
+    document.addEventListener('visibilitychange', channel.onVisibility)
     gameChannels.set(roomId, channel)
-    if(import.meta.env.DEV) window.__studiumLatency = () => Object.fromEntries([...gameChannels.keys()].map((id) => [id, getGameLatencyMetrics(id)]))
+    if(import.meta.env.DEV || new URLSearchParams(window.location.search).has('realtimeDiagnostics')) window.__studiumLatency = () => Object.fromEntries([...gameChannels.keys()].map((id) => [id, getGameLatencyMetrics(id)]))
     return channel
 }
 
@@ -230,6 +298,30 @@ const subscribeToGameReconnect = (roomId, listener) => {
     return () => channel.reconnectListeners.delete(listener)
 }
 
+const subscribeToGameConnection = (roomId, listener) => {
+    const channel = getGameChannel(roomId)
+    channel.connectionListeners.add(listener)
+    listener(channel.control.state)
+    return () => channel.connectionListeners.delete(listener)
+}
+
+const subscribeToGameDisconnect = (roomId, listener) => {
+    const channel = getGameChannel(roomId)
+    channel.disconnectListeners.add(listener)
+    return () => channel.disconnectListeners.delete(listener)
+}
+
+const preconnectGame = (roomId, admission = null) => {
+    if(!roomId) return
+    if(admission) admissions.set(roomId, admission)
+    const channel = getGameChannel(roomId)
+    if(channel.closeTimer) clearTimeout(channel.closeTimer)
+    channel.closeTimer = window.setTimeout(() => {
+        channel.closeTimer = null
+        if(!channel.listeners.size) closeGameChannel(roomId)
+    }, 15_000)
+}
+
 const subscribeToGameErrors = (roomId, listener) => {
     const channel = getGameChannel(roomId)
     channel.errorListeners.add(listener)
@@ -250,20 +342,20 @@ const requestGameResync = (roomId) => {
 
 const sendGameMessage = (roomId, type, payload = {}) => {
     const channel = getGameChannel(roomId)
-    const socket = channel.socket
-    const wire = message(type, payload)
-    const id = JSON.parse(wire).id
-    const sendNow = () => {
-        if(type.startsWith('game.') && !['game.resync', 'game.subscribe', 'game.leave'].includes(type)) recordActionSent(channel.metrics, id, type, monotonicNow())
-        socket.send(wire)
+    const started = monotonicNow()
+    const result = channel.control.send(type, payload)
+    if(type === 'game.leave' && !result.sent) channel.pendingLeaveSince ??= Date.now()
+    if(['game.chop', 'game.shoot', 'game.flutterInput'].includes(type)) {
+        if(result.sent) window.requestAnimationFrame(() => recordLocalVisual(channel.metrics, monotonicNow() - started))
+        else channel.metrics.droppedInputs += 1
     }
-    if(socket.readyState === WebSocket.OPEN) sendNow()
-    else socket.addEventListener('open', sendNow, { once: true })
+    if(!result.sent && type === 'chat.send') throw new Error('Chat is reconnecting. Please try again.')
+    return result
 }
 
 const getGameLatencyMetrics = (roomId) => {
     const channel = gameChannels.get(roomId)
-    return channel ? summarizeRealtimeMetrics(channel.metrics) : null
+    return channel ? { ...summarizeRealtimeMetrics(channel.metrics), connectionState: channel.control.state, rttMs: channel.clock.getBestRtt(), jitterMs: channel.clock.getJitter() } : null
 }
 const recordGameVisualCorrection = (roomId, magnitude = 1) => {
     const channel = gameChannels.get(roomId)
@@ -275,11 +367,17 @@ const getGameServerNow = (roomId) => gameChannels.get(roomId)?.clock.now() ?? Da
 const closeGameChannel = (roomId) => {
     const channel = gameChannels.get(roomId)
     if(!channel) return
+    if(channel.control.pendingLeave && Date.now() - channel.pendingLeaveSince < 35_000) {
+        channel.closeTimer = window.setTimeout(() => closeGameChannel(roomId), CHANNEL_CLOSE_GRACE_MS)
+        return
+    }
     if(channel.closeTimer) clearTimeout(channel.closeTimer)
     if(channel.clockInterval) clearInterval(channel.clockInterval)
     channel.clockTimers.forEach((timer) => clearTimeout(timer))
+    document.removeEventListener('visibilitychange', channel.onVisibility)
     channel.socket.close()
     gameChannels.delete(roomId)
+    admissions.delete(roomId)
 }
 
 export {
@@ -298,5 +396,8 @@ export {
     subscribeToGameActionResults,
     subscribeToGameErrors,
     subscribeToGameReconnect,
+    subscribeToGameDisconnect,
+    subscribeToGameConnection,
+    preconnectGame,
     subscribeToGameSnapshot,
 }

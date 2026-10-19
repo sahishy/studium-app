@@ -1,3 +1,4 @@
+import { matchRegion } from "../network";
 import { Server, type Connection, type ConnectionContext, type WSMessage } from "partyserver";
 import { appendChatMessage, appendSystemChatMessage, type ChatMessage } from "../chat";
 import { getGameMode } from "../games/registry";
@@ -172,7 +173,7 @@ export class SocialPartyServer extends Server<Env> {
     await this.saveAndBroadcast();
     const gameId = crypto.randomUUID();
     try {
-      const response = await requestRoom(this.env.GAME, gameId, { type: "game.initialize", modeId: mode.id, ranked: false, players: this.state.members });
+      const response = await requestRoom(this.env.GAME, gameId, { type: "game.initialize", modeId: mode.id, ranked: false, players: this.state.members, locationHint: matchRegion(this.state.members) }, matchRegion(this.state.members));
       if (!response.ok) throw new Error(await response.text());
       await Promise.all(this.state.members.map((member) => requestRoom(this.env.USER, member.userId, { type: "game.assigned", gameId, modeId: mode.id })));
       this.clearReady();

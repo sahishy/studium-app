@@ -1,3 +1,5 @@
+import { ingressRegion, isNetworkRegion, type NetworkRegion } from "./network";
+import { verifyAdmission } from "./admission";
 import type { Connection, Server, WSMessage } from "partyserver";
 import type { ConnectionState, PlayerIdentity, RealtimeMessage } from "./types";
 
@@ -48,11 +50,16 @@ export const verifyConnection = async (request: Request, env: Env) => {
     placementByMode: parseJson(url.searchParams.get("placementByMode"), {}),
   };
 
-  if (env.BACKEND_API_BASE_URL) {
+  const parts = url.pathname.split("/").filter(Boolean);
+  const roomId = parts[2] || "";
+  const admissionOnly = parts[1] === "game" && await verifyAdmission(env.GAME_ADMISSION_SECRET, url.searchParams.get("admission") || "", userId, roomId);
+  if (env.STAGING_TEST_ENABLED === "1" && !admissionOnly) return new Response("Unauthorized", { status: 401 });
+  if (env.BACKEND_API_BASE_URL && !admissionOnly) {
     if (!token) return new Response("Unauthorized", { status: 401 });
     const response = await fetch(`${env.BACKEND_API_BASE_URL}/realtime/auth/verify`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5_000),
     });
     if (!response.ok) {
       const detail = (await response.text()).slice(0, 500);
@@ -65,6 +72,8 @@ export const verifyConnection = async (request: Request, env: Env) => {
   }
 
   const headers = new Headers(request.headers);
+  headers.set("X-Admission-Only", admissionOnly ? "1" : "0");
+  headers.set("X-Network-Region", ingressRegion(request));
   headers.set("X-User-Id", identity.userId);
   headers.set("X-Display-Name", encodeURIComponent(identity.displayName));
   headers.set("X-Profile-Picture", encodeURIComponent(JSON.stringify(identity.profilePicture ?? null)));
@@ -93,6 +102,8 @@ export const stateFromRequest = (request: Request): ConnectionState => ({
   level: Math.max(1, Number(request.headers.get("X-Level")) || 1),
   eloByMode: parseJson(decodeURIComponent(request.headers.get("X-Elo-By-Mode") || "{}"), {}),
   placementByMode: parseJson(decodeURIComponent(request.headers.get("X-Placement-By-Mode") || "{}"), {}),
+  networkRegion: isNetworkRegion(request.headers.get("X-Network-Region")) ? request.headers.get("X-Network-Region") as NetworkRegion : undefined,
+  admissionOnly: request.headers.get("X-Admission-Only") === "1",
   connectedAt: Date.now(),
   protocolVersion: Math.max(1, Number(new URL(request.url).searchParams.get("protocolVersion")) || 1),
 });
@@ -101,10 +112,13 @@ export const requestRoom = <T extends Server<Env>>(
   namespace: DurableObjectNamespace<T>,
   roomId: string,
   body: unknown,
-) => namespace.getByName(roomId).fetch(new Request(`https://internal.invalid/${encodeURIComponent(roomId)}`, {
+  locationHint?: NetworkRegion,
+  timeoutMs = 10_000,
+) => namespace.get(namespace.idFromName(roomId), locationHint ? { locationHint } : undefined).fetch(new Request(`https://internal.invalid/${encodeURIComponent(roomId)}`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(body),
+  signal: AbortSignal.timeout(timeoutMs),
 }));
 
 export type PublicActivity =
@@ -135,6 +149,7 @@ export const publishActivities = async (env: Env, updates: Array<{ userId: strin
         Authorization: `Bearer ${env.REALTIME_ACTIVITY_SECRET}`,
       },
       body: JSON.stringify({ updates }),
+      signal: AbortSignal.timeout(5_000),
     });
     if (response.ok) return true;
 

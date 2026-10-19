@@ -1,3 +1,4 @@
+import { matchRegion } from "../network";
 import { Server } from "partyserver";
 import { getGameMode } from "../games/registry";
 import { botFillAt, createBotFillAt, findBotFillEntries, findMatch, nextEloWideningAt } from "../matchmaking";
@@ -84,7 +85,7 @@ export class MatchmakerServer extends Server<Env> {
       const selectedIds = new Set(selected.map((entry) => entry.id));
       const players = selected.flatMap((entry) => entry.players);
       const gameId = crypto.randomUUID();
-      const initialized = await requestRoom(this.env.GAME, gameId, { type: "game.initialize", modeId: mode.id, ranked: mode.ranked, players, introDelayMs: MATCH_JOIN_DELAY_MS });
+      const initialized = await requestRoom(this.env.GAME, gameId, { ...{ type: "game.initialize", modeId: mode.id, ranked: mode.ranked, players, introDelayMs: MATCH_JOIN_DELAY_MS }, locationHint: matchRegion(players) }, matchRegion(players));
       if (!initialized.ok) throw new Error((await initialized.text()) || "Unable to initialize the game.");
       this.queue = this.queue.filter((entry) => !selectedIds.has(entry.id));
       await this.ctx.storage.put("queue", this.queue);
@@ -101,7 +102,7 @@ export class MatchmakerServer extends Server<Env> {
         const bot = createBotIdentity(human, mode.id, `${entry.id}:${entry.joinedAt}`);
         const players = [human, bot];
         const gameId = crypto.randomUUID();
-        const initialized = await requestRoom(this.env.GAME, gameId, { type: "game.initialize", modeId: mode.id, ranked: mode.ranked, players, introDelayMs: MATCH_JOIN_DELAY_MS });
+        const initialized = await requestRoom(this.env.GAME, gameId, { ...{ type: "game.initialize", modeId: mode.id, ranked: mode.ranked, players, introDelayMs: MATCH_JOIN_DELAY_MS }, locationHint: matchRegion(players) }, matchRegion(players));
         if (!initialized.ok) continue;
         this.queue = this.queue.filter((queued) => queued.id !== entry.id);
         await this.ctx.storage.put("queue", this.queue);
