@@ -7,9 +7,7 @@ import ProgressBar from '../../../shared/components/ui/ProgressBar'
 import { useUserStats } from '../../profile/contexts/UserStatsContext'
 import { getModeStats, getRankInfoFromElo } from '../../profile/utils/statsUtils'
 import { useMultiplayer } from '../contexts/MultiplayerContext'
-import { useToast } from '../../../shared/contexts/ToastContext'
 import { useModal } from '../../../shared/contexts/ModalContext'
-import MatchmakingToast from '../components/toasts/MatchmakingToast'
 import { HiChevronDoubleUp } from 'react-icons/hi'
 import { FaTrophy, FaChartSimple } from 'react-icons/fa6'
 import {
@@ -18,7 +16,6 @@ import {
     GAME_MODES,
     getModeById,
     getQueueState,
-    MATCH_JOIN_DELAY_SECONDS,
 } from '../utils/multiplayerUtils'
 import GameModeTab from '../components/GameModeTab'
 import GameModeThumbnail from '../components/GameModeThumbnail'
@@ -71,9 +68,8 @@ const Play = () => {
     const { profile } = useOutletContext()
     const navigate = useNavigate()
     const { userStats } = useUserStats()
-    const { matchmaking, session, error: realtimeError, joinQueue, leaveQueue, findMatch, startSoloGame, createPartyAndInvite, joinParty, leaveParty } = useMultiplayer()
+    const { session, error: realtimeError, joinQueue, findMatch, startSoloGame, createPartyAndInvite, joinParty, leaveParty } = useMultiplayer()
     const { friends } = useFriends()
-    const { toastStack, showToast, updateToast, hideToast } = useToast()
     const { openModal, closeModal } = useModal()
     const { active: tutorial } = useOnboarding()
 
@@ -100,10 +96,7 @@ const Play = () => {
     const scrollRef = useRef(null)
     const [activePlayTab, setActivePlayTab] = useState('lobby')
     const showModePicker = activePlayTab === 'modes' && !tutorial
-    const [matchCountdownSeconds, setMatchCountdownSeconds] = useState(MATCH_JOIN_DELAY_SECONDS)
     const [isQueueingOptimistic, setIsQueueingOptimistic] = useState(false)
-    const matchmakingToastIdRef = useRef(null)
-    const autoJoinRoomIdRef = useRef(null)
     const partySocketRef = useRef(null)
     const [party, setParty] = useState(null)
     const [partyError, setPartyError] = useState(null)
@@ -274,77 +267,6 @@ const Play = () => {
         }
     }, [queueStateForMode])
 
-    useEffect(() => {
-        if (!isSelectedModeMultiplayer || queueStateForMode === 'idle') {
-            return
-        }
-
-        const existingMatchmakingToasts = toastStack.filter((toastEntry) => toastEntry.component === MatchmakingToast)
-
-        if (existingMatchmakingToasts.length === 0) {
-            return
-        }
-
-        const currentToastStillExists = existingMatchmakingToasts.some((toastEntry) => toastEntry.id === matchmakingToastIdRef.current)
-        if (!currentToastStillExists) {
-            matchmakingToastIdRef.current = existingMatchmakingToasts[0].id
-        }
-
-        existingMatchmakingToasts.forEach((toastEntry) => {
-            if (toastEntry.id !== matchmakingToastIdRef.current) {
-                hideToast(toastEntry.id, { force: true })
-            }
-        })
-    }, [isSelectedModeMultiplayer, queueStateForMode, toastStack, hideToast])
-
-    const handleLeaveQueue = async () => {
-        await leaveQueue()
-
-        if (matchmakingToastIdRef.current) {
-            hideToast(matchmakingToastIdRef.current, { force: true })
-            matchmakingToastIdRef.current = null
-        }
-    }
-
-    const showOrUpdateMatchmakingToast = (state) => {
-        if (!matchmakingToastIdRef.current) {
-            const existingMatchmakingToasts = toastStack.filter((toastEntry) => toastEntry.component === MatchmakingToast)
-            if (existingMatchmakingToasts.length > 0) {
-                matchmakingToastIdRef.current = existingMatchmakingToasts[0].id
-            }
-        }
-
-        if (matchmakingToastIdRef.current) {
-            const toastExists = toastStack.some((toastEntry) => toastEntry.id === matchmakingToastIdRef.current)
-            if (!toastExists) {
-                matchmakingToastIdRef.current = null
-            }
-        }
-
-        const toastProps = {
-            state,
-            queuedAt: matchmaking?.queuedAt,
-            matchCountdownSeconds,
-            onLeaveQueue: handleLeaveQueue,
-        }
-
-        if (!matchmakingToastIdRef.current) {
-            const toastId = showToast({
-                component: MatchmakingToast,
-                props: toastProps,
-                duration: null,
-            })
-
-            matchmakingToastIdRef.current = toastId
-            return
-        }
-
-        updateToast(matchmakingToastIdRef.current, {
-            props: toastProps,
-            duration: null,
-        })
-    }
-
     const handlePlayClick = async () => {
 
         if (!profile?.uid || effectiveQueueState !== 'idle') {
@@ -380,62 +302,6 @@ const Play = () => {
             throw error
         }
     }
-
-    // The matchmaking toast lives in a provider above this screen, so it outlives the screen.
-    // Hiding it only on the countdown path left it on top of the match whenever something else
-    // navigated first - a session redirect straight into an already-open room, for instance.
-    useEffect(() => () => {
-        if (matchmakingToastIdRef.current) {
-            hideToast(matchmakingToastIdRef.current, { force: true })
-            matchmakingToastIdRef.current = null
-        }
-    }, [hideToast])
-
-    useEffect(() => {
-        if (!isSelectedModeMultiplayer || queueStateForMode !== 'matched' || !session?.currentRoomId) {
-            autoJoinRoomIdRef.current = null
-            setMatchCountdownSeconds(MATCH_JOIN_DELAY_SECONDS)
-            return
-        }
-
-        if (autoJoinRoomIdRef.current !== session.currentRoomId) {
-            autoJoinRoomIdRef.current = session.currentRoomId
-            setMatchCountdownSeconds(MATCH_JOIN_DELAY_SECONDS)
-        }
-    }, [isSelectedModeMultiplayer, queueStateForMode, session?.currentRoomId])
-
-    useEffect(() => {
-        if (!isSelectedModeMultiplayer || queueStateForMode !== 'matched' || !session?.currentRoomId) {
-            return
-        }
-
-        if (matchCountdownSeconds <= 0) {
-            if (matchmakingToastIdRef.current) {
-                hideToast(matchmakingToastIdRef.current, { force: true })
-                matchmakingToastIdRef.current = null
-            }
-            navigate(`/play/game/${session.currentRoomId}`)
-            return
-        }
-
-        const timeoutId = setTimeout(() => {
-            setMatchCountdownSeconds((previous) => previous - 1)
-        }, 1000)
-
-        return () => clearTimeout(timeoutId)
-    }, [isSelectedModeMultiplayer, queueStateForMode, session?.currentRoomId, matchCountdownSeconds, navigate, hideToast])
-
-    useEffect(() => {
-        if (!isSelectedModeMultiplayer || queueStateForMode === 'idle') {
-            if (matchmakingToastIdRef.current) {
-                hideToast(matchmakingToastIdRef.current, { force: true })
-                matchmakingToastIdRef.current = null
-            }
-            return
-        }
-
-        showOrUpdateMatchmakingToast(queueStateForMode === 'matched' ? 'matched' : 'queueing')
-    }, [isSelectedModeMultiplayer, queueStateForMode, matchCountdownSeconds, matchmaking?.queuedAt])
 
     return (
         <div
