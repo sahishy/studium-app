@@ -131,7 +131,6 @@ const saveRealtimeResult = async (result = {}) => {
                     outcome,
                     opponentElo: Number(opponentEloByUserId?.[userId]) || 0,
                     performance: performanceScore({ performance, roundsPlayed: result.roundsPlayed }) ?? 0.5,
-                    roundsPlayed: result.roundsPlayed,
                 })
                 nextModeStats = rating.nextModeStats
                 eloDeltaByUserId[userId] = rating.eloDelta

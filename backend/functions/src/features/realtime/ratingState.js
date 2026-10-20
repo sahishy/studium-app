@@ -7,7 +7,7 @@ export const getModeElo = (stats = {}) => {
     return Math.max(1, Number(stats.elo) || 0)
 }
 
-export const buildRankedResult = ({ current = {}, outcome, opponentElo, performance = 0.5, roundsPlayed }) => {
+export const buildRankedResult = ({ current = {}, outcome, opponentElo, performance = 0.5 }) => {
     const gamesPlayed = (Number(current.gamesPlayed) || 0) + 1
     if(!current.placed) {
         const placementLog = [
@@ -30,7 +30,7 @@ export const buildRankedResult = ({ current = {}, outcome, opponentElo, performa
         }
     }
     const selfElo = getModeElo(current)
-    const delta = getRankedEloDelta({ isWin: outcome === 'win', isLoss: outcome === 'loss', roundsPlayed, selfElo, opponentElo })
+    const delta = getRankedEloDelta({ isWin: outcome === 'win', isLoss: outcome === 'loss', selfElo, opponentElo })
     const elo = Math.max(1, selfElo + delta)
     return {
         nextModeStats: { ...current, gamesPlayed, elo, peakElo: Math.max(Number(current.peakElo) || 0, elo) },
