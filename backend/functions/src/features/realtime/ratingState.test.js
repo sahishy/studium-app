@@ -2,6 +2,31 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { buildRankedResult, getModeElo } from './ratingState.js'
 
+test('ranked wins and losses count fully even for an immediate forfeit', () => {
+    for(const roundsPlayed of [undefined, 0, 1, 2, 3, 5, 6, 10]) {
+        for(const [outcome, expectedDelta] of [['win', 20], ['loss', -20], ['draw', 0]]) {
+            const result = buildRankedResult({
+                current: { placed: true, elo: 500, peakElo: 500, gamesPlayed: 3 },
+                outcome, opponentElo: 500, roundsPlayed,
+            })
+            assert.equal(result.eloDelta, expectedDelta)
+            assert.equal(result.nextModeStats.elo, 500 + expectedDelta)
+            assert.equal(result.nextModeStats.gamesPlayed, 4)
+            assert.equal(result.nextModeStats.peakElo, Math.max(500, 500 + expectedDelta))
+        }
+    }
+})
+
+test('full ranked results still account for opponent strength', () => {
+    const delta = (outcome, opponentElo) => buildRankedResult({
+        current: { placed: true, elo: 500 }, outcome, opponentElo, roundsPlayed: 0,
+    }).eloDelta
+    assert.equal(delta('win', 900), 36)
+    assert.equal(delta('loss', 900), -4)
+    assert.equal(delta('win', 100), 4)
+    assert.equal(delta('loss', 100), -36)
+})
+
 test('placements clear an old provisional rating, award no deltas, and assign a rank only on completion', () => {
     let current = { elo: 64, peakElo: 64, placed: false }
     for(let index = 0; index < 3; index += 1) {

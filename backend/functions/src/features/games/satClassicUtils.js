@@ -7,7 +7,7 @@ const SAT_CLASSIC_MIN_TIME_MULTIPLIER = 0.35
 const SAT_CLASSIC_TIME_SCALE_SEC = 8
 const ANSWERED_FIRST_MULTIPLIER = 1.5
 
-const ELO_K_FACTOR = 32
+const ELO_K_FACTOR = 40
 const PLACEMENT_MATCHES = 3
 // The first placement opponent is pitched around low Silver, and each result moves the next one by
 // a step. A brand new account is rated 0, so without an explicit ladder every placement bot would
@@ -29,29 +29,18 @@ const expectedScore = (selfElo, opponentElo) => 1 / (
     1 + Math.pow(10, ((Number(opponentElo) || 0) - (Number(selfElo) || 0)) / 400)
 )
 
-// A short match moves a rating less than a long one: two rounds says far less about skill than
-// ten, and without this an early finish would be the quickest way to climb.
-const roundsConfidence = (roundsPlayed) => {
-    const rounds = Math.max(0, Number(roundsPlayed) || 0)
-    if(rounds <= 1) return 0.1
-    if(rounds >= 6) return 1
-    return 0.6 + (((rounds - 2) / 4) * 0.4)
-}
-
-// Standard Elo. The delta now depends on who you played: beating someone far above you is worth
-// several times beating someone far below, and the ladder stops drifting upward for everyone the
-// way a fixed win/loss band does.
+// Every decided match counts fully, including forfeits. Equal opponents exchange 20 Elo;
+// opponent strength adjusts the amount, but match length never discounts a win or loss.
 const getRankedEloDelta = ({
     isWin = false,
     isLoss = false,
-    roundsPlayed = 0,
     selfElo = 0,
     opponentElo = 0,
 } = {}) => {
     if(!isWin && !isLoss) return 0
 
     const actual = isWin ? 1 : 0
-    const raw = ELO_K_FACTOR * (actual - expectedScore(selfElo, opponentElo)) * roundsConfidence(roundsPlayed)
+    const raw = ELO_K_FACTOR * (actual - expectedScore(selfElo, opponentElo))
     const rounded = Math.round(raw)
 
     // A decided match never rounds to nothing, or beating a much weaker opponent would read on
@@ -324,7 +313,6 @@ export {
     expectedScore,
     isPlacementComplete,
     placementOpponentElo,
-    roundsConfidence,
     getRankedEloDelta,
     getRoundDamageMultiplier,
     getBaseDamageByDifficulty,
