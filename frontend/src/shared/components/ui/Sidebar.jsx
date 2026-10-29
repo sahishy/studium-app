@@ -7,7 +7,7 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { FaClock, FaArrowRight, FaBookOpen, FaBoxArchive, FaArrowTrendUp, FaChevronDown, FaChild, FaGraduationCap, FaUserGroup, FaHouse, FaUser, FaGear, FaCommentMedical } from 'react-icons/fa6'
+import { FaAngleLeft, FaClock, FaArrowRight, FaBookOpen, FaBoxArchive, FaArrowTrendUp, FaChevronDown, FaChild, FaGraduationCap, FaUserGroup, FaHouse, FaUser, FaGear, FaCommentMedical } from 'react-icons/fa6'
 import TextTooltip from '../tooltips/TextTooltip.jsx'
 import { useModal } from '../../contexts/ModalContext.jsx'
 import FeedbackModal from '../../../features/feedback/components/FeedbackModal.jsx'
@@ -70,6 +70,8 @@ const getStoredGroupState = (key, defaultValue) => {
 
 const Sidebar = ({ profile, mobile = false, onNavigate }) => {
 
+    const [collapsed, setCollapsed] = useState(false)
+    const compact = !mobile && collapsed
     const navigate = useNavigate();
     const circles = useCircles()
     const {pins,toggle:togglePin} = useCirclePins(profile.uid,circles,useCirclesConfirmed())
@@ -151,13 +153,22 @@ const Sidebar = ({ profile, mobile = false, onNavigate }) => {
     }
 
     return (
-        <aside className={`bg-neutral5 p-4 ${mobile ? 'flex h-full' : 'hidden lg:flex h-dvh'} min-h-0 overflow-y-auto overscroll-y-contain flex-col justify-between gap-6 shrink-0 w-56 border-r border-neutral4`}>
+        <aside className={`bg-neutral5 py-4 ${compact ? 'px-3 w-16' : 'px-4 w-56'} ${mobile ? 'flex h-full' : 'hidden lg:flex h-dvh transition-[width,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none'} min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain flex-col justify-between gap-6 shrink-0 border-r border-neutral4`}>
 
             <div className='flex shrink-0 flex-col gap-6'>
 
-                <Logo className={'p-2'} large />
+                <div className='relative h-12'>
+                    <Logo className={`p-2 ${!mobile ? 'transition-opacity duration-200 motion-reduce:transition-none' : ''} ${compact ? 'opacity-0' : 'opacity-100'}`} large />
+                    {!mobile && <div aria-hidden='true' className={`absolute left-1 top-2 transition-opacity duration-200 motion-reduce:transition-none ${compact ? 'opacity-100' : 'opacity-0'}`}>
+                        <Logo />
+                    </div>}
+                </div>
 
-                <div className='py-6 flex flex-col gap-3 items-center'>
+                <div
+                    aria-hidden={compact || undefined}
+                    inert={compact || undefined}
+                    className={`py-6 flex flex-col gap-3 items-center ${!mobile ? 'w-48 self-center transition-opacity duration-200 motion-reduce:transition-none' : ''} ${compact ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+                >
                     <button onClick={() => { navigate(`/profile/${encodeURIComponent(profile?.profile?.displayName ?? '')}`); onNavigate?.() }}>
                         <AvatarPicture profile={profile} className='relative w-16 h-16 group/avatar cursor-pointer'>
                             <div className={`absolute -bottom-1 -right-1 bg-neutral3/60 backdrop-blur-xs rounded-full p-2
@@ -189,6 +200,7 @@ const Sidebar = ({ profile, mobile = false, onNavigate }) => {
                                         id={groupId}
                                         title={group.title}
                                         expanded={expanded}
+                                        compact={compact}
                                         onToggle={() => toggleGroup(group.storageKey, setter)}
                                         items={group.items}
                                         location={location}
@@ -210,8 +222,12 @@ const Sidebar = ({ profile, mobile = false, onNavigate }) => {
 
             </div>
 
-            <div className='flex shrink-0 flex-col gap-4'>
-                <div className={`flex justify-center gap-1 mb-6 text-sm ${navigationDisabled ? 'opacity-40' : ''}`}>
+            <div className='flex shrink-0 items-center justify-between mb-6'>
+                <div
+                    aria-hidden={compact || undefined}
+                    inert={compact || undefined}
+                    className={`flex ${mobile ? 'justify-center w-full' : 'justify-start flex-1 min-w-0 overflow-hidden transition-opacity duration-200 motion-reduce:transition-none'} gap-1 text-sm ${compact ? 'opacity-0 pointer-events-none' : navigationDisabled ? 'opacity-40' : ''}`}
+                >
                     <TextTooltip text='Profile' placement='top'>
                         <Link
                             to={`/profile/${encodeURIComponent(profile?.profile?.displayName ?? '')}`}
@@ -247,6 +263,17 @@ const Sidebar = ({ profile, mobile = false, onNavigate }) => {
                         </button>
                     </TextTooltip>
                 </div>
+                {!mobile && <TextTooltip text={compact ? 'Show' : 'Hide'} placement='top'>
+                    <button
+                        type='button'
+                        aria-label={compact ? 'Expand sidebar' : 'Minimize sidebar'}
+                        aria-expanded={!compact}
+                        onClick={() => setCollapsed(value => !value)}
+                        className='size-9 shrink-0 flex items-center justify-center rounded-full text-neutral2 transition-colors hover:text-neutral0 cursor-pointer'
+                    >
+                        <FaAngleLeft aria-hidden='true' className={`transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${compact ? 'rotate-180' : ''}`} />
+                    </button>
+                </TextTooltip>}
             </div>
 
 
@@ -254,7 +281,7 @@ const Sidebar = ({ profile, mobile = false, onNavigate }) => {
     )
 }
 
-const SidebarGroup = ({ id, title, expanded, onToggle, items, location, disabled, notifications, indicators, onNavigate, socialsExpanded, onSocialsClick, circleLinks, hasPinnedCircles }) => {
+const SidebarGroup = ({ id, title, expanded, compact, onToggle, items, location, disabled, notifications, indicators, onNavigate, socialsExpanded, onSocialsClick, circleLinks, hasPinnedCircles }) => {
     const onSocialsScreen=location.pathname.startsWith('/socials') && !location.pathname.startsWith('/socials/circle/')
 
     // The header doubles as the drag handle, so a short press still toggles
@@ -274,43 +301,47 @@ const SidebarGroup = ({ id, title, expanded, onToggle, items, location, disabled
                 disabled={disabled}
                 {...attributes}
                 {...listeners}
-                className={`flex gap-3 items-center justify-between px-3 py-2 text-xs uppercase font-semibold text-neutral1 rounded-xl 
+                className={`flex min-h-8 ${compact ? 'gap-1 px-1' : 'gap-3 px-3'} items-center justify-between py-2 text-xs uppercase font-semibold text-neutral1 rounded-xl
                     transition disabled:cursor-not-allowed disabled:opacity-40
                     ${isDragging ? 'cursor-grabbing' : 'cursor-pointer'}`}
             >
-                <span>{title}</span>
-                <hr className='w-full border-1 border-neutral3'/>
-                <FaChevronDown className={`shrink-0 text-xs text-neutral2 transition-transform ${expanded ? '' : '-rotate-90'}`} />
+                <span className={compact ? 'sr-only' : 'shrink-0'}>{title}</span>
+                <hr className='min-w-0 flex-1 border-1 border-neutral3'/>
+                {!compact && <FaChevronDown className={`shrink-0 text-xs text-neutral2 transition-transform ${expanded ? '' : '-rotate-90'}`} />}
             </button>
 
             {items.filter(item=>expanded || (item.path==='/socials' && hasPinnedCircles)).map((item) => (
                 <div key={item.path}><SidebarNavLink
                     key={item.path}
                     item={item}
+                    compact={compact}
                     isActive={item.path === '/socials' ? onSocialsScreen : location.pathname.startsWith(item.path)}
                     disabled={disabled}
                     showNotification={Boolean(notifications?.[item.path])}
                     indicator={indicators?.[item.path]}
                     onNavigate={() => { if(item.path === '/socials' && onSocialsScreen) onSocialsClick?.(); onNavigate?.() }}
                     disclosure={item.path === '/socials' && onSocialsScreen ? socialsExpanded : undefined}
-                />{item.path === '/socials' && circleLinks}</div>
+                />{!compact && item.path === '/socials' && circleLinks}</div>
             ))}
         </div>
     )
 }
 
-const SidebarNavLink = ({ item, isActive, disabled = false, showNotification = false, indicator, onNavigate, disclosure }) => {
+const SidebarNavLink = ({ item, isActive, compact = false, disabled = false, showNotification = false, indicator, onNavigate, disclosure }) => {
+
+    const linkClass = 'flex min-h-9 items-center px-3 py-2 gap-2 rounded-xl'
 
     if (disabled) {
         return (
             <div
-                className='flex items-center px-3 py-2 gap-2 rounded-xl text-neutral1 cursor-not-allowed opacity-40'
+                aria-label={compact ? item.title : undefined}
+                className={`${linkClass} text-neutral1 cursor-not-allowed opacity-40`}
             >
                 <div className='text-sm'>{item.icon}</div>
-                <div className='text-sm text-nowrap flex items-center gap-2'>
+                <div className={compact ? 'sr-only' : 'text-sm text-nowrap flex items-center gap-2'}>
                     {item.title}
                 </div>
-                {indicator && <span role='img' aria-label={indicator.label} className='ml-auto flex items-center text-xs text-neutral2'>{indicator.icon}</span>}
+                {!compact && indicator && <span role='img' aria-label={indicator.label} className='ml-auto flex items-center text-xs text-neutral2'>{indicator.icon}</span>}
             </div>
         )
     }
@@ -321,9 +352,11 @@ const SidebarNavLink = ({ item, isActive, disabled = false, showNotification = f
             data-onboarding={`nav:${item.path}`}
             to={item.path}
             onClick={onNavigate}
+            aria-label={compact ? item.title : undefined}
+            title={compact ? item.title : undefined}
             end
             className={
-                `flex items-center px-3 py-2 gap-2 rounded-xl transition-all group
+                `${linkClass} transition-all group
                 ${(isActive) ? 'text-neutral0 bg-neutral3' : 'text-neutral1 hover:bg-neutral4'}`
             }
         >
@@ -334,11 +367,11 @@ const SidebarNavLink = ({ item, isActive, disabled = false, showNotification = f
                         ${isActive ? 'bg-sky-500 border-neutral3' : 'bg-sky-300 border-neutral5 group-hover:border-neutral4'}`} />
                 )}
             </div>
-            <div className='text-sm text-nowrap'>
+            <div className={compact ? 'sr-only' : 'text-sm text-nowrap'}>
                 {item.title}
             </div>
-            {disclosure !== undefined && <FaChevronDown className={`ml-auto text-xs ${disclosure ? '' : '-rotate-90'}`} />}
-            {indicator && <span role='img' aria-label={indicator.label} className={`ml-auto flex items-center text-xs transition-colors group-focus-visible:text-neutral1 ${isActive ? 'text-neutral1' : 'text-neutral2'}`}>{indicator.icon}</span>}
+            {!compact && disclosure !== undefined && <FaChevronDown className={`ml-auto text-xs ${disclosure ? '' : '-rotate-90'}`} />}
+            {!compact && indicator && <span role='img' aria-label={indicator.label} className={`ml-auto flex items-center text-xs transition-colors group-focus-visible:text-neutral1 ${isActive ? 'text-neutral1' : 'text-neutral2'}`}>{indicator.icon}</span>}
         </NavLink>
     )
 }
